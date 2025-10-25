@@ -1,17 +1,14 @@
 ---
-title: "LiteMCP - Lightweigth MCP server"
+title: "LiteMCP - Lightweight MCP server"
 sidebarTitle: "LiteMCP"
 ---
 
 `LiteMCP` is a lightweight, ASGI-compatible MCP (Model Context Protocol) server built on top of FastAPI. It provides a simple, decorator-based API for creating MCP servers that can be deployed with any ASGI server.
 
-## Features
-
-- ✅ **ASGI Compatible**: Works with uvicorn, hypercorn, daphne, and other ASGI servers
-- ✅ **FastAPI-like Decorators**: Familiar `@app.tool()`, `@app.prompt()`, `@app.resource()` syntax
-
 
 ## LiteMCP vs FastMCP
+
+LitMCP has a more transparent design and FastAPI primites such as middlewares and dependency injection are immediately available, while FastMCP requires mounting as a sub-application, diverging from standard FastAPI primitives.
 
 | Feature | LiteMCP | FastMCP |
 |---------|---------|---------|
@@ -21,17 +18,12 @@ sidebarTitle: "LiteMCP"
 | Decorator API | ✅ Yes | ✅ Yes |
 | Custom Methods | ✅ Full support | ⚠️ Limited |
 | Lightweight | ✅ Minimal deps | ⚠️ More deps |
-| ASGI Compatible | ✅ Yes | ✅ Yes |
 
 
-### Key Architectural Difference
+<Card title="Connecting MCP endpoint to existing FastAPI app">
 
-**LiteMCP** is a native ASGI application that integrates directly with your existing FastAPI/Starlette app using standard routing patterns. You can use it standalone or include it in your app naturally.
-
-**FastMCP** requires mounting as a sub-application, which means you diverge from standard FastAPI primitives when serving MCP tools alongside your regular backend:
-
+**Using FastMCP**
 ```python
-# FastMCP - Requires mounting as sub-app
 from starlette.applications import Starlette
 from starlette.routing import Mount
 from mcp.server.fastmcp import FastMCP
@@ -42,14 +34,20 @@ app = Starlette(
         Mount("/mcp", app=mcp.streamable_http_app())  # Separate ASGI app
     ]
 )
-
-# LiteMCP - Native ASGI integration
-from agentor.mcp import LiteMCP
-
-app = LiteMCP(name="My App")  # IS the ASGI app
-# or easily include in existing FastAPI:
-# fastapi_app.include_router(app.get_fastapi_router())
 ```
+
+**Using LiteMCP**
+```python
+from agentor.mcp import LiteMCP
+from fastapi import FastAPI
+
+# Create the app
+app = FastAPI()
+mcp = LiteMCP()
+app.include_router(mcp.get_fastapi_router())  # Include MCP endpoints like a regular APIRouter
+```
+</Card>
+
 
 
 ### When to Use Each
