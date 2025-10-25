@@ -3,35 +3,33 @@
   "theme": "maple",
    "colors": {
     "primary": "#FF5722",
-    "dark": "#FF5722",
-    "light": "#FF5722"
+    "light": "#FF5722",
+    "dark": "#D84315"
   },
   "name": "Celesto AI",
   "favicon": "https://ik.imagekit.io/gradsflow/celestoai/logo/center-small_iO7tbplXN.png?updatedAt=1758078045506",
   "navigation": {
-    "tabs": [
+    "groups": [
       {
-        "tab": "Docs",
-        "groups": [
-          {
-            "group": "Quickstart",
-            "pages": [
-              "index"
-            ]
-          },
-          {
-            "group": "Agentor",
-            "pages": [
-              "agentor/overview",
-              "agentor/tool-use-mcp-servers"
-            ]
-          },
-          {
-            "group": "SuperAuth",
-            "pages": [
-              "superauth/google-oauth-setup"
-            ]
-          }
+        "group": "Getting Started",
+        "icon": "rocket",
+        "pages": [
+          "index"
+        ]
+      },
+      {
+        "group": "Agentor",
+        "icon": "robot",
+        "pages": [
+          "agentor/overview",
+          "agentor/tool-use-mcp-servers"
+        ]
+      },
+      {
+        "group": "SuperAuth",
+        "icon": "key",
+        "pages": [
+          "superauth/google-oauth-setup"
         ]
       }
     ],
