@@ -1,8 +1,9 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "maple",
-  "colors": {
-    "primary": "#FF2A00"
+   "colors": {
+    "primary": "#FF5722",
+    "dark": "#E64A19"
   },
   "name": "Celesto AI",
   "favicon": "https://ik.imagekit.io/gradsflow/celestoai/logo/center-small_iO7tbplXN.png?updatedAt=1758078045506",
