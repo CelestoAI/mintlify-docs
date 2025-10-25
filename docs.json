@@ -23,6 +23,7 @@
         "pages": [
           "agentor/overview",
           "agentor/01-agents-api",
+          "agentor/02-LiteMCP",
           "agentor/tool-use-mcp-servers"
         ]
       },
