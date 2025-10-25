@@ -1,12 +1,12 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "maple",
-   "colors": {
-    "primary": "#FF5722",
-    "light": "#FF5722",
-    "dark": "#D84315"
-  },
   "name": "Celesto AI",
+  "colors": {
+    "primary": "#FF5722",
+    "light": "#FF8A50",
+    "dark": "#BF360C"
+  },
   "favicon": "https://ik.imagekit.io/gradsflow/celestoai/logo/center-small_iO7tbplXN.png?updatedAt=1758078045506",
   "navigation": {
     "groups": [
@@ -22,6 +22,7 @@
         "icon": "robot",
         "pages": [
           "agentor/overview",
+          "agentor/01-agents-api",
           "agentor/tool-use-mcp-servers"
         ]
       },
@@ -30,6 +31,14 @@
         "icon": "key",
         "pages": [
           "superauth/google-oauth-setup"
+        ]
+      },
+      {
+        "group": "Query",
+        "icon": "code",
+        "pages": [
+          "query/client",
+          "query/curl"
         ]
       }
     ],

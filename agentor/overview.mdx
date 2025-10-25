@@ -60,55 +60,6 @@ agentor deploy
 </Steps>
 
 
-
-## Agents API
-
-Integrate Agentor directly into your applications with just a few lines of code:
-
-<CodeGroup>
-```python With Celesto AI ToolHub
-from agentor import Agentor
-
-agent = Agentor(
-    name="Weather Agent",
-    model="gpt-5-mini",
-    tools=["get_weather"],  # 100+ Celesto AI managed tools — plug-and-play
-)
-result = agent.run("What is the weather in London?")
-print(result)
-```
-
-```python Bring your own tool
-from agentor import Agentor, function_tool
-
-@function_tool
-def get_weather(city: str):
-    """Get the weather of city"""
-    return f"Weather in {city} is sunny"
-
-agent = Agentor(
-    name="Weather Agent",
-    model="gpt-5-mini",
-    tools=[get_weather],  # Bring your own tool
-)
-result = agent.run("What is the weather in London?")
-print(result)
-```
-
-</CodeGroup>
-
-To query your Agent server:
-
-```bash
-curl -X 'POST' \
-  'http://localhost:8000/chat' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -d '{
-  "input": "What is the weather in London?"
-}'
-```
-
 ## Features
 
 | Feature                    | Description                                                                                               |
@@ -118,27 +69,6 @@ curl -X 'POST' \
 | 🦾 **AgentMCP**            | [Code](https://github.com/CelestoAI/agentor/tree/main/docs/tools-and-mcp.mdx)                             |
 | ☁️ **Easy Deployment**     | [`agentor deploy FOLDER_PATH`](https://github.com/CelestoAI/agentor/tree/main/docs/examples/agent-server) |
 
-
-```python
-from agentor import CelestoSDK
-
-client = CelestoSDK(CELESTOAI_API_KEY)
-
-# List all available tools
-client.toolhub.list_tools()
-
-# Run the weather tool
-client.toolhub.run_weather_tool("London")
-
-# Run the Google email tool
-client.toolhub.run_list_google_emails(limit=5)
-```
-
-## Tool Routing with AgentMCP
-
-When multiple tools are added directly to an Agent, LLM context can bloat and degrade performance.
-
-`AgentMCP` solves this by exposing one unified interface that automatically routes calls to the correct tool — optimizing performance and context efficiency.
 
 ## Security & Privacy
 
