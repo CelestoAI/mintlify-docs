@@ -3,7 +3,8 @@
   "theme": "maple",
    "colors": {
     "primary": "#FF5722",
-    "dark": "#E64A19"
+    "dark": "#FF5722",
+    "light": "#FF5722"
   },
   "name": "Celesto AI",
   "favicon": "https://ik.imagekit.io/gradsflow/celestoai/logo/center-small_iO7tbplXN.png?updatedAt=1758078045506",
