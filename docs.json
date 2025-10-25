@@ -13,9 +13,15 @@
         "tab": "Docs",
         "groups": [
           {
+            "group": "Quickstart",
+            "pages": [
+              "index"
+            ]
+          },
+          {
             "group": "Agentor",
             "pages": [
-              "agentor/quickstart",
+              "agentor/overview",
               "agentor/tool-use-mcp-servers"
             ]
           },
