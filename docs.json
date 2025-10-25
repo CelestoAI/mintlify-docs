@@ -14,11 +14,10 @@
         "tab": "Guides",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Agentor",
             "pages": [
               "index",
-              "quickstart",
-              "development"
+              "agentor/tool-use-mcp-servers"
             ]
           }
         ]
@@ -63,43 +62,42 @@
         }
       ]
     },
-    "search": {
-  },
-  "logo": {
-    "light": "https://ik.imagekit.io/gradsflow/celestoai/logo/center-small_iO7tbplXN.png?updatedAt=1758078045506",
-    "dark": "https://ik.imagekit.io/gradsflow/celestoai/logo/center-small_iO7tbplXN.png?updatedAt=1758078045506"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@celesto.ai"
+    "search": {},
+    "logo": {
+      "light": "https://ik.imagekit.io/gradsflow/celestoai/logo/center-small_iO7tbplXN.png?updatedAt=1758078045506",
+      "dark": "https://ik.imagekit.io/gradsflow/celestoai/logo/center-small_iO7tbplXN.png?updatedAt=1758078045506"
+    },
+    "navbar": {
+      "links": [
+        {
+          "label": "Support",
+          "href": "mailto:hi@celesto.ai"
+        }
+      ],
+      "primary": {
+        "type": "button",
+        "label": "Dashboard",
+        "href": "https://celesto.ai"
       }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://celesto.ai"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/celestoai",
-      "github": "https://github.com/celestoai",
-      "linkedin": "https://linkedin.com/company/celestoai"
+    },
+    "contextual": {
+      "options": [
+        "copy",
+        "view",
+        "chatgpt",
+        "claude",
+        "perplexity",
+        "mcp",
+        "cursor",
+        "vscode"
+      ]
+    },
+    "footer": {
+      "socials": {
+        "x": "https://x.com/celestoai",
+        "github": "https://github.com/celestoai",
+        "linkedin": "https://linkedin.com/company/celestoai"
+      }
     }
   }
-}
 }
