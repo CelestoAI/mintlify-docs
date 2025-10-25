@@ -5,6 +5,24 @@ sidebarTitle: "LiteMCP"
 
 `LiteMCP` is a lightweight, ASGI-compatible MCP (Model Context Protocol) server built on top of FastAPI. It provides a simple, decorator-based API for creating MCP servers that can be deployed with any ASGI server.
 
+## Quick Start
+
+```python
+from agentor.mcp import LiteMCP
+
+# Create the app
+app = LiteMCP()
+
+# Register a tool
+@app.tool(description="Get weather")
+def get_weather(location: str) -> str:
+    return f"Weather in {location}: Sunny"
+
+# Run the server
+if __name__ == "__main__":
+    app.run()
+```
+
 
 ## LiteMCP vs FastMCP
 
@@ -65,24 +83,6 @@ app.include_router(mcp.get_fastapi_router())  # Include MCP endpoints like a reg
 - You want the official SDK implementation
 - You don't need to integrate with existing web services
 
-
-## Quick Start
-
-```python
-from agentor.mcp import LiteMCP
-
-# Create the app
-app = LiteMCP()
-
-# Register a tool
-@app.tool(description="Get weather")
-def get_weather(location: str) -> str:
-    return f"Weather in {location}: Sunny"
-
-# Run the server
-if __name__ == "__main__":
-    app.run()
-```
 
 ## Configuration
 

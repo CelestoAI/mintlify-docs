@@ -22,9 +22,15 @@
         "icon": "robot",
         "pages": [
           "agentor/overview",
-          "agentor/01-agents-api",
-          "agentor/02-LiteMCP",
-          "agentor/tool-use-mcp-servers"
+          "agentor/01-agents-api"
+        ]
+      },
+      {
+        "group": "Tool use and MCP Servers",
+        "icon": "tools",
+        "pages": [
+          "agentor/tool-use-mcp-servers",
+          "agentor/02-LiteMCP"
         ]
       },
       {
