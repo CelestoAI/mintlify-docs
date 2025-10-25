@@ -1,32 +1,38 @@
 ---
-title: "Agentor"
-description: "Fastest way to build, prototype and deploy AI Agents with tools securely."
+title: "Quickstart"
 sidebarTitle: "Quickstart"
 ---
 
+<img 
+  src="https://raw.githubusercontent.com/CelestoAI/agentor/main/assets/CelestoAI.png" 
+  alt="Main dashboard interface"
+  className="rounded-lg"
+/>
+
 **Agentor** is an open-source framework that makes it easy to build multi-agent systems with secure integrations across email, calendars, CRMs, and more.
 
-It lets you connect LLMs to tools — like email, calendar, CRMs, or any data stack.
 
-## Quick Start
+## Usage
 
 <Steps>
 <Step>
 ### Installation
 
-**Recommended**
+Recommended
 
 ```bash
 pip install agentor
 ```
 
-**Latest (unstable)**
+Latest (unstable)
 
 ```bash
 pip install git+https://github.com/celestoai/agentor@main
 ```
 </Step>
 <Step>
+Once installed, you can start building your first Agent with just a few lines of code.
+
 ```python
 from agentor import Agentor, function_tool
 
@@ -44,7 +50,7 @@ agent.serve()
 </Step>
 
 <Step>
-Deploy serverless API to access from ANYWHERE 🌐
+You can serve your Agents locally or on cloud with a single command. 
 
 ```bash
 agentor deploy
@@ -59,7 +65,20 @@ agentor deploy
 
 Integrate Agentor directly into your applications with just a few lines of code:
 
-```python
+<CodeGroup>
+```python With Celesto AI ToolHub
+from agentor import Agentor
+
+agent = Agentor(
+    name="Weather Agent",
+    model="gpt-5-mini",
+    tools=["get_weather"],  # 100+ Celesto AI managed tools — plug-and-play
+)
+result = agent.run("What is the weather in London?")
+print(result)
+```
+
+```python Bring your own tool
 from agentor import Agentor, function_tool
 
 @function_tool
@@ -70,15 +89,13 @@ def get_weather(city: str):
 agent = Agentor(
     name="Weather Agent",
     model="gpt-5-mini",
-    tools=["get_weather"],  # 100+ Celesto AI managed tools — plug-and-play
+    tools=[get_weather],  # Bring your own tool
 )
-
 result = agent.run("What is the weather in London?")
 print(result)
-
-# Serve Agent with a single line of code
-agent.serve()
 ```
+
+</CodeGroup>
 
 To query your Agent server:
 
@@ -101,11 +118,6 @@ curl -X 'POST' \
 | 🦾 **AgentMCP**            | [Code](https://github.com/CelestoAI/agentor/tree/main/docs/tools-and-mcp.mdx)                             |
 | ☁️ **Easy Deployment**     | [`agentor deploy FOLDER_PATH`](https://github.com/CelestoAI/agentor/tree/main/docs/examples/agent-server) |
 
-🔧 **Build with OSS** · 🧡 [Managed Multi-Agent Platform](https://celesto.ai)
-
-## Managed Tool Hub
-
-Access 100+ prebuilt tools via **Celesto Tool Hub** for real-time integrations.
 
 ```python
 from agentor import CelestoSDK
