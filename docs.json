@@ -66,8 +66,8 @@
     "search": {
   },
   "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
+    "light": "https://ik.imagekit.io/gradsflow/celestoai/logo/center-small_iO7tbplXN.png?updatedAt=1758078045506",
+    "dark": "https://ik.imagekit.io/gradsflow/celestoai/logo/center-small_iO7tbplXN.png?updatedAt=1758078045506"
   },
   "navbar": {
     "links": [
