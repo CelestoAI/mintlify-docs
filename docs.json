@@ -107,5 +107,10 @@
       "title": "I can't be found",
       "description": "What ever **happened** to this _page_?"
     }
-  }
+  },
+  "integrations": {
+    "posthog": {
+        "apiKey": "phc_dyOMKfao22XaWXamm8UVxmlbW78jgvL0ArZGZghqtmD"
+    }
+}
 }
