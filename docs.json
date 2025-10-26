@@ -52,9 +52,9 @@
     "global": {
       "anchors": [
         {
-          "anchor": "Blog",
-          "href": "https://celesto.ai/blog",
-          "icon": "newspaper"
+          "anchor": "Dashboard",
+          "href": "https://celesto.ai",
+          "icon": "dashboard"
         },
         {
           "anchor": "GitHub",
