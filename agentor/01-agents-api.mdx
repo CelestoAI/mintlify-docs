@@ -78,3 +78,31 @@ async def main():
 if __name__ == "__main__":
     asyncio.run(main())
 ```
+
+
+## Serve the Agent
+
+Agents can be deployed as REST API server so you can query them from your applications or integrate them into your existing infrastructure.
+
+Agentor makes it easy to serve the Agents by providing a simple `serve` method.
+
+```python
+from agentor import Agentor
+
+agent = Agentor(name="Weather Agent", model="gpt-5-mini", tools=["get_weather"])
+agent.serve(port=8000)   # [!code ++]
+```
+
+<RequestExample>
+
+```bash
+curl -X 'POST' \
+  'http://localhost:8000/chat' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "input": "What is the weather in London?"
+}'
+```
+
+</RequestExample>
