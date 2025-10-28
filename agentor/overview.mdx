@@ -1,6 +1,7 @@
 ---
 title: "Quickstart"
 sidebarTitle: "Quickstart"
+slug: "overview"
 ---
 
 <img 
@@ -9,7 +10,7 @@ sidebarTitle: "Quickstart"
   className="rounded-lg"
 />
 
-**Agentor** is an open-source framework that makes it easy to build multi-agent systems with secure integrations across email, calendars, CRMs, and more.
+**Agentor** is an open-source framework that makes it easy to build multi-agent systems, MCP Servers or ANY LLM application with secure integrations across email, calendars, CRMs, and more.
 
 
 ## Usage
@@ -17,18 +18,11 @@ sidebarTitle: "Quickstart"
 <Steps>
 <Step title="Install">
 
-Recommended
-
 ```bash
 pip install agentor
 ```
-
-Latest (unstable)
-
-```bash
-pip install git+https://github.com/celestoai/agentor@main
-```
 </Step>
+
 
 <Step title="Build an Agent">
 
@@ -37,25 +31,30 @@ Once installed, you can start building your first Agent with just a few lines of
 ```python
 from agentor import Agentor, function_tool
 
+@function_tool
+def get_weather(city: str):
+    """Get the weather of city"""
+    return f"Weather in {city} is sunny"
+
 agent = Agentor(
     name="Weather Agent",
-    tools=["get_weather"],  # 100+ Celesto AI managed tools — plug-and-play
+    tools=[get_weather],  # Bring your own tool, or [!code --]
+    tools=["get_weather"],  # 100+ Celesto AI managed tools — plug-and-play [!code ++]
 )
-
 result = agent.run("What is the weather in London?")
-print(result)
-
-# Serve Agent with a single line of code
-agent.serve()
 ```
 </Step>
 
-<Step title="Serve an Agent">
 
-You can serve your Agents locally or on cloud with a single command. 
+<Step title="Serve locally or on cloud">
 
-```bash
-agentor deploy
+Add a single line of code to turn Agent into a Server that can be queried locally or on cloud. 
+
+```python
+from agentor import Agentor, function_tool
+
+agent = Agentor(name="Weather Agent", tools=["get_weather"])
+agent.serve() # Single line of code to serve the Agent [!code ++]
 ```
 </Step>
 
