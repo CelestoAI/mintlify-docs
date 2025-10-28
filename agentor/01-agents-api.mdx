@@ -1,10 +1,30 @@
 ---
 title: "Agents API"
 sidebarTitle: "Agents API"
+description: "Integrate Agentor directly into your applications with just a few lines of code."
 ---
 
+## Build an Agent
 
-Integrate Agentor directly into your applications with just a few lines of code:
+Use the Agentor class to initialize an Agent providing the name, instructions, and tools. You can run the Agent with the `run` method or stream the response with the `stream` method.
+
+```python
+from agentor import Agentor
+
+agent = Agentor(
+    name="Weather Agent",
+    model="gpt-5-mini",
+)
+result = agent.run("What is the weather in London?")
+print(result)
+```
+
+
+## Connect to a tool
+
+Agents has access to tools to perform tasks and get information from the world.
+
+You can define your own tools or use the ones provided by Celesto AI [ToolHub](https://celesto.ai/toolhub).
 
 <CodeGroup>
 ```python With Celesto AI ToolHub
@@ -38,49 +58,23 @@ print(result)
 
 </CodeGroup>
 
-To query your Agent server:
 
-<CodeGroup>
-```python Local Deployment
-import requests
+## Stream the response
 
-URL = "http://localhost:8000/chat"
+You can stream the response from the Agent with the `stream` method.
 
-response = requests.post(
-    URL,
-    json={"input": "how are you?"},
-    headers={"Content-Type": "application/json"}
-)
-print(response.content)
+```python
+from agentor import Agentor
+import asyncio
+
+agent = Agentor(name="Weather Agent", tools=["get_weather"])
+
+async def main():
+    async for event in agent.stream_chat(
+        "How is the weather in Tokyo?",
+    ):
+        print(event, flush=True)
+
+if __name__ == "__main__":
+    asyncio.run(main())
 ```
-
-```python Cloud Deployment
-import os
-import requests
-
-URL = "https://api.celesto.ai/v1/deploy/apps/APP-ID/chat"
-CELESTO_API_KEY = os.environ.get("CELESTO_API_KEY")
-
-headers = {
-    "Authorization": f"Bearer {CELESTO_API_KEY}",
-    "Content-Type": "application/json",
-}
-
-response = requests.post(
-    URL,
-    json={"input": "how are you?"},
-    headers=headers,
-)
-print(response.content)
-```
-
-```bash cURL
-curl -X 'POST' \
-  'http://localhost:8000/chat' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -d '{
-  "input": "What is the weather in London?"
-}'
-```
-</CodeGroup>
