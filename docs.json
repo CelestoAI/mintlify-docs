@@ -47,10 +47,10 @@
         ]
       },
       {
-        "tab": "Cookbooks",
-        "icon": "hat-chef",
+        "tab": "Tutorials",
+        "icon": "compass",
         "pages": [
-          "cookbooks/welcome"
+          "tutorials/welcome"
         ]
       }
     ],
