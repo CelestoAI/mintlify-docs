@@ -13,7 +13,7 @@ slug: "overview"
 **Agentor** is an open-source framework that makes it easy to build multi-agent systems, MCP Servers or ANY LLM application with secure integrations across email, calendars, CRMs, and more.
 
 
-## Usage
+## Start with 4 steps
 
 <Steps>
 <Step title="Install">
@@ -66,11 +66,9 @@ You can query your Agent server with a simple curl command.
 ```python Local Deployment
 import requests
 
-URL = "http://localhost:8000/chat"
-
 response = requests.post(
-    URL,
-    json={"input": "how are you?"},
+    "http://localhost:8000/chat",
+    json={"input": "What is the weather in London?"},
     headers={"Content-Type": "application/json"}
 )
 print(response.content)
