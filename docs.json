@@ -9,43 +9,49 @@
   },
   "favicon": "https://ik.imagekit.io/gradsflow/celestoai/logo/center-small_iO7tbplXN.png?updatedAt=1758078045506",
   "navigation": {
-    "groups": [
+    "tabs": [
       {
-        "group": "Getting Started",
-        "icon": "rocket",
-        "pages": [
-          "index"
+        "tab": "Documentation",
+        "icon": "book",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "icon": "rocket",
+            "pages": [
+              "index"
+            ]
+          },
+          {
+            "group": "Agentor",
+            "icon": "robot",
+            "pages": [
+              "agentor/overview",
+              "agentor/01-agents-api"
+            ]
+          },
+          {
+            "group": "Tool use and MCP Servers",
+            "icon": "tools",
+            "pages": [
+              "agentor/tools/overview",
+              "agentor/tools/01-LiteMCP",
+              "agentor/tools/02-LiteMCP-as-fastapi-router"
+            ]
+          },
+          {
+            "group": "SuperAuth",
+            "icon": "key",
+            "pages": [
+              "superauth/google-oauth-setup"
+            ]
+          }
         ]
       },
       {
-        "group": "Agentor",
-        "icon": "robot",
+        "tab": "Tutorials",
+        "icon": "compass",
         "pages": [
-          "agentor/overview",
-          "agentor/01-agents-api"
-        ]
-      },
-      {
-        "group": "Tool use and MCP Servers",
-        "icon": "tools",
-        "pages": [
-          "agentor/tool-use-mcp-servers",
-          "agentor/02-LiteMCP"
-        ]
-      },
-      {
-        "group": "SuperAuth",
-        "icon": "key",
-        "pages": [
-          "superauth/google-oauth-setup"
-        ]
-      },
-      {
-        "group": "Query",
-        "icon": "code",
-        "pages": [
-          "query/client",
-          "query/curl"
+          "tutorials/welcome"
         ]
       }
     ],
@@ -110,7 +116,11 @@
   },
   "integrations": {
     "posthog": {
-        "apiKey": "phc_dyOMKfao22XaWXamm8UVxmlbW78jgvL0ArZGZghqtmD"
+      "apiKey": "phc_dyOMKfao22XaWXamm8UVxmlbW78jgvL0ArZGZghqtmD"
     }
+  },
+  "banner": {
+  "content": "🚀 Agentor is now live! See our [GitHub repository](https://github.com/CelestoAI/agentor) for details.",
+  "dismissible": true 
 }
 }

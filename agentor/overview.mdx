@@ -1,5 +1,5 @@
 ---
-title: "Quickstart"
+title: "Agentor Quickstart"
 sidebarTitle: "Quickstart"
 slug: "overview"
 ---
@@ -13,7 +13,7 @@ slug: "overview"
 **Agentor** is an open-source framework that makes it easy to build multi-agent systems, MCP Servers or ANY LLM application with secure integrations across email, calendars, CRMs, and more.
 
 
-## Start with 4 steps
+## Start with four steps
 
 <Steps>
 <Step title="Install">
@@ -56,6 +56,9 @@ from agentor import Agentor, function_tool
 agent = Agentor(name="Weather Agent", tools=["get_weather"])
 agent.serve() # Single line of code to serve the Agent [!code ++]
 ```
+
+<Tip>Deploy your Agent to [cloud](https://celesto.ai) with a single command: `agentor deploy`</Tip>
+
 </Step>
 
 <Step title="Query the Agent server">
@@ -110,39 +113,6 @@ curl -X 'POST' \
 </Steps>
 
 
-## Features
-
-| Feature                    | Description                                                                                               |
-| -------------------------- | --------------------------------------------------------------------------------------------------------- |
-| ✅ **Pre-built Agents**     | Ready-to-use tools                                                                                        |
-| 🔐 **Secure Integrations** | Email, calendar, CRMs, and more                                                                           |
-| 🦾 **AgentMCP**            | [Code](https://github.com/CelestoAI/agentor/tree/main/docs/tools-and-mcp.mdx)                             |
-| ☁️ **Easy Deployment**     | [`agentor deploy FOLDER_PATH`](https://github.com/CelestoAI/agentor/tree/main/docs/examples/agent-server) |
-
-
-## Security & Privacy
-
-### Your data stays yours
-
-- **Local credentials** — Stored securely on your machine
-- **No data collection** — We never see your emails or calendar
-- **Open source** — Audit the code yourself
-- **Standard OAuth** — Uses Google’s official authentication
-
-### Credential management
-
-- Automatic token refresh
-- Secure local storage
-- Per-user isolation
-- Configurable credential paths
-
----
-
-## Contributing
-
-We’d love your help making Agentor even better! Please read our [Contributing Guidelines](https://github.com/CelestoAI/agentor/blob/main/.github/CONTRIBUTING.md) and [Code of Conduct](https://github.com/CelestoAI/agentor/blob/main/.github/CODE_OF_CONDUCT.md).
-
----
 
 ## License
 
