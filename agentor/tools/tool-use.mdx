@@ -6,7 +6,7 @@ description: "Learn about tool use with Agentor."
 
 
 **[Agentor](https://github.com/CelestoAI/agentor)** simplifies the [tool use](./overview) process by automatically
-generating the tool schema from the function definition, parsing the function signature and calling the function when required.
+generating the tool schema from the function definition, parsing the function signature, and calling the function when required.
 
 
 To create an Agent with access to external tools or APIs, you need to define a function and decorate it with the `@function_tool` decorator.
@@ -17,11 +17,11 @@ from agentor import Agentor, function_tool
 
 @function_tool
 def get_weather(city: str) -> str:
-    """Get the weather of city"""
+    """Get the weather of a city"""
     return f"Weather in {city} is sunny"
 
 agent = Agentor(name="Weather Agent", tools=[get_weather])
-agent.run("What is the weather in London?")
+result = agent.run("What is the weather in London?")
 print(result)
 ```
 
@@ -34,3 +34,4 @@ RunResult:
     London weather: sunny right now. Would you like the temperature or a short forecast?
 ```
 
+In the next section, we will learn about how to build and use MCP Servers with Agentor.

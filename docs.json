@@ -35,8 +35,8 @@
             "pages": [
               "agentor/tools/overview",
               "agentor/tools/tool-use",
-              "agentor/tools/01-LiteMCP",
-              "agentor/tools/02-LiteMCP-as-fastapi-router"
+              "agentor/tools/LiteMCP",
+              "agentor/tools/LiteMCP-fastapi"
             ]
           },
           {
