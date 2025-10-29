@@ -5,9 +5,9 @@ description: "Learn about tool-use and MCP Servers with Agentor."
 ---
 
 
-Large Language Models (LLMs) can answer most of the user questions but they can't access or affect the real world.
+Large Language Models (LLMs) can answer most user questions but they can't access or affect the real world.
 
-With access to tools and APIs, LLMs can perform tasks and actions impacting the real world such as booking a flight, sending an email, or updating a database.
+With access to tools and APIs, LLMs can perform tasks and actions that impact the real world such as booking a flight, sending an email, or updating a database.
 
 
 ## What is an LLM Tool?
@@ -24,7 +24,7 @@ But how does an LLM know how to call a tool?
 ## Tool calling with OpenAI API
 
 LLMs first need to know the details of the tool to call it.
-This is done by providing a <Tooltip tip="A tool schema is a JSON containing the details of the function and its arguments">tool schema</Tooltip> to the LLM.
+This is done by providing a <Tooltip tip="A tool schema is a JSON object containing the details of the function and its arguments">tool schema</Tooltip> to the LLM.
 
 In the following example, we define a tool schema for a weather API function that retrieves the current weather for a given location.
 
@@ -34,18 +34,18 @@ from openai import OpenAI
 weather_tool_schema = {
     "type": "function",
     "name": "get_weather",
-    "description": "Retrieves current weather for the given location.",
+    "description": "Retrieves the current weather for the given location.",
     "parameters": {
         "type": "object",
         "properties": {
             "location": {
                 "type": "string",
-                "description": "City and country e.g. London, United Kingdom",
+                "description": "City and country, e.g. London, United Kingdom",
             },
             "units": {
                 "type": "string",
                 "enum": ["celsius", "fahrenheit"],
-                "description": "Units the temperature will be returned in.",
+                "description": "The units in which the temperature will be returned.",
             },
         },
         "required": ["location", "units"],
@@ -64,7 +64,7 @@ print(response.content)
 
 The LLM will respond with a JSON containing the _**tool name**_ and the _**arguments**_ to call the tool.
 It's the job of the developer to implement the tool and call it with the arguments.
-The tool result it then fed back to the LLM to answer the user question.
+The tool result is then fed back to the LLM to answer the user question.
 
 ```python focus={4,6-7}
 Response(model='gpt-5-nano-2025-08-07', object='response', output=[
