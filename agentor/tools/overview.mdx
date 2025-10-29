@@ -81,3 +81,41 @@ Response(model='gpt-5-nano-2025-08-07', object='response', output=[
 )
 ```
 
+## Tool Calling Flow
+
+The following diagram illustrates the complete flow of tool calling with an LLM:
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Developer
+    participant LLM
+    participant Tool
+
+    User->>Developer: Asks question
+    Note over User,Developer: "What is the weather in London?"
+    
+    Developer->>LLM: Sends user query + tool schema
+    Note over Developer,LLM: Query + function definitions
+    
+    LLM->>LLM: Analyzes query & determines tool needed
+    
+    LLM->>Developer: Returns tool call (JSON)
+    Note over LLM,Developer: {"name": "get_weather",<br/>"arguments": {"location": "London, UK"}}
+    
+    Developer->>Tool: Executes tool with arguments
+    Note over Developer,Tool: Calls get_weather() function
+    
+    Tool->>Developer: Returns tool result
+    Note over Tool,Developer: {"temp": "15°C", "condition": "Cloudy"}
+    
+    Developer->>LLM: Sends tool result back to LLM
+    Note over Developer,LLM: Tool execution response
+    
+    LLM->>Developer: Generates final answer
+    Note over LLM,Developer: Natural language response
+    
+    Developer->>User: Displays answer to user
+    Note over Developer,User: "The weather in London is 15°C and cloudy"
+```
+
