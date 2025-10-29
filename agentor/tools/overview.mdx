@@ -15,16 +15,17 @@ With access to tools and APIs, LLMs can perform tasks and actions that impact th
 
 ## What is an LLM Tool?
 
-When we say "tool", we mean a function that can be called by an LLM to perform a task or action.
+When we say **"tool"**, we mean a function that can be called by an LLM to perform a task or action.
 But how does an LLM know how to call a tool?
 
 
-<Tip>The LLM doesn't call the tool directly, it only returns a JSON object with the tool details and the arguments to call the tool.</Tip>
-
 ![tool-use-tutorial-1](./tool-use-tutorial-1.svg)
 
+<Tip>The LLM doesn't call the tool directly, it only returns a JSON object with the tool details and the arguments to call the tool.</Tip>
 
-## Tool calling with OpenAI API
+
+
+### Tool calling with OpenAI API
 
 LLMs first need to know the details of the tool to call it.
 This is done by providing a <Tooltip tip="A tool schema is a JSON object containing the details of the function and its arguments">tool schema</Tooltip> to the LLM.
@@ -60,7 +61,9 @@ weather_tool_schema = {
 client = OpenAI()
 
 response = client.responses.create(
-    model="gpt-5-nano", input="What is the weather in London?", tools=[weather_tool_schema]
+    model="gpt-5-nano",
+    input="What is the weather in London?",
+    tools=[weather_tool_schema],  #[!code ++]
 )
 print(response.content)
 ```
@@ -84,10 +87,11 @@ Response(model='gpt-5-nano-2025-08-07', object='response', output=[
 )
 ```
 
-## Tool Calling Flow
+### Tool Calling Flow
 
 The following diagram illustrates the complete flow of tool calling with an LLM:
 
+<Card>
 ```mermaid
 sequenceDiagram
     participant User
@@ -121,6 +125,7 @@ sequenceDiagram
     Developer->>User: Displays answer to user
     Note over Developer,User: "The weather in London is 15°C and cloudy"
 ```
+</Card>
 
 
 ## MCP Server
