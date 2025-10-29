@@ -119,3 +119,31 @@ sequenceDiagram
     Note over Developer,User: "The weather in London is 15°C and cloudy"
 ```
 
+
+## Tool use with Agentor
+
+**[Agentor](https://github.com/CelestoAI/agentor)** simplifies the tool use process by automatically generating the tool schema from the tool function, parsing the function signature and calling the function with the arguments.
+
+To use a tool with Agentor, you need to define a function and decorate it with the `function_tool` decorator.
+
+```python
+from agentor import Agentor, function_tool
+
+@function_tool
+def get_weather(city: str):
+    """Get the weather of city"""
+    return f"Weather in {city} is sunny"
+
+agent = Agentor(name="Weather Agent", tools=[get_weather])
+agent.run("What is the weather in London?")
+print(result)
+```
+
+The result will be the weather in London.
+
+```markdown
+RunResult:
+- Last agent: Agent(name="Weather Agent", ...)
+- Final output (str):
+    London weather: sunny right now. Would you like the temperature or a short forecast?
+```
