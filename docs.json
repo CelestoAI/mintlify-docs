@@ -33,9 +33,9 @@
             "group": "Tool use and MCP Servers",
             "icon": "tools",
             "pages": [
-              "agentor/tool-use-mcp-servers",
-              "agentor/02-LiteMCP",
-              "agentor/LiteMCP-as-fastapi-router"
+              "agentor/tools/overview",
+              "agentor/tools/01-LiteMCP",
+              "agentor/tools/02-LiteMCP-as-fastapi-router"
             ]
           },
           {
