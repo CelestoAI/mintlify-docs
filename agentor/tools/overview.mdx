@@ -5,9 +5,9 @@ description: "Learn about how LLMs make use of tools and MCP Servers."
 ---
 
 Large Language Models (LLMs) can answer most user questions but they can't access or affect the real world.
-
 With access to tools and APIs, LLMs can perform tasks and actions that impact the real world such as booking a flight, sending an email, or updating a database.
 
+In this section, we will learn about how LLMs make use of tools and what are MCP Servers. You can skip to the next section to learn about [tool use with Agentor](./tool-use).
 
 <Card title="Weather Agent Example" img="./overview.png">
   ChatGPT accesses weather using an external API.
@@ -128,8 +128,16 @@ sequenceDiagram
 </Card>
 
 
-## MCP Server
+## MCP (Model Context Protocol) Server
 
-MCP Server
+MCP (Model Context Protocol) is standard for communicating with LLMs that allows them to access external tools, APIs and other resources.
 
 ![mcp](https://mintcdn.com/mcp/bEUxYpZqie0DsluH/images/mcp-simple-diagram.png?w=1650&fit=max&auto=format&n=bEUxYpZqie0DsluH&q=85&s=a131a609c7b6a70f342f493bbad57fcb)
+
+
+Let's understand the "why" behind MCP with a comparison between MCP and without MCP.
+
+| **Without MCP** | **MCP** |
+|-----------------|---------|
+| Developers need to implement the tool calling logic in the application. | A prebuilt MCP Server can be just plugged in to the LLM to provide tools and APIs. |
+| Developers need to implement integrations logic for all external tools such as weather API, email API, etc. | Think of MCP like a USB-C port for AI applications. |

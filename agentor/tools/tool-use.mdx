@@ -1,19 +1,22 @@
 ---
-title: "Tool-use and MCP Server with Agentor"
+title: "Tool use with Agentor"
 sidebarTitle: "Tool use with Agentor"
-description: "Learn about tool-use with Agentor."
+description: "Learn about tool use with Agentor."
 ---
 
 
-**[Agentor](https://github.com/CelestoAI/agentor)** simplifies the tool use process by automatically generating the tool schema from the tool function, parsing the function signature and calling the function with the arguments.
+**[Agentor](https://github.com/CelestoAI/agentor)** simplifies the [tool use](./overview) process by automatically
+generating the tool schema from the function definition, parsing the function signature and calling the function when required.
 
-To use a tool with Agentor, you need to define a function and decorate it with the `function_tool` decorator.
+
+To create an Agent with access to external tools or APIs, you need to define a function and decorate it with the `@function_tool` decorator.
+
 
 ```python
 from agentor import Agentor, function_tool
 
 @function_tool
-def get_weather(city: str):
+def get_weather(city: str) -> str:
     """Get the weather of city"""
     return f"Weather in {city} is sunny"
 
