@@ -1,14 +1,17 @@
 ---
-title: "Tool-use and MCP Server with Agentor"
+title: "Tool-use and MCP Server"
 sidebarTitle: "Overview"
-description: "Learn about tool-use and MCP Servers with Agentor."
+description: "Learn about how LLMs make use of tools and MCP Servers."
 ---
-
 
 Large Language Models (LLMs) can answer most user questions but they can't access or affect the real world.
 
 With access to tools and APIs, LLMs can perform tasks and actions that impact the real world such as booking a flight, sending an email, or updating a database.
 
+
+<Card title="Weather Agent Example" img="./overview.png">
+  ChatGPT accesses weather using an external API.
+</Card>
 
 ## What is an LLM Tool?
 
@@ -120,30 +123,8 @@ sequenceDiagram
 ```
 
 
-## Tool use with Agentor
+## MCP Server
 
-**[Agentor](https://github.com/CelestoAI/agentor)** simplifies the tool use process by automatically generating the tool schema from the tool function, parsing the function signature and calling the function with the arguments.
+MCP Server
 
-To use a tool with Agentor, you need to define a function and decorate it with the `function_tool` decorator.
-
-```python
-from agentor import Agentor, function_tool
-
-@function_tool
-def get_weather(city: str):
-    """Get the weather of city"""
-    return f"Weather in {city} is sunny"
-
-agent = Agentor(name="Weather Agent", tools=[get_weather])
-agent.run("What is the weather in London?")
-print(result)
-```
-
-The result will be the weather in London.
-
-```markdown
-RunResult:
-- Last agent: Agent(name="Weather Agent", ...)
-- Final output (str):
-    London weather: sunny right now. Would you like the temperature or a short forecast?
-```
+![mcp](https://mintcdn.com/mcp/bEUxYpZqie0DsluH/images/mcp-simple-diagram.png?w=1650&fit=max&auto=format&n=bEUxYpZqie0DsluH&q=85&s=a131a609c7b6a70f342f493bbad57fcb)
