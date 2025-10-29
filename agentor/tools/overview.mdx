@@ -23,6 +23,10 @@ But how does an LLM know how to call a tool?
 
 ## Tool calling with OpenAI API
 
+LLMs first need to know the details of the tool to call it.
+This is done by providing a <Tooltip tip="A tool schema is a JSON containing the details of the function and its arguments">tool schema</Tooltip> to the LLM.
+
+In the following example, we define a tool schema for a weather API function that retrieves the current weather for a given location.
 
 ```python
 from openai import OpenAI
@@ -57,3 +61,23 @@ response = client.responses.create(
 )
 print(response.content)
 ```
+
+The LLM will respond with a JSON containing the _**tool name**_ and the _**arguments**_ to call the tool.
+It's the job of the developer to implement the tool and call it with the arguments.
+The tool result it then fed back to the LLM to answer the user question.
+
+```python focus={4,6-7}
+Response(model='gpt-5-nano-2025-08-07', object='response', output=[
+    ResponseReasoningItem(summary=[], type='reasoning', content=None, encrypted_content=None, status=None),
+    ResponseFunctionToolCall(
+        arguments='{"location":"London, United Kingdom","units":"celsius"}',
+        call_id='call_d1K7mBkbN62s4MChtPOkpckW',
+        name='get_weather',
+        type='function_call',
+        id='fc_0945c6bd7187945700690166502f7881978963e94cbe4d4ee5',
+        status='completed'
+    )
+]
+)
+```
+
