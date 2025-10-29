@@ -1,12 +1,12 @@
 ---
-title: "LitMCP and FastAPI APIRouter"
+title: "LiteMCP and FastAPI APIRouter"
 sidebarTitle: "LiteMCP ❤️ FastAPI APIRouter"
 description: "Build MCP Servers with a FastAPI APIRouter."
 ---
 
 Build MCP Servers with a FastAPI APIRouter.
 
-````python
+```python
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from agentor.mcp import MCPAPIRouter
@@ -55,7 +55,7 @@ app.include_router(mcp_router.get_fastapi_router())
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
-````
+```
 
 You can test your MCP Server with an interactive UI called [MCP Inspector](https://github.com/modelcontextprotocol/inspector):
 
