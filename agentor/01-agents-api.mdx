@@ -79,6 +79,45 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
+The response is streamed as a JSON object with the following fields:
+- `type`: The type of event.
+- `message`: The message from the Agent.
+- `chunk`: The chunk of the message.
+- `tool_action`: The tool action from the Agent.
+- `reasoning`: The reasoning from the Agent.
+- `raw_event`: The raw event from the Agent.
+
+<Expandable title="output">
+
+```python
+{
+    'type': 'run_item_stream_event', 
+    'message': "{'tool_id': None, 'tool_name': 'current-weather', 'output': {'location': {'name': 'Tokyo', 'region': 'Tokyo', 'country': 'Japan', 'lat': 35.6895, 'lon': 139.6917, 'tz_id': 'Asia/Tokyo', 'localtime_epoch': 1761694721, 'localtime': '2025-10-29 08:38'}, 'current': {'last_updated_epoch': 1761694200, 'last_updated': '2025-10-29 08:30', 'temp_c': 14.1, 'temp_f': 57.4, 'is_day': 1, 'condition': {'text': 'Partly cloudy', 'icon': '//cdn.weatherapi.com/weather/64x64/day/116.png', 'code': 1003}, 'wind_mph': 7.4, 'wind_kph': 11.9, 'wind_degree': 37, 'wind_dir': 'NE', 'pressure_mb': 1028.0, 'pressure_in': 30.36, 'precip_mm': 0.0, 'precip_in': 0.0, 'humidity': 51, 'cloud': 75, 'feelslike_c': 13.3, 'feelslike_f': 55.9, 'windchill_c': 12.8, 'windchill_f': 55.0, 'heatindex_c': 13.7, 'heatindex_f': 56.6, 'dewpoint_c': 1.7, 'dewpoint_f': 35.1, 'vis_km': 10.0, 'vis_miles': 6.0, 'uv': 0.3, 'gust_mph': 9.6, 'gust_kph': 15.4}}, 'error': None}", 'chunk': None, 'tool_action': {'name': 'dict', 'type': 'tool_output'}, 
+    'reasoning': None, 
+    'raw_event': None
+}
+
+{
+    'type': 'run_item_stream_event', 
+    'message': None, 
+    'chunk': None, 
+    'tool_action': None, 
+    'reasoning': '', 
+    'raw_event': None
+}
+
+{
+    'type': 'run_item_stream_event', 
+    'message': 'Here’s the current weather in Tokyo:\n\n- Condition: Partly cloudy\n- Temperature: 14.1°C (57.4°F), feels like 13.3°C\n- Humidity: 51%\n- Wind: NE at 11.9 km/h (7.4 mph), gusts up to 15.4 km/h (9.6 mph)\n- Pressure: 1028 mb (30.36 in)\n- Precipitation: 0.0 mm\n- Visibility: 10 km\n- UV index: 0.3 (low)\n- Local time: 08: 38 (Japan Time), data as of 08: 30 local\n\nWould you like a short forecast or a weather alert for Tokyo?', 
+    'chunk': None, 
+    'tool_action': None, 
+    'reasoning': None, 
+    'raw_event': None
+}
+```
+
+</Expandable>
+
 
 ## Serve the Agent
 
@@ -93,9 +132,43 @@ agent = Agentor(name="Weather Agent", model="gpt-5-mini", tools=["get_weather"])
 agent.serve(port=8000)   # [!code ++]
 ```
 
-<RequestExample>
+To query your Agent server:
 
-```bash
+<CodeGroup>
+```python Local Deployment
+import requests
+
+URL = "http://localhost:8000/chat"
+
+response = requests.post(
+    URL,
+    json={"input": "how are you?"},
+    headers={"Content-Type": "application/json"}
+)
+print(response.content)
+```
+
+```python Cloud Deployment
+import os
+import requests
+
+URL = "https://api.celesto.ai/v1/deploy/apps/APP-ID/chat"
+CELESTO_API_KEY = os.environ.get("CELESTO_API_KEY")
+
+headers = {
+    "Authorization": f"Bearer {CELESTO_API_KEY}",
+    "Content-Type": "application/json",
+}
+
+response = requests.post(
+    URL,
+    json={"input": "how are you?"},
+    headers=headers,
+)
+print(response.content)
+```
+
+```bash cURL
 curl -X 'POST' \
   'http://localhost:8000/chat' \
   -H 'accept: application/json' \
@@ -104,5 +177,4 @@ curl -X 'POST' \
   "input": "What is the weather in London?"
 }'
 ```
-
-</RequestExample>
+</CodeGroup>

@@ -117,5 +117,9 @@
     "posthog": {
       "apiKey": "phc_dyOMKfao22XaWXamm8UVxmlbW78jgvL0ArZGZghqtmD"
     }
-  }
+  },
+  "banner": {
+  "content": "🚀 Agentor is now live! See our [GitHub repository](https://github.com/CelestoAI/agentor) for details.",
+  "dismissible": true 
+}
 }
