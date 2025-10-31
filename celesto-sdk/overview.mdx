@@ -1,0 +1,141 @@
+---
+title: 'Celesto SDK Overview'
+description: 'The CelestoSDK is the Python client for interacting with the Celesto AI platform programatically.'
+---
+
+
+## Authentication and Initialization
+
+The SDK uses cookie-based authentication with Bearer token format. The API key is passed as a cookie named `access_token` with value `Bearer {api_key}`.
+
+```python
+from agentor import CelestoSDK
+
+# Using explicit API key
+client = CelestoSDK(api_key="sk-your-api-key-here")
+```
+
+
+## ToolHub
+
+### `list_tools`
+Retrieves the catalog of available managed tools.
+
+```python
+tools = client.toolhub.list_tools()
+# Returns: {"tools": [{"name": "get_weather", "description": "...", ...}, ...]}
+```
+
+### `run_weather_tool`
+
+Executes the weather tool to retrieve current weather data for a specified city.
+
+```python
+weather = client.toolhub.run_weather_tool("London")
+# Returns: {"error": None, "data": {...weather data...}}
+```
+
+### `list_google_emails`
+
+Lists all emails from the user's Gmail account.
+
+```python
+emails = client.toolhub.run_list_google_emails(limit=5)
+```
+
+
+## Deployment
+
+```python
+from pathlib import Path
+from agentor import CelestoSDK
+
+# Initialize SDK
+client = CelestoSDK(api_key="sk-your-api-key")
+
+# === ToolHub Operations ===
+
+# List available tools
+tools = client.toolhub.list_tools()
+print(f"Available tools: {len(tools['tools'])}")
+
+# Execute weather tool
+weather = client.toolhub.run_weather_tool("San Francisco")
+print(f"Weather: {weather}")
+
+# Execute Gmail tools (requires Google OAuth setup)
+emails = client.toolhub.run_list_google_emails(limit=3)
+print(f"Recent emails: {len(emails)}")
+
+client.toolhub.run_send_google_email(
+    to="user@example.com",
+    subject="Hello from Agentor",
+    body="This email was sent via CelestoSDK"
+)
+
+# === Deployment Operations ===
+
+# Deploy an agent
+deployment = client.deployment.deploy(
+    folder=Path("./my-weather-agent"),
+    name="weather-agent-prod",
+    description="Production weather assistant",
+    envs={
+        "OPENAI_API_KEY": "sk-...",
+        "LOG_LEVEL": "INFO"
+    }
+)
+
+print(f"Deployment ID: {deployment['id']}")
+print(f"Status: {deployment['status']}")
+
+# List all deployments
+all_deployments = client.deployment.list()
+for dep in all_deployments:
+    print(f"{dep['name']}: {dep['status']} (created: {dep['created_at']})")
+```
+
+### `deploy`
+The `Deployment` client manages the agent deployment lifecycle, including packaging, uploading, and listing deployed applications.
+
+
+Signature: `deploy(folder: Path, name: str, description: Optional[str] = None, envs: Optional[dict[str, str]] = None) -> dict`
+
+**Parameters:**
+
+- `folder (Path)`: Path to directory containing agent code
+- `name (str)`: Deployment name (must be unique)
+- `description (str, optional)`: Human-readable deployment description
+- `envs (dict[str, str], optional)`: Environment variables as key-value pairs
+
+
+```python
+from pathlib import Path
+
+result = client.deployment.deploy(
+    folder=Path("./my-agent"),
+    name="weather-agent-v1",
+    description="Weather assistant",
+    envs={"OPENAI_API_KEY": "sk-..."}
+)
+
+print(f"Deployment ID: {result['id']}")
+print(f"Status: {result['status']}")
+```
+
+**Returns:** Dictionary with deployment metadata including:
+
+- `id`: Unique deployment identifier
+- `status`: Deployment status ("BUILDING", "READY", "FAILED")
+- `url`: Endpoint URL (when status is "READY")
+
+
+### List deployments
+Retrieves all deployments associated with the authenticated account.
+
+```python
+deployments = client.deployment.list()
+
+for dep in deployments:
+    print(f"{dep['name']}: {dep['status']}")
+```

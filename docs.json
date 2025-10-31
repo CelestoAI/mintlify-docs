@@ -40,9 +40,10 @@
             ]
           },
           {
-            "group": "SuperAuth",
-            "icon": "key",
+            "group": "Guides",
+            "icon": "map",
             "pages": [
+              "celesto-sdk/overview",
               "superauth/google-oauth-setup"
             ]
           }
