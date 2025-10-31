@@ -50,10 +50,10 @@
         ]
       },
       {
-        "tab": "Tutorials",
+        "tab": "Use cases",
         "icon": "compass",
         "pages": [
-          "tutorials/welcome"
+          "enterprise/use-cases/quickstart"
         ]
       }
     ],
