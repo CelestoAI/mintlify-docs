@@ -29,29 +29,23 @@ pip install agentor
 Once installed, you can start building your first Agent with just a few lines of code.
 
 ```python
-from agentor import Agentor, function_tool
-
-@function_tool
-def get_weather(city: str):
-    """Get the weather of city"""
-    return f"Weather in {city} is sunny"
+from agentor import Agentor
 
 agent = Agentor(
     name="Weather Agent",
-    tools=[get_weather],  # Bring your own tool, or [!code --]
-    tools=["get_weather"],  # 100+ Celesto AI managed tools — plug-and-play [!code ++]
+    tools=["get_weather"],  # 100+ Celesto AI managed tools — plug-and-play
 )
 result = agent.run("What is the weather in London?")
 ```
 </Step>
 
 
-<Step title="Serve locally or on cloud">
+<Step title="Run the Agent as a server">
 
-Add a single line of code to turn Agent into a Server that can be queried locally or on cloud. 
+Agents can be run as a server to be integrated into other applications such as UI applications, or other LLM applications.
 
 ```python
-from agentor import Agentor, function_tool
+from agentor import Agentor
 
 agent = Agentor(name="Weather Agent", tools=["get_weather"])
 agent.serve() # Single line of code to serve the Agent [!code ++]
@@ -66,7 +60,17 @@ agent.serve() # Single line of code to serve the Agent [!code ++]
 You can query your Agent server with a simple curl command.
 
 <CodeGroup>
-```python Local Deployment
+```bash cURL
+curl -X 'POST' \
+  'http://localhost:8000/chat' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "input": "What is the weather in London?"
+}'
+```
+
+```python Python Requests
 import requests
 
 response = requests.post(
@@ -77,7 +81,7 @@ response = requests.post(
 print(response.content)
 ```
 
-```python Cloud Deployment
+```python Cloud
 import os
 import requests
 
@@ -96,16 +100,6 @@ response = requests.post(
 )
 print(response.content)
 ```
-
-```bash cURL
-curl -X 'POST' \
-  'http://localhost:8000/chat' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -d '{
-  "input": "What is the weather in London?"
-}'
-```
 </CodeGroup>
 
 </Step>
@@ -113,7 +107,12 @@ curl -X 'POST' \
 </Steps>
 
 
+## Next steps
 
-## License
+<Card title="Build an Agent" icon="robot" horizontal href="/agentor/01-agents-api">
+  Learn how to build an Agent with tools.
+</Card>
 
-Apache 2.0 License — see [LICENSE](https://github.com/CelestoAI/agentor/blob/main/LICENSE) for details.
+<Card title="Build an MCP Server" icon="bolt" horizontal href="/agentor/tools/overview">
+  Learn how to add capabilities to your Agent with MCP Servers.
+</Card>

@@ -70,9 +70,7 @@ import asyncio
 agent = Agentor(name="Weather Agent", tools=["get_weather"])
 
 async def main():
-    async for event in agent.stream_chat(
-        "How is the weather in Tokyo?",
-    ):
+    async for event in agent.stream_chat("How is the weather in Tokyo?"):
         print(event, flush=True)
 
 if __name__ == "__main__":
