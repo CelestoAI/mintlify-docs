@@ -10,7 +10,8 @@ A2A solves the problem of Agents not being able to communicate with each other b
 Source: [A2A Protocol](https://a2a-protocol.org)
 </Card>
 
-**A2A Protocol** defines the specifications for communicating with Agents and the format of the messages exchanged between Agents.
+The **A2A Protocol** defines standard specifications for Agent communication and message formatting, enabling seamless interoperability between different AI agents.
+
 
 ## Highlights
 
@@ -20,7 +21,7 @@ Source: [A2A Protocol](https://a2a-protocol.org)
 - Multiple transport protocols supported: `JSON-RPC`, `gRPC`, and `HTTP + REST`.
 
 
-## Key concepts
+## Key Concepts
 
 The A2A protocol is comprehensive, and we will cover the most important concepts here.
 
@@ -28,11 +29,10 @@ The A2A protocol is comprehensive, and we will cover the most important concepts
 
 Every Agent **must** expose an Agent Card, a JSON object that describes the Agent's identity, capabilities, skills, service endpoint URL, and how clients should authenticate and interact with it.
 
-
 It is recommended to expose the Agent Card at the endpoint `https://{server_url}/.well-known/agent-card.json`
 
 
-### Protocol methods
+### Protocol Methods
 
 1. `message/send`
 2. `message/stream`
@@ -42,13 +42,27 @@ It is recommended to expose the Agent Card at the endpoint `https://{server_url}
 
 ## A2A with Agentor
 
-Agentor implements the A2A protocol and makes it easy to convert any Agent into an A2A-compatible Agent.
+Agentor provides built-in A2A support, making it effortless to create agents that can discover, communicate, and collaborate with other A2A-compatible agents.
+
+### Key Features
+- **Agent Discovery**: Automatic agent card generation at `/.well-known/agent-card.json` describing agent capabilities, skills, and endpoints
+- **Standard Communication**: JSON-RPC based messaging with support for both streaming and non-streaming responses
+- **Rich Interactions**: Built-in support for tasks, status updates, and artifact sharing between agents
 
 The following example shows how to create an Agent and serve it as an A2A-compatible Agent.
 
 ```python
 from agentor import Agentor
 
-agent = Agentor(name="Weather Agent", tools=["get_weather"])
-agent.serve()
+agent = Agentor(
+    name="Weather Agent",
+    model="gpt-5",
+    tools=["get_weather"],
+)
+
+# Serve agent with A2A protocol enabled automatically
+agent.serve(port=8000)
+# Agent card available at: http://localhost:8000/.well-known/agent-card.json
 ```
+
+Any agent served with `agent.serve()` automatically becomes A2A-compatible with standardized endpoints for message sending, streaming, and task management.
