@@ -4,22 +4,22 @@ sidebarTitle: "Agent to Agent (A2A)"
 ---
 
 Agents can collaborate to perform complex tasks by communicating with each other.
-A2A solves the problem of Agents not being able to communicate with each other due to everyone having their own unique API.
+A2A solves the problem of Agents not being able to communicate with each other because each Agent has its own unique API.
 
-It defines the specifications for communicating with Agents, and the format of the messages exchanged between agents.
+It defines the specifications for communicating with Agents and the format of the messages exchanged between Agents.
 
 
 ## 💡 Highlights
 
-- Supports both immediate responses and long running tasks.
+- Supports both immediate responses and long-running tasks.
 - Agents can discover each other via an **Agent Card**.
 - Defines security and authentication mechanisms.
-- Multiple Transport protocols supported: `JSON-RPC`, `gRPC` and `HTTP + REST`.
+- Multiple transport protocols supported: `JSON-RPC`, `gRPC`, and `HTTP + REST`.
 
 
 ## Key concepts
 
-A2A protocol is quite exhaustive and we will try to cover the most important ones here.
+The A2A protocol is comprehensive, and we will cover the most important concepts here.
 
 ### Agent Discovery: The Agent Card
 
@@ -39,9 +39,9 @@ It is recommended to expose the Agent Card at the endpoint `https://{server_url}
 
 ## A2A with Agentor
 
-Agentor implements the A2A protocol and makes it easy to convert any Agent into an A2A compatible Agent.
+Agentor implements the A2A protocol and makes it easy to convert any Agent into an A2A-compatible Agent.
 
-The following example shows how to create an Agent and serve it as an A2A compatible Agent.
+The following example shows how to create an Agent and serve it as an A2A-compatible Agent.
 
 ```python
 from agentor import Agentor
