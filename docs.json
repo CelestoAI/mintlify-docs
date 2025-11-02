@@ -53,10 +53,10 @@
         "tab": "Use cases",
         "icon": "compass",
         "pages": [
-          "enterprise/use-cases/customer-support-agent",
-          "enterprise/use-cases/ecommerce-agent",
-          "enterprise/use-cases/human-resource-agent",
-          "enterprise/use-cases/SDR-agent"
+          "enterprise/use-cases/customer-support-Agent",
+          "enterprise/use-cases/ecommerce-Agent",
+          "enterprise/use-cases/human-resource-Agent",
+          "enterprise/use-cases/SDR-Agent"
         ]
       }
     ],
