@@ -8,6 +8,16 @@ A2A solves the problem of Agents not being able to communicate with each other b
 
 It defines the specifications for communicating with Agents and the format of the messages exchanged between Agents.
 
+```mermaid
+graph LR
+  A[🤖 AI Assistant]:::main --> B[✈️ Flight Booking Agent]:::sub
+  A --> C[🏨 Hotel Reservation Agent]:::sub
+  A --> D[💱 Currency Conversion Agent]:::sub
+  A --> E[🚌 Local Tours Agent]:::sub
+  
+  classDef main fill:#FF5722,stroke:#FF5722,color:#fff,font-weight:bold;
+  classDef sub fill:#fafafa,stroke:#FF5722,color:#333,rx:8,ry:8;
+```
 
 ## Highlights
 
@@ -29,7 +39,7 @@ Every Agent **must** expose an Agent Card, a JSON object that describes the Agen
 It is recommended to expose the Agent Card at the endpoint `https://{server_url}/.well-known/agent-card.json`
 
 
-### Protocol methods:
+### Protocol methods
 
 1. `message/send`
 2. `message/stream`
