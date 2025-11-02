@@ -8,7 +8,7 @@ description: "Build, secure, and deploy production-ready AI agents with Celesto"
 
 <Columns cols={2} gap={32}>
   <div style={{ flex: 3, display: "flex", alignItems: "center" }}>
-    Celesto is an open-source platform that helps you build, secure, and scale agentic applications. Connect to 100+ tools via MCP servers, add enterprise-grade security layers, and deploy agents that communicate seamlessly.
+    Celesto scales your Agentic application and adds a security layer for MCP tools and agent-to-agent communication. Connect to external data using 100+ tools.
   </div>
   <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center" }}>
     <img src="/assets/undraw_stars_5pgw.svg" alt="Celesto AI Platform" width="240" />
@@ -32,8 +32,8 @@ description: "Build, secure, and deploy production-ready AI agents with Celesto"
   <Card title="🚀 Fast Development" icon="code">
     Build agents with simple Python APIs. No complex infrastructure setup required.
   </Card>
-  <Card title="🔒 Enterprise Security" icon="shield">
-    Built-in OAuth, authentication, and secure agent-to-agent communication.
+  <Card title="🔒 A2A Security" icon="shield">
+    Built-in OAuth, authentication, and secure *Agent-to-Agent* communication.
   </Card>
   <Card title="🔌 100+ Integrations" icon="plug">
     Connect to databases, APIs, and external services via MCP protocol.
@@ -44,14 +44,14 @@ description: "Build, secure, and deploy production-ready AI agents with Celesto"
 
 ## Quick Example
 
-Build an AI agent with tool access in just a few lines:
+Build an AI Agent with tool access in just a few lines:
 
 ```python
 from agentor import Agent
 
 agent = Agent(
     name="research_assistant",
-    model="gpt-4",
+    model="gpt-5",
     tools=["web_search"]
 )
 
@@ -70,130 +70,24 @@ Check out our [Quickstart Guide](/agentor/overview) to build your first agent in
 
 <CardGroup cols={2}>
   <Card title="Agentor - Build Agents" icon="robot" href="/agentor/overview">
-    Open-source Python library for building and deploying agentic systems with LLMs.
-    
-    - Simple Agent API
-    - Multi-agent orchestration
-    - Built-in memory and context
-    - Streaming responses
+    Open-source Python library for building and deploying agentic systems with LLMs. Simple Agent API with multi-agent orchestration, built-in memory, and streaming responses.
   </Card>
   
   <Card title="SuperAuth - Security Layer" icon="lock" href="/superauth/google-oauth-setup">
-    Add enterprise-grade security for MCP tools and agent communication.
-    
-    - OAuth 2.0 integration
-    - Role-based access control
-    - Secure credential management
-    - Audit logging
+    Add enterprise-grade security for MCP tools and agent communication. OAuth 2.0 integration, role-based access control, and secure credential management.
   </Card>
   
   <Card title="Tool Use & MCP Servers" icon="wrench" href="/agentor/tools/overview">
-    Access 100+ prebuilt tools via Celesto Tool Hub for real-time integrations.
-    
-    - LiteMCP lightweight servers
-    - Database connectors
-    - API integrations
-    - Custom tool creation
+    Access 100+ prebuilt tools via Celesto Tool Hub for real-time integrations. LiteMCP lightweight servers, database connectors, API integrations, and custom tool creation.
   </Card>
   
   <Card title="Deploy Anywhere" icon="cloud" href="https://celesto.ai/">
-    Deploy your agents with the Celesto CLI or integrate into existing infrastructure.
-    
-    - One-command deployment
-    - Auto-scaling support
-    - Monitoring & observability
-    - CI/CD integration
+    Deploy your agents with the Celesto CLI or integrate into existing infrastructure. One-command deployment with auto-scaling, monitoring, and CI/CD support.
   </Card>
 </CardGroup>
 
 ---
 
-## Popular Use Cases
-
-<AccordionGroup>
-  <Accordion title="🎯 Customer Support Agents" icon="headset">
-    Build intelligent support agents that can:
-    - Answer customer queries using your knowledge base
-    - Access CRM data and order history
-    - Escalate to human agents when needed
-    - Available 24/7 with consistent responses
-    
-    [View Customer Support Guide](/enterprise/use-cases/customer-support-Agent)
-  </Accordion>
-  
-  <Accordion title="💼 Sales & SDR Agents" icon="chart-line">
-    Automate sales workflows with agents that:
-    - Qualify leads automatically
-    - Schedule meetings and send follow-ups
-    - Research prospects and companies
-    - Personalize outreach at scale
-    
-    [View SDR Agent Guide](/enterprise/use-cases/SDR-Agent)
-  </Accordion>
-  
-  <Accordion title="🛒 E-commerce Assistants" icon="shopping-cart">
-    Create shopping assistants that:
-    - Help customers find products
-    - Provide personalized recommendations
-    - Handle order tracking and returns
-    - Integrate with inventory systems
-    
-    [View E-commerce Guide](/enterprise/use-cases/ecommerce-Agent)
-  </Accordion>
-  
-  <Accordion title="👥 HR & Recruiting Agents" icon="users">
-    Build HR agents that:
-    - Screen resumes and schedule interviews
-    - Answer employee policy questions
-    - Onboard new hires automatically
-    - Manage time-off requests
-    
-    [View HR Agent Guide](/enterprise/use-cases/human-resource-Agent)
-  </Accordion>
-</AccordionGroup>
-
----
-
-## Get Started
-
-<Steps>
-  <Step title="Install Celesto">
-    Install the Celesto SDK using pip:
-    
-    ```bash
-    pip install celesto-ai
-    ```
-  </Step>
-  
-  <Step title="Build Your First Agent">
-    Create a simple agent with our quickstart guide:
-    
-    <CardGroup cols={2}>
-      <Card title="Quickstart Tutorial" icon="book" href="/agentor/overview">
-        Step-by-step guide to build your first agent
-      </Card>
-      <Card title="API Reference" icon="code" href="/agentor/01-agents-api">
-        Complete API documentation
-      </Card>
-    </CardGroup>
-  </Step>
-  
-  <Step title="Add Tools & Deploy">
-    Connect tools and deploy to production:
-    
-    <CardGroup cols={2}>
-      <Card title="Tool Integration" icon="plug" href="/agentor/tools/overview">
-        Add MCP tools to your agents
-      </Card>
-      <Card title="Deploy Guide" icon="rocket" href="https://celesto.ai/">
-        Deploy with the Celesto CLI
-      </Card>
-    </CardGroup>
-  </Step>
-</Steps>
-
----
-
-<Card title="Need Help?" icon="question" href="https://github.com/celesto-ai/discussions">
-  Join our community discussions or reach out to our team for support.
+<Card title="Need Help?" icon="discord" href="https://discord.gg/KNb5UkrAmm">
+  Join our Discord community to get help, share ideas, and connect with other developers.
 </Card>
