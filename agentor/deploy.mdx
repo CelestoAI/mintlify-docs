@@ -1,0 +1,202 @@
+---
+title: "Deploy Agents"
+sidebarTitle: "Deploy Agents"
+---
+
+Deploy your agents to production with Celesto Cloud or self-host on your own infrastructure.
+
+## Deploy to Celesto Cloud
+
+Deploy your agent with a single command using Agentor.
+
+<Steps>
+<Step title="Create Your Agent">
+
+First, create your agent with the tools you need:
+
+```python
+from agentor import Agentor
+
+agent = Agentor(
+    name="Weather Agent",
+    model="gpt-4",
+    tools=["get_weather"]
+)
+```
+</Step>
+
+<Step title="Deploy Your Agent">
+
+Deploy your agent with a single command:
+
+```bash
+agentor deploy
+```
+
+<Accordion title="View deployment output" icon="eye">
+```bash
+✓ Building agent...
+✓ Pushing to Celesto Cloud...
+✓ Deploying agent...
+
+🚀 Agent deployed successfully!
+
+Endpoint: https://api.celesto.ai/v1/apps/your-agent-id
+Dashboard: https://celesto.ai/apps/your-agent-id
+```
+</Accordion>
+
+<Tip>
+Your agent is now live and accessible via the API endpoint. Visit the [dashboard](https://celesto.ai) to monitor performance and manage settings.
+</Tip>
+</Step>
+</Steps>
+
+---
+
+## Self-Hosted Deployment
+
+Deploy agents on your own infrastructure using Docker or Kubernetes.
+
+<Tabs>
+<Tab title="Docker">
+Create a `Dockerfile` in your project:
+
+```dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+EXPOSE 8000
+
+CMD ["python", "agent.py"]
+```
+
+Build and run your container:
+
+```bash
+docker build -t my-agent .
+docker run -p 8000:8000 my-agent
+```
+</Tab>
+
+<Tab title="Kubernetes">
+Create a deployment manifest:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: my-agent
+  template:
+    metadata:
+      labels:
+        app: my-agent
+    spec:
+      containers:
+      - name: agent
+        image: my-agent:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: agent-secrets
+              key: openai-api-key
+```
+
+Deploy to your cluster:
+
+```bash
+kubectl apply -f deployment.yaml
+```
+</Tab>
+</Tabs>
+
+---
+
+## Environment Variables
+
+Set required environment variables for your deployment:
+
+<ParamField path="OPENAI_API_KEY" type="string" required>
+Your LLM provider API key (OpenAI, Anthropic, etc.)
+</ParamField>
+
+<ParamField path="CELESTO_API_KEY" type="string">
+Your Celesto API key for accessing managed tools and services
+</ParamField>
+
+<ParamField path="PORT" type="integer" default="8000">
+Port to run the agent server on
+</ParamField>
+
+<ParamField path="LOG_LEVEL" type="string" default="INFO">
+Logging level: DEBUG, INFO, WARNING, ERROR
+</ParamField>
+
+---
+
+## Monitoring & Logs
+
+<CardGroup cols={2}>
+  <Card title="Celesto Dashboard" icon="chart-line" href="https://celesto.ai">
+    Monitor agent performance, view logs, and track usage metrics in real-time.
+  </Card>
+  
+  <Card title="Health Checks" icon="heart-pulse">
+    Built-in health endpoint at `/health` for monitoring and load balancers.
+  </Card>
+</CardGroup>
+
+<Info>
+For production deployments, we recommend setting up monitoring, logging, and auto-scaling based on your traffic patterns.
+</Info>
+
+---
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Deployment failed or timed out" icon="triangle-exclamation">
+    **Common causes:**
+    - Missing or invalid API keys
+    - Insufficient resources allocated
+    - Network connectivity issues
+    
+    **Solution:** Check your environment variables and ensure your account has sufficient credits.
+  </Accordion>
+  
+  <Accordion title="Agent not responding after deployment" icon="circle-exclamation">
+    **Common causes:**
+    - Environment variables not set correctly
+    - Port conflicts or firewall rules
+    
+    **Solution:** Verify environment variables and check the deployment logs in your [Celesto dashboard](https://celesto.ai).
+  </Accordion>
+  
+  <Accordion title="High latency or slow responses" icon="clock">
+    **Common causes:**
+    - Cold starts on serverless platforms
+    - Insufficient compute resources
+    - LLM provider rate limits
+    
+    **Solution:** Consider upgrading your plan for reserved instances or increase resource allocation.
+  </Accordion>
+</AccordionGroup>
+
+<Card title="Need deployment help?" icon="discord" href="https://discord.gg/KNb5UkrAmm">
+  Join our Discord community for deployment support and best practices.
+</Card>
+
