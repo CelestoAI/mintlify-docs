@@ -26,7 +26,8 @@
             "icon": "robot",
             "pages": [
               "agentor/overview",
-              "agentor/01-agents-api"
+              "agentor/01-agents-api",
+              "agentor/agent-to-agent"
             ]
           },
           {
