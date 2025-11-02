@@ -114,7 +114,7 @@
     "404": {
       "redirect": false,
       "title": "I can't be found",
-      "description": "<img src='./assets/undraw_page-eaten_b2rt.svg'/>"
+      "description": "<img src='/assets/undraw_page-eaten_b2rt.svg'/>"
     }
   },
   "integrations": {
