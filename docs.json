@@ -53,7 +53,10 @@
         "tab": "Use cases",
         "icon": "compass",
         "pages": [
-          "enterprise/use-cases/quickstart"
+          "enterprise/use-cases/customer-support-agent",
+          "enterprise/use-cases/ecommerce-agent",
+          "enterprise/use-cases/human-resource-agent",
+          "enterprise/use-cases/SDR-agent"
         ]
       }
     ],
@@ -80,7 +83,7 @@
       "links": [
         {
           "label": "Support",
-          "href": "mailto:hi@celesto.ai"
+          "href": "mailto:aniket@celesto.ai"
         }
       ],
       "primary": {
