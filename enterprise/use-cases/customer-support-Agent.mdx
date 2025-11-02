@@ -1,37 +1,37 @@
 ---
-description: "A Customer Support Agent is an AI-powered assistant that handles customer queries across chat, email, and support portals. It understands customer intent, fetches answers from your knowledge base, executes workflows like order tracking and refunds, and responds instantly 24/7."
+description: "A Customer Support Agent is an AI-powered assistant that manages customer queries across chat, email, and support portals. It understands intent, fetches information from your knowledge base, executes actions such as order tracking or refunds, and responds instantly across channels."
 title: "What is a Customer Support Agent?"
 ---
 
 ## Why do you need a Customer Support Agent?
 
-Customers today expect instant, contextual, and human-like responses whether it’s about an order, a billing query, or a technical issue.\
-Manual teams, even with the best training, often struggle with:
+Customers expect instant, accurate, and contextual support, whether it involves an order issue, billing question, or technical problem.\
+Traditional support teams face growing limitations when they must:
 
-- Handling repetitive questions (e.g., "Where’s my order?")
-- Scaling support during promotions or high-traffic events
-- Maintaining response consistency and accuracy
-- Switching between multiple tools (CRM, ticketing, KBs, etc.)
+- Answer repetitive questions such as “Where is my order?”
+- Scale during high-traffic periods or promotions
+- Maintain consistent and accurate responses
+- Switch across multiple systems such as CRM, ticketing tools, and knowledge bases
 
-An AI agent bridges this gap and connects your tools to your customers.
+An AI agent connects these systems and provides a unified interface between your tools and your customers.
 
 ## What problems does it solve?
 
 Here’s what a Customer Support Agent can handle in practice:
 
-| Problem            | Without AI                                     | With AI Agent                                           |
-| :----------------- | :--------------------------------------------- | :------------------------------------------------------ |
-| Repetitive queries | Manual responses to FAQs and repetitive issues | Automated instant replies with contextual understanding |
-| Order tracking     | Agent checks systems manually                  | AI fetches order details via APIs                       |
-| Refunds/returns    | Support rep coordinates across systems         | AI triggers refund workflows automatically              |
-| Knowledge search   | Support rep searches KB manually               | AI retrieves relevant info instantly                    |
-| Escalations        | Manual ticket tagging                          | AI routes unresolved cases to human reps                |
+| Problem            | Without AI                                        | With AI Agent                                           |
+| :----------------- | :------------------------------------------------ | :------------------------------------------------------ |
+| Repetitive queries | Manual responses to FAQs and repetitive issues    | Automated instant replies with contextual understanding |
+| Order tracking     | Agent checks systems manually                     | AI fetches order details via APIs                       |
+| Refunds/returns    | Support rep coordinates across systems            | AI triggers refund workflows automatically              |
+| Knowledge search   | Support rep searches Knowledge Base (KB) manually | AI retrieves relevant info instantly                    |
+| Escalations        | Manual ticket tagging                             | AI routes unresolved cases to human reps                |
 
-It also learns from interactions and improves response accuracy over time, reducing dependency on manual training.
+The agent improves accuracy through continuous learning from interactions, reducing manual dependency over time.
 
 ## Build your own Customer Support Agent
 
-With Celesto, you can build a customer support agent quickly.
+Celesto enables rapid creation of a complete support automation layer.
 
 ```
 check
@@ -39,33 +39,32 @@ check
 
 Once configured, your agent can:
 
-- Answer FAQs using your KB
-- Pull live data from your CRM or e-commerce backend
-- Trigger actions like refunds or replacements
+- Answer FAQs using your knowledge base
+- Fetch live data from your CRM or commerce systems
+- Trigger actions such as refunds or replacements
 - Escalate complex cases automatically
 
-That’s an entire support pipeline built in minutes, not months.
+Setup completes within minutes without separate infrastructure or code orchestration.
 
 ## AI customer support with internal knowledge base
 
-Imagine you’re a B2B SaaS company offering workflow automation tools for enterprises.\
-You get 300+ tickets per day from your clients’ IT teams asking:
+Consider a SaaS company receiving hundreds of daily tickets from enterprise clients.\
+Typical queries include:
 
-- “How can I trigger an automation based on form submissions?”
-- “Where do I find the API token for my workspace?”
-- “Can you show me how to connect Slack to TechFlow?”
+- “How do I trigger an automation after a form submission?”
+- “Where can I find the API token?”
+- “How do I connect Slack to my workspace?”
 
-Normally, Level 1 support looks up KB articles and responds manually. This is repetitive and slow.
+Level-1 teams usually handle such cases by searching KB articles manually—slow and repetitive work.
 
-Here’s where your agent steps in.
+With Celesto, the support agent:
 
-It reads your knowledge base, understands your product APIs, and connects to your support tool.\
-When a ticket comes in, it:
+1. Reads incoming queries
+2. Searches the knowledge base and recent resolutions
+3. Drafts precise replies citing KB sources
+4. Either suggests the response to a human agent or auto-responds for verified categories
 
-1. Reads the question
-2. Searches your KB and recent ticket resolutions
-3. Drafts a natural-language reply citing the KB source
-4. Suggests the answer to your human support agent or auto-replies for verified categories
+This process maintains speed and accuracy while reducing manual involvement.
 
 # APPENDIX
 
@@ -81,7 +80,7 @@ Let’s look at what happens without an AI-powered setup:
 | Data analysis  | Manual ticket review      | Excel or BI tools   | Poor visibility             |
 | Escalations    | Manual triage             | Ticketing tool      | Missed SLAs                 |
 
-Manual workflows mean higher cost per ticket and slower customer response times and they don’t scale as your customer base grows.
+Manual processes lead to high cost per ticket and poor scalability.
 
 ## With AI: The Smarter Way
 
@@ -93,16 +92,14 @@ Manual workflows mean higher cost per ticket and slower customer response times 
 | Escalations    | AI detects frustration and routes | Improved CSAT         |
 | Insights       | AI summarizes conversation trends | Actionable analytics  |
 
-AI agents speed up resolution times and reduce operational load so your human agents focus on empathy-driven cases, not repetitive tickets.
+AI agents handle operational load so human teams focus on complex or empathy-driven issues.
 
-## Without Celesto vs. With Celesto
+| Step             | Without Celesto                                      | With Celesto                      |
+| :--------------- | :--------------------------------------------------- | :-------------------------------- |
+| Agent setup      | Build infra, orchestration, tool connectors manually | One-line Agentor initialization   |
+| Tool integration | Custom API plumbing, auth management                 | 100+ prebuilt tools via ToolHub   |
+| Deployment       | Manual setup, servers, scaling issues                | Deploy as REST API in one command |
+| Versioning       | Maintain code manually                               | Automated agent version control   |
+| Monitoring       | Build dashboards                                     | Built-in event logs and metrics   |
 
-| Step              | Without Celesto                                      | With Celesto                      |
-| :---------------- | :--------------------------------------------------- | :-------------------------------- |
-| Agent setup       | Build infra, orchestration, tool connectors manually | One-line Agentor initialization   |
-| Tool integration  | Custom API plumbing, auth management                 | 100+ prebuilt tools via ToolHub   |
-| Deployment        | Manual setup, servers, scaling issues                | Deploy as REST API in one command |
-| Versioning        | Maintain code manually                               | Automated agent version control   |
-| Monitoring        | Build dashboards                                     | Built-in event logs and metrics   |
-
-With Celesto, your Customer Support Agent goes from concept → production in under a day, not weeks.
+Celesto reduces the complete support agent lifecycle from setup to deployment, to under a day.
