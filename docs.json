@@ -66,6 +66,20 @@
     "logo": {
       "light": "https://ik.imagekit.io/gradsflow/celestoai/logo/center-small_iO7tbplXN.png?updatedAt=1758078045506",
       "dark": "https://ik.imagekit.io/gradsflow/celestoai/logo/center-small_iO7tbplXN.png?updatedAt=1758078045506"
+    },
+    "global": {
+      "anchors": [
+        {
+          "anchor": "Try Celesto now",
+          "href": "https://celesto.ai",
+          "icon": "flask"
+        },
+        {
+          "anchor": "GitHub",
+          "href": "https://github.com/celestoai",
+          "icon": "github"
+        }
+      ]
     }
   },
   "navbar": {
@@ -77,7 +91,7 @@
       ],
       "primary": {
         "type": "button",
-        "label": "Try Celesto now",
+        "label": "Home",
         "href": "https://celesto.ai"
       }
     },
