@@ -62,26 +62,13 @@
         ]
       }
     ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Dashboard",
-          "href": "https://celesto.ai",
-          "icon": "dashboard"
-        },
-        {
-          "anchor": "GitHub",
-          "href": "https://github.com/celestoai",
-          "icon": "github"
-        }
-      ]
-    },
     "search": {},
     "logo": {
       "light": "https://ik.imagekit.io/gradsflow/celestoai/logo/center-small_iO7tbplXN.png?updatedAt=1758078045506",
       "dark": "https://ik.imagekit.io/gradsflow/celestoai/logo/center-small_iO7tbplXN.png?updatedAt=1758078045506"
-    },
-    "navbar": {
+    }
+  },
+  "navbar": {
       "links": [
         {
           "label": "Support",
@@ -90,30 +77,19 @@
       ],
       "primary": {
         "type": "button",
-        "label": "Dashboard",
+        "label": "Try Celesto now",
         "href": "https://celesto.ai"
       }
     },
-    "contextual": {
+  "contextual": {
       "options": [
         "copy",
-        "view",
         "chatgpt",
-        "claude",
-        "perplexity",
         "mcp",
         "cursor",
-        "vscode"
+        "claude"
       ]
     },
-    "footer": {
-      "socials": {
-        "x": "https://x.com/celestoai",
-        "github": "https://github.com/celestoai",
-        "linkedin": "https://linkedin.com/company/celestoai"
-      }
-    }
-  },
   "errors": {
     "404": {
       "redirect": false,
@@ -129,5 +105,18 @@
   "banner": {
   "content": "🚀 Agentor is free and open-source! See our [GitHub repository](https://github.com/CelestoAI/agentor) for details.",
   "dismissible": true 
-}
+},
+"fonts": {
+    "heading": {
+      "family": "JetBrains Mono"
+    }
+  },
+"footer": {
+      "socials": {
+        "x": "https://x.com/celestoai",
+        "github": "https://github.com/celestoai",
+        "linkedin": "https://linkedin.com/company/celestoai",
+        "discord": "https://discord.gg/KNb5UkrAmm"
+      }
+    }
 }
