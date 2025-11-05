@@ -1,13 +1,18 @@
 ---
-title: "LiteMCP - Lightweight MCP server"
-sidebarTitle: "LiteMCP - Lightweight MCP Server"
+title: "Build a custom MCP Server"
+sidebarTitle: "Build MCP Server"
+description: "Agents can access internal data sources and APIs with a custom MCP Server."
 ---
 
-`LiteMCP` is a lightweight, ASGI-compatible MCP (Model Context Protocol) server built on top of FastAPI. It provides a simple, decorator-based API for creating MCP servers that can be deployed with any ASGI server.
+
+`Agentor` enables you to build a custom MCP Server as a FastAPI app. You can integrate it with your existing FastAPI app or deploy it as a standalone MCP Server.
 
 <img src="/assets/undraw_mcp-server_7kvc.png" alt="LiteMCP" className="rounded-lg" width="500" />
 
-## Quick Start
+
+## LiteMCP - Lightweight MCP Server
+
+To build MCP Servers with `Agentor`, you can use the `LiteMCP` class.
 
 ```python
 from agentor.mcp import LiteMCP

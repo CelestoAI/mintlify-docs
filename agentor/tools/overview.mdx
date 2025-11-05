@@ -87,7 +87,7 @@ Response(model='gpt-5-nano-2025-08-07', object='response', output=[
 )
 ```
 
-### Tool Calling Flow
+### Tool calling flow
 
 The following diagram illustrates the complete flow of tool calling with an LLM:
 
@@ -130,19 +130,56 @@ sequenceDiagram
 
 ## MCP (Model Context Protocol) Server
 
-The Model Context Protocol (MCP) is a standardized way for LLM applications to interact with external data sources and functionality. MCP servers expose capabilities through three main abstractions:
+The Model Context Protocol (MCP) is a standardized way for LLM applications to interact with external data sources and functionality. MCP servers expose capabilities through three main abstractions: **Tools**, **Resources**, and **Prompts**.
 
-**Tools** - Executable functions that perform actions and computations
-**Resources** - Static or dynamic data accessible through URIs
-**Prompts** - Reusable templates for LLM interactions
-
-
-![mcp](https://mintcdn.com/mcp/bEUxYpZqie0DsluH/images/mcp-simple-diagram.png?w=1650&fit=max&auto=format&n=bEUxYpZqie0DsluH&q=85&s=a131a609c7b6a70f342f493bbad57fcb)
-
-
-Let's understand the "why" behind MCP with a comparison between MCP and without MCP.
+Let's understand the "why" behind MCP with a comparison between using MCP and not using MCP.
 
 | **Without MCP** | **MCP** |
 |-----------------|---------|
 | Developers need to implement the tool calling logic in the application. | A prebuilt MCP Server can be plugged into the LLM to provide tools and APIs. |
-| Developers need to implement integrations logic for all external tools such as weather API, email API, etc. | Think of MCP like a USB-C port for AI applications. |
+| Developers need to implement integration logic for all external tools such as weather API, email API, etc. | Think of MCP like a USB-C port for AI applications. |
+
+### Key concepts
+
+- **MCP Host**: The AI application that coordinates and manages one or more MCP clients
+- **MCP Client**: A component that maintains a connection to an MCP server and obtains context from the MCP server for the MCP host to use
+- **MCP Server**: A program that provides context to MCP clients
+
+### Architecture
+
+MCP follows a client-server architecture where **MCP Clients** (within the MCP Host) connect to **MCP Servers** in a one-to-one relationship. Each client maintains its own dedicated connection to a specific server.
+
+```mermaid
+flowchart TD
+    subgraph Host["MCP Host (AI Application)"]
+        Client1["MCP Client 1"]
+        Client2["MCP Client 2"]
+        Client3["MCP Client 3"]
+    end
+    
+    Server1["MCP Server 1<br/>(e.g., GitHub)"]
+    Server2["MCP Server 2<br/>(e.g., Filesystem)"]
+    Server3["MCP Server 3<br/>(e.g., Notion)"]
+    
+    Client1 -->|One-to-one connection| Server1
+    Client2 -->|One-to-one connection| Server2
+    Client3 -->|One-to-one connection| Server3
+    
+    style Host fill:#FFE0D4,stroke:#FF5722,stroke-width:2px
+    style Client1 fill:#FF5722,stroke:#FF5722,stroke-width:1px
+    style Client2 fill:#FF5722,stroke:#FF5722,stroke-width:1px
+    style Client3 fill:#FF5722,stroke:#FF5722,stroke-width:1px
+    style Server1 fill:#FF5722,stroke:#FF5722,stroke-width:1px
+    style Server2 fill:#FF5722,stroke:#FF5722,stroke-width:1px
+    style Server3 fill:#FF5722,stroke:#FF5722,stroke-width:1px
+```
+
+## Next steps
+
+<Card title="Build a custom MCP Server" icon="server" href="/agentor/tools/LiteMCP">
+  Build a custom MCP Server with Agentor to connect to your own data sources.
+</Card>
+
+<Card title="Celesto AI MCP Hub" icon="server" href="https://celesto.ai/toolhub"> 
+  Connect Agent with 100+ MCP Servers with built-in security and authentication.
+</Card>
