@@ -10,46 +10,42 @@ Deploy your agents to production with Celesto Cloud or self-host on your own inf
 Deploy your agent with a single command using Agentor.
 
 <Steps>
-<Step title="Create Your Agent">
+  <Step title="Create Your Agent">
+    First, create your agent with the tools you need:
 
-First, create your agent with the tools you need:
+    ```python
+    from agentor import Agentor
+    
+    agent = Agentor(
+        name="Weather Agent",
+        model="gpt-4",
+        tools=["get_weather"]
+    )
+    ```
+  </Step>
+  <Step title="Deploy Your Agent">
+    Deploy your agent with a single command:
 
-```python
-from agentor import Agentor
+    ```bash
+    celesto deploy
+    ```
 
-agent = Agentor(
-    name="Weather Agent",
-    model="gpt-4",
-    tools=["get_weather"]
-)
-```
-</Step>
-
-<Step title="Deploy Your Agent">
-
-Deploy your agent with a single command:
-
-```bash
-agentor deploy
-```
-
-<Accordion title="View deployment output" icon="eye">
-```bash
-✓ Building agent...
-✓ Pushing to Celesto Cloud...
-✓ Deploying agent...
-
-🚀 Agent deployed successfully!
-
-Endpoint: https://api.celesto.ai/v1/apps/your-agent-id
-Dashboard: https://celesto.ai/apps/your-agent-id
-```
-</Accordion>
-
-<Tip>
-Your agent is now live and accessible via the API endpoint. Visit the [dashboard](https://celesto.ai) to monitor performance and manage settings.
-</Tip>
-</Step>
+    <Accordion title="View deployment output" icon="eye">
+      ```bash
+      ✓ Building agent...
+      ✓ Pushing to Celesto Cloud...
+      ✓ Deploying agent...
+      
+      🚀 Agent deployed successfully!
+      
+      Endpoint: https://api.celesto.ai/v1/apps/your-agent-id
+      Dashboard: https://celesto.ai/apps/your-agent-id
+      ```
+    </Accordion>
+    <Tip>
+      Your agent is now live and accessible via the API endpoint. Visit the [dashboard](https://celesto.ai) to monitor performance and manage settings.
+    </Tip>
+  </Step>
 </Steps>
 
 ---
@@ -59,69 +55,68 @@ Your agent is now live and accessible via the API endpoint. Visit the [dashboard
 Deploy agents on your own infrastructure using Docker or Kubernetes.
 
 <Tabs>
-<Tab title="Docker">
-Create a `Dockerfile` in your project:
+  <Tab title="Docker">
+    Create a `Dockerfile` in your project:
 
-```dockerfile
-FROM python:3.11-slim
+    ```dockerfile
+    FROM python:3.11-slim
+    
+    WORKDIR /app
+    
+    COPY requirements.txt .
+    RUN pip install --no-cache-dir -r requirements.txt
+    
+    COPY . .
+    
+    EXPOSE 8000
+    
+    CMD ["python", "agent.py"]
+    ```
 
-WORKDIR /app
+    Build and run your container:
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+    ```bash
+    docker build -t my-agent .
+    docker run -p 8000:8000 my-agent
+    ```
+  </Tab>
+  <Tab title="Kubernetes">
+    Create a deployment manifest:
 
-COPY . .
-
-EXPOSE 8000
-
-CMD ["python", "agent.py"]
-```
-
-Build and run your container:
-
-```bash
-docker build -t my-agent .
-docker run -p 8000:8000 my-agent
-```
-</Tab>
-
-<Tab title="Kubernetes">
-Create a deployment manifest:
-
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: agent-deployment
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: my-agent
-  template:
+    ```yaml
+    apiVersion: apps/v1
+    kind: Deployment
     metadata:
-      labels:
-        app: my-agent
+      name: agent-deployment
     spec:
-      containers:
-      - name: agent
-        image: my-agent:latest
-        ports:
-        - containerPort: 8000
-        env:
-        - name: OPENAI_API_KEY
-          valueFrom:
-            secretKeyRef:
-              name: agent-secrets
-              key: openai-api-key
-```
+      replicas: 3
+      selector:
+        matchLabels:
+          app: my-agent
+      template:
+        metadata:
+          labels:
+            app: my-agent
+        spec:
+          containers:
+          - name: agent
+            image: my-agent:latest
+            ports:
+            - containerPort: 8000
+            env:
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: agent-secrets
+                  key: openai-api-key
+    ```
 
-Deploy to your cluster:
+    Deploy to your cluster:
 
-```bash
-kubectl apply -f deployment.yaml
-```
-</Tab>
+    ```bash
+    kubectl apply -f deployment.yaml
+    ```
+  </Tab>
 </Tabs>
 
 ---
@@ -131,19 +126,19 @@ kubectl apply -f deployment.yaml
 Set required environment variables for your deployment:
 
 <ParamField path="OPENAI_API_KEY" type="string" required>
-Your LLM provider API key (OpenAI, Anthropic, etc.)
+  Your LLM provider API key (OpenAI, Anthropic, etc.)
 </ParamField>
 
 <ParamField path="CELESTO_API_KEY" type="string">
-Your Celesto API key for accessing managed tools and services
+  Your Celesto API key for accessing managed tools and services
 </ParamField>
 
-<ParamField path="PORT" type="integer" default="8000">
-Port to run the agent server on
+<ParamField path="PORT" default="8000" type="integer">
+  Port to run the agent server on
 </ParamField>
 
-<ParamField path="LOG_LEVEL" type="string" default="INFO">
-Logging level: DEBUG, INFO, WARNING, ERROR
+<ParamField path="LOG_LEVEL" default="INFO" type="string">
+  Logging level: DEBUG, INFO, WARNING, ERROR
 </ParamField>
 
 ---
@@ -154,12 +149,11 @@ Logging level: DEBUG, INFO, WARNING, ERROR
   <Card title="Celesto Dashboard" icon="chart-line" href="https://celesto.ai">
     Monitor agent performance, view logs, and track usage metrics in real-time.
   </Card>
-  
   <Card title="Health Checks" icon="heart-pulse">
     Built-in health endpoint at `/health` for monitoring and load balancers.
   </Card>
 </CardGroup>
 
 <Info>
-For production deployments, we recommend setting up monitoring, logging, and auto-scaling based on your traffic patterns.
+  For production deployments, we recommend setting up monitoring, logging, and auto-scaling based on your traffic patterns.
 </Info>
