@@ -9,11 +9,13 @@ description: "Build an Agent, add capabilities and serve as an API in just few l
 Use the Agentor class to initialize an Agent providing the name, instructions, and tools. You can run the Agent with the `run` method or stream the response with the `stream` method.
 
 ```python
+from agentor.tools import WeatherAPI
 from agentor import Agentor
 
 agent = Agentor(
     name="Weather Agent",
     model="gpt-5-mini",
+    tools=[WeatherAPI()]
 )
 result = agent.run("What is the weather in London?")
 print(result)
@@ -32,12 +34,13 @@ You can define your own tools or use the ones provided by Celesto AI [ToolHub](h
 <CodeGroup>
 
 ```python With Celesto AI ToolHub
+from agentor.tools import WeatherAPI
 from agentor import Agentor
 
 agent = Agentor(
     name="Weather Agent",
     model="gpt-5-mini",
-    tools=["get_weather"],  # 100+ Celesto AI managed tools — plug-and-play
+    tools=[WeatherAPI()],  # 100+ Celesto AI managed tools — plug-and-play
 )
 result = agent.run("What is the weather in London?")
 print(result)
@@ -68,10 +71,11 @@ print(result)
 You can stream the response from the Agent with the `stream` method.
 
 ```python
+from agentor.tools import WeatherAPI
 from agentor import Agentor
 import asyncio
 
-agent = Agentor(name="Weather Agent", tools=["get_weather"])
+agent = Agentor(name="Weather Agent", tools=[WeatherAPI()])
 
 async def main():
     async for event in agent.stream_chat("How is the weather in Tokyo?"):
@@ -126,9 +130,10 @@ Agents can be deployed as REST API server so you can query them from your applic
 Agentor makes it easy to serve the Agents by providing a simple `serve` method.
 
 ```python
+from agentor.tools import WeatherAPI
 from agentor import Agentor
 
-agent = Agentor(name="Weather Agent", model="gpt-5-mini", tools=["get_weather"])
+agent = Agentor(name="Weather Agent", model="gpt-5-mini", tools=[WeatherAPI()])
 agent.serve(port=8000)   # [!code ++]
 ```
 

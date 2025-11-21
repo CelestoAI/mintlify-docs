@@ -48,9 +48,10 @@ result = agent.run("What is the weather in London?")
     Agents can be run as a server to be integrated into other applications such as UI applications, or other LLM applications.
 
     ```python
+    from agentor.tools import WeatherAPI
     from agentor import Agentor
-    
-    agent = Agentor(name="Weather Agent", tools=["get_weather"])
+      
+    agent = Agentor(name="Weather Agent", tools=[WeatherAPI()])
     agent.serve() # Single line of code to serve the Agent [!code ++]
     ```
 
