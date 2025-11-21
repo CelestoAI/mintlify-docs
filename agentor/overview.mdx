@@ -1,16 +1,10 @@
 ---
-title: "Agentor Quickstart"
+title: "Quickstart"
 sidebarTitle: "Quickstart"
 slug: "overview"
 ---
 
-<img
-  src="https://raw.githubusercontent.com/CelestoAI/agentor/main/assets/CelestoAI.png"
-  alt="Main dashboard interface"
-  className="rounded-lg"
-/>
-
-**Agentor** is an open-source framework that makes it easy to build multi-agent systems, MCP Servers or ANY LLM application with secure integrations across email, calendars, CRMs, and more.
+**Agentor** is an open-source framework that makes it easy to build AI Agents, distributed multi-agent systems, MCP Servers or ANY LLM application with secure integrations across email, calendars, CRMs, and more.
 
 ## Start with four steps
 
@@ -31,15 +25,16 @@ slug: "overview"
   <Step title="Build an Agent">
     Once installed, you can start building your first Agent with just a few lines of code.
 
-    ```python
-    from agentor import Agentor
-    
-    agent = Agentor(
-        name="Weather Agent",
-        tools=["get_weather"],  # 100+ Celesto AI managed tools — plug-and-play
-    )
-    result = agent.run("What is the weather in London?")
-    ```
+```python
+from agentor.tools import WeatherAPI
+from agentor import Agentor
+
+agent = Agentor(
+    name="Weather Agent",
+    tools=[WeatherAPI()]
+)
+result = agent.run("What is the weather in London?")
+```
 
     <Accordion title="View expected output" icon="eye">
       ```json

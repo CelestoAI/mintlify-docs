@@ -47,12 +47,13 @@ description: "Build, secure, and deploy production-ready AI agents with Celesto"
 Build an AI Agent with tool access in just a few lines:
 
 ```python
-from agentor import Agent
+from agentor.tools import WebSearchAPI
+from agentor import Agentor
 
-agent = Agent(
+agent = Agentor(
     name="research_assistant",
     model="gpt-5",
-    tools=["web_search"]
+    tools=[WebSearchAPI()]
 )
 
 # Run agent with natural language
