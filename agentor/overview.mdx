@@ -13,15 +13,8 @@ slug: "overview"
     ```bash
     pip install agentor
     ```
-
-    <Info>
-      You'll need an API key from your LLM provider (OpenAI, Anthropic, etc.). Set it as an environment variable:
-
-      ```bash
-      export OPENAI_API_KEY="your-api-key-here"
-      ```
-    </Info>
   </Step>
+
   <Step title="Build an Agent">
     Once installed, you can start building your first Agent with just a few lines of code.
 
@@ -31,6 +24,8 @@ from agentor import Agentor
 
 agent = Agentor(
     name="Weather Agent",
+    model="gpt-5-mini",
+    llm_api_key="sk-xxx",
     tools=[WeatherAPI()]
 )
 result = agent.run("What is the weather in London?")
