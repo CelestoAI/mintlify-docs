@@ -1,0 +1,54 @@
+---
+title: 'Authorization in MCP'
+description: 'Secure your MCP Server with clear authorization modes'
+---
+
+MCP has three actors:
+
+- **Host** → The application the user interacts with (Claude Desktop, Cursor, etc.)  
+- **Client** → The agent that connects to the MCP Server and supplies authentication or authorization  
+- **Server** → The MCP endpoint that exposes tools
+
+The **Client** often acts as the **resource owner** for tools like Gmail, Notion, Slack, etc.
+
+MCP Servers expose tools in multiple authorization modes. Start with the simplest pattern and move toward multi-user setups as your deployment grows.
+
+
+## Pattern 1: Host-authenticated tool
+
+The MCP Server already holds the credentials for the resource.  
+Example: You ship a Gmail MCP Server that already contains the OAuth token required to read emails.
+
+**Flow**  
+- The Server stores the Gmail token internally  
+- The Client connects  
+- The Client does not send any Gmail credentials  
+- The Server accesses Gmail directly
+
+**When this works**  
+- Single-user setups  
+- No multi-tenant requirements  
+- Local or private workflows  
+- Simple “agent runs with my credentials” tooling
+
+**Risks**  
+If someone connects to the MCP Server, they gain full access to the Gmail account because the Server holds the token.  
+This becomes a security liability for any shared or public deployment.
+
+**Celesto recommendation**  
+Celesto Cloud adds authentication on top of your MCP Server, but we still recommend this pattern **only** for single-user setups.  
+Never share the Celesto API key and never expose this Server publicly.
+
+
+
+## Pattern 2: Client-authenticated per-user OAuth
+
+
+
+
+## Pattern 3: Client-supplied API key
+
+
+
+
+
