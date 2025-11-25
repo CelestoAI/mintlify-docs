@@ -16,7 +16,7 @@ The **Client** often acts as the **resource owner** for tools like Gmail, Notion
 MCP Servers expose tools in multiple authorization modes. Start with the simplest pattern and move toward multi-user setups as your deployment grows.
 
 
-## Single tenant
+## Single-tenant
 
 Single-tenant architecture is a model where each customer gets a dedicated application instance and infrastructure, providing full resource isolation.
 
@@ -38,6 +38,18 @@ Example: You ship a Gmail MCP Server that already contains the OAuth token requi
 - Simple “agent runs with my credentials” tooling
 
 
+```python
+from agentor.tools import GmailAPI
+
+tool = GmailAPI(
+    scopes=["readonly"],
+    token="your-token-here",
+)
+result = tool.list_emails()
+print(result)
+```
+
+
 If someone connects to the MCP Server, they gain full access to the Gmail account because the Server holds the token.  
 This becomes a security liability for any shared or public deployment.
 
@@ -49,14 +61,19 @@ Never share the Celesto API key and never expose this Server publicly.
 
 Multi-tenant architecture is a model where multiple customers share the same application and infrastructure while keeping their data logically isolated from one another.
 
-### Client-authenticated per-user OAuth
-
-
-
 
 ### Client-supplied API key
 
+```python
+from agentor.tools import GmailAPI
+
+tool = GmailAPI(
+    scopes=["readonly"],
+)
+result = tool.list_emails(api_key="your-api-key-here")
+print(result)
+```
 
 
 
-
+### Client-authenticated per-user OAuth
