@@ -3,7 +3,6 @@ title: 'Authorization in MCP'
 description: 'Learn about authorization and security in MCP'
 ---
 
-## Overview
 
 MCP has three actors:
 
@@ -62,7 +61,11 @@ Never share the Celesto API key and never expose this Server publicly.
 Multi-tenant architecture is a model where multiple customers share the same application and infrastructure while keeping their data logically isolated from one another.
 
 
-### Authorization in MCP Server
+### Authorization inside the MCP Server
+
+In this pattern, each Client supplies its own credential—OAuth tokens, API keys, workspace keys, etc.—on every request.
+
+The Server reads the token from the request headers and performs the operation under that user’s identity.
 
 ```python
 from agentor.tools import SlackTool
@@ -72,12 +75,19 @@ mcp = LiteMCP()
 
 @mcp.tool(description="Send a message to a Slack channel")
 def send_slack_message(channel: str, message: str):
-    print(get_headers())
-    token = get_headers()["authorization"]
-    slack_client = SlackTool(token=token)
-    slack_client.send_message(channel=channel, text=message)
+    headers = get_headers()
+    token = headers["authorization"]
+
+    slack = SlackTool(token=token)
+    slack.send_message(channel=channel, text=message)
+
     return "Message sent successfully"
 
 mcp.run()
 ```
 
+This pattern scales cleanly across users:
+- Each Client injects its own token.
+- The Server performs the action on behalf of that user.
+- No user ever accesses data that is not theirs.
+- The Server remains simple, predictable, and safe to expose.
