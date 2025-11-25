@@ -7,9 +7,9 @@ description: 'Learn about authorization and security in MCP'
 
 MCP has three actors:
 
-- **Host** → The application the user interacts with (Claude Desktop, Cursor, etc.)  
-- **Client** → The agent that connects to the MCP Server and supplies authentication or authorization  
-- **Server** → The MCP endpoint that exposes tools
+- **Host:** The application the user interacts with (Claude Desktop, Cursor, etc.)  
+- **Client:** The agent that connects to the MCP Server and supplies authentication or authorization  
+- **Server:** The MCP endpoint that exposes tools
 
 The **Client** often acts as the **resource owner** for tools like Gmail, Notion, Slack, etc.
 
@@ -62,18 +62,4 @@ Never share the Celesto API key and never expose this Server publicly.
 Multi-tenant architecture is a model where multiple customers share the same application and infrastructure while keeping their data logically isolated from one another.
 
 
-### Client-supplied API key
-
-```python
-from agentor.tools import GmailAPI
-
-tool = GmailAPI(
-    scopes=["readonly"],
-)
-result = tool.list_emails(api_key="your-api-key-here")
-print(result)
-```
-
-
-
-### Client-authenticated per-user OAuth
+Coming soon...
