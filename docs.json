@@ -38,7 +38,8 @@
               "agentor/tools/overview",
               "agentor/tools/tool-use",
               "agentor/tools/LiteMCP",
-              "agentor/tools/LiteMCP-fastapi"
+              "agentor/tools/LiteMCP-fastapi",
+              "agentor/tools/auth"
             ]
           },
           {
