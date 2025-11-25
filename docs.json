@@ -32,14 +32,14 @@
             ]
           },
           {
-            "group": "Tool use and MCP Servers",
+            "group": "Tools and MCP Servers",
             "icon": "tools",
             "pages": [
               "agentor/tools/overview",
               "agentor/tools/tool-use",
               "agentor/tools/LiteMCP",
-              "agentor/tools/LiteMCP-fastapi",
-              "agentor/tools/auth"
+              "agentor/tools/auth",
+              "agentor/tools/LiteMCP-fastapi"
             ]
           },
           {

@@ -62,4 +62,22 @@ Never share the Celesto API key and never expose this Server publicly.
 Multi-tenant architecture is a model where multiple customers share the same application and infrastructure while keeping their data logically isolated from one another.
 
 
-Coming soon...
+### Authorization in MCP Server
+
+```python
+from agentor.tools import SlackTool
+from agentor.mcp import LiteMCP, get_headers
+
+mcp = LiteMCP()
+
+@mcp.tool(description="Send a message to a Slack channel")
+def send_slack_message(channel: str, message: str):
+    print(get_headers())
+    token = get_headers()["authorization"]
+    slack_client = SlackTool(token=token)
+    slack_client.send_message(channel=channel, text=message)
+    return "Message sent successfully"
+
+mcp.run()
+```
+
