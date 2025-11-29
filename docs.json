@@ -37,6 +37,7 @@
             "pages": [
               "agentor/tools/overview",
               "agentor/tools/tool-use",
+              "agentor/tools/tool-search",
               "agentor/tools/LiteMCP",
               "agentor/tools/auth",
               "agentor/tools/LiteMCP-fastapi"
