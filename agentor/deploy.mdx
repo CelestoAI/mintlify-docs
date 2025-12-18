@@ -1,52 +1,100 @@
 ---
-title: "Deploy Agents"
-sidebarTitle: "Deploy Agents"
+title: "Run agents in cloud"
+sidebarTitle: "Run Agents in Cloud"
 ---
 
-Deploy your agents to production with Celesto Cloud or self-host on your own infrastructure.
+You can connect an agent to other applications and services by exposing an API endpoint. 
+Agentor makes it easy to create a production-ready server. 
 
-## Deploy to Celesto Cloud
 
-Deploy your agent with a single command using Agentor.
+## Serve an Agent as API
 
-<Steps>
-  <Step title="Create Your Agent">
-    First, create your agent with the tools you need:
+Agents can be deployed as REST API server so you can query them from your applications or integrate them into your existing infrastructure.
 
-    ```python
-    from agentor import Agentor
-    
-    agent = Agentor(
-        name="Weather Agent",
-        model="gpt-4",
-        tools=["get_weather"]
-    )
-    ```
-  </Step>
-  <Step title="Deploy Your Agent">
-    Deploy your agent with a single command:
+Agentor makes it easy to serve the Agents by providing a simple `serve` method.
 
-    ```bash
-    celesto deploy
-    ```
+```python
+from agentor.tools import WeatherAPI
+from agentor import Agentor
 
-    <Accordion title="View deployment output" icon="eye">
-      ```bash
-      ✓ Building agent...
-      ✓ Pushing to Celesto Cloud...
-      ✓ Deploying agent...
-      
-      🚀 Agent deployed successfully!
-      
-      Endpoint: https://api.celesto.ai/v1/apps/your-agent-id
-      Dashboard: https://celesto.ai/apps/your-agent-id
-      ```
-    </Accordion>
-    <Tip>
-      Your agent is now live and accessible via the API endpoint. Visit the [dashboard](https://celesto.ai) to monitor performance and manage settings.
-    </Tip>
-  </Step>
-</Steps>
+agent = Agentor(name="Weather Agent", model="gpt-5-mini", tools=[WeatherAPI()])
+agent.serve(port=8000)   # [!code ++]
+```
+
+To query your Agent server:
+
+<CodeGroup>
+
+```python Local Deployment
+import requests
+
+URL = "http://localhost:8000/chat"
+
+response = requests.post(
+    URL,
+    json={"input": "how are you?"},
+    headers={"Content-Type": "application/json"}
+)
+print(response.content)
+```
+
+
+```python Cloud Deployment
+import os
+import requests
+
+URL = "https://api.celesto.ai/v1/deploy/apps/APP-NAME/chat"
+CELESTO_API_KEY = os.environ.get("CELESTO_API_KEY")
+
+headers = {
+    "Authorization": f"Bearer {CELESTO_API_KEY}",
+    "Content-Type": "application/json",
+}
+
+response = requests.post(
+    URL,
+    json={"input": "how are you?"},
+    headers=headers,
+)
+print(response.content)
+```
+
+
+```bash cURL
+curl -X 'POST' \
+  'http://localhost:8000/chat' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "input": "What is the weather in London?"
+}'
+```
+
+</CodeGroup>
+
+
+## Run Agent in Managed Cloud
+
+Agentor comes with a built-in CLI to deploy agents to the cloud with a single command - `celesto deploy`.
+
+Celesto provides a serverless platform to run agents, which means you only pay when your agent is running.
+
+
+```bash
+✓ Building agent...
+✓ Pushing to Celesto Cloud...
+✓ Deploying agent...
+
+🚀 Agent deployed successfully!
+
+Endpoint: https://api.celesto.ai/v1/apps/your-agent-name
+Dashboard: https://celesto.ai/apps/your-agent-name
+```
+<Tip>
+  Your agent is now live and accessible via the API endpoint. Visit the [dashboard](https://celesto.ai) to monitor performance and manage settings.
+</Tip>
+
+
 
 ---
 
