@@ -1,11 +1,13 @@
 ---
 title: "Agent Skills"
 sidebarTitle: "Agent Skills"
+description: Skills are directories containing instructions, scripts, and resources that an agent loads dynamically to improve performance on specialized tasks.
 ---
 
-<img src="/assets/cat.gif"/>
+<Card img="/assets/cat.gif">
+Credits: 🤖 Agent Z 
+</Card>
 
-Skills are directories containing instructions, scripts, and resources that an agent loads dynamically to improve performance on specialized tasks.
 
 Agent Skills help agents pull just the right context from simple Markdown files. The agent first sees only a skill's name and short description. When a task matches a skill, the agent loads the rest of `SKILL.md`, follows the steps, and can execute commands in a shell environment as specified by the skill.
 
