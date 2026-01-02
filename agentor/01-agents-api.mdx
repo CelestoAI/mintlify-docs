@@ -9,13 +9,13 @@ description: "Build an Agent, add capabilities and serve as an API in just few l
 Use the Agentor class to initialize an Agent providing the name, instructions, and tools. You can run the Agent with the `run` method or stream the response with the `stream` method.
 
 ```python
-from agentor.tools import WeatherAPI
+from agentor.tools import GetWeatherTool
 from agentor import Agentor
 
 agent = Agentor(
     name="Weather Agent",
     model="gpt-5-mini",
-    tools=[WeatherAPI()]
+    tools=[GetWeatherTool()]
 )
 result = agent.run("What is the weather in London?")
 print(result)
@@ -34,13 +34,13 @@ You can define your own tools or use the ones provided by Celesto AI [ToolHub](h
 <CodeGroup>
 
 ```python With Celesto AI ToolHub
-from agentor.tools import WeatherAPI
+from agentor.tools import GetWeatherTool
 from agentor import Agentor
 
 agent = Agentor(
     name="Weather Agent",
     model="gpt-5-mini",
-    tools=[WeatherAPI()],  # 100+ Celesto AI managed tools — plug-and-play
+    tools=[GetWeatherTool()],  # 100+ Celesto AI managed tools — plug-and-play
 )
 result = agent.run("What is the weather in London?")
 print(result)
@@ -71,11 +71,11 @@ print(result)
 You can stream the response from the Agent with the `stream` method.
 
 ```python
-from agentor.tools import WeatherAPI
+from agentor.tools import GetWeatherTool
 from agentor import Agentor
 import asyncio
 
-agent = Agentor(name="Weather Agent", tools=[WeatherAPI()])
+agent = Agentor(name="Weather Agent", tools=[GetWeatherTool()])
 
 async def main():
     async for event in agent.stream_chat("How is the weather in Tokyo?"):
