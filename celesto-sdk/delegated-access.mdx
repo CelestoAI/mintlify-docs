@@ -1,5 +1,5 @@
 ---
-title: "Delegated Access (SDK)"
+title: "Celesto Gatekeeper - Delegated Access"
 description: "Connect your end users to third-party tools like Google Drive using CelestoSDK."
 ---
 
@@ -8,7 +8,7 @@ Delegated Access lets you connect your end users (subjects) to third-party provi
 ## Prerequisites
 
 - A Celesto API key in `CELESTO_API_KEY`
-- Your project ID in `CELESTO_PROJECT_ID`
+- Your project name in `CELESTO_PROJECT_NAME`
 
 ## Quickstart script
 
@@ -31,6 +31,16 @@ response = client.delegated_access.connect(
     project_name=project_name,
 )
 print("connect:", response)
+
+oauth_url = response.get("oauth_url")
+if oauth_url:
+    print("OAuth URL:", oauth_url)
+    print("Complete OAuth flow before continuing...")
+    raise SystemExit
+
+connection_id = response.get("connection_id")
+if not connection_id:
+    raise SystemExit("No connection_id returned - check OAuth flow")
 
 # ====================================================================
 
@@ -118,7 +128,7 @@ print("drive_files:", files)
 
 <Steps>
   <Step title="Create a connection">
-    You call `connect` with a subject and project ID. If the subject has not authorized yet, you receive an OAuth URL.
+    You call `connect` with a subject and project name. If the subject has not authorized yet, you receive an OAuth URL.
 
     <Check>
       You get `status: redirect` and an `oauth_url`.
@@ -142,22 +152,22 @@ print("drive_files:", files)
 
 ### `connect`
 
-Signature: `connect(subject: str, project_id: str, provider: str = "google_drive", redirect_uri: str | None = None) -> dict`
+Signature: `connect(subject: str, project_name: str, provider: str = "google_drive", redirect_uri: str | None = None) -> dict`
 
 **Parameters**
 
 - `subject`: Stable identifier for your end user (for example, `user:acme:alice`)
-- `project_id`: Your Celesto project ID
+- `project_name`: Your Celesto project name
 - `provider`: Provider key. Use `google_drive` for Google Drive
 - `redirect_uri`: Optional custom redirect URI after OAuth completion
 
 ### `list_connections`
 
-Signature: `list_connections(project_id: str, status_filter: str | None = None) -> dict`
+Signature: `list_connections(project_name: str, status_filter: str | None = None) -> dict`
 
 **Parameters**
 
-- `project_id`: Your Celesto project ID
+- `project_name`: Your Celesto project name
 - `status_filter`: `ACTIVE`, `PENDING`, or `REVOKED`
 
 ### `get_connection`
@@ -170,11 +180,11 @@ Signature: `get_connection(connection_id: str) -> dict`
 
 ### `list_drive_files`
 
-Signature: `list_drive_files(project_id: str, subject: str, page_size: int = 20, page_token: str | None = None, folder_id: str | None = None, query: str | None = None, include_folders: bool = True, order_by: str | None = None) -> dict`
+Signature: `list_drive_files(project_name: str, subject: str, page_size: int = 20, page_token: str | None = None, folder_id: str | None = None, query: str | None = None, include_folders: bool = True, order_by: str | None = None) -> dict`
 
 **Parameters**
 
-- `project_id`: Your Celesto project ID
+- `project_name`: Your Celesto project name
 - `subject`: Subject identifier tied to the delegated connection
 - `page_size`: Number of files to return (1-1000)
 - `page_token`: Token from a previous response for pagination
@@ -182,6 +192,30 @@ Signature: `list_drive_files(project_id: str, subject: str, page_size: int = 20,
 - `query`: Google Drive search query (`q` parameter)
 - `include_folders`: Include folders in the results
 - `order_by`: Google Drive `orderBy` parameter
+
+Notes:
+- If access rules are active, a page may contain fewer than `page_size` results after filtering. Use `next_page_token` to continue.
+
+### `update_access_rules`
+
+Signature: `update_access_rules(connection_id: str, allowed_folders: list[str] | None = None, allowed_files: list[str] | None = None) -> dict`
+
+**Parameters**
+
+- `connection_id`: Delegated connection ID
+- `allowed_folders`: List of Google Drive folder IDs with recursive access
+- `allowed_files`: List of individual Google Drive file IDs
+
+Notes:
+- Setting both lists to empty blocks all access. Use `clear_access_rules` to remove restrictions.
+
+### `clear_access_rules`
+
+Signature: `clear_access_rules(connection_id: str) -> dict`
+
+**Parameters**
+
+- `connection_id`: Delegated connection ID
 
 ### `revoke_connection`
 
@@ -196,7 +230,7 @@ Signature: `revoke_connection(connection_id: str) -> dict`
 <AccordionGroup>
   <Accordion title="OAuth is not configured for the provider">
     - Ensure Google OAuth is configured for delegated access in your Celesto settings.
-    - Verify you are using `provider="google_drive"` and the correct project ID.
+    - Verify you are using `provider="google_drive"` and the correct project name.
   </Accordion>
   <Accordion title="Connection stays in PENDING">
     - Make sure the user completed the OAuth flow in the browser.
