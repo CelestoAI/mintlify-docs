@@ -7,13 +7,18 @@ Delegated Access lets you connect your end users (subjects) to third-party provi
 
 ## Prerequisites
 
+<Info>
+  You can find your API key and project name in the [Celesto Dashboard](https://celesto.ai/dashboard).
+</Info>
+
 Set the following environment variables:
 
-- Celesto API key as `CELESTO_API_KEY`
-- Celesto project name as `CELESTO_PROJECT_NAME`
+- `CELESTO_API_KEY`: Your Celesto API key
+- `CELESTO_PROJECT_NAME`: Your project name
 
 ## Quickstart script
 
+<Accordion title="View complete example script">
 Use this complete script to start a connection, list active connections, and list Drive files once OAuth completes.
 
 ```python gatekeeper.py
@@ -28,7 +33,7 @@ client = CelestoSDK(api_key)
 
 # Initiate connection (returns oauth_url if authorization is required)
 response = client.gatekeeper.connect(
-    subject="user:adam@acme.com",  # Unique identifier for the user 
+    subject="user:acme:alice",  # Unique identifier for the user
     provider="google_drive",
     project_name=project_name,
 )
@@ -55,12 +60,13 @@ print("connections:", connections)
 # List Drive files for the subject
 files = client.gatekeeper.list_drive_files(
     project_name=project_name,
-    subject="user:adam@acme.com",
+    subject="user:acme:alice",
     page_size=10,
     include_folders=True,
 )
 print("drive_files:", files)
 ```
+</Accordion>
 
 
 ## Expected responses
@@ -154,78 +160,182 @@ print("drive_files:", files)
 
 ### `connect`
 
-Signature: `connect(subject: str, project_name: str, provider: str = "google_drive", redirect_uri: str | None = None) -> dict`
+Signature:
+
+```python
+connect(
+    subject: str, 
+    project_name: str, 
+    provider: str = "google_drive", 
+    redirect_uri: str | None = None
+) -> dict
+```
 
 **Parameters**
 
-- `subject`: Stable identifier for your end user (for example, `user:acme:alice`)
-- `project_name`: Your Celesto project name
-- `provider`: Provider key. Use `google_drive` for Google Drive
-- `redirect_uri`: Optional custom redirect URI after OAuth completion
+<ParamField body="subject" type="string" required>
+  Stable identifier for your end user (for example, `user:acme:alice`)
+</ParamField>
+
+<ParamField body="project_name" type="string" required>
+  Your Celesto project name
+</ParamField>
+
+<ParamField body="provider" type="string" default="google_drive">
+  Provider key. Use `google_drive` for Google Drive
+</ParamField>
+
+<ParamField body="redirect_uri" type="string">
+  Optional custom redirect URI after OAuth completion
+</ParamField>
 
 ### `list_connections`
 
-Signature: `list_connections(project_name: str, status_filter: str | None = None) -> dict`
+Signature:
+
+```python
+list_connections(
+    project_name: str, 
+    status_filter: str | None = None
+) -> dict
+```
 
 **Parameters**
 
-- `project_name`: Your Celesto project name
-- `status_filter`: `ACTIVE`, `PENDING`, or `REVOKED`
+<ParamField body="project_name" type="string" required>
+  Your Celesto project name
+</ParamField>
+
+<ParamField body="status_filter" type="string">
+  Filter by status: `ACTIVE`, `PENDING`, or `REVOKED`
+</ParamField>
 
 ### `get_connection`
 
-Signature: `get_connection(connection_id: str) -> dict`
+Signature:
+
+```python
+get_connection(connection_id: str) -> dict
+```
 
 **Parameters**
 
-- `connection_id`: Delegated connection ID
+<ParamField body="connection_id" type="string" required>
+  Delegated connection ID
+</ParamField>
 
 ### `list_drive_files`
 
-Signature: `list_drive_files(project_name: str, subject: str, page_size: int = 20, page_token: str | None = None, folder_id: str | None = None, query: str | None = None, include_folders: bool = True, order_by: str | None = None) -> dict`
+Signature:
+
+```python
+list_drive_files(
+    project_name: str, 
+    subject: str, 
+    page_size: int = 20, 
+    page_token: str | None = None, 
+    folder_id: str | None = None, 
+    query: str | None = None, 
+    include_folders: bool = True, 
+    order_by: str | None = None
+) -> dict
+```
 
 **Parameters**
 
-- `project_name`: Your Celesto project name
-- `subject`: Subject identifier tied to the delegated connection
-- `page_size`: Number of files to return (1-1000)
-- `page_token`: Token from a previous response for pagination
-- `folder_id`: Google Drive folder ID. Defaults to root unless `query` is provided
-- `query`: Google Drive search query (`q` parameter)
-- `include_folders`: Include folders in the results
-- `order_by`: Google Drive `orderBy` parameter
+<ParamField body="project_name" type="string" required>
+  Your Celesto project name
+</ParamField>
 
-Notes:
-- If access rules are active, a page may contain fewer than `page_size` results after filtering. Use `next_page_token` to continue.
+<ParamField body="subject" type="string" required>
+  Subject identifier tied to the delegated connection
+</ParamField>
+
+<ParamField body="page_size" type="integer" default="20">
+  Number of files to return (1-1000)
+</ParamField>
+
+<ParamField body="page_token" type="string">
+  Token from a previous response for pagination
+</ParamField>
+
+<ParamField body="folder_id" type="string">
+  Google Drive folder ID. Defaults to root unless `query` is provided
+</ParamField>
+
+<ParamField body="query" type="string">
+  Google Drive search query (`q` parameter)
+</ParamField>
+
+<ParamField body="include_folders" type="boolean" default="true">
+  Include folders in the results
+</ParamField>
+
+<ParamField body="order_by" type="string">
+  Google Drive `orderBy` parameter
+</ParamField>
+
+<Note>
+  If access rules are active, a page may contain fewer than `page_size` results after filtering. Use `next_page_token` to continue.
+</Note>
 
 ### `update_access_rules`
 
-Signature: `update_access_rules(connection_id: str, allowed_folders: list[str] | None = None, allowed_files: list[str] | None = None) -> dict`
+Signature:
+
+```python
+update_access_rules(
+    connection_id: str, 
+    allowed_folders: list[str] | None = None, 
+    allowed_files: list[str] | None = None
+) -> dict
+```
 
 **Parameters**
 
-- `connection_id`: Delegated connection ID
-- `allowed_folders`: List of Google Drive folder IDs with recursive access
-- `allowed_files`: List of individual Google Drive file IDs
+<ParamField body="connection_id" type="string" required>
+  Delegated connection ID
+</ParamField>
 
-Notes:
-- Setting both lists to empty blocks all access. Use `clear_access_rules` to remove restrictions.
+<ParamField body="allowed_folders" type="string[]">
+  List of Google Drive folder IDs with recursive access
+</ParamField>
+
+<ParamField body="allowed_files" type="string[]">
+  List of individual Google Drive file IDs
+</ParamField>
+
+<Note>
+  Setting both lists to empty blocks all access. Use `clear_access_rules` to remove restrictions.
+</Note>
 
 ### `clear_access_rules`
 
-Signature: `clear_access_rules(connection_id: str) -> dict`
+Signature:
+
+```python
+clear_access_rules(connection_id: str) -> dict
+```
 
 **Parameters**
 
-- `connection_id`: Delegated connection ID
+<ParamField body="connection_id" type="string" required>
+  Delegated connection ID
+</ParamField>
 
 ### `revoke_connection`
 
-Signature: `revoke_connection(connection_id: str) -> dict`
+Signature:
+
+```python
+revoke_connection(connection_id: str) -> dict
+```
 
 **Parameters**
 
-- `connection_id`: Delegated connection ID to revoke
+<ParamField body="connection_id" type="string" required>
+  Delegated connection ID to revoke
+</ParamField>
 
 ## Troubleshooting
 
