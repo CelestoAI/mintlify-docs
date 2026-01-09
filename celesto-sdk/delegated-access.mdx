@@ -16,64 +16,38 @@ Use this complete script to start a connection, list active connections, and lis
 
 ```python delegated_access.py
 import os
-import sys
+from celesto_sdk.sdk import CelestoSDK
 
-from agentor import CelestoSDK
+api_key = os.environ["CELESTO_API_KEY"]
+project_name = os.environ["CELESTO_PROJECT_NAME"]
+client = CelestoSDK(api_key)
 
+# ====================================================================
 
-def main() -> None:
-    api_key = os.environ.get("CELESTO_API_KEY")
-    project_id = os.environ.get("CELESTO_PROJECT_ID")
+# Initiate connection (returns oauth_url if authorization is required)
+response = client.delegated_access.connect(
+    subject="user:adam@acme.com",  # Unique identifier for the user 
+    provider="google_drive",
+    project_name=project_name,
+)
+print("connect:", response)
 
-    if not api_key or not project_id:
-        raise SystemExit("Set CELESTO_API_KEY and CELESTO_PROJECT_ID")
+# ====================================================================
 
-    client = CelestoSDK(api_key)
+# List current connections
+connections = client.delegated_access.list_connections(project_name=project_name)
+print("connections:", connections)
 
-    response = client.delegated_access.connect(
-        subject="user:acme:alice",
-        provider="google_drive",
-        project_id=project_id,
-    )
+# ====================================================================
 
-    if response.get("status") == "redirect":
-        print("Authorize the user at:", response["oauth_url"])
-        return
-
-    connection_id = response.get("connection_id")
-    if not connection_id:
-        raise SystemExit(f"Unexpected connect response: {response}")
-
-    print("connected:", connection_id)
-
-    connections = client.delegated_access.list_connections(
-        project_id=project_id,
-        status_filter="ACTIVE",
-    )
-    print("active connections:", connections.get("total", 0))
-
-    files = client.delegated_access.list_drive_files(
-        project_id=project_id,
-        subject="user:acme:alice",
-        page_size=10,
-        include_folders=True,
-    )
-    print("files:", len(files.get("files", [])))
-
-    should_revoke = False
-    if should_revoke:
-        revoked = client.delegated_access.revoke_connection(
-            connection_id=connection_id
-        )
-        print("revoked:", revoked)
-
-
-if __name__ == "__main__":
-    try:
-        main()
-    except Exception as exc:
-        print(f"delegated access failed: {exc}", file=sys.stderr)
-        raise
+# List Drive files for the subject
+files = client.delegated_access.list_drive_files(
+    project_name=project_name,
+    subject="user:adam@acme.com",
+    page_size=10,
+    include_folders=True,
+)
+print("drive_files:", files)
 ```
 
 ## Expected responses
