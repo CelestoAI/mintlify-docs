@@ -49,7 +49,7 @@
             "icon": "map",
             "pages": [
               "celesto-sdk/overview",
-              "celesto-sdk/delegated-access",
+              "celesto-sdk/gatekeeper",
               "superauth/google-oauth-setup"
             ]
           }
