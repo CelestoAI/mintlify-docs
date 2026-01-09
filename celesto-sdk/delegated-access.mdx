@@ -1,0 +1,255 @@
+---
+title: "Delegated Access (SDK)"
+description: "Connect your end users to third-party tools like Google Drive using CelestoSDK."
+---
+
+Delegated Access lets you connect your end users (subjects) to third-party providers such as Google Drive while keeping access scoped to your project.
+
+## Prerequisites
+
+- A Celesto API key in `CELESTO_API_KEY`
+- Your project ID in `CELESTO_PROJECT_ID`
+- Google OAuth configured for delegated access
+
+<Note>
+  If you test locally, set `CELESTO_BASE_URL` to your API host, for example `http://localhost:8500/v1`.
+</Note>
+
+## Quickstart script
+
+Use this complete script to start a connection, list active connections, and list Drive files once OAuth completes.
+
+```python delegated_access.py
+import os
+import sys
+
+from agentor import CelestoSDK
+
+
+def main() -> None:
+    api_key = os.environ.get("CELESTO_API_KEY")
+    project_id = os.environ.get("CELESTO_PROJECT_ID")
+
+    if not api_key or not project_id:
+        raise SystemExit("Set CELESTO_API_KEY and CELESTO_PROJECT_ID")
+
+    client = CelestoSDK(api_key)
+
+    response = client.delegated_access.connect(
+        subject="user:acme:alice",
+        provider="google_drive",
+        project_id=project_id,
+    )
+
+    if response.get("status") == "redirect":
+        print("Authorize the user at:", response["oauth_url"])
+        return
+
+    connection_id = response.get("connection_id")
+    if not connection_id:
+        raise SystemExit(f"Unexpected connect response: {response}")
+
+    print("connected:", connection_id)
+
+    connections = client.delegated_access.list_connections(
+        project_id=project_id,
+        status_filter="ACTIVE",
+    )
+    print("active connections:", connections.get("total", 0))
+
+    files = client.delegated_access.list_drive_files(
+        project_id=project_id,
+        subject="user:acme:alice",
+        page_size=10,
+        include_folders=True,
+    )
+    print("files:", len(files.get("files", [])))
+
+    should_revoke = False
+    if should_revoke:
+        revoked = client.delegated_access.revoke_connection(
+            connection_id=connection_id
+        )
+        print("revoked:", revoked)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as exc:
+        print(f"delegated access failed: {exc}", file=sys.stderr)
+        raise
+```
+
+## Expected responses
+
+<ResponseExample>
+
+```json connect (redirect)
+{
+  "status": "redirect",
+  "oauth_url": "https://accounts.google.com/o/oauth2/v2/auth?..."
+}
+```
+
+</ResponseExample>
+
+<ResponseExample>
+
+```json connect (connected)
+{
+  "status": "connected",
+  "connection_id": "conn_8e7f4b0b"
+}
+```
+
+</ResponseExample>
+
+<ResponseExample>
+
+```json list_connections
+{
+  "data": [
+    {
+      "id": "conn_8e7f4b0b",
+      "subject": "user:acme:alice",
+      "provider": "google_drive",
+      "project_id": "proj_5f2c9f41",
+      "account_email": "alice@acme.com",
+      "scopes": ["https://www.googleapis.com/auth/drive.readonly"],
+      "status": "ACTIVE",
+      "created_at": "2025-12-10T19:22:11Z",
+      "updated_at": "2025-12-10T19:25:45Z",
+      "last_used_at": "2025-12-11T10:01:12Z"
+    }
+  ],
+  "total": 1
+}
+```
+
+</ResponseExample>
+
+<ResponseExample>
+
+```json list_drive_files
+{
+  "files": [
+    {
+      "id": "1a2b3c4d",
+      "name": "Quarterly Report",
+      "mime_type": "application/pdf",
+      "size": 482133,
+      "modified_time": "2025-12-01T08:10:22Z",
+      "web_view_link": "https://drive.google.com/file/d/1a2b3c4d/view"
+    }
+  ],
+  "next_page_token": "Cj4QAA"
+}
+```
+
+</ResponseExample>
+
+<ResponseExample>
+
+```json error
+{
+  "detail": "OAuth not configured for provider: google_drive"
+}
+```
+
+</ResponseExample>
+
+## How the flow works
+
+<Steps>
+  <Step title="Create a connection">
+    You call `connect` with a subject and project ID. If the subject has not authorized yet, you receive an OAuth URL.
+
+    <Check>
+      You get `status: redirect` and an `oauth_url`.
+    </Check>
+  </Step>
+
+  <Step title="Complete OAuth">
+    You send your user to the OAuth URL and complete consent. The provider calls Celesto back to finalize the connection.
+
+    <Check>
+      The connection becomes `ACTIVE` for that subject.
+    </Check>
+  </Step>
+
+  <Step title="Use delegated access">
+    You list connections, fetch file metadata, and optionally revoke access when you are done.
+  </Step>
+</Steps>
+
+## SDK methods
+
+### `connect`
+
+Signature: `connect(subject: str, project_id: str, provider: str = "google_drive", redirect_uri: str | None = None) -> dict`
+
+**Parameters**
+
+- `subject`: Stable identifier for your end user (for example, `user:acme:alice`)
+- `project_id`: Your Celesto project ID
+- `provider`: Provider key. Use `google_drive` for Google Drive
+- `redirect_uri`: Optional custom redirect URI after OAuth completion
+
+### `list_connections`
+
+Signature: `list_connections(project_id: str, status_filter: str | None = None) -> dict`
+
+**Parameters**
+
+- `project_id`: Your Celesto project ID
+- `status_filter`: `ACTIVE`, `PENDING`, or `REVOKED`
+
+### `get_connection`
+
+Signature: `get_connection(connection_id: str) -> dict`
+
+**Parameters**
+
+- `connection_id`: Delegated connection ID
+
+### `list_drive_files`
+
+Signature: `list_drive_files(project_id: str, subject: str, page_size: int = 20, page_token: str | None = None, folder_id: str | None = None, query: str | None = None, include_folders: bool = True, order_by: str | None = None) -> dict`
+
+**Parameters**
+
+- `project_id`: Your Celesto project ID
+- `subject`: Subject identifier tied to the delegated connection
+- `page_size`: Number of files to return (1-1000)
+- `page_token`: Token from a previous response for pagination
+- `folder_id`: Google Drive folder ID. Defaults to root unless `query` is provided
+- `query`: Google Drive search query (`q` parameter)
+- `include_folders`: Include folders in the results
+- `order_by`: Google Drive `orderBy` parameter
+
+### `revoke_connection`
+
+Signature: `revoke_connection(connection_id: str) -> dict`
+
+**Parameters**
+
+- `connection_id`: Delegated connection ID to revoke
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="OAuth is not configured for the provider">
+    - Ensure Google OAuth is configured for delegated access in your Celesto settings.
+    - Verify you are using `provider="google_drive"` and the correct project ID.
+  </Accordion>
+  <Accordion title="Connection stays in PENDING">
+    - Make sure the user completed the OAuth flow in the browser.
+    - Check that the callback URL is reachable from the OAuth provider.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+- Review the Google OAuth setup guide in `superauth/google-oauth-setup`.
+- Use `get_connection` to inspect scopes and last usage when you debug access.
