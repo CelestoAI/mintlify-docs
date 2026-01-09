@@ -14,7 +14,7 @@ Delegated Access lets you connect your end users (subjects) to third-party provi
 
 Use this complete script to start a connection, list active connections, and list Drive files once OAuth completes.
 
-```python delegated_access.py
+```python gatekeeper.py
 import os
 from celesto_sdk.sdk import CelestoSDK
 
@@ -25,7 +25,7 @@ client = CelestoSDK(api_key)
 # ====================================================================
 
 # Initiate connection (returns oauth_url if authorization is required)
-response = client.delegated_access.connect(
+response = client.gatekeeper.connect(
     subject="user:adam@acme.com",  # Unique identifier for the user 
     provider="google_drive",
     project_name=project_name,
@@ -45,13 +45,13 @@ if not connection_id:
 # ====================================================================
 
 # List current connections
-connections = client.delegated_access.list_connections(project_name=project_name)
+connections = client.gatekeeper.list_connections(project_name=project_name)
 print("connections:", connections)
 
 # ====================================================================
 
 # List Drive files for the subject
-files = client.delegated_access.list_drive_files(
+files = client.gatekeeper.list_drive_files(
     project_name=project_name,
     subject="user:adam@acme.com",
     page_size=10,
