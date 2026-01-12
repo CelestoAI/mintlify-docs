@@ -49,13 +49,13 @@ description: "Fastest way to build and deploy long-running AI agents—with dura
 Build an AI Agent with tool access in just a few lines:
 
 ```python
-from agentor.tools import WebSearchAPI
+from agentor.tools import WebSearchTool
 from agentor import Agentor
 
 agent = Agentor(
     name="research_assistant",
     model="gpt-5",
-    tools=[WebSearchAPI()]
+    tools=[WebSearchTool()]
 )
 
 # Run agent with natural language
