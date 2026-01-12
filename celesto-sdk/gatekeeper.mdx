@@ -27,27 +27,26 @@ from celesto_sdk.sdk import CelestoSDK
 
 api_key = os.environ["CELESTO_API_KEY"]
 project_name = os.environ["CELESTO_PROJECT_NAME"]
+subject = "user:acme:alice"  # Unique identifier for your end user
+
 client = CelestoSDK(api_key)
 
 # ====================================================================
 
 # Initiate connection (returns oauth_url if authorization is required)
 response = client.gatekeeper.connect(
-    subject="user:acme:alice",  # Unique identifier for the user
+    subject=subject,
     provider="google_drive",
     project_name=project_name,
 )
 print("connect:", response)
 
-oauth_url = response.get("oauth_url")
-if oauth_url:
-    print("OAuth URL:", oauth_url)
+if response.get("oauth_url"):
+    print("OAuth URL:", response["oauth_url"])
     print("Complete OAuth flow before continuing...")
     raise SystemExit
 
-connection_id = response.get("connection_id")
-if not connection_id:
-    raise SystemExit("No connection_id returned - check OAuth flow")
+print("Connected! Status:", response.get("status"))
 
 # ====================================================================
 
@@ -60,11 +59,29 @@ print("connections:", connections)
 # List Drive files for the subject
 files = client.gatekeeper.list_drive_files(
     project_name=project_name,
-    subject="user:acme:alice",
+    subject=subject,
     page_size=10,
     include_folders=True,
 )
 print("drive_files:", files)
+
+# ====================================================================
+
+# Update access rules (restrict to specific folders)
+# rules = client.gatekeeper.update_access_rules(
+#     subject=subject,
+#     project_name=project_name,
+#     allowed_folders=["folder_id_1", "folder_id_2"],
+# )
+# print("access_rules:", rules)
+
+# ====================================================================
+
+# Revoke connection when done
+# client.gatekeeper.revoke_connection(
+#     subject=subject,
+#     project_name=project_name,
+# )
 ```
 </Accordion>
 
@@ -285,16 +302,22 @@ Signature:
 
 ```python
 update_access_rules(
-    connection_id: str, 
-    allowed_folders: list[str] | None = None, 
-    allowed_files: list[str] | None = None
+    subject: str,
+    project_name: str,
+    allowed_folders: list[str] | None = None,
+    allowed_files: list[str] | None = None,
+    provider: str | None = None
 ) -> dict
 ```
 
 **Parameters**
 
-<ParamField body="connection_id" type="string" required>
-  Delegated connection ID
+<ParamField body="subject" type="string" required>
+  Subject identifier (e.g., `user:acme:alice`)
+</ParamField>
+
+<ParamField body="project_name" type="string" required>
+  Your Celesto project name
 </ParamField>
 
 <ParamField body="allowed_folders" type="string[]">
@@ -303,6 +326,10 @@ update_access_rules(
 
 <ParamField body="allowed_files" type="string[]">
   List of individual Google Drive file IDs
+</ParamField>
+
+<ParamField body="provider" type="string">
+  Optional provider filter (e.g., `google_drive`)
 </ParamField>
 
 <Note>
@@ -328,13 +355,25 @@ clear_access_rules(connection_id: str) -> dict
 Signature:
 
 ```python
-revoke_connection(connection_id: str) -> dict
+revoke_connection(
+    subject: str,
+    project_name: str,
+    provider: str | None = None
+) -> dict
 ```
 
 **Parameters**
 
-<ParamField body="connection_id" type="string" required>
-  Delegated connection ID to revoke
+<ParamField body="subject" type="string" required>
+  Subject identifier (e.g., `user:acme:alice`)
+</ParamField>
+
+<ParamField body="project_name" type="string" required>
+  Your Celesto project name
+</ParamField>
+
+<ParamField body="provider" type="string">
+  Optional provider filter (e.g., `google_drive`)
 </ParamField>
 
 ## Troubleshooting
