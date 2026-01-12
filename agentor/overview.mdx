@@ -5,6 +5,11 @@ slug: "overview"
 description: "Agentor is an open-source framework for building and serving AI agents, MCP tools, and multi-agent systems."
 ---
 
+## Prerequisites
+
+- Python 3.10 or higher
+- An OpenAI API key (or other supported LLM provider)
+
 ## Get started in 3 steps
 
 <Steps>
@@ -14,14 +19,14 @@ description: "Agentor is an open-source framework for building and serving AI ag
     ```
   </Step>
   <Step title="Build an Agent">
-    Once installed, you can start building your first Agent with just a few lines of code.
+    Create your first agent with just a few lines of code.
 
     ```python
     from agentor import Agentor
-    
+
     agent = Agentor(
-        name="Spanish to English Translator Agent",
-        instructions="You are a helpful assistant that translates Spanish to English.",
+        name="Translator",
+        instructions="Translate Spanish to English.",
         model="gpt-5-mini",
     )
     result = agent.run("Hola, ¿cómo estás?")
@@ -34,27 +39,25 @@ description: "Agentor is an open-source framework for building and serving AI ag
     </Accordion>
   </Step>
   <Step title="Add a tool capability">
-    You can add tools to your Agent to perform tasks and get information from the world.
-
-    The following example shows an Agent that can access the realtime weather information from the world.
+    Give your agent the ability to interact with the real world.
 
     ```python
     from agentor.tools import WeatherAPI
     from agentor import Agentor
-    
+
     agent = Agentor(
         name="Weather Agent",
         model="gpt-5-mini",
         tools=[WeatherAPI()]
     )
-    result = agent.run("What is the weather in London?")
+    result = agent.run("What's the weather in London?")
     ```
   </Step>
 </Steps>
 
 ---
 
-## Learn more
+## Next steps
 
 <Card title="Build an Agent" icon="robot" horizontal href="/agentor/agents-api">
   Learn how to build an Agent with tools.
