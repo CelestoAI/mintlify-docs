@@ -18,7 +18,6 @@ Set the following environment variables:
 
 ## Quickstart script
 
-<Accordion title="View complete example script">
 Use this complete script to start a connection, list active connections, and list Drive files once OAuth completes.
 
 ```python gatekeeper.py
@@ -29,7 +28,7 @@ from celesto_sdk.sdk import CelestoSDK
 project_name = "Default"
 subject = "user:acme:alice"  # Unique identifier for your end user
 
-client = CelestoSDK(api_key)
+client = CelestoSDK()
 
 # ====================================================================
 
@@ -83,7 +82,6 @@ print("drive_files:", files)
 #     project_name=project_name,
 # )
 ```
-</Accordion>
 
 
 ## Expected responses

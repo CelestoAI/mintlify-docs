@@ -26,7 +26,8 @@
             "icon": "robot",
             "pages": [
               "agentor/overview",
-              "agentor/01-agents-api",
+              "agentor/concepts",
+              "agentor/agents-api",
               "agentor/deploy",
               "agentor/agent-to-agent",
               "agentor/skills"
@@ -38,15 +39,15 @@
             "pages": [
               "agentor/tools/overview",
               "agentor/tools/tool-use",
-              "agentor/tools/tool-search",
               "agentor/tools/LiteMCP",
+              "agentor/tools/LiteMCP-fastapi",
               "agentor/tools/auth",
-              "agentor/tools/LiteMCP-fastapi"
+              "agentor/tools/tool-search"
             ]
           },
           {
-            "group": "Guides",
-            "icon": "map",
+            "group": "Platform",
+            "icon": "grid-2",
             "pages": [
               "celesto-sdk/overview",
               "celesto-sdk/gatekeeper",
