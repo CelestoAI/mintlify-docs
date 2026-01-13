@@ -28,6 +28,7 @@
               "agentor/overview",
               "agentor/concepts",
               "agentor/agents-api",
+              "agentor/tracing",
               "agentor/deploy",
               "agentor/agent-to-agent",
               "agentor/skills"
