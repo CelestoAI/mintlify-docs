@@ -16,9 +16,25 @@ Set the following environment variables:
 - `CELESTO_API_KEY`: Your Celesto API key
 - `CELESTO_PROJECT_NAME`: Your project name
 
+Install the SDK:
+
+<CodeGroup>
+
+```bash Python
+pip install celesto-sdk
+```
+
+```bash JavaScript
+npm install @celestoai/sdk
+```
+
+</CodeGroup>
+
 ## Quickstart script
 
 Use this complete script to start a connection, list active connections, and list Drive files once OAuth completes.
+
+<CodeGroup>
 
 ```python gatekeeper.py
 import os
@@ -83,6 +99,58 @@ print("drive_files:", files)
 # )
 ```
 
+```ts gatekeeper.ts
+import { GatekeeperClient } from "@celestoai/sdk/gatekeeper";
+
+const projectName = "Default";
+const subject = "user:acme:alice"; // Unique identifier for your end user
+
+const client = new GatekeeperClient({
+  token: process.env.CELESTO_API_KEY,
+  // baseUrl: "https://api.celesto.ai",
+});
+
+const run = async () => {
+  const connect = await client.connect({
+    subject,
+    provider: "google_drive",
+    projectName,
+  });
+  console.log("connect:", connect);
+
+  if (connect.status === "redirect" && connect.oauthUrl) {
+    console.log("OAuth URL:", connect.oauthUrl);
+    console.log("Complete OAuth flow before continuing...");
+    return;
+  }
+
+  const connections = await client.listConnections({ projectName });
+  console.log("connections:", connections);
+
+  const files = await client.listDriveFiles({
+    projectName,
+    subject,
+    pageSize: 10,
+    includeFolders: true,
+  });
+  console.log("drive_files:", files);
+
+  // Update access rules (restrict to specific folders)
+  // const rules = await client.updateAccessRules({
+  //   subject,
+  //   projectName,
+  //   accessRules: { allowedFolders: ["folder_id_1", "folder_id_2"] },
+  // });
+  // console.log("access_rules:", rules);
+
+  // Revoke connection when done
+  // await client.revokeConnection({ subject, projectName });
+};
+
+run().catch(console.error);
+```
+
+</CodeGroup>
 
 ## Expected responses
 
@@ -173,11 +241,17 @@ print("drive_files:", files)
 
 ## SDK methods
 
+<Note>
+  Python uses snake_case parameters (e.g., `project_name`, `page_size`). JavaScript uses camelCase (e.g., `projectName`, `pageSize`).
+</Note>
+
 ### `connect`
 
 Signature:
 
-```python
+<CodeGroup>
+
+```python Python
 connect(
     subject: str, 
     project_name: str, 
@@ -185,6 +259,17 @@ connect(
     redirect_uri: str | None = None
 ) -> dict
 ```
+
+```ts JavaScript
+connect(payload: {
+  subject: string;
+  projectName: string;
+  provider?: string;
+  redirectUri?: string;
+}): Promise<GatekeeperConnectResponse>
+```
+
+</CodeGroup>
 
 **Parameters**
 
@@ -208,12 +293,23 @@ connect(
 
 Signature:
 
-```python
+<CodeGroup>
+
+```python Python
 list_connections(
     project_name: str, 
     status_filter: str | None = None
 ) -> dict
 ```
+
+```ts JavaScript
+listConnections(params: {
+  projectName: string;
+  statusFilter?: string;
+}): Promise<GatekeeperListConnectionsResponse>
+```
+
+</CodeGroup>
 
 **Parameters**
 
@@ -229,9 +325,17 @@ list_connections(
 
 Signature:
 
-```python
+<CodeGroup>
+
+```python Python
 get_connection(connection_id: str) -> dict
 ```
+
+```ts JavaScript
+getConnection(connectionId: string): Promise<GatekeeperConnection>
+```
+
+</CodeGroup>
 
 **Parameters**
 
@@ -243,7 +347,9 @@ get_connection(connection_id: str) -> dict
 
 Signature:
 
-```python
+<CodeGroup>
+
+```python Python
 list_drive_files(
     project_name: str, 
     subject: str, 
@@ -255,6 +361,21 @@ list_drive_files(
     order_by: str | None = None
 ) -> dict
 ```
+
+```ts JavaScript
+listDriveFiles(params: {
+  projectName: string;
+  subject: string;
+  pageSize?: number;
+  pageToken?: string;
+  folderId?: string;
+  query?: string;
+  includeFolders?: boolean;
+  orderBy?: string;
+}): Promise<GatekeeperDriveListResponse>
+```
+
+</CodeGroup>
 
 **Parameters**
 
@@ -298,7 +419,9 @@ list_drive_files(
 
 Signature:
 
-```python
+<CodeGroup>
+
+```python Python
 update_access_rules(
     subject: str,
     project_name: str,
@@ -307,6 +430,20 @@ update_access_rules(
     provider: str | None = None
 ) -> dict
 ```
+
+```ts JavaScript
+updateAccessRules(params: {
+  subject: string;
+  projectName: string;
+  provider?: string;
+  accessRules: {
+    allowedFolders?: string[];
+    allowedFiles?: string[];
+  };
+}): Promise<GatekeeperAccessRules>
+```
+
+</CodeGroup>
 
 **Parameters**
 
@@ -338,9 +475,17 @@ update_access_rules(
 
 Signature:
 
-```python
+<CodeGroup>
+
+```python Python
 clear_access_rules(connection_id: str) -> dict
 ```
+
+```ts JavaScript
+clearAccessRules(connectionId: string): Promise<GatekeeperAccessRules>
+```
+
+</CodeGroup>
 
 **Parameters**
 
@@ -352,13 +497,25 @@ clear_access_rules(connection_id: str) -> dict
 
 Signature:
 
-```python
+<CodeGroup>
+
+```python Python
 revoke_connection(
     subject: str,
     project_name: str,
     provider: str | None = None
 ) -> dict
 ```
+
+```ts JavaScript
+revokeConnection(params: {
+  subject: string;
+  projectName: string;
+  provider?: string;
+}): Promise<GatekeeperRevokeResponse>
+```
+
+</CodeGroup>
 
 **Parameters**
 
