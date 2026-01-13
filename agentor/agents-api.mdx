@@ -122,3 +122,68 @@ The response is streamed as a JSON object with the following fields:
   }
   ```
 </Expandable>
+
+## Tracing and observability
+
+Agentor supports tracing out of the box. Traces capture agent runs and tool calls so you can inspect them in Celesto.
+
+<Steps>
+  <Step title="Set your Celesto API key">
+    Add your Celesto API key to the environment.
+
+    ```bash
+    export CELESTO_API_KEY="cel_..."
+    ```
+
+  </Step>
+  <Step title="Enable tracing">
+    Choose the setup that fits your workflow.
+
+    <Tabs>
+      <Tab title="Automatic (recommended)">
+        If `CELESTO_API_KEY` is set, Agentor enables tracing automatically.
+
+        ```python
+        from agentor import Agentor
+
+        agent = Agentor(
+            name="Support Agent",
+            model="gpt-5-mini",
+        )
+        result = agent.run("Summarize the latest support tickets.")
+        ```
+
+        <Tip>
+          Set `CELESTO_DISABLE_AUTO_TRACING=true` if you want to opt out of automatic tracing.
+        </Tip>
+      </Tab>
+      <Tab title="Explicit">
+        Enable tracing directly on the agent.
+
+        ```python
+        from agentor import Agentor
+
+        agent = Agentor(
+            name="Support Agent",
+            model="gpt-5-mini",
+            enable_tracing=True,
+        )
+        result = agent.run("Summarize the latest support tickets.")
+        ```
+      </Tab>
+    </Tabs>
+
+    <Check>
+      After you run the agent, open the Celesto dashboard to view the trace.
+    </Check>
+  </Step>
+</Steps>
+
+### Troubleshooting tracing setup
+
+<AccordionGroup>
+  <Accordion title="No traces appear in the dashboard">
+    - Confirm you set `CELESTO_API_KEY` in the same environment where you run the agent.
+    - If you set `CELESTO_DISABLE_AUTO_TRACING=true`, enable tracing explicitly with `enable_tracing=True`.
+  </Accordion>
+</AccordionGroup>
