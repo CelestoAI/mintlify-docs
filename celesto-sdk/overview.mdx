@@ -9,7 +9,7 @@ description: 'The CelestoSDK is the Python client for interacting with the Celes
 The SDK uses cookie-based authentication with Bearer token format. The API key is passed as a cookie named `access_token` with value `Bearer {api_key}`.
 
 ```python
-from celesto_sdk.sdk import CelestoSDK
+from celesto.sdk import CelestoSDK
 
 # Using explicit API key
 client = CelestoSDK(api_key="sk-your-api-key-here")
@@ -48,7 +48,7 @@ emails = client.toolhub.run_list_google_emails(limit=5)
 
 ```python
 from pathlib import Path
-from celesto_sdk.sdk import CelestoSDK
+from celesto.sdk import CelestoSDK
 
 # Initialize SDK
 client = CelestoSDK(api_key="sk-your-api-key")
