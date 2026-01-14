@@ -1,0 +1,10 @@
+/* Custom background colors */
+:root {
+  /* Warm White: #FAFAF9 (rgb(250, 250, 249)) */
+  --background-light: 250 250 249;
+}
+
+.dark {
+  /* Pitch Black: #000000 (rgb(0, 0, 0)) */
+  --background-dark: 0 0 0;
+}
