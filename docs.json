@@ -66,6 +66,13 @@
           "enterprise/use-cases/human-resource-Agent",
           "enterprise/use-cases/SDR-Agent"
         ]
+      },
+      {
+        "tab": "Blog",
+        "icon": "newspaper",
+        "pages": [
+          "blog/welcome"
+        ]
       }
     ],
     "search": {},
