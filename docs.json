@@ -153,5 +153,8 @@
   "appearance": {
     "default": "dark"
   },
-  "description": "Celesto AI enables developers to effortlessly deploy, connect, and orchestrate AI agents by providing an all-in-one, developer-first platform that abstracts away complex infrastructure management."
+  "description": "Celesto AI enables developers to effortlessly deploy, connect, and orchestrate AI agents by providing an all-in-one, developer-first platform that abstracts away complex infrastructure management.",
+  "interaction": {
+    "drilldown": true
+  }
 }
