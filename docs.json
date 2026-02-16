@@ -29,13 +29,6 @@
         "icon": "book",
         "groups": [
           {
-            "group": "SmolVM",
-            "icon": "box",
-            "pages": [
-              "untitled-page"
-            ]
-          },
-          {
             "group": "Getting Started",
             "icon": "rocket",
             "pages": [
@@ -66,6 +59,13 @@
               "agentor/tools/LiteMCP",
               "agentor/tools/auth",
               "agentor/tools/LiteMCP-fastapi"
+            ]
+          },
+          {
+            "group": "SmolVM",
+            "icon": "box",
+            "pages": [
+              "untitled-page"
             ]
           },
           {
