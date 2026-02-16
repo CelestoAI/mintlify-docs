@@ -40,7 +40,6 @@
             "icon": "robot",
             "pages": [
               "agentor/overview",
-              "agentor/01-agents-api",
               "agentor/deploy",
               "agentor/agent-to-agent",
               "agentor/skills",
