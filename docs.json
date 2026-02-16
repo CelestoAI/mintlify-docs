@@ -63,8 +63,9 @@
           {
             "group": "SmolVM",
             "icon": "box",
+            "expanded": true,
             "pages": [
-              "untitled-page"
+              "getting-started"
             ]
           },
           {
