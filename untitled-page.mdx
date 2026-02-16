@@ -1,6 +1,6 @@
 ---
 title: "SmolVM"
-description: "Secure runtime for AI agents, and tools -- free and open-source from Celesto AI 🧡"
+description: "Secure runtime for AI agents and tools"
 sidebarTitle: "Getting Started"
 slug: "getting-started"
 ---
@@ -117,7 +117,7 @@ with SmolVM() as vm:
     print(f"App available at http://localhost:{host_port}")
 ```
 
-## 6. Environment Variables
+### 6. Environment Variables
 
 Inject environment variables into a running VM. Variables are persisted in `/etc/profile.d/smolvm_env.sh` and apply to new SSH/login shell sessions.
 
@@ -130,7 +130,7 @@ with SmolVM() as vm:
     print(vm.run("echo $API_KEY").output)
 ```
 
-CLI:
+**CLI:**
 
 ```bash
 smolvm env set <vm_id> API_KEY=sk-... DEBUG=1
