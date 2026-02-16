@@ -3,12 +3,26 @@
   "theme": "maple",
   "name": "Celesto AI",
   "colors": {
-    "primary": "#FF4500",
+    "primary": "#FF5722",
     "light": "#FF8A50",
-    "dark": "#BF360C"
+    "dark": "#FF5722"
   },
   "favicon": "https://ik.imagekit.io/gradsflow/celestoai/logo/center-small_iO7tbplXN.png?updatedAt=1758078045506",
   "navigation": {
+    "global": {
+      "anchors": [
+        {
+          "anchor": "Try Celesto now",
+          "icon": "flask",
+          "href": "https://celesto.ai"
+        },
+        {
+          "anchor": "GitHub",
+          "icon": "github",
+          "href": "https://github.com/celestoai"
+        }
+      ]
+    },
     "tabs": [
       {
         "tab": "Documentation",
@@ -27,11 +41,11 @@
             "pages": [
               "agentor/overview",
               "agentor/concepts",
-              "agentor/agents-api",
-              "agentor/tracing",
               "agentor/deploy",
               "agentor/agent-to-agent",
-              "agentor/skills"
+              "agentor/skills",
+              "agentor/agents-api",
+              "agentor/tracing"
             ]
           },
           {
@@ -40,10 +54,26 @@
             "pages": [
               "agentor/tools/overview",
               "agentor/tools/tool-use",
+              "agentor/tools/tool-search",
               "agentor/tools/LiteMCP",
-              "agentor/tools/LiteMCP-fastapi",
               "agentor/tools/auth",
-              "agentor/tools/tool-search"
+              "agentor/tools/LiteMCP-fastapi"
+            ]
+          },
+          {
+            "group": "SmolVM",
+            "icon": "box",
+            "expanded": true,
+            "pages": [
+              "getting-started"
+            ]
+          },
+          {
+            "group": "Guides",
+            "icon": "map",
+            "pages": [
+              "celesto-sdk/overview",
+              "superauth/google-oauth-setup"
             ]
           },
           {
@@ -74,26 +104,7 @@
           "blog/welcome"
         ]
       }
-    ],
-    "search": {},
-    "logo": {
-      "light": "https://ik.imagekit.io/gradsflow/celestoai/logo/center-small_iO7tbplXN.png?updatedAt=1758078045506",
-      "dark": "https://ik.imagekit.io/gradsflow/celestoai/logo/center-small_iO7tbplXN.png?updatedAt=1758078045506"
-    },
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Try Celesto now",
-          "href": "https://celesto.ai",
-          "icon": "flask"
-        },
-        {
-          "anchor": "GitHub",
-          "href": "https://github.com/celestoai",
-          "icon": "github"
-        }
-      ]
-    }
+    ]
   },
   "navbar": {
     "links": [
@@ -129,6 +140,10 @@
       "apiKey": "phc_vjIHlkZ5iOYWdZx0LXiifLKGl53QehS8LjudWiuSRND"
     }
   },
+  "banner": {
+    "content": "🚀 Agentor is free and open-source! See our [GitHub repository](https://github.com/CelestoAI/agentor) for details.",
+    "dismissible": true
+  },
   "fonts": {
     "heading": {
       "family": "JetBrains Mono"
@@ -141,5 +156,12 @@
       "linkedin": "https://linkedin.com/company/celestoai",
       "discord": "https://discord.gg/KNb5UkrAmm"
     }
+  },
+  "appearance": {
+    "default": "dark"
+  },
+  "description": "Celesto AI enables developers to effortlessly deploy, connect, and orchestrate AI agents by providing an all-in-one, developer-first platform that abstracts away complex infrastructure management.",
+  "interaction": {
+    "drilldown": true
   }
 }
