@@ -3,9 +3,7 @@ title: "Run agents in cloud"
 sidebarTitle: "Run Agents in Cloud"
 ---
 
-You can connect an agent to other applications and services by exposing an API endpoint. 
-Agentor makes it easy to create a production-ready server. 
-
+You can connect an agent to other applications and services by exposing an API endpoint. Agentor makes it easy to create a production-ready server.
 
 ## Serve an Agent as API
 
@@ -14,10 +12,10 @@ Agents can be deployed as REST API server so you can query them from your applic
 Agentor makes it easy to serve the Agents by providing a simple `serve` method.
 
 ```python
-from agentor.tools import WeatherAPI
+from agentor.tools import GetWeatherTool
 from agentor import Agentor
 
-agent = Agentor(name="Weather Agent", model="gpt-5-mini", tools=[WeatherAPI()])
+agent = Agentor(name="Weather Agent", model="gpt-5-mini", tools=[GetWeatherTool()])
 agent.serve(port=8000)   # [!code ++]
 ```
 
@@ -72,13 +70,11 @@ curl -X 'POST' \
 
 </CodeGroup>
 
-
 ## Run Agent in Managed Cloud
 
 Agentor comes with a built-in CLI to deploy agents to the cloud with a single command - `celesto deploy`.
 
 Celesto provides a serverless platform to run agents, which means you only pay when your agent is running.
-
 
 ```bash
 ✓ Building agent...
@@ -90,11 +86,10 @@ Celesto provides a serverless platform to run agents, which means you only pay w
 Endpoint: https://api.celesto.ai/v1/apps/your-agent-name
 Dashboard: https://celesto.ai/apps/your-agent-name
 ```
+
 <Tip>
   Your agent is now live and accessible via the API endpoint. Visit the [dashboard](https://celesto.ai) to monitor performance and manage settings.
 </Tip>
-
-
 
 ---
 
