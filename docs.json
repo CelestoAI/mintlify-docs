@@ -29,32 +29,24 @@
         "icon": "robot",
         "groups": [
           {
-            "group": "Getting Started",
+            "group": "Start Here",
             "icon": "rocket",
             "pages": [
-              "index"
-            ]
-          },
-          {
-            "group": "Agentor Get Started",
-            "icon": "rocket",
-            "pages": [
+              "agentor/home",
               "agentor/introduction",
               "agentor/installation",
               "agentor/quickstart"
             ]
           },
           {
-            "group": "Agentor Core Docs",
+            "group": "Build Agents",
             "icon": "robot",
             "pages": [
-              "agentor/overview",
               "agentor/agents-api",
-              "agentor/concepts",
               "agentor/deploy",
+              "agentor/tracing",
               "agentor/agent-to-agent",
-              "agentor/skills",
-              "agentor/tracing"
+              "agentor/skills"
             ]
           },
           {
@@ -70,20 +62,32 @@
             ]
           },
           {
-            "group": "Agentor Guides",
+            "group": "Tool Use & MCP",
+            "icon": "screwdriver-wrench",
+            "pages": [
+              "agentor/tools/overview",
+              "agentor/tools/tool-use",
+              "agentor/tools/tool-search",
+              "agentor/tools/LiteMCP",
+              "agentor/tools/LiteMCP-fastapi",
+              "agentor/tools/auth",
+              "agentor/guides/mcp-servers"
+            ]
+          },
+          {
+            "group": "Guides",
             "icon": "map",
             "pages": [
               "agentor/guides/building-agents",
               "agentor/guides/custom-tools",
-              "agentor/guides/mcp-servers",
-              "agentor/guides/agent-communication",
               "agentor/guides/streaming",
               "agentor/guides/observability",
+              "agentor/guides/agent-communication",
               "agentor/guides/deployment"
             ]
           },
           {
-            "group": "Agentor API Reference",
+            "group": "API Reference",
             "icon": "code",
             "pages": [
               "agentor/api/agentor",
@@ -103,35 +107,6 @@
               "agentor/api/mcp/hub",
               "agentor/api/a2a/controller",
               "agentor/api/a2a/types"
-            ]
-          },
-          {
-            "group": "Tools and MCP Servers",
-            "icon": "screwdriver-wrench",
-            "pages": [
-              "agentor/tools/overview",
-              "agentor/tools/tool-use",
-              "agentor/tools/tool-search",
-              "agentor/tools/LiteMCP",
-              "agentor/tools/auth",
-              "agentor/tools/LiteMCP-fastapi"
-            ]
-          },
-          {
-            "group": "Guides",
-            "icon": "map",
-            "pages": [
-              "celesto-sdk/overview",
-              "superauth/google-oauth-setup"
-            ]
-          },
-          {
-            "group": "Platform",
-            "icon": "table-cells",
-            "pages": [
-              "celesto-sdk/overview",
-              "celesto-sdk/gatekeeper",
-              "superauth/google-oauth-setup"
             ]
           }
         ]
