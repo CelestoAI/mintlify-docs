@@ -132,10 +132,6 @@
       "apiKey": "phc_vjIHlkZ5iOYWdZx0LXiifLKGl53QehS8LjudWiuSRND"
     }
   },
-  "banner": {
-    "content": "🚀 Agentor is free and open-source! See our [GitHub repository](https://github.com/CelestoAI/agentor) for details.",
-    "dismissible": true
-  },
   "fonts": {
     "heading": {
       "family": "JetBrains Mono"
@@ -146,7 +142,7 @@
       "x": "https://x.com/celestoai",
       "github": "https://github.com/celestoai",
       "linkedin": "https://linkedin.com/company/celestoai",
-      "discord": "https://discord.gg/KNb5UkrAmm"
+      "slack": "https://join.slack.com/t/celestoai/shared_invite/zt-3qc7h8gno-Nb5_PElEWHDNnGqdVzC~4Q"
     }
   },
   "appearance": {
@@ -155,5 +151,17 @@
   "description": "Celesto AI enables developers to effortlessly deploy, connect, and orchestrate AI agents by providing an all-in-one, developer-first platform that abstracts away complex infrastructure management.",
   "interaction": {
     "drilldown": true
+  },
+  "styling": {
+    "latex": false
+  },
+  "icons": {
+    "library": "lucide"
+  },
+  "metadata": {
+    "timestamp": true
+  },
+  "seo": {
+    "indexing": "all"
   }
 }
