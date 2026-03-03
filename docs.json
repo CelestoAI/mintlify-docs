@@ -7,7 +7,7 @@
     "light": "#FF8A50",
     "dark": "#FF5722"
   },
-  "favicon": "https://ik.imagekit.io/gradsflow/celestoai/logo/center-small_iO7tbplXN.png?updatedAt=1758078045506",
+  "favicon": "favicon.png",
   "navigation": {
     "global": {
       "anchors": [
@@ -50,7 +50,7 @@
           },
           {
             "group": "Tools and MCP Servers",
-            "icon": "tools",
+            "icon": "screwdriver-wrench",
             "pages": [
               "agentor/tools/overview",
               "agentor/tools/tool-use",
@@ -70,7 +70,7 @@
           },
           {
             "group": "Platform",
-            "icon": "grid-2",
+            "icon": "table-cells",
             "pages": [
               "celesto-sdk/overview",
               "celesto-sdk/gatekeeper",
@@ -127,7 +127,7 @@
           },
           {
             "group": "Advanced",
-            "icon": "settings",
+            "icon": "gear",
             "pages": [
               "smolvm/advanced/performance",
               "smolvm/advanced/troubleshooting",
@@ -221,9 +221,6 @@
   },
   "styling": {
     "latex": false
-  },
-  "icons": {
-    "library": "lucide"
   },
   "metadata": {
     "timestamp": true
