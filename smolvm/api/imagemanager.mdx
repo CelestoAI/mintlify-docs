@@ -1,0 +1,203 @@
+---
+title: "ImageManager"
+description: "Download, cache, and verify pre-built VM images"
+---
+
+`ImageManager` handles fetching and caching VM images from remote sources. It provides atomic downloads with SHA-256 verification to ensure image integrity.
+
+## Constructor
+
+### `ImageManager(cache_dir=None, registry=None)`
+
+Initialize the image manager.
+
+<ParamField path="cache_dir" type="Path | None" default="~/.smolvm/images/">
+  Override the default cache directory. If not specified, images are cached in `~/.smolvm/images/`.
+</ParamField>
+
+<ParamField path="registry" type="dict[str, ImageSource] | None" default="BUILTIN_IMAGES">
+  Override the built-in image registry. Useful for testing or adding custom images. If not specified, uses the built-in registry.
+</ParamField>
+
+```python  theme={null}
+from smolvm import ImageManager
+from pathlib import Path
+
+# Use default settings
+manager = ImageManager()
+
+# Custom cache directory
+manager = ImageManager(cache_dir=Path("/var/cache/smolvm"))
+```
+
+## Methods
+
+### `list_available()`
+
+List names of all registered images.
+
+<ResponseField name="return" type="list[str]">
+  Sorted list of image names available in the registry.
+</ResponseField>
+
+```python  theme={null}
+manager = ImageManager()
+available = manager.list_available()
+print(f"Available images: {', '.join(available)}")
+# Output: Available images: hello, quickstart-x86_64
+```
+
+### `is_cached(name)`
+
+Check if an image is fully cached locally.
+
+<ParamField path="name" type="str" required>
+  Image name to check.
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  `True` if both kernel and rootfs files exist in the cache, `False` otherwise.
+</ResponseField>
+
+**Raises:**
+
+* `ValueError` - If image name is empty
+
+```python  theme={null}
+manager = ImageManager()
+
+if manager.is_cached("hello"):
+    print("Image already cached")
+else:
+    print("Need to download image")
+```
+
+### `ensure_image(name)`
+
+Ensure an image is available locally, downloading if necessary.
+
+If the image is already cached and passes SHA-256 verification, it is returned immediately. Otherwise, it is downloaded from the registry.
+
+Downloads are atomic: files are written to a temporary location, SHA-256 verified, then renamed into place. This ensures a partial download never corrupts the cache.
+
+<ParamField path="name" type="str" required>
+  Image name from the registry.
+</ParamField>
+
+<ResponseField name="return" type="LocalImage">
+  `LocalImage` instance with paths to kernel and rootfs.
+</ResponseField>
+
+**Raises:**
+
+* `ValueError` - If image name is empty
+* `ImageError` - If the image is not in the registry, download fails, or checksum verification fails
+
+```python  theme={null}
+from smolvm import ImageManager, SmolVM, VMConfig
+
+manager = ImageManager()
+
+# Download or retrieve cached image
+image = manager.ensure_image("hello")
+print(f"Kernel: {image.kernel_path}")
+print(f"Rootfs: {image.rootfs_path}")
+
+# Use the image with SmolVM
+config = VMConfig(
+    kernel_path=image.kernel_path,
+    rootfs_path=image.rootfs_path,
+)
+
+with SmolVM(config) as vm:
+    vm.start()
+    # VM is now running with the "hello" image
+```
+
+## Built-in Image Registry
+
+SmolVM includes a registry of pre-built images from Firecracker's official sources:
+
+### `hello`
+
+Minimal "hello world" image for testing.
+
+* **Kernel:** `hello-vmlinux.bin`
+* **Rootfs:** `hello-rootfs.ext4`
+* **Size:** \~10MB total
+* **Use case:** Quick tests, examples
+
+### `quickstart-x86_64`
+
+Ubuntu Bionic (18.04) image for x86\_64 architecture.
+
+* **Kernel:** `vmlinux.bin`
+* **Rootfs:** `bionic.rootfs.ext4`
+* **Size:** \~100MB total
+* **Use case:** General purpose Linux environment
+
+## Custom Image Registry
+
+You can define custom images by providing your own registry:
+
+```python  theme={null}
+from smolvm import ImageManager, ImageSource
+
+custom_registry = {
+    "my-custom-image": ImageSource(
+        name="my-custom-image",
+        kernel_url="https://example.com/vmlinux.bin",
+        kernel_sha256="abc123...",
+        rootfs_url="https://example.com/rootfs.ext4",
+        rootfs_sha256="def456...",
+    ),
+}
+
+manager = ImageManager(registry=custom_registry)
+image = manager.ensure_image("my-custom-image")
+```
+
+## Cache Behavior
+
+The image manager implements smart caching:
+
+1. **Cache hit:** If both kernel and rootfs exist and pass SHA-256 verification, they are used immediately
+2. **Cache miss:** If files don't exist, they are downloaded
+3. **Checksum mismatch:** If cached files fail verification, they are re-downloaded
+4. **Atomic writes:** Downloads write to temporary files and rename on success, preventing corruption
+
+```python  theme={null}
+manager = ImageManager()
+
+# First call: downloads image
+image1 = manager.ensure_image("hello")
+print("Downloaded image")
+
+# Second call: uses cache (instant)
+image2 = manager.ensure_image("hello")
+print("Used cached image")
+
+assert image1.kernel_path == image2.kernel_path
+assert image1.rootfs_path == image2.rootfs_path
+```
+
+## Error Handling
+
+```python  theme={null}
+from smolvm import ImageManager
+from smolvm.exceptions import ImageError
+
+manager = ImageManager()
+
+try:
+    image = manager.ensure_image("nonexistent")
+except ImageError as e:
+    print(f"Error: {e}")
+    # Error: Unknown image: 'nonexistent'. Available images: hello, quickstart-x86_64
+```
+
+## Related
+
+* [ImageSource](/smolvm/api/imagesource) - Define downloadable image metadata
+* [LocalImage](/smolvm/api/imagesource#localimage) - Locally-cached image representation
+* [ImageBuilder](/smolvm/api/imagebuilder) - Build custom images with SSH

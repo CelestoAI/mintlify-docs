@@ -82,8 +82,75 @@
       {
         "tab": "SmolVM",
         "icon": "box",
-        "pages": [
-          "smolvm/getting-started"
+        "groups": [
+          {
+            "group": "Get Started",
+            "icon": "rocket",
+            "pages": [
+              "smolvm/introduction",
+              "smolvm/quickstart",
+              "smolvm/installation"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "icon": "lightbulb",
+            "pages": [
+              "smolvm/concepts/overview",
+              "smolvm/concepts/security",
+              "smolvm/concepts/backends",
+              "smolvm/concepts/networking"
+            ]
+          },
+          {
+            "group": "Guides",
+            "icon": "map",
+            "pages": [
+              "smolvm/guides/basic-usage",
+              "smolvm/guides/vm-lifecycle",
+              "smolvm/guides/port-forwarding",
+              "smolvm/guides/environment-variables",
+              "smolvm/guides/custom-images",
+              "smolvm/guides/ai-agent-integration"
+            ]
+          },
+          {
+            "group": "CLI Reference",
+            "icon": "terminal",
+            "pages": [
+              "smolvm/cli/overview",
+              "smolvm/cli/cleanup",
+              "smolvm/cli/doctor",
+              "smolvm/cli/env",
+              "smolvm/cli/ui"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "icon": "settings",
+            "pages": [
+              "smolvm/advanced/performance",
+              "smolvm/advanced/troubleshooting",
+              "smolvm/advanced/architecture"
+            ]
+          },
+          {
+            "group": "API Reference",
+            "icon": "book",
+            "pages": [
+              "smolvm/api/smolvm",
+              "smolvm/api/vmconfig",
+              "smolvm/api/commandresult",
+              "smolvm/api/vminfo",
+              "smolvm/api/imagebuilder",
+              "smolvm/api/imagemanager",
+              "smolvm/api/imagesource",
+              "smolvm/api/hostmanager",
+              "smolvm/api/networkconfig",
+              "smolvm/api/sshclient",
+              "smolvm/api/exceptions"
+            ]
+          }
         ]
       },
       {

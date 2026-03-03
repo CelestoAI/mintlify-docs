@@ -1,0 +1,338 @@
+---
+title: "VM Lifecycle Management"
+description: "Create, start, stop, and manage SmolVM instances throughout their lifecycle"
+---
+
+## VM Lifecycle States
+
+A SmolVM instance progresses through these states:
+
+* `CREATED` - VM configured but not started
+* `RUNNING` - VM is booted and operational
+* `STOPPED` - VM has been gracefully shut down
+
+## Creating a VM
+
+<Steps>
+  <Step title="Import SmolVM">
+    ```python  theme={null}
+    from smolvm import SmolVM
+    ```
+  </Step>
+
+  <Step title="Create VM instance">
+    ```python  theme={null}
+    # Auto-configuration mode
+    vm = SmolVM()
+    print(f"Created VM: {vm.vm_id}")
+    print(f"Status: {vm.status}")  # VMState.CREATED
+    ```
+  </Step>
+
+  <Step title="Verify VM is created">
+    The VM is now registered in SmolVM's state database but not yet running.
+  </Step>
+</Steps>
+
+## Starting a VM
+
+Start the VM to boot the guest operating system:
+
+```python  theme={null}
+from smolvm import SmolVM
+
+vm = SmolVM()
+vm.start(boot_timeout=30.0)
+print(f"VM started: {vm.status}")  # VMState.RUNNING
+print(f"IP address: {vm.get_ip()}")
+```
+
+### Boot Process
+
+When you call `start()`, SmolVM:
+
+1. Launches the Firecracker/QEMU process
+2. Boots the kernel with configured boot arguments
+3. Waits for the VM to become responsive
+4. Injects environment variables if configured (see `env_vars` in VMConfig)
+
+### Method Signature
+
+```python  theme={null}
+def start(self, boot_timeout: float = 30.0) -> SmolVM:
+    """Start the VM.
+
+    Args:
+        boot_timeout: Maximum seconds to wait for boot.
+
+    Returns:
+        self for method chaining.
+    """
+```
+
+<Note>
+  If a VM is already running, calling `start()` is a no-op and returns immediately.
+</Note>
+
+## Stopping a VM
+
+Gracefully shut down a running VM:
+
+```python  theme={null}
+vm.stop(timeout=3.0)
+print(f"VM stopped: {vm.status}")  # VMState.STOPPED
+```
+
+The `stop()` method:
+
+* Sends a shutdown signal to the guest
+* Waits up to `timeout` seconds for graceful shutdown
+* Cleans up port forwarding rules
+* Closes SSH connections
+
+### Method Signature
+
+```python  theme={null}
+def stop(self, timeout: float = 3.0) -> SmolVM:
+    """Stop the VM.
+
+    Args:
+        timeout: Seconds to wait for graceful shutdown.
+
+    Returns:
+        self for method chaining.
+    """
+```
+
+## Deleting a VM
+
+Permanently delete a VM and release all resources:
+
+```python  theme={null}
+vm.delete()
+# VM is now removed from state database
+# All network resources are cleaned up
+```
+
+<Warning>
+  Deletion is permanent. The VM cannot be recovered after deletion.
+</Warning>
+
+## Context Manager Pattern
+
+The recommended way to manage VM lifecycle is using Python's context manager:
+
+```python  theme={null}
+from smolvm import SmolVM
+
+with SmolVM() as vm:
+    # VM automatically starts on context entry
+    print(f"VM running: {vm.vm_id}")
+    result = vm.run("hostname")
+    print(result.output)
+    # VM automatically stops and deletes on context exit
+```
+
+### Context Manager Behavior
+
+<Tabs>
+  <Tab title="New VMs (owns_vm=True)">
+    When you create a VM with `SmolVM(config)` or `SmolVM()`:
+
+    * `__enter__`: Automatically starts the VM
+    * `__exit__`: Stops AND deletes the VM
+
+    ```python  theme={null}
+    # VM is created, started, and cleaned up automatically
+    with SmolVM() as vm:
+        vm.run("echo 'hello'")
+    # VM is now deleted
+    ```
+  </Tab>
+
+  <Tab title="Reconnected VMs (owns_vm=False)">
+    When you reconnect with `SmolVM.from_id(vm_id)`:
+
+    * `__enter__`: Does NOT start the VM (preserves state)
+    * `__exit__`: Stops but does NOT delete
+
+    ```python  theme={null}
+    # Reconnect to existing VM
+    with SmolVM.from_id("my-vm") as vm:
+        vm.run("echo 'hello'")
+    # VM is stopped but still exists
+    ```
+  </Tab>
+</Tabs>
+
+## Reconnecting to Existing VMs
+
+Reconnect to a VM that was created earlier:
+
+```python  theme={null}
+from smolvm import SmolVM
+
+# Create a VM without context manager
+vm = SmolVM()
+vm.start()
+vm_id = vm.vm_id
+vm.close()  # Release resources but don't delete
+
+# Later, reconnect to the same VM
+vm2 = SmolVM.from_id(vm_id)
+print(f"Reconnected to {vm2.vm_id}")
+print(f"Status: {vm2.status}")  # VMState.RUNNING
+
+# Continue using the VM
+result = vm2.run("uptime")
+print(result.output)
+```
+
+### Class Method Signature
+
+```python  theme={null}
+@classmethod
+def from_id(
+    cls,
+    vm_id: str,
+    *,
+    data_dir: Path | None = None,
+    socket_dir: Path | None = None,
+    backend: str | None = None,
+    ssh_user: str = "root",
+    ssh_key_path: str | None = None,
+) -> SmolVM:
+    """Reconnect to an existing VM by ID."""
+```
+
+## Manual Lifecycle Management
+
+For advanced use cases where you need explicit control:
+
+```python  theme={null}
+from smolvm import SmolVM
+
+try:
+    # Create but don't start
+    vm = SmolVM()
+    print(f"VM created: {vm.vm_id} (status: {vm.status})")
+
+    # Manually start when ready
+    vm.start()
+    print(f"VM started (status: {vm.status})")
+
+    # Do work
+    result = vm.run("cat /etc/os-release")
+    print(result.output)
+
+    # Manually stop
+    vm.stop()
+    print(f"VM stopped (status: {vm.status})")
+
+finally:
+    # Clean up resources
+    vm.delete()
+    print("VM deleted")
+```
+
+## Long-running VMs
+
+For persistent VMs that survive across Python sessions:
+
+<Steps>
+  <Step title="Create a VM with a stable ID">
+    ```python  theme={null}
+    from smolvm import SmolVM, VMConfig
+    from smolvm.build import ImageBuilder, SSH_BOOT_ARGS
+
+    builder = ImageBuilder()
+    kernel, rootfs = builder.build_alpine_ssh()
+
+    config = VMConfig(
+        vm_id="persistent-agent-vm",  # Stable, reusable ID
+        vcpu_count=2,
+        mem_size_mib=2048,
+        kernel_path=kernel,
+        rootfs_path=rootfs,
+        boot_args=SSH_BOOT_ARGS,
+    )
+
+    vm = SmolVM(config)
+    vm.start()
+    print(f"Created persistent VM: {vm.vm_id}")
+    vm.close()  # Release SDK resources, keep VM running
+    ```
+  </Step>
+
+  <Step title="Reconnect in another session">
+    ```python  theme={null}
+    from smolvm import SmolVM
+
+    # In a different Python session or script
+    vm = SmolVM.from_id("persistent-agent-vm")
+    print(f"Reconnected to {vm.vm_id}")
+    print(f"Status: {vm.status}")
+
+    result = vm.run("uptime")
+    print(result.output)
+    ```
+  </Step>
+
+  <Step title="Clean up when done">
+    ```python  theme={null}
+    vm = SmolVM.from_id("persistent-agent-vm")
+    vm.stop()
+    vm.delete()
+    print("VM permanently deleted")
+    ```
+  </Step>
+</Steps>
+
+## Waiting for SSH
+
+Explicitly wait for SSH to become available:
+
+```python  theme={null}
+vm = SmolVM()
+vm.start()
+
+# Wait up to 60 seconds for SSH
+vm.wait_for_ssh(timeout=60.0)
+print("SSH is ready")
+
+# Now run commands
+result = vm.run("whoami")
+print(result.output)
+```
+
+<Note>
+  You typically don't need to call `wait_for_ssh()` explicitly. The `run()` method automatically waits for SSH on first use.
+</Note>
+
+## Refreshing VM State
+
+VM properties like `status` and `info` are cached. Refresh them from the state store:
+
+```python  theme={null}
+vm = SmolVM.from_id("my-vm")
+print(vm.status)  # Cached value
+
+vm.refresh()
+print(vm.status)  # Fresh value from database
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Port Forwarding" icon="network-wired" href="/smolvm/guides/port-forwarding">
+    Expose services running inside VMs to your host
+  </Card>
+
+  <Card title="Environment Variables" icon="code" href="/smolvm/guides/environment-variables">
+    Configure guest environment dynamically
+  </Card>
+
+  <Card title="AI Agent Integration" icon="robot" href="/smolvm/guides/ai-agent-integration">
+    Build secure AI agent sandboxes
+  </Card>
+</CardGroup>

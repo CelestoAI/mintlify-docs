@@ -1,0 +1,269 @@
+---
+title: "CommandResult"
+description: "Result object returned from executing commands on a guest VM via SSH"
+---
+
+## Overview
+
+`CommandResult` is a Pydantic model that encapsulates the result of executing a command on a guest VM. It provides exit code, stdout, stderr, and convenience properties for checking command success.
+
+## Model Definition
+
+```python  theme={null}
+class CommandResult(BaseModel)
+```
+
+All CommandResult instances are immutable (frozen) after creation.
+
+## Fields
+
+<ResponseField name="exit_code" type="int">
+  Exit code of the executed command. A value of `0` indicates success, while non-zero values indicate errors.
+</ResponseField>
+
+<ResponseField name="stdout" type="str">
+  Standard output captured from the command execution. Contains all text written to stdout during command execution.
+</ResponseField>
+
+<ResponseField name="stderr" type="str">
+  Standard error captured from the command execution. Contains all text written to stderr during command execution.
+</ResponseField>
+
+## Properties
+
+### ok
+
+```python  theme={null}
+@property
+def ok(self) -> bool
+```
+
+Whether the command succeeded (exit\_code == 0).
+
+<ResponseField name="return" type="bool">
+  `True` if the command succeeded (exit\_code is 0), `False` otherwise.
+</ResponseField>
+
+### output
+
+```python  theme={null}
+@property
+def output(self) -> str
+```
+
+Convenience alias for stripped standard output.
+
+<ResponseField name="return" type="str">
+  The stdout with leading and trailing whitespace removed.
+</ResponseField>
+
+## Usage Examples
+
+### Basic Command Execution
+
+```python  theme={null}
+from smolvm import SmolVM
+
+with SmolVM() as vm:
+    result = vm.run("echo 'Hello, World!'")
+    
+    print(f"Exit code: {result.exit_code}")  # 0
+    print(f"Output: {result.stdout}")  # Hello, World!\n
+    print(f"Stripped output: {result.output}")  # Hello, World!
+    print(f"Success: {result.ok}")  # True
+```
+
+### Checking Command Success
+
+```python  theme={null}
+from smolvm import SmolVM
+
+with SmolVM() as vm:
+    result = vm.run("test -f /etc/passwd")
+    
+    if result.ok:
+        print("File exists")
+    else:
+        print(f"Command failed with exit code: {result.exit_code}")
+```
+
+### Handling Command Errors
+
+```python  theme={null}
+from smolvm import SmolVM
+
+with SmolVM() as vm:
+    result = vm.run("ls /nonexistent")
+    
+    if not result.ok:
+        print(f"Error (exit code {result.exit_code}):")
+        print(result.stderr)  # ls: /nonexistent: No such file or directory
+    else:
+        print(result.stdout)
+```
+
+### Capturing Multi-line Output
+
+```python  theme={null}
+from smolvm import SmolVM
+
+with SmolVM() as vm:
+    result = vm.run("cat /etc/os-release")
+    
+    if result.ok:
+        for line in result.stdout.splitlines():
+            print(line)
+```
+
+### Using the output Property
+
+```python  theme={null}
+from smolvm import SmolVM
+
+with SmolVM() as vm:
+    result = vm.run("hostname")
+    
+    # result.stdout might be "localhost\n"
+    # result.output is "localhost" (stripped)
+    hostname = result.output
+    print(f"Hostname: {hostname}")
+```
+
+### Conditional Execution Based on Results
+
+```python  theme={null}
+from smolvm import SmolVM
+
+with SmolVM() as vm:
+    # Check if Python is installed
+    python_check = vm.run("which python3")
+    
+    if python_check.ok:
+        python_version = vm.run("python3 --version")
+        print(f"Python is installed: {python_version.output}")
+    else:
+        # Install Python
+        install = vm.run("apk add python3")
+        if install.ok:
+            print("Python installed successfully")
+        else:
+            print(f"Installation failed: {install.stderr}")
+```
+
+### Parsing Command Output
+
+```python  theme={null}
+from smolvm import SmolVM
+import json
+
+with SmolVM() as vm:
+    # Get process list as JSON
+    result = vm.run("ps aux | awk '{print $1, $2, $11}' | tail -n +2")
+    
+    if result.ok:
+        for line in result.stdout.splitlines():
+            user, pid, command = line.split(None, 2)
+            print(f"PID {pid}: {command} (user: {user})")
+```
+
+### Error Handling Pattern
+
+```python  theme={null}
+from smolvm import SmolVM
+
+def run_command_safe(vm: SmolVM, command: str) -> str:
+    """Run a command and raise an exception on failure."""
+    result = vm.run(command)
+    
+    if not result.ok:
+        raise RuntimeError(
+            f"Command failed with exit code {result.exit_code}: "
+            f"{result.stderr or result.stdout}"
+        )
+    
+    return result.output
+
+with SmolVM() as vm:
+    try:
+        output = run_command_safe(vm, "uname -r")
+        print(f"Kernel version: {output}")
+    except RuntimeError as e:
+        print(f"Error: {e}")
+```
+
+### Working with Binary Output
+
+```python  theme={null}
+from smolvm import SmolVM
+import base64
+
+with SmolVM() as vm:
+    # Read a binary file and encode it
+    result = vm.run("base64 /bin/busybox | head -n 1")
+    
+    if result.ok:
+        # First line of base64-encoded binary
+        print(f"Encoded data: {result.output[:50]}...")
+```
+
+### Chaining Commands with Result Checks
+
+```python  theme={null}
+from smolvm import SmolVM
+
+with SmolVM() as vm:
+    # Create directory
+    result = vm.run("mkdir -p /tmp/myapp")
+    if not result.ok:
+        raise RuntimeError(f"Failed to create directory: {result.stderr}")
+    
+    # Write file
+    result = vm.run("echo 'Hello' > /tmp/myapp/test.txt")
+    if not result.ok:
+        raise RuntimeError(f"Failed to write file: {result.stderr}")
+    
+    # Verify file exists
+    result = vm.run("cat /tmp/myapp/test.txt")
+    print(f"File contents: {result.output}")  # Hello
+```
+
+### Shell Mode Comparison
+
+```python  theme={null}
+from smolvm import SmolVM
+
+with SmolVM() as vm:
+    # Login shell mode (default) - runs through login shell
+    result1 = vm.run("echo $HOME", shell="login")
+    print(f"Login shell HOME: {result1.output}")  # /root
+    
+    # Raw mode - no shell wrapping
+    result2 = vm.run("echo 'Direct execution'", shell="raw")
+    print(f"Raw output: {result2.output}")  # Direct execution
+```
+
+## Immutability
+
+CommandResult instances are frozen and cannot be modified:
+
+```python  theme={null}
+result = vm.run("echo test")
+
+# This raises an error
+result.exit_code = 1  # ValidationError: "CommandResult" is frozen
+```
+
+## Field Summary
+
+| Field       | Type  | Description                       |
+| ----------- | ----- | --------------------------------- |
+| `exit_code` | `int` | Command exit status (0 = success) |
+| `stdout`    | `str` | Standard output stream            |
+| `stderr`    | `str` | Standard error stream             |
+
+## Property Summary
+
+| Property | Type   | Description                         |
+| -------- | ------ | ----------------------------------- |
+| `ok`     | `bool` | True if exit\_code == 0             |
+| `output` | `str`  | Stripped stdout (convenience alias) |

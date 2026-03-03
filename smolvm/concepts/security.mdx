@@ -1,0 +1,310 @@
+---
+title: "Security Model"
+description: "Understand SmolVM's security guarantees, isolation mechanisms, and operational guidance"
+---
+
+SmolVM provides hardware-level isolation for untrusted code execution. This page explains the security model, trust boundaries, and recommended operational practices.
+
+## Hardware-Level Isolation
+
+SmolVM uses KVM-backed microVMs to provide significantly stronger isolation than traditional containers.
+
+### MicroVMs vs Containers
+
+| Feature           | Containers            | MicroVMs (SmolVM)              |
+| ----------------- | --------------------- | ------------------------------ |
+| Kernel            | Shared with host      | Isolated kernel per VM         |
+| Syscall Interface | Direct to host kernel | Via KVM hypervisor             |
+| Attack Surface    | Entire host kernel    | Virtualized hardware           |
+| Escape Difficulty | Kernel exploits       | Hardware virtualization bypass |
+| Boot Time         | Milliseconds          | Sub-second                     |
+
+### Why Hardware Virtualization Matters
+
+When an LLM generates code, it's critical to execute it in an isolated environment. SmolVM provides:
+
+* **Strong Isolation**: Unlike Docker, Firecracker microVMs use hardware virtualization (KVM), making it significantly harder for malicious code to escape to the host
+* **Controlled Networking**: Fine-grained control over guest networking, allowing you to restrict or monitor an agent's internet access
+* **Ephemeral Environments**: Easily spin up a fresh VM for every task and destroy it immediately after, ensuring no side effects persist
+
+## Security Boundaries
+
+### What SmolVM Protects
+
+#### Host System Protection
+
+Malicious guest code cannot:
+
+* Access host filesystem (except via shared volumes)
+* Read host memory
+* Interfere with other VMs
+* Access host network interfaces directly
+* Execute privileged operations on the host
+
+#### Network Isolation
+
+By default, VMs are isolated from each other:
+
+```python  theme={null}
+# This network rule prevents VM-to-VM traffic
+# From network.py:469-472
+iifname "tap*" oifname "tap*" counter drop
+```
+
+Each VM can:
+
+* Access the internet via NAT (configurable)
+* Be accessed from the host via port forwarding
+* **Cannot** directly communicate with other VMs
+
+#### Resource Isolation
+
+Each VM has dedicated, capped resources:
+
+```python  theme={null}
+from smolvm import VMConfig
+
+config = VMConfig(
+    vcpu_count=2,      # Max 2 CPUs
+    mem_size_mib=512   # Max 512 MiB RAM
+)
+```
+
+### What SmolVM Does NOT Protect
+
+<Warning>
+  SmolVM provides isolation, not complete security. Understand these limitations:
+</Warning>
+
+#### Host Network Trust
+
+SmolVM assumes the host network is trusted. Guests can:
+
+* Make outbound network requests (unless restricted)
+* Access any internet service
+* Download and execute code from the internet
+
+#### Data Exfiltration
+
+If a VM has network access, malicious code can:
+
+* Send data to external servers
+* Establish reverse shells
+* Participate in botnets
+
+**Mitigation**: Use firewall rules or network policies to restrict outbound access.
+
+#### Resource Exhaustion
+
+A malicious guest can:
+
+* Consume all allocated CPU and memory
+* Fill the allocated disk
+* Generate high network traffic
+
+**Mitigation**: Set appropriate resource limits and monitor usage.
+
+## SSH Trust Model (Important)
+
+<Warning>
+  SmolVM currently prioritizes zero-touch VM access for local agent workflows. Read this section carefully.
+</Warning>
+
+### Current Implementation
+
+SmolVM uses Paramiko's `AutoAddPolicy` for SSH connections, which accepts unknown host keys on first connection.
+
+```python  theme={null}
+# From SECURITY.md:82-100
+# SSH host keys are not strictly verified during first connection
+# (Paramiko `AutoAddPolicy`).
+```
+
+### Security Impact
+
+This can allow man-in-the-middle attacks in untrusted network environments (CWE-295).
+
+**SmolVM should therefore be treated as a trusted-host / trusted-network local runtime by default.**
+
+### Recommended Operational Guidance
+
+<Note>
+  Follow these practices to use SmolVM securely:
+</Note>
+
+#### 1. Local-Only Usage
+
+* Prefer local-only usage on developer machines or trusted CI runners
+* Do not expose guest SSH endpoints to public or untrusted networks
+
+#### 2. Network Controls
+
+If your environment requires strict host identity validation:
+
+* Use private networking with firewall restrictions
+* Deploy bastion/proxy hosts
+* Add SSH key pinning policy at your deployment layer
+* Implement external network controls
+
+#### 3. Trusted Networks Only
+
+```python  theme={null}
+# Good: Local development
+with SmolVM() as vm:
+    result = vm.run("echo 'Safe on localhost'")
+
+# Bad: Exposing to untrusted networks
+# DO NOT expose VM SSH ports publicly without additional controls
+```
+
+## Disk Isolation
+
+### Isolated Mode (Default)
+
+SmolVM defaults to `disk_mode="isolated"`, creating a per-VM rootfs clone:
+
+```python  theme={null}
+from smolvm import VMConfig
+
+# Each VM gets its own disk copy
+config = VMConfig(disk_mode="isolated")
+```
+
+**Benefits**:
+
+* Complete filesystem isolation
+* No state leakage between VMs
+* Safe for untrusted code
+
+**Trade-offs**:
+
+* Additional disk space per VM
+* Slight creation overhead for copying rootfs
+
+### Shared Mode
+
+For trusted workloads that need persistent storage:
+
+```python  theme={null}
+config = VMConfig(disk_mode="shared")
+```
+
+<Warning>
+  Shared mode means all VMs boot from the same rootfs. Use only for trusted workloads where you need state persistence.
+</Warning>
+
+### Disk Retention
+
+Control whether isolated disks are kept after VM deletion:
+
+```python  theme={null}
+config = VMConfig(
+    disk_mode="isolated",
+    retain_disk_on_delete=True  # Keep disk for later reuse
+)
+```
+
+## Environment Variables
+
+SmolVM can inject environment variables into VMs:
+
+```python  theme={null}
+from smolvm import SmolVM
+
+with SmolVM() as vm:
+    vm.set_env_vars({
+        "API_KEY": "sk-...",
+        "DEBUG": "1"
+    })
+```
+
+<Warning>
+  Environment variables are persisted in `/etc/profile.d/smolvm_env.sh` in the guest. Do not inject highly sensitive secrets if the VM is shared or persistent.
+</Warning>
+
+### Best Practices
+
+* Use ephemeral VMs for sensitive operations
+* Rotate secrets after VM deletion
+* Prefer isolated disk mode for untrusted code
+* Consider using secret management services
+
+## Vulnerability Reporting
+
+### Supported Versions
+
+SmolVM is currently pre-1.0. Security fixes are prioritized for:
+
+| Version / Branch   | Supported       |
+| ------------------ | --------------- |
+| Latest release tag | ✅               |
+| `main` branch      | ✅ (best effort) |
+| Older release tags | ❌               |
+
+### Reporting Process
+
+<Warning>
+  Do not open public GitHub issues for suspected vulnerabilities.
+</Warning>
+
+Use GitHub's private vulnerability reporting:
+
+* **Private report**: [https://github.com/CelestoAI/SmolVM/security/advisories/new](https://github.com/CelestoAI/SmolVM/security/advisories/new)
+
+If that link is unavailable, open a minimal issue asking maintainers for a private contact channel (without sensitive details).
+
+### What to Include
+
+Please include:
+
+* Clear description of the vulnerability and impact
+* Affected version/commit and host environment (OS, architecture)
+* Reproduction steps or proof-of-concept
+* Expected vs. actual behavior
+* Any suggested mitigation
+
+### Response Expectations
+
+As a small team, reports are handled as capacity allows. Non-binding targets:
+
+1. Acknowledge report within **3 business days**
+2. Triage and severity assessment within **7 business days**
+3. Provide periodic updates when possible
+
+### Disclosure Policy
+
+SmolVM follows coordinated disclosure:
+
+* Please allow reasonable time for a fix before public disclosure
+* Security advisories may be published for confirmed issues
+* Reporters are credited (unless anonymous credit is requested)
+
+## Scope Notes
+
+This security policy covers vulnerabilities in SmolVM's code and release artifacts.
+
+### Out of Scope
+
+(unless caused by SmolVM code):
+
+* Vulnerabilities in third-party dependencies/upstream projects
+* Host misconfiguration outside documented SmolVM setup
+* Security findings without a realistic exploit path or impact
+
+## Security Checklist
+
+Before deploying SmolVM:
+
+* [ ] Using local/trusted networks only?
+* [ ] Firewall rules configured for outbound restrictions?
+* [ ] Resource limits appropriate for workload?
+* [ ] Using `disk_mode="isolated"` for untrusted code?
+* [ ] Secrets rotated after ephemeral VM deletion?
+* [ ] Not exposing VM SSH ports publicly?
+* [ ] CI/CD runners using trusted network environments?
+
+## Next Steps
+
+* Explore [Backend Options](/smolvm/concepts/backends)
+* Configure [Network Security](/smolvm/concepts/networking)
+* Review [Architecture Overview](/smolvm/concepts/overview)

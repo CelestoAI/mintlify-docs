@@ -1,0 +1,76 @@
+---
+title: "CLI Overview"
+description: "Overview of the SmolVM command-line interface and installation"
+---
+
+## Overview
+
+The SmolVM CLI provides a set of commands for managing VMs, diagnosing system requirements, and running the dashboard UI. The main entrypoint is the `smolvm` command.
+
+## Installation
+
+Install SmolVM via pip:
+
+```bash  theme={null}
+pip install smolvm
+```
+
+For dashboard support, install with the `dashboard` extra:
+
+```bash  theme={null}
+pip install 'smolvm[dashboard]'
+```
+
+## Available Commands
+
+The `smolvm` CLI provides the following commands:
+
+| Command          | Description                                   |
+| ---------------- | --------------------------------------------- |
+| `smolvm cleanup` | Clean stale SmolVM resources and VMs          |
+| `smolvm doctor`  | Run host diagnostics for the selected backend |
+| `smolvm env`     | Manage environment variables on a running VM  |
+| `smolvm ui`      | Start the SmolVM dashboard UI server          |
+
+## Getting Help
+
+Display help for the main command:
+
+```bash  theme={null}
+smolvm --help
+```
+
+Display help for a specific subcommand:
+
+```bash  theme={null}
+smolvm cleanup --help
+smolvm doctor --help
+smolvm env --help
+smolvm ui --help
+```
+
+## Script Aliases
+
+The following script aliases are also available:
+
+* `smolvm-cleanup`: Equivalent to `smolvm cleanup` (standalone cleanup command)
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Cleanup Command" icon="broom" href="/smolvm/cli/cleanup">
+    Clean up stale VMs and resources
+  </Card>
+
+  <Card title="Doctor Command" icon="stethoscope" href="/smolvm/cli/doctor">
+    Diagnose system requirements
+  </Card>
+
+  <Card title="Environment Commands" icon="gear" href="/smolvm/cli/env">
+    Manage VM environment variables
+  </Card>
+
+  <Card title="UI Command" icon="window" href="/smolvm/cli/ui">
+    Launch the dashboard interface
+  </Card>
+</CardGroup>

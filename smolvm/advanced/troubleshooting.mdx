@@ -1,0 +1,443 @@
+---
+title: "Troubleshooting Guide"
+description: "Common issues, error messages, and solutions for SmolVM"
+---
+
+This guide covers common issues you might encounter when using SmolVM and how to resolve them.
+
+## Diagnostics
+
+SmolVM includes a built-in diagnostic tool to check your system configuration:
+
+```bash  theme={null}
+# Auto-detect backend and check prerequisites
+smolvm doctor
+
+# Check specific backend
+smolvm doctor --backend firecracker
+smolvm doctor --backend qemu
+
+# CI-friendly JSON output
+smolvm doctor --json --strict
+```
+
+The `smolvm doctor` command validates:
+
+* KVM availability (Linux/Firecracker)
+* Firecracker binary installation
+* QEMU installation and HVF support (macOS)
+* Network configuration (nftables, iproute2)
+* System permissions
+
+## Common Issues
+
+<AccordionGroup>
+  <Accordion title="KVM not available: /dev/kvm not found">
+    **Problem**: The Firecracker backend requires KVM hardware virtualization.
+
+    **Solution**:
+
+    1. Verify KVM is available:
+
+    ```bash  theme={null}
+    ls -l /dev/kvm
+    ```
+
+    2. If missing, enable virtualization in your BIOS/UEFI settings
+
+    3. Add your user to the `kvm` group:
+
+    ```bash  theme={null}
+    sudo usermod -aG kvm $USER
+    newgrp kvm  # Or log out and back in
+    ```
+
+    4. Verify permissions:
+
+    ```bash  theme={null}
+    # Should show rw-rw---- with kvm group
+    ls -l /dev/kvm
+    ```
+
+    **Alternative**: Use the QEMU backend if KVM is unavailable:
+
+    ```python  theme={null}
+    from smolvm import SmolVM
+    vm = SmolVM(backend="qemu")
+    ```
+  </Accordion>
+
+  <Accordion title="Firecracker binary not found">
+    **Problem**: The `firecracker` executable is not in PATH.
+
+    **Solution**:
+
+    1. Run the system setup script:
+
+    ```bash  theme={null}
+    sudo ./scripts/system-setup.sh --configure-runtime
+    ```
+
+    2. Or install manually using the HostManager:
+
+    ```python  theme={null}
+    from smolvm.host import HostManager
+
+    host = HostManager()
+    host.install_firecracker()
+    ```
+
+    3. Verify installation:
+
+    ```bash  theme={null}
+    which firecracker
+    # Should show /usr/local/bin/firecracker or ~/.smolvm/bin/firecracker
+    ```
+  </Accordion>
+
+  <Accordion title="Permission denied: Cannot create TAP device">
+    **Problem**: User lacks permissions to create TAP networking devices.
+
+    **Solution**:
+
+    1. Run the network setup script:
+
+    ```bash  theme={null}
+    sudo ./scripts/system-setup.sh --configure-runtime
+    ```
+
+    2. Or configure manually:
+
+    ```bash  theme={null}
+    # Allow user to create TAP devices
+    sudo setcap cap_net_admin+ep $(which ip)
+
+    # Enable IP forwarding
+    sudo sysctl -w net.ipv4.ip_forward=1
+    echo 'net.ipv4.ip_forward=1' | sudo tee -a /etc/sysctl.conf
+    ```
+
+    3. Verify nftables is installed:
+
+    ```bash  theme={null}
+    sudo nft list ruleset
+    ```
+  </Accordion>
+
+  <Accordion title="VM boots but SSH connection times out">
+    **Problem**: VM starts successfully but SSH connection fails.
+
+    **Solution**:
+
+    1. Check VM status:
+
+    ```python  theme={null}
+    from smolvm import SmolVM
+
+    manager = SmolVM()
+    vm_info = manager.get("vm-xxxxx")
+    print(f"Status: {vm_info.status}")
+    print(f"IP: {vm_info.network.guest_ip}")
+    print(f"SSH Port: {vm_info.network.ssh_host_port}")
+    ```
+
+    2. Test network connectivity:
+
+    ```bash  theme={null}
+    # Ping guest IP (Firecracker backend)
+    ping 172.16.0.2
+
+    # Test SSH port forwarding
+    nc -zv localhost 2200
+    ```
+
+    3. Check firewall rules:
+
+    ```bash  theme={null}
+    sudo nft list ruleset | grep 2200
+    ```
+
+    4. Examine VM logs:
+
+    ```bash  theme={null}
+    cat ~/.local/state/smolvm/vm-xxxxx.log
+    ```
+
+    5. Increase SSH timeout:
+
+    ```python  theme={null}
+    from smolvm import SmolVM, VMConfig
+
+    config = VMConfig(ssh_timeout=60.0)  # Increase from default 30s
+    vm = SmolVM(config)
+    ```
+  </Accordion>
+
+  <Accordion title="DatabaseError: database is locked">
+    **Problem**: Multiple SmolVM processes trying to access the state database simultaneously.
+
+    **Solution**:
+
+    1. The state database uses exclusive locks for writes. Ensure only one process modifies VMs at a time.
+
+    2. Check for stale processes:
+
+    ```bash  theme={null}
+    ps aux | grep firecracker
+    ps aux | grep qemu-system
+    ```
+
+    3. Reconcile VM state:
+
+    ```python  theme={null}
+    from smolvm import SmolVM
+
+    manager = SmolVM()
+    stale_vms = manager.reconcile()
+    print(f"Cleaned up {len(stale_vms)} stale VMs")
+    ```
+
+    4. If persistent, manually remove the lock:
+
+    ```bash  theme={null}
+    # WARNING: Only do this if no SmolVM processes are running
+    rm ~/.local/state/smolvm/smolvm.db-wal
+    rm ~/.local/state/smolvm/smolvm.db-shm
+    ```
+  </Accordion>
+
+  <Accordion title="No IP addresses available in pool">
+    **Problem**: All IPs in the `172.16.0.2-254` range are allocated.
+
+    **Solution**:
+
+    1. List all VMs:
+
+    ```python  theme={null}
+    from smolvm import SmolVM
+
+    manager = SmolVM()
+    vms = manager.list_vms()
+    print(f"Total VMs: {len(vms)}")
+    ```
+
+    2. Clean up stopped VMs:
+
+    ```python  theme={null}
+    from smolvm.types import VMState
+
+    stopped_vms = manager.list_vms(status=VMState.STOPPED)
+    for vm in stopped_vms:
+        manager.delete(vm.vm_id)
+    ```
+
+    3. Use the CLI cleanup command:
+
+    ```bash  theme={null}
+    smolvm cleanup --all
+    ```
+
+    4. The IP pool supports 253 concurrent VMs. If you need more, consider implementing a custom IP allocator.
+  </Accordion>
+
+  <Accordion title="QEMU exited early while booting (macOS)">
+    **Problem**: QEMU process terminates immediately after start.
+
+    **Solution**:
+
+    1. Verify QEMU installation:
+
+    ```bash  theme={null}
+    qemu-system-aarch64 --version
+    qemu-system-x86_64 --version
+    ```
+
+    2. Check HVF acceleration support:
+
+    ```bash  theme={null}
+    qemu-system-aarch64 -accel help
+    # Should list 'hvf' for Hypervisor.framework
+    ```
+
+    3. Reinstall QEMU via Homebrew:
+
+    ```bash  theme={null}
+    brew uninstall qemu
+    brew install qemu
+    ```
+
+    4. Check VM logs for kernel panic:
+
+    ```bash  theme={null}
+    cat ~/.local/state/smolvm/vm-xxxxx.log
+    ```
+
+    5. Ensure kernel and rootfs are compatible:
+
+    ```python  theme={null}
+    from smolvm import VMConfig
+    from smolvm.build import download_assets
+
+    # Download matching kernel and rootfs
+    assets = download_assets()
+    config = VMConfig(
+        kernel_path=assets["kernel"],
+        rootfs_path=assets["rootfs"]
+    )
+    ```
+  </Accordion>
+
+  <Accordion title="VM stuck in ERROR state">
+    **Problem**: VM is marked as ERROR and cannot be restarted.
+
+    **Solution**:
+
+    1. Check VM details:
+
+    ```python  theme={null}
+    from smolvm import SmolVM
+
+    manager = SmolVM()
+    vm_info = manager.get("vm-xxxxx")
+    print(f"Status: {vm_info.status}")
+    print(f"PID: {vm_info.pid}")
+    ```
+
+    2. Examine logs:
+
+    ```bash  theme={null}
+    cat ~/.local/state/smolvm/vm-xxxxx.log
+    ```
+
+    3. Delete and recreate:
+
+    ```python  theme={null}
+    manager.delete("vm-xxxxx")
+
+    # Create fresh VM
+    new_vm = manager.create(config)
+    manager.start(new_vm.vm_id)
+    ```
+
+    4. Run reconciliation to clean up stale state:
+
+    ```python  theme={null}
+    stale_vms = manager.reconcile()
+    ```
+  </Accordion>
+
+  <Accordion title="RuntimeError: Unable to find writable data directory">
+    **Problem**: SmolVM cannot create or write to any data directory.
+
+    **Solution**:
+
+    1. Check directory permissions:
+
+    ```bash  theme={null}
+    ls -ld ~/.local/state/smolvm
+    ls -ld /var/lib/smolvm
+    ```
+
+    2. Create directory manually:
+
+    ```bash  theme={null}
+    mkdir -p ~/.local/state/smolvm
+    chmod 755 ~/.local/state/smolvm
+    ```
+
+    3. Set explicit data directory:
+
+    ```python  theme={null}
+    from pathlib import Path
+    from smolvm import SmolVM
+
+    data_dir = Path("/tmp/smolvm-data")
+    manager = SmolVM(data_dir=data_dir)
+    ```
+
+    4. Use environment variable:
+
+    ```bash  theme={null}
+    export SMOLVM_DATA_DIR=/tmp/smolvm-data
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Debugging Tips
+
+### Enable Debug Logging
+
+```python  theme={null}
+import logging
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
+from smolvm import SmolVM
+
+manager = SmolVM()
+# Now you'll see detailed debug output
+```
+
+### Inspect Firecracker Socket
+
+Manually query the Firecracker API:
+
+```python  theme={null}
+from smolvm.api import FirecrackerClient
+from pathlib import Path
+
+socket_path = Path("/tmp/fc-vm-xxxxx.sock")
+client = FirecrackerClient(socket_path)
+info = client.get_instance_info()
+print(info)
+client.close()
+```
+
+### Check Network Rules
+
+```bash  theme={null}
+# List all nftables rules
+sudo nft list ruleset
+
+# Check NAT rules for specific VM
+sudo nft list table nat | grep smolvm
+
+# List TAP devices
+ip link show | grep tap
+
+# Show routes to guest VMs
+ip route show | grep 172.16.0
+```
+
+### Monitor VM Processes
+
+```bash  theme={null}
+# List all Firecracker processes
+ps aux | grep firecracker
+
+# List all QEMU processes  
+ps aux | grep qemu-system
+
+# Check resource usage
+top -p $(pgrep -d',' firecracker)
+```
+
+## Getting Help
+
+If you're still experiencing issues:
+
+1. Check the [GitHub Issues](https://github.com/celestoai/smolvm/issues) for similar problems
+2. Run `smolvm doctor --json` and include the output in your bug report
+3. Include relevant logs from `~/.local/state/smolvm/*.log`
+4. Join the [Celesto AI Slack](https://join.slack.com/t/celestoai/shared_invite/zt-3qc7h8gno-Nb5_PElEWHDNnGqdVzC~4Q) community
+
+## Known Limitations
+
+* **IP Pool**: Maximum 253 concurrent VMs (172.16.0.2-254)
+* **SSH Port Pool**: Maximum 800 concurrent VMs (ports 2200-2999)
+* **Firecracker**: Linux only (requires KVM)
+* **QEMU**: Slower boot times compared to Firecracker
+* **SSH Trust Model**: Host keys not strictly verified by default (see SECURITY.md)

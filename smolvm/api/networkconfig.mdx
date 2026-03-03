@@ -1,0 +1,172 @@
+---
+title: "NetworkConfig"
+description: "Network configuration model for SmolVM guests."
+---
+
+## Overview
+
+`NetworkConfig` is a Pydantic model that defines the network configuration for a microVM. It specifies the guest IP, gateway, TAP device, MAC address, and optional SSH port forwarding.
+
+This model is immutable (frozen) and is typically created automatically by SmolVM when starting a VM.
+
+## Attributes
+
+<ParamField path="guest_ip" type="str" required>
+  IP address assigned to the guest VM.
+</ParamField>
+
+<ParamField path="gateway_ip" type="str" default="172.16.0.1">
+  Gateway IP address (host side of the TAP device).
+</ParamField>
+
+<ParamField path="netmask" type="str" default="255.255.255.0">
+  Network mask for the guest network.
+</ParamField>
+
+<ParamField path="tap_device" type="str" required>
+  Name of the TAP network device (e.g., "smol0", "smol1").
+</ParamField>
+
+<ParamField path="guest_mac" type="str" required>
+  MAC address for the guest network interface.
+</ParamField>
+
+<ParamField path="ssh_host_port" type="int | None" default="None">
+  Optional host TCP port forwarded to guest SSH port 22.
+
+  When set, you can SSH to the guest using `ssh -p <ssh_host_port> root@localhost`.
+</ParamField>
+
+## Usage
+
+### Creating a NetworkConfig
+
+```python  theme={null}
+from smolvm import NetworkConfig
+
+network = NetworkConfig(
+    guest_ip="172.16.0.2",
+    gateway_ip="172.16.0.1",
+    netmask="255.255.255.0",
+    tap_device="smol0",
+    guest_mac="AA:FC:00:00:00:01",
+    ssh_host_port=2222
+)
+
+print(f"Guest IP: {network.guest_ip}")
+print(f"Gateway: {network.gateway_ip}")
+print(f"TAP device: {network.tap_device}")
+```
+
+### Accessing Network Info from a VM
+
+```python  theme={null}
+from smolvm import SmolVM, VMConfig
+
+config = VMConfig(
+    kernel_path="/path/to/vmlinux",
+    rootfs_path="/path/to/rootfs.ext4"
+)
+
+vm = SmolVM(config)
+vm.start()
+
+info = vm.info
+if info.network:
+    print(f"VM IP: {info.network.guest_ip}")
+    print(f"TAP device: {info.network.tap_device}")
+    if info.network.ssh_host_port:
+        print(f"SSH port: {info.network.ssh_host_port}")
+```
+
+### Using with the High-Level API
+
+```python  theme={null}
+from smolvm import SmolVM
+
+with SmolVM() as vm:
+    # Network is automatically configured
+    ip = vm.get_ip()
+    print(f"VM IP: {ip}")
+    
+    # Access the full network config
+    info = vm.get_info()
+    if info.network:
+        print(f"Gateway: {info.network.gateway_ip}")
+        print(f"MAC address: {info.network.guest_mac}")
+```
+
+## Network Architecture
+
+SmolVM uses the following networking setup:
+
+1. **TAP Device**: A virtual network interface on the host (e.g., `smol0`)
+2. **Guest IP**: Private IP address in the `172.16.0.0/16` range by default
+3. **Gateway IP**: Host-side IP of the TAP device (default: `172.16.0.1`)
+4. **NAT**: Network Address Translation configured via nftables for internet access
+5. **Port Forwarding**: Optional TCP port forwarding for SSH access
+
+### Default IP Range
+
+By default, SmolVM assigns guest IPs from `172.16.0.0/16`:
+
+* Gateway: `172.16.0.1`
+* Guest VMs: `172.16.0.2`, `172.16.0.3`, etc.
+
+### SSH Port Forwarding
+
+When `ssh_host_port` is set, you can access the guest via localhost:
+
+```bash  theme={null}
+# If ssh_host_port is 2222
+ssh -p 2222 root@localhost
+```
+
+This is useful when:
+
+* The guest IP is not directly routable
+* You want to expose SSH on a predictable port
+* You're running behind a firewall
+
+## Example: Custom Network Configuration
+
+```python  theme={null}
+from smolvm import NetworkConfig
+
+# Create a custom network config
+network = NetworkConfig(
+    guest_ip="172.16.100.50",
+    gateway_ip="172.16.100.1",
+    netmask="255.255.255.0",
+    tap_device="smol-custom",
+    guest_mac="AA:FC:00:00:01:23",
+    ssh_host_port=3333
+)
+
+print(f"Guest: {network.guest_ip}")
+print(f"Gateway: {network.gateway_ip}")
+print(f"SSH: localhost:{network.ssh_host_port}")
+```
+
+## Immutability
+
+`NetworkConfig` is a frozen Pydantic model, meaning it cannot be modified after creation:
+
+```python  theme={null}
+network = NetworkConfig(
+    guest_ip="172.16.0.2",
+    tap_device="smol0",
+    guest_mac="AA:FC:00:00:00:01"
+)
+
+# This will raise a ValidationError
+network.guest_ip = "172.16.0.3"  # Error: frozen model
+```
+
+To change network settings, create a new `NetworkConfig` instance.
+
+## Related
+
+* [VMConfig](/smolvm/api/vmconfig) - VM configuration including network settings
+* [VMInfo](/smolvm/api/vminfo) - Runtime VM information including network state
+* [SmolVM](/smolvm/api/smolvm) - High-level VM API that uses NetworkConfig internally

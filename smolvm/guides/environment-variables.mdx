@@ -1,0 +1,378 @@
+---
+title: "Environment Variables"
+description: "Inject and manage environment variables in SmolVM guests"
+---
+
+## Overview
+
+SmolVM provides multiple ways to inject environment variables into guest VMs:
+
+1. **At VM creation** - via `VMConfig.env_vars` (injected during boot)
+2. **At runtime** - via `set_env_vars()` method (dynamic injection)
+3. **Manual management** - read, update, and remove variables on running VMs
+
+Variables are persisted to `/etc/profile.d/smolvm_env.sh` inside the guest and automatically sourced by new login shells.
+
+## Injecting Variables at Boot
+
+Set environment variables when creating a VM:
+
+```python  theme={null}
+from smolvm import SmolVM, VMConfig
+from smolvm.build import ImageBuilder, SSH_BOOT_ARGS
+
+builder = ImageBuilder()
+kernel, rootfs = builder.build_alpine_ssh()
+
+config = VMConfig(
+    vm_id="env-vm",
+    vcpu_count=1,
+    mem_size_mib=512,
+    kernel_path=kernel,
+    rootfs_path=rootfs,
+    boot_args=SSH_BOOT_ARGS,
+    env_vars={  # Variables injected after boot
+        "APP_MODE": "production",
+        "DATABASE_URL": "postgres://localhost:5432/mydb",
+        "API_KEY": "secret-key-value",
+    },
+)
+
+with SmolVM(config) as vm:
+    # Variables are automatically injected during start()
+    result = vm.run("echo $APP_MODE")
+    print(result.output)  # "production"
+```
+
+### How It Works
+
+When `env_vars` is set in `VMConfig`:
+
+1. VM boots normally
+2. SmolVM waits for SSH to become available
+3. Variables are written to `/etc/profile.d/smolvm_env.sh`
+4. All subsequent login shells source these variables
+
+<Note>
+  Environment variable injection requires an SSH-capable image. Use `ImageBuilder` or auto-config mode to ensure your image supports this feature.
+</Note>
+
+## Runtime Variable Management
+
+Dynamically set, update, and remove variables on a running VM:
+
+```python  theme={null}
+from smolvm import SmolVM
+
+with SmolVM() as vm:
+    # Set environment variables
+    vm.set_env_vars({"APP_MODE": "dev", "DEBUG": "1"})
+
+    # Use them in commands
+    result = vm.run("echo APP_MODE=$APP_MODE DEBUG=$DEBUG")
+    print(result.output)  # "APP_MODE=dev DEBUG=1"
+
+    # List current variables
+    env_vars = vm.list_env_vars()
+    print(env_vars)  # {"APP_MODE": "dev", "DEBUG": "1"}
+
+    # Remove a variable
+    removed = vm.unset_env_vars(["DEBUG"])
+    print(removed)  # {"DEBUG": "1"}
+
+    # Verify it's gone
+    result = vm.run("echo DEBUG=$DEBUG")
+    print(result.output)  # "DEBUG="
+```
+
+## Method Reference
+
+### set\_env\_vars()
+
+```python  theme={null}
+def set_env_vars(
+    self,
+    env_vars: dict[str, str],
+    *,
+    merge: bool = True,
+) -> list[str]:
+    """Set environment variables on a running VM.
+
+    Variables are persisted in /etc/profile.d/smolvm_env.sh and
+    affect new SSH sessions/login shells.
+
+    Args:
+        env_vars: Key/value pairs to set.
+        merge: If True (default), merge with existing variables.
+
+    Returns:
+        Sorted variable names present after update.
+    """
+```
+
+**Example:**
+
+```python  theme={null}
+# Merge with existing variables (default)
+vm.set_env_vars({"NEW_VAR": "value"})
+
+# Replace all variables
+vm.set_env_vars({"ONLY_VAR": "value"}, merge=False)
+```
+
+### list\_env\_vars()
+
+```python  theme={null}
+def list_env_vars(self) -> dict[str, str]:
+    """Return SmolVM-managed environment variables for a running VM."""
+```
+
+**Example:**
+
+```python  theme={null}
+env_vars = vm.list_env_vars()
+for key, value in env_vars.items():
+    print(f"{key}={value}")
+```
+
+### unset\_env\_vars()
+
+```python  theme={null}
+def unset_env_vars(self, keys: list[str]) -> dict[str, str]:
+    """Remove environment variables from a running VM.
+
+    Args:
+        keys: Variable names to remove.
+
+    Returns:
+        Mapping of removed keys to their previous values.
+    """
+```
+
+**Example:**
+
+```python  theme={null}
+# Remove multiple variables
+removed = vm.unset_env_vars(["VAR1", "VAR2"])
+print(f"Removed: {removed}")
+```
+
+## Complete Example
+
+From `examples/env_injection.py`:
+
+```python  theme={null}
+from smolvm import SmolVM
+
+def main() -> int:
+    with SmolVM() as vm:
+        print(f"VM started: {vm.vm_id}")
+
+        print("\n1) Set environment variables")
+        vm.set_env_vars({"APP_MODE": "dev", "DEBUG": "1"})
+        print(vm.list_env_vars())
+
+        print("\n2) Use env vars in a command")
+        # vm.run() opens a fresh SSH session, so new values are available
+        print(vm.run("echo APP_MODE=$APP_MODE DEBUG=$DEBUG").output)
+
+        print("\n3) Remove one variable")
+        removed = vm.unset_env_vars(["DEBUG"])
+        print(f"Removed: {removed}")
+        print(vm.list_env_vars())
+
+    print("\nDone.")
+    return 0
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+```
+
+## Advanced: Injecting Host Environment
+
+Pass environment variables from your host into the VM:
+
+```python  theme={null}
+import os
+from smolvm import SmolVM, VMConfig
+from smolvm.build import ImageBuilder, SSH_BOOT_ARGS
+
+def collect_host_env() -> dict[str, str]:
+    """Collect API keys from host environment."""
+    env_vars = {}
+
+    if api_key := os.getenv("OPENAI_API_KEY"):
+        env_vars["OPENAI_API_KEY"] = api_key
+
+    if api_key := os.getenv("ANTHROPIC_API_KEY"):
+        env_vars["ANTHROPIC_API_KEY"] = api_key
+
+    return env_vars
+
+builder = ImageBuilder()
+kernel, rootfs = builder.build_alpine_ssh()
+
+config = VMConfig(
+    vm_id="host-env-vm",
+    vcpu_count=1,
+    mem_size_mib=512,
+    kernel_path=kernel,
+    rootfs_path=rootfs,
+    boot_args=SSH_BOOT_ARGS,
+    env_vars=collect_host_env(),  # Inject host environment
+)
+
+with SmolVM(config) as vm:
+    result = vm.run("env | grep API_KEY")
+    print(result.output)
+```
+
+This pattern is used in `examples/openclaw.py` to inject `OPENROUTER_API_KEY` and `OPENAI_API_KEY` from the host.
+
+## Variable Validation
+
+SmolVM validates environment variable keys:
+
+```python  theme={null}
+from smolvm.env import validate_env_key
+
+# Valid keys
+validate_env_key("MY_VAR")      # OK
+validate_env_key("_PRIVATE")    # OK
+validate_env_key("VAR_123")     # OK
+
+# Invalid keys
+validate_env_key("")            # ValueError: cannot be empty
+validate_env_key("123VAR")      # ValueError: must start with letter or _
+validate_env_key("MY-VAR")      # ValueError: only [A-Za-z0-9_] allowed
+```
+
+Keys must match the pattern: `[A-Za-z_][A-Za-z0-9_]*`
+
+## Persistence Details
+
+### File Location
+
+Variables are stored in `/etc/profile.d/smolvm_env.sh` inside the guest:
+
+```bash  theme={null}
+# Inside the VM
+$ cat /etc/profile.d/smolvm_env.sh
+#!/bin/sh
+# SmolVM managed environment variables
+
+export APP_MODE='production'
+export DATABASE_URL='postgres://localhost:5432/mydb'
+```
+
+### Atomic Updates
+
+All writes are atomic (write to temp file → `mv` into place) to prevent partial updates on failure.
+
+### Quoting and Escaping
+
+SmolVM uses `shlex.quote()` to safely handle special characters:
+
+```python  theme={null}
+vm.set_env_vars({
+    "MESSAGE": "Hello, World!",
+    "PATH_VAR": "/usr/local/bin:/usr/bin",
+    "COMPLEX": "value with 'quotes' and spaces",
+})
+
+# All values are safely quoted in the generated shell script
+```
+
+## Use Cases
+
+### 1. Configuration Management
+
+```python  theme={null}
+config = VMConfig(
+    vm_id="app-vm",
+    # ... other config ...
+    env_vars={
+        "DATABASE_URL": "postgres://db:5432/app",
+        "REDIS_URL": "redis://cache:6379",
+        "LOG_LEVEL": "info",
+    },
+)
+```
+
+### 2. Secret Injection
+
+```python  theme={null}
+import os
+
+with SmolVM() as vm:
+    # Inject secrets from host environment or secrets manager
+    vm.set_env_vars({
+        "API_KEY": os.getenv("API_KEY", "default-key"),
+        "DB_PASSWORD": get_secret("db-password"),
+    })
+
+    vm.run("my-application")
+```
+
+### 3. Dynamic Configuration Updates
+
+```python  theme={null}
+with SmolVM() as vm:
+    # Start in dev mode
+    vm.set_env_vars({"APP_MODE": "dev"})
+    vm.run("start-app")
+
+    # Switch to production mode
+    vm.set_env_vars({"APP_MODE": "production"})
+    vm.run("restart-app")
+```
+
+## Troubleshooting
+
+### Variables Not Available
+
+If variables don't appear in your commands:
+
+<Steps>
+  <Step title="Verify SSH support">
+    ```python  theme={null}
+    if not vm.can_run_commands():
+        print("VM does not support SSH - cannot inject variables")
+    ```
+  </Step>
+
+  <Step title="Check the file was created">
+    ```python  theme={null}
+    result = vm.run("cat /etc/profile.d/smolvm_env.sh")
+    print(result.output)
+    ```
+  </Step>
+
+  <Step title="Ensure you're using a login shell">
+    Variables are only available in login shells:
+
+    ```python  theme={null}
+    # This works - uses login shell (default)
+    vm.run("echo $MY_VAR", shell="login")
+
+    # This may not work - raw execution
+    vm.run("echo $MY_VAR", shell="raw")
+    ```
+  </Step>
+</Steps>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Custom Images" icon="box" href="/smolvm/guides/custom-images">
+    Build images with pre-baked environment configuration
+  </Card>
+
+  <Card title="AI Agent Integration" icon="robot" href="/smolvm/guides/ai-agent-integration">
+    Use environment variables for agent configuration
+  </Card>
+
+  <Card title="Port Forwarding" icon="network-wired" href="/smolvm/guides/port-forwarding">
+    Expose services configured via environment variables
+  </Card>
+</CardGroup>

@@ -1,0 +1,187 @@
+---
+title: "ImageSource"
+description: "Define downloadable VM image metadata with verification"
+---
+
+`ImageSource` defines the metadata for a downloadable VM image, including URLs and SHA-256 checksums for verification.
+
+## ImageSource
+
+### Attributes
+
+<ParamField path="name" type="str" required>
+  Human-readable image name used for caching and identification.
+</ParamField>
+
+<ParamField path="kernel_url" type="str" required>
+  URL to download the kernel binary.
+</ParamField>
+
+<ParamField path="kernel_sha256" type="str | None" default="None">
+  Expected SHA-256 hex digest of the kernel. If `None`, checksum verification is skipped for the kernel.
+</ParamField>
+
+<ParamField path="rootfs_url" type="str" required>
+  URL to download the root filesystem image.
+</ParamField>
+
+<ParamField path="rootfs_sha256" type="str | None" default="None">
+  Expected SHA-256 hex digest of the rootfs. If `None`, checksum verification is skipped for the rootfs.
+</ParamField>
+
+### Usage
+
+```python  theme={null}
+from smolvm import ImageSource
+
+# Define an image with checksum verification
+image = ImageSource(
+    name="ubuntu-jammy",
+    kernel_url="https://example.com/kernels/jammy-vmlinux.bin",
+    kernel_sha256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    rootfs_url="https://example.com/rootfs/jammy-rootfs.ext4",
+    rootfs_sha256="cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce",
+)
+
+print(image.name)  # ubuntu-jammy
+print(image.kernel_url)
+```
+
+### Without Checksum Verification
+
+You can skip SHA-256 verification by omitting the checksum fields:
+
+```python  theme={null}
+from smolvm import ImageSource
+
+# No checksum verification
+image = ImageSource(
+    name="test-image",
+    kernel_url="https://example.com/vmlinux.bin",
+    rootfs_url="https://example.com/rootfs.ext4",
+)
+```
+
+<Warning>
+  Skipping checksum verification is not recommended for production use. Always verify image integrity when possible.
+</Warning>
+
+### Custom Registry
+
+Use `ImageSource` to define custom images for `ImageManager`:
+
+```python  theme={null}
+from smolvm import ImageManager, ImageSource
+
+custom_images = {
+    "alpine-minimal": ImageSource(
+        name="alpine-minimal",
+        kernel_url="https://cdn.example.com/alpine-vmlinux.bin",
+        kernel_sha256="abc123...",
+        rootfs_url="https://cdn.example.com/alpine-rootfs.ext4",
+        rootfs_sha256="def456...",
+    ),
+    "debian-dev": ImageSource(
+        name="debian-dev",
+        kernel_url="https://cdn.example.com/debian-vmlinux.bin",
+        rootfs_url="https://cdn.example.com/debian-rootfs.ext4",
+    ),
+}
+
+manager = ImageManager(registry=custom_images)
+image = manager.ensure_image("alpine-minimal")
+```
+
+## LocalImage
+
+`LocalImage` represents a VM image that has been downloaded and cached locally.
+
+### Attributes
+
+<ParamField path="name" type="str" required>
+  Image name.
+</ParamField>
+
+<ParamField path="kernel_path" type="Path" required>
+  Absolute path to the kernel binary on the local filesystem.
+</ParamField>
+
+<ParamField path="rootfs_path" type="Path" required>
+  Absolute path to the root filesystem on the local filesystem.
+</ParamField>
+
+### Usage
+
+```python  theme={null}
+from smolvm import ImageManager, VMConfig, SmolVM
+
+manager = ImageManager()
+image = manager.ensure_image("hello")
+
+print(type(image))  # <class 'smolvm.images.LocalImage'>
+print(image.name)   # hello
+print(image.kernel_path)  # PosixPath('/home/user/.smolvm/images/hello/vmlinux.bin')
+print(image.rootfs_path)  # PosixPath('/home/user/.smolvm/images/hello/rootfs.ext4')
+
+# Use with VMConfig
+config = VMConfig(
+    kernel_path=image.kernel_path,
+    rootfs_path=image.rootfs_path,
+)
+
+with SmolVM(config) as vm:
+    vm.start()
+```
+
+### Immutability
+
+Both `ImageSource` and `LocalImage` are immutable (frozen) Pydantic models:
+
+```python  theme={null}
+from smolvm import ImageSource
+
+image = ImageSource(
+    name="test",
+    kernel_url="https://example.com/vmlinux.bin",
+    rootfs_url="https://example.com/rootfs.ext4",
+)
+
+# This will raise an error
+try:
+    image.name = "modified"
+except Exception as e:
+    print(f"Error: {type(e).__name__}")  # Error: ValidationError
+```
+
+## SHA-256 Checksum Generation
+
+To generate SHA-256 checksums for your images:
+
+```bash  theme={null}
+# Linux/macOS
+sha256sum vmlinux.bin
+sha256sum rootfs.ext4
+
+# Or using Python
+python3 -c "import hashlib; print(hashlib.sha256(open('vmlinux.bin', 'rb').read()).hexdigest())"
+```
+
+## Built-in Images
+
+SmolVM includes these built-in `ImageSource` definitions:
+
+```python  theme={null}
+from smolvm.images import BUILTIN_IMAGES
+
+for name, source in BUILTIN_IMAGES.items():
+    print(f"{name}:")
+    print(f"  Kernel: {source.kernel_url}")
+    print(f"  Rootfs: {source.rootfs_url}")
+    print(f"  Verified: {source.kernel_sha256 is not None}")
+```
+
+## Related
+
+* [ImageManager](/smolvm/api/imagemanager) - Download and cache images
+* [ImageBuilder](/smolvm/api/imagebuilder) - Build custom images with SSH
+* [VMConfig](/smolvm/api/vmconfig) - Configure VM instances

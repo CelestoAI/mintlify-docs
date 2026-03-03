@@ -1,0 +1,246 @@
+---
+title: "smolvm ui"
+description: "Start the SmolVM dashboard UI server"
+---
+
+## Synopsis
+
+```bash  theme={null}
+smolvm ui [OPTIONS]
+```
+
+## Description
+
+The `ui` command starts a local web server that hosts the SmolVM dashboard interface. The dashboard provides a graphical interface for managing VMs, viewing logs, and monitoring system resources.
+
+<Note>
+  The dashboard requires the `dashboard` extra to be installed: `pip install 'smolvm[dashboard]'`
+</Note>
+
+## Options
+
+<ParamField path="--host" type="string" default="127.0.0.1">
+  Bind host address. Use `0.0.0.0` to allow external connections.
+</ParamField>
+
+<ParamField path="--port" type="integer" default="8080">
+  Bind port (must be between 1-65535).
+</ParamField>
+
+<ParamField path="--allow-beta" type="flag" default="false">
+  Allow dashboard UI downloads from prerelease/beta tags. Enables access to experimental features.
+</ParamField>
+
+## Examples
+
+### Start with default settings
+
+Start the dashboard on localhost:8080:
+
+```bash  theme={null}
+smolvm ui
+```
+
+**Output:**
+
+```
+Starting SmolVM UI on http://127.0.0.1:8080 ...
+Once started, open http://localhost:8080 in your browser.
+INFO:     Started server process [12345]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8080 (Press CTRL+C to quit)
+```
+
+### Use a custom port
+
+Start the dashboard on port 3000:
+
+```bash  theme={null}
+smolvm ui --port 3000
+```
+
+**Output:**
+
+```
+Starting SmolVM UI on http://127.0.0.1:3000 ...
+Once started, open http://localhost:3000 in your browser.
+INFO:     Uvicorn running on http://127.0.0.1:3000 (Press CTRL+C to quit)
+```
+
+### Allow external connections
+
+Bind to all interfaces to allow remote access:
+
+```bash  theme={null}
+smolvm ui --host 0.0.0.0 --port 8080
+```
+
+**Output:**
+
+```
+Starting SmolVM UI on http://0.0.0.0:8080 ...
+Once started, open http://localhost:8080 in your browser.
+INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
+```
+
+<Warning>
+  Binding to `0.0.0.0` allows connections from any network interface. Ensure appropriate firewall rules are in place.
+</Warning>
+
+### Enable beta features
+
+Use prerelease dashboard UI assets:
+
+```bash  theme={null}
+smolvm ui --allow-beta
+```
+
+**Output:**
+
+```
+Starting SmolVM UI on http://127.0.0.1:8080 ...
+Once started, open http://localhost:8080 in your browser.
+Using prerelease dashboard UI assets (--allow-beta enabled).
+INFO:     Uvicorn running on http://127.0.0.1:8080 (Press CTRL+C to quit)
+```
+
+### Combine options
+
+Custom host, port, and beta features:
+
+```bash  theme={null}
+smolvm ui --host 0.0.0.0 --port 9000 --allow-beta
+```
+
+## Dashboard Features
+
+The SmolVM dashboard provides:
+
+* **VM Management**: Create, start, stop, and delete VMs
+* **Real-time Monitoring**: View VM status, resource usage, and logs
+* **Network Configuration**: Manage port forwarding and network settings
+* **Console Access**: Web-based terminal access to VMs
+* **Environment Variables**: GUI for managing VM environment variables
+
+## Environment Variables
+
+The UI command sets the following environment variables during runtime:
+
+<ParamField path="SMOLVM_DASHBOARD_URL" type="string">
+  Set to the dashboard URL (e.g., `http://localhost:8080`). Used by dashboard components.
+</ParamField>
+
+<ParamField path="SMOLVM_DASHBOARD_ALLOW_BETA" type="string">
+  Set to `"1"` when `--allow-beta` is enabled. Triggers beta asset downloads.
+</ParamField>
+
+<Note>
+  These environment variables are automatically managed and restored to their previous values when the server stops.
+</Note>
+
+## Requirements
+
+The dashboard requires additional dependencies. Install them with:
+
+```bash  theme={null}
+pip install 'smolvm[dashboard]'
+```
+
+This installs:
+
+* `fastapi>=0.115.0` - Web framework
+* `uvicorn[standard]>=0.34.0` - ASGI server
+* `websockets>=14.0` - WebSocket support for real-time updates
+
+## Stopping the Server
+
+Press `Ctrl+C` to stop the dashboard server gracefully:
+
+```bash  theme={null}
+^C
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [12345]
+```
+
+## Exit Codes
+
+| Code  | Description                                                              |
+| ----- | ------------------------------------------------------------------------ |
+| `0`   | Success - server started and stopped cleanly                             |
+| `1`   | Error - failed to start server (missing dependencies, port in use, etc.) |
+| `2`   | Invalid usage - invalid port number                                      |
+| `130` | Interrupted - server stopped via Ctrl+C                                  |
+
+## Common Issues
+
+### Missing dashboard dependencies
+
+```
+Error: Dashboard dependencies are not installed. Install with: pip install 'smolvm[dashboard]'
+```
+
+**Solution**: Install the dashboard extra:
+
+```bash  theme={null}
+pip install 'smolvm[dashboard]'
+```
+
+### Port already in use
+
+```
+Error: failed to start UI: [Errno 98] Address already in use
+```
+
+**Solution**: Use a different port or stop the process using the current port:
+
+```bash  theme={null}
+smolvm ui --port 8081
+```
+
+### Invalid port number
+
+```
+Error: invalid port 99999. Expected 1-65535.
+```
+
+**Solution**: Use a valid port number between 1 and 65535:
+
+```bash  theme={null}
+smolvm ui --port 8080
+```
+
+## Production Deployment
+
+For production deployments, consider:
+
+1. **Reverse Proxy**: Use Nginx or Caddy to handle HTTPS
+2. **Authentication**: Implement authentication middleware
+3. **Process Management**: Use systemd or supervisord for automatic restarts
+4. **Resource Limits**: Set appropriate ulimits and container limits
+
+### Example systemd service
+
+```ini  theme={null}
+[Unit]
+Description=SmolVM Dashboard
+After=network.target
+
+[Service]
+Type=simple
+User=smolvm
+WorkingDirectory=/home/smolvm
+ExecStart=/usr/local/bin/smolvm ui --host 127.0.0.1 --port 8080
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
+```
+
+## Related Commands
+
+* [`smolvm doctor`](/smolvm/cli/doctor) - Verify system requirements before starting the UI
+* [`smolvm cleanup`](/smolvm/cli/cleanup) - Clean up VMs managed through the dashboard

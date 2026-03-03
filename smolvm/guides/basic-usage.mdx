@@ -1,0 +1,190 @@
+---
+title: "Basic Usage"
+description: "Learn the fundamentals of creating and interacting with SmolVM instances"
+---
+
+## Quick Start
+
+The simplest way to get started with SmolVM is using auto-configuration mode:
+
+```python  theme={null}
+from smolvm import SmolVM
+
+with SmolVM() as vm:
+    result = vm.run("uname -r")
+    print(result.stdout)
+```
+
+When you create a `SmolVM()` with no arguments, it automatically:
+
+* Generates SSH keys (stored in `~/.smolvm/keys/`)
+* Builds an Alpine Linux image with SSH pre-configured
+* Creates a VM with sensible defaults (512MB RAM, 1 vCPU)
+* Starts the VM when entering the context manager
+
+## Creating a VM
+
+<Tabs>
+  <Tab title="Auto-config (Recommended)">
+    ```python  theme={null}
+    from smolvm import SmolVM
+
+    # Minimal configuration
+    with SmolVM() as vm:
+        print(f"VM running at {vm.get_ip()}")
+
+    # Custom memory and disk size
+    with SmolVM(mem_size_mib=1024, disk_size_mib=1024) as vm:
+        print(f"VM ID: {vm.vm_id}")
+    ```
+  </Tab>
+
+  <Tab title="Manual Configuration">
+    ```python  theme={null}
+    from smolvm import SmolVM, VMConfig
+    from smolvm.build import ImageBuilder, SSH_BOOT_ARGS
+
+    # Build custom image
+    builder = ImageBuilder()
+    kernel, rootfs = builder.build_alpine_ssh()
+
+    # Create VM with explicit config
+    config = VMConfig(
+        vm_id="my-vm",
+        vcpu_count=2,
+        mem_size_mib=1024,
+        kernel_path=kernel,
+        rootfs_path=rootfs,
+        boot_args=SSH_BOOT_ARGS,
+    )
+
+    with SmolVM(config) as vm:
+        result = vm.run("echo 'Hello from SmolVM'")
+        print(result.output)
+    ```
+  </Tab>
+</Tabs>
+
+## Running Commands
+
+The `run()` method executes commands via SSH and returns a `CommandResult` object:
+
+```python  theme={null}
+from smolvm import SmolVM
+
+with SmolVM() as vm:
+    # Basic command execution
+    result = vm.run("ls -la /")
+    print(result.stdout)  # Command output
+    print(result.exit_code)  # Exit status (0 = success)
+    print(result.ok)  # True if exit_code == 0
+
+    # Commands with custom timeout
+    result = vm.run("sleep 10", timeout=60)
+
+    # Handle command failures
+    result = vm.run("exit 1")
+    if not result.ok:
+        print(f"Command failed: {result.stderr}")
+```
+
+### Shell Modes
+
+SmolVM supports two command execution modes:
+
+```python  theme={null}
+# Login shell mode (default) - runs through guest login shell
+result = vm.run("echo $HOME", shell="login")
+
+# Raw mode - executes command directly with no shell wrapping
+result = vm.run("/bin/ls", shell="raw")
+```
+
+## VM Properties
+
+Access VM information through properties:
+
+```python  theme={null}
+with SmolVM() as vm:
+    print(vm.vm_id)        # VM identifier
+    print(vm.status)       # Current state (VMState.RUNNING)
+    print(vm.get_ip())     # Guest IP address
+    print(vm.info)         # Full VMInfo object (cached)
+    print(vm.data_dir)     # State directory path
+
+    # Refresh cached info from state store
+    vm.refresh()
+    print(vm.info.status)
+```
+
+## Checking SSH Capability
+
+Not all VM images support command execution. Check before attempting to run commands:
+
+```python  theme={null}
+with SmolVM() as vm:
+    if vm.can_run_commands():
+        result = vm.run("whoami")
+        print(result.output)
+    else:
+        print("This VM does not support SSH command execution")
+```
+
+<Note>
+  Command execution requires the VM to be booted with `init=/init` in the boot arguments. All auto-configured VMs and images built with `ImageBuilder` include this by default.
+</Note>
+
+## Getting SSH Connection Details
+
+Retrieve SSH commands for manual connection:
+
+```python  theme={null}
+with SmolVM() as vm:
+    ssh_cmds = vm.ssh_commands()
+    print(ssh_cmds["direct"])     # SSH to guest IP
+    print(ssh_cmds["localhost"])  # SSH via localhost (if forwarded)
+```
+
+## Error Handling
+
+SmolVM raises specific exceptions for different failure scenarios:
+
+```python  theme={null}
+from smolvm import SmolVM
+from smolvm.exceptions import (
+    SmolVMError,
+    CommandExecutionUnavailableError,
+    OperationTimeoutError,
+)
+
+try:
+    with SmolVM() as vm:
+        result = vm.run("some-command", timeout=5)
+except CommandExecutionUnavailableError as e:
+    print(f"SSH not available: {e.reason}")
+    print(f"Remediation: {e.remediation}")
+except OperationTimeoutError as e:
+    print(f"Operation timed out: {e.message}")
+except SmolVMError as e:
+    print(f"SmolVM error: {e}")
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="VM Lifecycle" icon="circle-play" href="/smolvm/guides/vm-lifecycle">
+    Learn about starting, stopping, and managing VM lifecycles
+  </Card>
+
+  <Card title="Port Forwarding" icon="network-wired" href="/smolvm/guides/port-forwarding">
+    Expose guest services to your host machine
+  </Card>
+
+  <Card title="Environment Variables" icon="code" href="/smolvm/guides/environment-variables">
+    Inject configuration into your VMs
+  </Card>
+
+  <Card title="Custom Images" icon="box" href="/smolvm/guides/custom-images">
+    Build custom rootfs images for your use case
+  </Card>
+</CardGroup>

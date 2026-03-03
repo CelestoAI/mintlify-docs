@@ -1,0 +1,462 @@
+---
+title: "AI Agent Integration"
+description: "Build secure sandboxes for AI agents using SmolVM's isolation and safety features"
+---
+
+## Why SmolVM for AI Agents?
+
+When AI agents generate and execute code, you need strong isolation to prevent:
+
+* **Host compromise** - Malicious code escaping to your system
+* **Data exfiltration** - Unauthorized access to sensitive files
+* **Resource abuse** - Uncontrolled CPU/memory/network usage
+* **Persistent side effects** - State pollution across tasks
+
+SmolVM provides hardware-level isolation using Firecracker microVMs, making it significantly more secure than Docker containers.
+
+## Security Benefits
+
+<CardGroup cols={2}>
+  <Card title="Hardware Isolation" icon="shield">
+    KVM-based virtualization provides stronger isolation than containers. Escape requires a hypervisor exploit, not just a kernel vulnerability.
+  </Card>
+
+  <Card title="Controlled Networking" icon="network-wired">
+    Fine-grained control over guest internet access. Restrict or monitor all network traffic.
+  </Card>
+
+  <Card title="Ephemeral Environments" icon="trash">
+    Spin up a fresh VM for every task and destroy immediately after. No persistent state between tasks.
+  </Card>
+
+  <Card title="Resource Limits" icon="gauge">
+    Strict CPU and memory limits prevent resource exhaustion attacks.
+  </Card>
+</CardGroup>
+
+## Integration Pattern 1: Tool/Function Calling
+
+Wrap SmolVM as a tool that your AI agent can invoke:
+
+```python  theme={null}
+from smolvm import SmolVM
+
+def execute_code_in_sandbox(code: str, language: str = "python") -> str:
+    """Tool for AI agent to execute code safely.
+
+    Args:
+        code: The code to execute
+        language: Programming language (python, bash, etc.)
+
+    Returns:
+        Execution output or error message
+    """
+    with SmolVM() as vm:
+        if language == "python":
+            # Write code to a file and execute
+            vm.run(f"cat > /tmp/script.py << 'EOF'\n{code}\nEOF")
+            result = vm.run("python3 /tmp/script.py", timeout=30)
+        elif language == "bash":
+            result = vm.run(code, timeout=30)
+        else:
+            return f"Unsupported language: {language}"
+
+        if result.ok:
+            return result.stdout
+        else:
+            return f"Error (exit {result.exit_code}): {result.stderr}"
+
+# Example usage with an LLM
+from anthropic import Anthropic
+
+client = Anthropic()
+response = client.messages.create(
+    model="claude-3-5-sonnet-20241022",
+    max_tokens=1024,
+    tools=[
+        {
+            "name": "execute_code_in_sandbox",
+            "description": "Execute Python or Bash code in an isolated sandbox VM",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "code": {"type": "string", "description": "Code to execute"},
+                    "language": {"type": "string", "enum": ["python", "bash"]},
+                },
+                "required": ["code"],
+            },
+        }
+    ],
+    messages=[{"role": "user", "content": "Calculate fibonacci(10)"}],
+)
+
+# Process tool calls
+for block in response.content:
+    if block.type == "tool_use" and block.name == "execute_code_in_sandbox":
+        output = execute_code_in_sandbox(**block.input)
+        print(output)
+```
+
+## Integration Pattern 2: Long-running Agent Environments
+
+For agents that need persistent state across multiple interactions:
+
+<Steps>
+  <Step title="Create a persistent VM">
+    ```python  theme={null}
+    from smolvm import SmolVM, VMConfig
+    from smolvm.build import ImageBuilder, SSH_BOOT_ARGS
+
+    builder = ImageBuilder()
+    kernel, rootfs = builder.build_debian_ssh_key(
+        ssh_public_key=public_key,
+        rootfs_size_mb=4096,
+    )
+
+    config = VMConfig(
+        vm_id="agent-workspace",  # Stable ID for reconnection
+        vcpu_count=2,
+        mem_size_mib=2048,
+        kernel_path=kernel,
+        rootfs_path=rootfs,
+        boot_args=SSH_BOOT_ARGS,
+    )
+
+    vm = SmolVM(config)
+    vm.start()
+
+    # Install dependencies once
+    vm.run("apt-get update && apt-get install -y python3-pip git")
+    vm.run("pip3 install pandas numpy requests")
+
+    print(f"Agent workspace ready: {vm.vm_id}")
+    vm.close()  # Release resources, keep VM running
+    ```
+  </Step>
+
+  <Step title="Reconnect for each agent task">
+    ```python  theme={null}
+    def execute_agent_task(task: str) -> str:
+        """Execute an agent task in the persistent workspace."""
+        vm = SmolVM.from_id("agent-workspace")
+
+        # Ensure VM is running
+        if vm.status != VMState.RUNNING:
+            vm.start()
+
+        # Execute the task
+        result = vm.run(task, timeout=120)
+        vm.close()
+
+        return result.stdout if result.ok else result.stderr
+
+    # Use across multiple turns
+    execute_agent_task("git clone https://github.com/user/repo")
+    execute_agent_task("cd repo && python3 analyze.py")
+    execute_agent_task("cd repo && python3 generate_report.py")
+    ```
+  </Step>
+
+  <Step title="Clean up when done">
+    ```python  theme={null}
+    vm = SmolVM.from_id("agent-workspace")
+    vm.stop()
+    vm.delete()
+    print("Workspace deleted")
+    ```
+  </Step>
+</Steps>
+
+## Integration Pattern 3: Web Browsing Agent
+
+Provide agents with isolated browser environments:
+
+```python  theme={null}
+from smolvm import SmolVM, VMConfig
+from smolvm.build import ImageBuilder, SSH_BOOT_ARGS
+from smolvm.utils import ensure_ssh_key
+
+def create_browser_vm() -> SmolVM:
+    """Create a VM with headless browser for agent use."""
+    private_key, public_key = ensure_ssh_key()
+
+    builder = ImageBuilder()
+    kernel, rootfs = builder.build_debian_ssh_key(
+        ssh_public_key=public_key,
+        rootfs_size_mb=2048,
+    )
+
+    config = VMConfig(
+        vm_id="browser-agent",
+        vcpu_count=2,
+        mem_size_mib=2048,
+        kernel_path=kernel,
+        rootfs_path=rootfs,
+        boot_args=SSH_BOOT_ARGS,
+    )
+
+    vm = SmolVM(config, ssh_key_path=str(private_key))
+    vm.start()
+
+    # Install headless browser
+    vm.run("apt-get update && apt-get install -y chromium chromium-driver")
+    vm.run("pip3 install selenium")
+
+    return vm
+
+def browse_url(vm: SmolVM, url: str) -> str:
+    """Use agent VM to fetch and return page content."""
+    script = f'''
+import sys
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+
+options = Options()
+options.add_argument("--headless")
+options.add_argument("--no-sandbox")
+options.add_argument("--disable-dev-shm-usage")
+
+driver = webdriver.Chrome(options=options)
+try:
+    driver.get("{url}")
+    print(driver.page_source)
+finally:
+    driver.quit()
+'''
+
+    vm.run(f"cat > /tmp/browse.py << 'EOF'\n{script}\nEOF")
+    result = vm.run("python3 /tmp/browse.py", timeout=60)
+
+    return result.stdout if result.ok else f"Error: {result.stderr}"
+
+# Usage
+with create_browser_vm() as vm:
+    html = browse_url(vm, "https://example.com")
+    print(html)
+```
+
+## Real-world Example: OpenClaw Agent Environment
+
+From `examples/openclaw.py` - complete integration with the OpenClaw AI agent framework:
+
+```python  theme={null}
+from smolvm import SmolVM, VMConfig, SSH_BOOT_ARGS
+from smolvm.build import ImageBuilder
+from smolvm.utils import ensure_ssh_key
+import os
+
+GUEST_DASHBOARD_PORT = 18789
+HOST_DASHBOARD_PORT = 18789
+
+# Collect API keys from host environment
+env_vars = {}
+if api_key := os.getenv("OPENROUTER_API_KEY"):
+    env_vars["OPENROUTER_API_KEY"] = api_key
+if api_key := os.getenv("OPENAI_API_KEY"):
+    env_vars["OPENAI_API_KEY"] = api_key
+
+# Build 4GB Debian image for OpenClaw
+private_key, public_key = ensure_ssh_key()
+builder = ImageBuilder()
+kernel, rootfs = builder.build_debian_ssh_key(
+    ssh_public_key=public_key,
+    name="debian-ssh-key-openclaw-4g",
+    rootfs_size_mb=4096,
+)
+
+config = VMConfig(
+    vcpu_count=1,
+    mem_size_mib=2048,
+    kernel_path=kernel,
+    rootfs_path=rootfs,
+    boot_args=SSH_BOOT_ARGS,
+    env_vars=env_vars,  # Inject API keys
+)
+
+with SmolVM(config, ssh_key_path=str(private_key)) as vm:
+    print(f"VM running: {vm.vm_id} ({vm.get_ip()})")
+
+    # Install Node.js runtime
+    vm.run(
+        "apt-get update && apt-get install -y ca-certificates curl gnupg git bash",
+        timeout=300,
+    )
+    vm.run("mkdir -p /etc/apt/keyrings", timeout=60)
+    vm.run(
+        "curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | "
+        "gpg --dearmor --batch --yes -o /etc/apt/keyrings/nodesource.gpg",
+        timeout=120,
+    )
+    vm.run(
+        "echo 'deb [signed-by=/etc/apt/keyrings/nodesource.gpg] "
+        "https://deb.nodesource.com/node_22.x nodistro main' > "
+        "/etc/apt/sources.list.d/nodesource.list",
+        timeout=60,
+    )
+    vm.run(
+        "apt-get update && apt-get install -y nodejs",
+        timeout=300,
+    )
+
+    # Install OpenClaw
+    vm.run("npm install -g openclaw", timeout=1200)
+
+    # Start OpenClaw gateway
+    vm.run(
+        f"nohup openclaw gateway --allow-unconfigured --token smolvm-token "
+        f"--port {GUEST_DASHBOARD_PORT} >/tmp/openclaw-gateway.log 2>&1 &",
+        timeout=30,
+    )
+
+    # Expose dashboard to host
+    host_port = vm.expose_local(
+        guest_port=GUEST_DASHBOARD_PORT,
+        host_port=HOST_DASHBOARD_PORT,
+    )
+
+    print(f"Dashboard ready: http://127.0.0.1:{host_port}/")
+    print("Gateway token: smolvm-token")
+
+    input("Press Enter to stop and clean up...")
+```
+
+## Best Practices
+
+### 1. Use Ephemeral VMs for Untrusted Code
+
+```python  theme={null}
+# Good - Fresh VM for each execution
+def execute_untrusted_code(code: str) -> str:
+    with SmolVM() as vm:
+        result = vm.run(code)
+        return result.output
+    # VM automatically deleted after execution
+```
+
+### 2. Set Resource Limits
+
+```python  theme={null}
+# Limit resources to prevent abuse
+config = VMConfig(
+    vm_id="agent-vm",
+    vcpu_count=1,        # Single vCPU
+    mem_size_mib=512,    # 512MB RAM
+    # ... other config ...
+)
+```
+
+### 3. Use Timeouts on All Commands
+
+```python  theme={null}
+# Always specify timeouts to prevent hanging
+result = vm.run("potentially-slow-command", timeout=30)
+if not result.ok:
+    print(f"Command failed or timed out: {result.stderr}")
+```
+
+### 4. Inject Secrets Securely
+
+```python  theme={null}
+# Use environment variables, not command arguments
+config = VMConfig(
+    # ... other config ...
+    env_vars={
+        "API_KEY": os.getenv("API_KEY"),  # From host environment
+    },
+)
+
+with SmolVM(config) as vm:
+    # Access secret from environment, not command line
+    vm.run("my-app")  # App reads API_KEY from environment
+```
+
+### 5. Monitor Network Access
+
+VMs have full internet access by default through NAT. Monitor or restrict access at the host firewall level if needed.
+
+## Error Handling for Agents
+
+```python  theme={null}
+from smolvm import SmolVM
+from smolvm.exceptions import (
+    SmolVMError,
+    CommandExecutionUnavailableError,
+    OperationTimeoutError,
+)
+
+def safe_execute(code: str) -> dict:
+    """Execute code with comprehensive error handling."""
+    try:
+        with SmolVM() as vm:
+            result = vm.run(code, timeout=30)
+            return {
+                "success": result.ok,
+                "output": result.stdout,
+                "error": result.stderr if not result.ok else None,
+                "exit_code": result.exit_code,
+            }
+    except OperationTimeoutError:
+        return {
+            "success": False,
+            "error": "Execution timed out after 30 seconds",
+        }
+    except CommandExecutionUnavailableError as e:
+        return {
+            "success": False,
+            "error": f"Cannot execute commands: {e.reason}",
+        }
+    except SmolVMError as e:
+        return {
+            "success": False,
+            "error": f"VM error: {str(e)}",
+        }
+```
+
+## Multi-tenant Agent Systems
+
+Run multiple isolated agent workspaces:
+
+```python  theme={null}
+from smolvm import SmolVM
+import concurrent.futures
+
+def create_agent_workspace(agent_id: str) -> str:
+    """Create isolated workspace for one agent."""
+    with SmolVM() as vm:
+        # Each agent gets a fresh VM
+        vm.run(f"mkdir -p /workspace/{agent_id}")
+        vm.run(f"cd /workspace/{agent_id} && git clone https://repo.git")
+        result = vm.run(f"cd /workspace/{agent_id} && python3 task.py")
+        return result.output
+
+# Run multiple agents in parallel
+with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+    futures = [
+        executor.submit(create_agent_workspace, f"agent-{i}")
+        for i in range(10)
+    ]
+
+    for future in concurrent.futures.as_completed(futures):
+        output = future.result()
+        print(output)
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Basic Usage" icon="play" href="/smolvm/guides/basic-usage">
+    Learn fundamental SmolVM operations
+  </Card>
+
+  <Card title="Custom Images" icon="box" href="/smolvm/guides/custom-images">
+    Build specialized images for your agents
+  </Card>
+
+  <Card title="Environment Variables" icon="code" href="/smolvm/guides/environment-variables">
+    Configure agent environments dynamically
+  </Card>
+
+  <Card title="Port Forwarding" icon="network-wired" href="/smolvm/guides/port-forwarding">
+    Expose agent services to your host
+  </Card>
+</CardGroup>

@@ -1,0 +1,418 @@
+---
+title: "Exceptions"
+description: "Exception classes for error handling in SmolVM"
+---
+
+SmolVM provides a comprehensive exception hierarchy for handling various error conditions. All exceptions inherit from the base `SmolVMError` class, making it easy to catch all SmolVM-related errors or handle specific error types.
+
+## Exception Hierarchy
+
+```
+SmolVMError (base)
+├── ValidationError
+├── VMAlreadyExistsError
+├── VMNotFoundError
+├── NetworkError
+├── HostError
+├── ImageError
+├── FirecrackerAPIError
+├── OperationTimeoutError
+└── CommandExecutionUnavailableError
+```
+
+## Base Exception
+
+### SmolVMError
+
+Base exception for all SmolVM errors. All other exceptions inherit from this class.
+
+**Attributes:**
+
+* `message` (str): Human-readable error message
+* `details` (dict): Additional error context and metadata
+
+**Example:**
+
+```python  theme={null}
+from smolvm import SmolVM, SmolVMError
+
+try:
+    vm = SmolVM.from_id("my-vm")
+except SmolVMError as e:
+    print(f"SmolVM error: {e.message}")
+    print(f"Details: {e.details}")
+```
+
+## VM Lifecycle Exceptions
+
+### VMAlreadyExistsError
+
+Raised when attempting to create a VM with an ID that already exists.
+
+**Attributes:**
+
+* `vm_id` (str): The conflicting VM ID
+* `message` (str): Error message
+* `details` (dict): Contains `vm_id`
+
+**When raised:**
+
+* Creating a new VM when a VM with the same ID already exists
+
+**Example:**
+
+```python  theme={null}
+from smolvm import SmolVM, VMAlreadyExistsError
+
+try:
+    vm = SmolVM(vm_id="existing-vm")
+except VMAlreadyExistsError as e:
+    print(f"VM {e.vm_id} already exists")
+    # Either use the existing VM or choose a different ID
+    vm = SmolVM.from_id(e.vm_id)
+```
+
+### VMNotFoundError
+
+Raised when attempting to access a VM that doesn't exist.
+
+**Attributes:**
+
+* `vm_id` (str): The VM ID that was not found
+* `message` (str): Error message
+* `details` (dict): Contains `vm_id`
+
+**When raised:**
+
+* Calling `SmolVM.from_id()` with a non-existent VM ID
+* Attempting operations on a deleted VM
+
+**Example:**
+
+```python  theme={null}
+from smolvm import SmolVM, VMNotFoundError
+
+try:
+    vm = SmolVM.from_id("non-existent-vm")
+except VMNotFoundError as e:
+    print(f"VM {e.vm_id} not found")
+    # Create a new VM instead
+    vm = SmolVM(vm_id=e.vm_id)
+```
+
+## Validation Exceptions
+
+### ValidationError
+
+Raised when input validation fails, such as invalid configuration parameters.
+
+**When raised:**
+
+* Invalid VM configuration (e.g., invalid CPU count, memory size)
+* Invalid network configuration
+* Invalid image paths or URLs
+* Malformed parameters
+
+**Example:**
+
+```python  theme={null}
+from smolvm import SmolVM, VMConfig, ValidationError
+
+try:
+    config = VMConfig(
+        vcpu_count=0,  # Invalid: must be at least 1
+        mem_size_mb=0  # Invalid: must be positive
+    )
+except ValidationError as e:
+    print(f"Invalid configuration: {e.message}")
+```
+
+## Network Exceptions
+
+### NetworkError
+
+Raised when network operations fail, including TAP device creation, NAT configuration, or IP allocation.
+
+**When raised:**
+
+* Failed to create TAP device
+* Failed to configure NAT rules
+* IP address allocation errors
+* Network interface configuration failures
+
+**Example:**
+
+```python  theme={null}
+from smolvm import SmolVM, NetworkError
+
+try:
+    vm = SmolVM()
+    vm.start()
+except NetworkError as e:
+    print(f"Network setup failed: {e.message}")
+    # Check system permissions or network configuration
+    print(f"Details: {e.details}")
+```
+
+## Host Environment Exceptions
+
+### HostError
+
+Raised when host environment checks fail, such as missing KVM support, dependencies, or Firecracker binary.
+
+**When raised:**
+
+* KVM is not available or accessible
+* Firecracker binary not found
+* Missing system dependencies
+* Insufficient permissions for virtualization
+
+**Example:**
+
+```python  theme={null}
+from smolvm import HostManager, HostError
+
+try:
+    host = HostManager()
+    host.validate_environment()
+except HostError as e:
+    print(f"Host validation failed: {e.message}")
+    # Run system setup script or install dependencies
+```
+
+## Image Exceptions
+
+### ImageError
+
+Raised when image operations fail, including download errors, checksum validation, or cache issues.
+
+**When raised:**
+
+* Failed to download kernel or rootfs image
+* Checksum verification failed
+* Cache directory access errors
+* Image file corruption
+
+**Example:**
+
+```python  theme={null}
+from smolvm import ImageManager, ImageError
+
+try:
+    manager = ImageManager()
+    kernel, rootfs = manager.ensure_default_images()
+except ImageError as e:
+    print(f"Image operation failed: {e.message}")
+    # Clear cache and retry, or use custom images
+```
+
+## Firecracker API Exceptions
+
+### FirecrackerAPIError
+
+Raised when Firecracker API calls fail.
+
+**Attributes:**
+
+* `status_code` (int | None): HTTP status code from Firecracker API
+* `message` (str): Error message
+* `details` (dict): Contains `status_code`
+
+**When raised:**
+
+* Firecracker API returns an error response
+* Failed to communicate with Firecracker socket
+* Invalid API requests
+
+**Example:**
+
+```python  theme={null}
+from smolvm import SmolVM, FirecrackerAPIError
+
+try:
+    vm = SmolVM()
+    vm.start()
+except FirecrackerAPIError as e:
+    print(f"Firecracker API error: {e.message}")
+    if e.status_code:
+        print(f"Status code: {e.status_code}")
+```
+
+## Timeout Exceptions
+
+### OperationTimeoutError
+
+Raised when an operation exceeds its timeout duration.
+
+**Attributes:**
+
+* `operation` (str): Name of the operation that timed out
+* `timeout_seconds` (float): Timeout duration in seconds
+* `message` (str): Error message
+* `details` (dict): Contains `operation` and `timeout_seconds`
+
+**When raised:**
+
+* VM boot timeout
+* Command execution timeout
+* API call timeout
+
+**Example:**
+
+```python  theme={null}
+from smolvm import SmolVM, OperationTimeoutError
+
+try:
+    vm = SmolVM()
+    vm.start()
+    vm.wait_for_ssh(timeout=30)
+except OperationTimeoutError as e:
+    print(f"Operation '{e.operation}' timed out after {e.timeout_seconds}s")
+    # Increase timeout or check VM status
+```
+
+### TimeoutError
+
+Backward-compatible alias for `OperationTimeoutError`. Use `OperationTimeoutError` in new code.
+
+## Command Execution Exceptions
+
+### CommandExecutionUnavailableError
+
+Raised when command execution is not available for a VM, typically because the VM profile doesn't support SSH.
+
+**Attributes:**
+
+* `vm_id` (str): The VM ID
+* `reason` (str): Why command execution is unavailable
+* `remediation` (str | None): Suggested fix if available
+* `message` (str): Error message with reason and remediation
+* `details` (dict): Contains `vm_id` and `reason`
+
+**When raised:**
+
+* Attempting to run commands on a VM without SSH support
+* SSH is not configured in the kernel boot arguments
+* VM is not running or not accessible
+
+**Example:**
+
+```python  theme={null}
+from smolvm import SmolVM, CommandExecutionUnavailableError
+
+try:
+    vm = SmolVM()
+    vm.start()
+    result = vm.run("echo 'Hello'")
+except CommandExecutionUnavailableError as e:
+    print(f"Cannot execute commands: {e.reason}")
+    if e.remediation:
+        print(f"Solution: {e.remediation}")
+```
+
+## Error Handling Best Practices
+
+### Catch Specific Exceptions
+
+Catch specific exceptions when you can handle them appropriately:
+
+```python  theme={null}
+from smolvm import (
+    SmolVM,
+    VMNotFoundError,
+    VMAlreadyExistsError,
+    NetworkError,
+    OperationTimeoutError
+)
+
+vm_id = "my-agent-vm"
+
+try:
+    vm = SmolVM.from_id(vm_id)
+except VMNotFoundError:
+    # VM doesn't exist, create it
+    vm = SmolVM(vm_id=vm_id)
+
+try:
+    vm.start()
+except VMAlreadyExistsError:
+    # VM is already running, that's fine
+    pass
+except NetworkError as e:
+    # Network setup failed, log and abort
+    print(f"Network error: {e.message}")
+    raise
+except OperationTimeoutError as e:
+    # Timeout, may need to adjust timeout or check system load
+    print(f"Timeout starting VM: {e.timeout_seconds}s")
+    raise
+```
+
+### Catch All SmolVM Errors
+
+Use the base `SmolVMError` to catch all SmolVM-related errors:
+
+```python  theme={null}
+from smolvm import SmolVM, SmolVMError
+
+try:
+    with SmolVM() as vm:
+        result = vm.run("my-command")
+        print(result.stdout)
+except SmolVMError as e:
+    # Handle any SmolVM error
+    print(f"SmolVM error: {e.message}")
+    if e.details:
+        print(f"Additional context: {e.details}")
+```
+
+### Access Error Details
+
+All exceptions provide a `details` dictionary with additional context:
+
+```python  theme={null}
+from smolvm import SmolVM, SmolVMError
+
+try:
+    vm = SmolVM()
+    vm.start()
+except SmolVMError as e:
+    # Access structured error information
+    print(f"Error: {e.message}")
+    for key, value in e.details.items():
+        print(f"  {key}: {value}")
+```
+
+### Cleanup on Error
+
+Always clean up resources when errors occur:
+
+```python  theme={null}
+from smolvm import SmolVM, SmolVMError
+
+vm = None
+try:
+    vm = SmolVM(vm_id="temp-vm")
+    vm.start()
+    # Do work...
+except SmolVMError as e:
+    print(f"Error: {e.message}")
+    raise
+finally:
+    if vm:
+        vm.delete()  # Ensure cleanup even on error
+```
+
+Or use context managers for automatic cleanup:
+
+```python  theme={null}
+from smolvm import SmolVM, SmolVMError
+
+try:
+    with SmolVM() as vm:
+        # VM is automatically cleaned up on exit
+        result = vm.run("my-command")
+except SmolVMError as e:
+    print(f"Error: {e.message}")
+    # VM is still cleaned up
+```

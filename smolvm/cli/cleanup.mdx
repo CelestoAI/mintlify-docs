@@ -1,0 +1,142 @@
+---
+title: "smolvm cleanup"
+description: "Clean stale SmolVM resources and VMs"
+---
+
+## Synopsis
+
+```bash  theme={null}
+smolvm cleanup [OPTIONS]
+```
+
+## Description
+
+The `cleanup` command removes stale or auto-created VMs and their associated resources. By default, it targets VMs with the `vm-` prefix and any VMs that have been reconciled as stale.
+
+<Warning>
+  Running cleanup as root is recommended to ensure proper cleanup of TAP devices and nftables rules.
+</Warning>
+
+## Options
+
+<ParamField path="--all" type="flag" default="false">
+  Delete all VMs, not just stale or auto-created ones.
+</ParamField>
+
+<ParamField path="--prefix" type="string" default="vm-">
+  Auto-VM prefix to clean. Only VMs starting with this prefix (or marked as stale) will be targeted.
+</ParamField>
+
+<ParamField path="--dry-run" type="flag" default="false">
+  Print targets without deleting. Useful for previewing what would be cleaned up.
+</ParamField>
+
+## Examples
+
+### Clean auto-created VMs (default prefix)
+
+Remove VMs with IDs starting with `vm-` and any stale VMs:
+
+```bash  theme={null}
+smolvm cleanup
+```
+
+**Example output:**
+
+```
+Reconciled stale VMs: vm-abc123
+Targets (3):
+  - vm-abc123
+  - vm-test-001
+  - vm-demo
+Deleted: vm-abc123
+Deleted: vm-test-001
+Deleted: vm-demo
+Cleanup complete.
+```
+
+### Preview cleanup targets
+
+See what would be deleted without actually deleting:
+
+```bash  theme={null}
+smolvm cleanup --dry-run
+```
+
+**Example output:**
+
+```
+Reconciled stale VMs: vm-old
+Targets (2):
+  - vm-old
+  - vm-test
+Dry run complete. No changes made.
+```
+
+### Clean VMs with custom prefix
+
+Remove VMs starting with a custom prefix:
+
+```bash  theme={null}
+smolvm cleanup --prefix agent-
+```
+
+### Delete all VMs
+
+<Warning>
+  This will delete **all** VMs, including manually created ones.
+</Warning>
+
+```bash  theme={null}
+smolvm cleanup --all
+```
+
+**Example output:**
+
+```
+Targets (5):
+  - vm-auto-001
+  - my-persistent-vm
+  - dev-environment
+  - test-vm
+  - production-agent
+Deleted: vm-auto-001
+Deleted: my-persistent-vm
+Deleted: dev-environment
+Deleted: test-vm
+Deleted: production-agent
+Cleanup complete.
+```
+
+## Cleanup Process
+
+The cleanup command performs the following steps:
+
+1. **Reconciliation**: Identifies stale VMs (VMs with state entries but no running processes)
+2. **Target Selection**: Based on `--all` or `--prefix`, selects VMs to delete
+3. **Resource Cleanup**: For each target VM:
+   * Stops the VM process (if running)
+   * Removes TAP network devices
+   * Cleans up nftables rules
+   * Removes state database entries
+
+## Exit Codes
+
+| Code | Description                                     |
+| ---- | ----------------------------------------------- |
+| `0`  | Success - all targets cleaned successfully      |
+| `1`  | Partial failure - some VMs could not be deleted |
+
+## Standalone Command
+
+The cleanup command is also available as a standalone script:
+
+```bash  theme={null}
+smolvm-cleanup [OPTIONS]
+```
+
+This is functionally identical to `smolvm cleanup`.
+
+## Related Commands
+
+* [`smolvm doctor`](/smolvm/cli/doctor) - Diagnose system setup before cleanup

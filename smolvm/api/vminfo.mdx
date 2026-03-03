@@ -1,0 +1,374 @@
+---
+title: "VMInfo"
+description: "Runtime information about a VM including status, configuration, network details, and process information"
+---
+
+## Overview
+
+`VMInfo` is a Pydantic model that provides comprehensive runtime information about a VM. It includes the current lifecycle state, configuration, networking details, and process identifiers.
+
+## Model Definition
+
+```python  theme={null}
+class VMInfo(BaseModel)
+```
+
+All VMInfo instances are immutable (frozen) after creation.
+
+## Fields
+
+<ResponseField name="vm_id" type="str">
+  The VM identifier. This is the unique ID assigned when the VM was created.
+</ResponseField>
+
+<ResponseField name="status" type="VMState">
+  Current lifecycle state of the VM. Possible values:
+
+  * `VMState.CREATED`: VM has been created but not started
+  * `VMState.RUNNING`: VM is currently running
+  * `VMState.STOPPED`: VM has been stopped
+  * `VMState.ERROR`: VM encountered an error
+</ResponseField>
+
+<ResponseField name="config" type="VMConfig">
+  The VM configuration used to create this VM. Contains all settings including CPU count, memory, kernel path, rootfs path, boot args, and environment variables.
+</ResponseField>
+
+<ResponseField name="network" type="NetworkConfig | None">
+  Network configuration for the VM. Contains guest IP, gateway, TAP device name, MAC address, and optional SSH port forwarding.
+
+  `None` if the VM has not been configured with networking.
+</ResponseField>
+
+<ResponseField name="pid" type="int | None">
+  Process ID of the Firecracker/QEMU process running the VM.
+
+  `None` if the VM is not currently running.
+</ResponseField>
+
+<ResponseField name="socket_path" type="Path | None">
+  Path to the Firecracker API socket for this VM.
+
+  `None` if the socket has not been created or the VM is not running.
+</ResponseField>
+
+## Nested Types
+
+### VMState Enum
+
+```python  theme={null}
+class VMState(str, Enum):
+    CREATED = "created"
+    RUNNING = "running"
+    STOPPED = "stopped"
+    ERROR = "error"
+```
+
+### NetworkConfig
+
+<Expandable title="NetworkConfig Fields">
+  <ResponseField name="guest_ip" type="str">
+    IP address assigned to the guest VM.
+  </ResponseField>
+
+  <ResponseField name="gateway_ip" type="str" default="172.16.0.1">
+    Gateway IP address (host side of the TAP device).
+  </ResponseField>
+
+  <ResponseField name="netmask" type="str" default="255.255.255.0">
+    Network mask for the guest network.
+  </ResponseField>
+
+  <ResponseField name="tap_device" type="str">
+    Name of the TAP network device (e.g., "smolvm0").
+  </ResponseField>
+
+  <ResponseField name="guest_mac" type="str">
+    MAC address assigned to the guest network interface.
+  </ResponseField>
+
+  <ResponseField name="ssh_host_port" type="int | None">
+    Optional host TCP port forwarded to guest SSH port 22.
+
+    When set, you can SSH to `127.0.0.1:<ssh_host_port>` to reach the guest.
+  </ResponseField>
+</Expandable>
+
+### VMConfig
+
+See the [VMConfig documentation](/smolvm/api/vmconfig) for complete field details.
+
+## Usage Examples
+
+### Accessing VM Information
+
+```python  theme={null}
+from smolvm import SmolVM
+
+with SmolVM() as vm:
+    info = vm.info
+    
+    print(f"VM ID: {info.vm_id}")
+    print(f"Status: {info.status.value}")
+    print(f"vCPUs: {info.config.vcpu_count}")
+    print(f"Memory: {info.config.mem_size_mib} MiB")
+    
+    if info.network:
+        print(f"Guest IP: {info.network.guest_ip}")
+        print(f"TAP device: {info.network.tap_device}")
+    
+    if info.pid:
+        print(f"Process ID: {info.pid}")
+```
+
+### Checking VM Status
+
+```python  theme={null}
+from smolvm import SmolVM, VMState
+
+with SmolVM() as vm:
+    info = vm.info
+    
+    if info.status == VMState.RUNNING:
+        print("VM is running")
+        result = vm.run("hostname")
+        print(f"Hostname: {result.output}")
+    elif info.status == VMState.STOPPED:
+        print("VM is stopped")
+        vm.start()
+    elif info.status == VMState.ERROR:
+        print("VM encountered an error")
+```
+
+### Accessing Network Configuration
+
+```python  theme={null}
+from smolvm import SmolVM
+
+with SmolVM() as vm:
+    info = vm.info
+    
+    if info.network:
+        print(f"Guest IP: {info.network.guest_ip}")
+        print(f"Gateway: {info.network.gateway_ip}")
+        print(f"Netmask: {info.network.netmask}")
+        print(f"MAC: {info.network.guest_mac}")
+        
+        if info.network.ssh_host_port:
+            print(f"SSH available at: localhost:{info.network.ssh_host_port}")
+    else:
+        print("VM has no network configuration")
+```
+
+### Inspecting VM Configuration
+
+```python  theme={null}
+from smolvm import SmolVM
+
+with SmolVM() as vm:
+    config = vm.info.config
+    
+    print(f"Kernel: {config.kernel_path}")
+    print(f"Rootfs: {config.rootfs_path}")
+    print(f"Boot args: {config.boot_args}")
+    print(f"Backend: {config.backend or 'auto'}")
+    print(f"Disk mode: {config.disk_mode}")
+    
+    if config.env_vars:
+        print("Environment variables:")
+        for key, value in config.env_vars.items():
+            print(f"  {key}={value}")
+```
+
+### Refreshing VM Information
+
+```python  theme={null}
+from smolvm import SmolVM
+import time
+
+vm = SmolVM()
+vm.start()
+
+print(f"Initial status: {vm.info.status.value}")
+print(f"Initial PID: {vm.info.pid}")
+
+# Perform some operations...
+time.sleep(5)
+
+# Refresh to get latest state
+vm.refresh()
+
+print(f"Current status: {vm.info.status.value}")
+print(f"Current PID: {vm.info.pid}")
+
+vm.stop()
+vm.delete()
+vm.close()
+```
+
+### Using VMInfo Outside Context Manager
+
+```python  theme={null}
+from smolvm import SmolVM, VMConfig
+from pathlib import Path
+
+config = VMConfig(
+    vm_id="my-vm",
+    vcpu_count=2,
+    mem_size_mib=512,
+    kernel_path=Path("/path/to/vmlinux"),
+    rootfs_path=Path("/path/to/rootfs.ext4"),
+)
+
+vm = SmolVM(config)
+info = vm.info
+
+print(f"Created VM: {info.vm_id}")
+print(f"Status: {info.status.value}")  # created
+
+vm.start()
+vm.refresh()  # Update info
+
+info = vm.info
+print(f"Status after start: {info.status.value}")  # running
+print(f"Process PID: {info.pid}")
+
+vm.close()
+```
+
+### Monitoring VM Process
+
+```python  theme={null}
+from smolvm import SmolVM
+import psutil
+
+with SmolVM() as vm:
+    info = vm.info
+    
+    if info.pid:
+        try:
+            process = psutil.Process(info.pid)
+            print(f"Process name: {process.name()}")
+            print(f"CPU percent: {process.cpu_percent(interval=1.0)}%")
+            print(f"Memory: {process.memory_info().rss / 1024 / 1024:.2f} MiB")
+        except psutil.NoSuchProcess:
+            print(f"Process {info.pid} not found")
+```
+
+### Accessing Socket Path
+
+```python  theme={null}
+from smolvm import SmolVM
+
+with SmolVM() as vm:
+    info = vm.info
+    
+    if info.socket_path:
+        print(f"Firecracker socket: {info.socket_path}")
+        
+        # You could use this to make direct API calls
+        # to the Firecracker API if needed
+```
+
+### Comparing VM Configurations
+
+```python  theme={null}
+from smolvm import SmolVM
+
+vm1 = SmolVM(mem_size_mib=512)
+vm2 = SmolVM(mem_size_mib=1024)
+
+vm1.start()
+vm2.start()
+
+info1 = vm1.info
+info2 = vm2.info
+
+print(f"VM1 memory: {info1.config.mem_size_mib} MiB")
+print(f"VM2 memory: {info2.config.mem_size_mib} MiB")
+print(f"VM1 IP: {info1.network.guest_ip if info1.network else 'N/A'}")
+print(f"VM2 IP: {info2.network.guest_ip if info2.network else 'N/A'}")
+
+vm1.stop()
+vm2.stop()
+vm1.delete()
+vm2.delete()
+vm1.close()
+vm2.close()
+```
+
+### Persisting VM Information
+
+```python  theme={null}
+from smolvm import SmolVM
+import json
+
+with SmolVM() as vm:
+    info = vm.info
+    
+    # Convert to dict for serialization
+    info_dict = {
+        "vm_id": info.vm_id,
+        "status": info.status.value,
+        "vcpu_count": info.config.vcpu_count,
+        "mem_size_mib": info.config.mem_size_mib,
+        "guest_ip": info.network.guest_ip if info.network else None,
+        "pid": info.pid,
+    }
+    
+    # Save to file
+    with open(f"/tmp/{info.vm_id}.json", "w") as f:
+        json.dump(info_dict, f, indent=2)
+    
+    print(f"VM info saved to /tmp/{info.vm_id}.json")
+```
+
+### Reconnecting Using VMInfo
+
+```python  theme={null}
+from smolvm import SmolVM
+
+# First session: create and use VM
+with SmolVM() as vm:
+    vm_id = vm.info.vm_id
+    print(f"Created VM: {vm_id}")
+    vm.run("echo 'First session'")
+
+# Second session: reconnect to the same VM
+# (Note: The VM was deleted by the context manager above,
+# so this is just for illustration)
+reconnected_vm = SmolVM.from_id(vm_id)
+info = reconnected_vm.info
+
+print(f"Reconnected to: {info.vm_id}")
+print(f"Status: {info.status.value}")
+
+reconnected_vm.close()
+```
+
+## Immutability
+
+VMInfo instances are frozen and cannot be modified:
+
+```python  theme={null}
+with SmolVM() as vm:
+    info = vm.info
+    
+    # This raises an error
+    info.status = VMState.STOPPED  # ValidationError: "VMInfo" is frozen
+    
+    # To get updated info, call refresh()
+    vm.refresh()
+    updated_info = vm.info
+```
+
+## Field Summary
+
+| Field         | Type                    | Description                                    |
+| ------------- | ----------------------- | ---------------------------------------------- |
+| `vm_id`       | `str`                   | Unique VM identifier                           |
+| `status`      | `VMState`               | Current lifecycle state                        |
+| `config`      | `VMConfig`              | VM configuration                               |
+| `network`     | `NetworkConfig \| None` | Network configuration (None if not configured) |
+| `pid`         | `int \| None`           | Firecracker process ID (None if not running)   |
+| `socket_path` | `Path \| None`          | API socket path (None if not created)          |

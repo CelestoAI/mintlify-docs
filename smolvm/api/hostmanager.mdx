@@ -1,0 +1,230 @@
+---
+title: "HostManager"
+description: "Validates host environment and manages the Firecracker binary for SmolVM."
+---
+
+## Overview
+
+The `HostManager` class validates the host environment and manages the Firecracker binary installation. It checks for required system capabilities like KVM access, network tools, and the Firecracker binary.
+
+The default installation directory is `~/.smolvm/bin/`.
+
+## Constructor
+
+<ParamField path="firecracker_version" type="str" default="v1.14.1">
+  Pinned Firecracker version to install when auto-installing (e.g., "v1.14.1").
+</ParamField>
+
+```python  theme={null}
+from smolvm import HostManager
+
+# Use default Firecracker version
+host_mgr = HostManager()
+
+# Specify custom version
+host_mgr = HostManager(firecracker_version="v1.14.1")
+```
+
+## Class Attributes
+
+<ResponseField name="SMOLVM_HOME" type="Path">
+  SmolVM home directory: `~/.smolvm`
+</ResponseField>
+
+<ResponseField name="BIN_DIR" type="Path">
+  Binary installation directory: `~/.smolvm/bin/`
+</ResponseField>
+
+## Methods
+
+### detect\_arch
+
+```python  theme={null}
+def detect_arch() -> str
+```
+
+Detect the host CPU architecture.
+
+<ResponseField name="returns" type="str">
+  Architecture string (e.g., "x86\_64", "aarch64").
+</ResponseField>
+
+```python  theme={null}
+host_mgr = HostManager()
+arch = host_mgr.detect_arch()
+print(f"Detected architecture: {arch}")
+```
+
+### check\_kvm
+
+```python  theme={null}
+def check_kvm() -> bool
+```
+
+Check if `/dev/kvm` exists and is accessible with read/write permissions.
+
+<ResponseField name="returns" type="bool">
+  True if KVM is available with R/W permissions, False otherwise.
+</ResponseField>
+
+```python  theme={null}
+host_mgr = HostManager()
+if not host_mgr.check_kvm():
+    print("KVM is not available. Run: sudo usermod -aG kvm $USER")
+```
+
+### check\_dependencies
+
+```python  theme={null}
+def check_dependencies() -> list[str]
+```
+
+Check for required system dependencies:
+
+* `ip` (iproute2)
+* `nft` (nftables)
+* `ssh` (openssh-client)
+
+<ResponseField name="returns" type="list[str]">
+  List of missing dependency names (empty if all present).
+</ResponseField>
+
+```python  theme={null}
+host_mgr = HostManager()
+missing = host_mgr.check_dependencies()
+if missing:
+    print(f"Missing dependencies: {', '.join(missing)}")
+```
+
+### find\_firecracker
+
+```python  theme={null}
+def find_firecracker() -> Path | None
+```
+
+Find the Firecracker binary by searching:
+
+1. System PATH
+2. `~/.smolvm/bin/firecracker`
+
+<ResponseField name="returns" type="Path | None">
+  Path to the binary, or None if not found.
+</ResponseField>
+
+```python  theme={null}
+host_mgr = HostManager()
+fc_path = host_mgr.find_firecracker()
+if fc_path:
+    print(f"Firecracker found at: {fc_path}")
+else:
+    print("Firecracker not found")
+```
+
+### install\_firecracker
+
+```python  theme={null}
+def install_firecracker(version: str | None = None) -> Path
+```
+
+Download and install Firecracker from GitHub releases.
+
+Downloads the official tarball, extracts the firecracker binary, and installs it to `~/.smolvm/bin/`.
+
+<ParamField path="version" type="str | None" default="None">
+  Version to install (e.g., "v1.14.1"). Defaults to the pinned version from the constructor.
+</ParamField>
+
+<ResponseField name="returns" type="Path">
+  Path to the installed binary.
+</ResponseField>
+
+<ResponseField name="raises" type="HostError">
+  If architecture is unsupported, download fails, or extraction fails.
+</ResponseField>
+
+```python  theme={null}
+host_mgr = HostManager()
+
+# Install default version
+fc_path = host_mgr.install_firecracker()
+print(f"Firecracker installed at: {fc_path}")
+
+# Install specific version
+fc_path = host_mgr.install_firecracker(version="v1.14.1")
+```
+
+### validate
+
+```python  theme={null}
+def validate() -> HostInfo
+```
+
+Run all host validation checks and return a summary.
+
+<ResponseField name="returns" type="HostInfo">
+  Summary of validation results with the following attributes:
+
+  * `arch` (str): CPU architecture (e.g., "x86\_64")
+  * `capabilities` (dict\[HostCapability, bool]): Map of capability to availability
+  * `missing_deps` (list\[str]): List of missing dependency names
+  * `firecracker_path` (Path | None): Path to the Firecracker binary, if found
+</ResponseField>
+
+```python  theme={null}
+from smolvm import HostManager
+
+host_mgr = HostManager()
+info = host_mgr.validate()
+
+print(f"Architecture: {info.arch}")
+print(f"KVM available: {info.capabilities['kvm']}")
+print(f"Network tools: {info.capabilities['net_tools']}")
+print(f"Firecracker: {info.capabilities['firecracker']}")
+
+if info.missing_deps:
+    print(f"Missing dependencies: {', '.join(info.missing_deps)}")
+
+if info.firecracker_path:
+    print(f"Firecracker path: {info.firecracker_path}")
+```
+
+## Complete Example
+
+```python  theme={null}
+from smolvm import HostManager
+
+# Initialize host manager
+host_mgr = HostManager()
+
+# Validate the host environment
+info = host_mgr.validate()
+
+if not info.capabilities['kvm']:
+    print("Error: KVM is not available")
+    exit(1)
+
+if not info.capabilities['firecracker']:
+    print("Firecracker not found, installing...")
+    fc_path = host_mgr.install_firecracker()
+    print(f"Firecracker installed at: {fc_path}")
+
+if info.missing_deps:
+    print(f"Warning: Missing dependencies: {', '.join(info.missing_deps)}")
+    print("Run: sudo ./scripts/system-setup.sh --configure-runtime")
+
+print("Host environment is ready for SmolVM!")
+```
+
+## Related Types
+
+### HostCapability
+
+Enum of host capabilities that SmolVM depends on:
+
+* `HostCapability.KVM` - KVM virtualization support
+* `HostCapability.NET_TOOLS` - Network configuration tools (ip, nft, ssh)
+* `HostCapability.FIRECRACKER` - Firecracker binary availability
+
+### HostInfo
+
+Pydantic model containing host validation results. See the `validate()` method for details.

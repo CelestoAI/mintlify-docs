@@ -1,0 +1,435 @@
+---
+title: "Firecracker vs QEMU Backends"
+description: "Choose the right microVM backend for your platform and understand their trade-offs"
+---
+
+SmolVM supports two microVM backends: **Firecracker** (Linux) and **QEMU** (macOS/cross-platform). This page explains how backend selection works and the trade-offs between them.
+
+## Backend Resolution
+
+SmolVM automatically selects the appropriate backend based on your platform:
+
+```python  theme={null}
+from smolvm.backends import resolve_backend
+
+# Auto-detection
+backend = resolve_backend()  # Darwin -> qemu, Linux -> firecracker
+```
+
+### Resolution Order
+
+Backends are resolved in this priority order:
+
+1. **Explicit argument**: `SmolVM(backend="firecracker")`
+2. **Environment variable**: `SMOLVM_BACKEND=qemu`
+3. **Platform default**:
+   * macOS (Darwin) → `qemu`
+   * Linux → `firecracker`
+
+```python  theme={null}
+# From backends.py:29-58
+def resolve_backend(requested: str | None = None) -> str:
+    """Resolve the effective backend name.
+
+    Resolution order:
+    1) Explicit ``requested`` argument.
+    2) ``SMOLVM_BACKEND`` environment variable.
+    3) Platform-aware default (Darwin -> qemu, others -> firecracker).
+    """
+    raw = (requested or os.environ.get("SMOLVM_BACKEND") or BACKEND_AUTO).strip().lower()
+
+    if raw == BACKEND_AUTO:
+        system = platform.system().lower()
+        if system == "darwin":
+            return BACKEND_QEMU
+        return BACKEND_FIRECRACKER
+
+    if raw in SUPPORTED_BACKENDS:
+        return raw
+
+    supported = ", ".join(sorted((*SUPPORTED_BACKENDS, BACKEND_AUTO)))
+    raise ValueError(f"Unsupported backend '{raw}'. Supported values: {supported}")
+```
+
+### Supported Backends
+
+```python  theme={null}
+# From backends.py:22-26
+BACKEND_FIRECRACKER = "firecracker"
+BACKEND_QEMU = "qemu"
+BACKEND_AUTO = "auto"
+
+SUPPORTED_BACKENDS = {BACKEND_FIRECRACKER, BACKEND_QEMU}
+```
+
+## Firecracker Backend (Linux)
+
+### Overview
+
+Firecracker is AWS's purpose-built VMM (Virtual Machine Monitor) designed for serverless and container workloads.
+
+**Best for**: Production Linux deployments, CI/CD, high-density environments
+
+### Prerequisites
+
+* **OS**: Linux (Ubuntu, Debian, Fedora, etc.)
+* **CPU**: KVM support (Intel VT-x or AMD-V)
+* **Kernel**: Modern Linux kernel with KVM modules
+
+### Installation
+
+```bash  theme={null}
+# Install SmolVM
+pip install smolvm
+
+# Run system setup (installs Firecracker, configures KVM)
+sudo ./scripts/system-setup.sh --configure-runtime
+```
+
+### Advantages
+
+**Performance**
+
+* Sub-second boot times (\~572ms create + start)
+* Minimal memory overhead
+* Optimized for high-density workloads
+* Command execution: \~43ms
+
+**Security**
+
+* Purpose-built for isolation
+* Minimal attack surface
+* No legacy device emulation
+* Trusted by AWS Lambda
+
+**Resource Efficiency**
+
+* Lightweight process model
+* Efficient memory management
+* Fast snapshot/restore (future feature)
+
+### Limitations
+
+* **Linux-only**: Requires KVM support
+* **Architecture**: x86\_64 or aarch64 only
+* **Device support**: Minimal (by design)
+
+### Configuration
+
+```python  theme={null}
+from smolvm import SmolVM
+
+# Explicit Firecracker backend
+vm = SmolVM(backend="firecracker")
+vm.start()
+```
+
+### Environment Variable
+
+```bash  theme={null}
+# Force Firecracker backend
+export SMOLVM_BACKEND=firecracker
+
+python my_agent.py
+```
+
+## QEMU Backend (macOS)
+
+### Overview
+
+QEMU is a mature, full-featured emulator and virtualizer that works across platforms.
+
+**Best for**: macOS development, cross-platform testing, environments without KVM
+
+### Prerequisites
+
+* **OS**: macOS (or Linux without KVM)
+* **Homebrew**: For package management
+* **QEMU**: `qemu-system-*` binaries
+
+### Installation
+
+```bash  theme={null}
+# Install SmolVM
+pip install smolvm
+
+# macOS setup (installs QEMU via Homebrew)
+./scripts/system-setup-macos.sh
+
+# Optional: Explicit backend override
+export SMOLVM_BACKEND=qemu
+```
+
+### Advantages
+
+**Cross-Platform**
+
+* Works on macOS, Linux, Windows
+* Doesn't require KVM
+* Broad hardware support
+
+**Compatibility**
+
+* Emulates various architectures
+* Extensive device support
+* Mature, well-tested
+
+**Flexibility**
+
+* Rich configuration options
+* Snapshot and migration support
+* Debugging tools
+
+### Limitations
+
+**Performance**
+
+* Slower than Firecracker on Linux
+* Higher memory overhead
+* Longer boot times
+
+**Complexity**
+
+* More moving parts
+* Larger binary size
+* More configuration options
+
+### Configuration
+
+```python  theme={null}
+from smolvm import SmolVM
+
+# Explicit QEMU backend
+vm = SmolVM(backend="qemu")
+vm.start()
+```
+
+### Environment Variable
+
+```bash  theme={null}
+# Force QEMU backend (e.g., on Linux for testing)
+export SMOLVM_BACKEND=qemu
+
+python my_agent.py
+```
+
+## Comparison Matrix
+
+| Feature              | Firecracker      | QEMU            |   |   |
+| -------------------- | ---------------- | --------------- | - | - |
+| **Platform Support** |                  |                 |   |   |
+| Linux                | ✅ Native         | ✅ Supported     |   |   |
+| macOS                | ❌ Not supported  | ✅ Native        |   |   |
+| Windows              | ❌ Not supported  | ✅ Supported     |   |   |
+| **Performance**      |                  |                 |   |   |
+| Boot time            | \~572ms          | Slower (\~2-3s) |   |   |
+| Command execution    | \~43ms           | Similar         |   |   |
+| Memory overhead      | Minimal          | Higher          |   |   |
+| **Features**         |                  |                 |   |   |
+| KVM acceleration     | Required         | Optional        |   |   |
+| Snapshot/restore     | Planned          | ✅ Available     |   |   |
+| Device emulation     | Minimal          | Extensive       |   |   |
+| Architecture support | x86\_64, aarch64 | Many            |   |   |
+| **Use Cases**        |                  |                 |   |   |
+| Production Linux     | ✅ Recommended    | ⚠️ Fallback     |   |   |
+| macOS development    | ❌ Not available  | ✅ Recommended   |   |   |
+| CI/CD (Linux)        | ✅ Recommended    | ⚠️ Testing only |   |   |
+| CI/CD (macOS)        | ❌ Not available  | ✅ Only option   |   |   |
+
+## Backend Diagnostics
+
+SmolVM provides a diagnostic tool to check backend availability:
+
+```bash  theme={null}
+# Auto-detect backend (Darwin -> qemu, Linux -> firecracker)
+smolvm doctor
+
+# Force backend checks
+smolvm doctor --backend firecracker
+smolvm doctor --backend qemu
+
+# CI-friendly mode (JSON output)
+smolvm doctor --json --strict
+```
+
+Example output:
+
+```
+✅ Platform: linux
+✅ Backend: firecracker
+✅ KVM support: enabled
+✅ Firecracker binary: /usr/local/bin/firecracker
+✅ Network tools: ip, nft
+✅ Sudo access: configured
+```
+
+## Switching Backends
+
+### Per-VM Basis
+
+```python  theme={null}
+from smolvm import SmolVM
+
+# Use Firecracker
+vm1 = SmolVM(backend="firecracker")
+
+# Use QEMU
+vm2 = SmolVM(backend="qemu")
+```
+
+### Environment-Wide
+
+```bash  theme={null}
+# In your shell or CI config
+export SMOLVM_BACKEND=qemu
+
+# All SmolVM instances will use QEMU
+python my_script.py
+```
+
+### Application-Wide
+
+```python  theme={null}
+import os
+
+# Set before importing SmolVM
+os.environ["SMOLVM_BACKEND"] = "firecracker"
+
+from smolvm import SmolVM
+
+vm = SmolVM()  # Uses Firecracker
+```
+
+## Recommendations
+
+### For Production (Linux)
+
+<Note>
+  Use Firecracker for production Linux deployments.
+</Note>
+
+```python  theme={null}
+from smolvm import SmolVM
+
+# Production configuration
+vm = SmolVM(
+    backend="firecracker",
+    vcpu_count=2,
+    mem_size_mib=512,
+    disk_mode="isolated"
+)
+```
+
+**Why?**
+
+* Optimized performance
+* Minimal overhead
+* Security-focused design
+* Battle-tested in AWS Lambda
+
+### For Development (macOS)
+
+<Note>
+  Use QEMU for local macOS development.
+</Note>
+
+```python  theme={null}
+from smolvm import SmolVM
+
+# Development configuration
+vm = SmolVM(
+    backend="qemu",  # Auto-detected on macOS
+    mem_size_mib=1024
+)
+```
+
+**Why?**
+
+* Only option on macOS
+* Good enough for development
+* Cross-platform testing
+
+### For CI/CD
+
+**Linux Runners**:
+
+```yaml  theme={null}
+# .github/workflows/test.yml
+steps:
+  - name: Setup SmolVM
+    run: |
+      pip install smolvm
+      sudo ./scripts/system-setup.sh --configure-runtime
+  
+  - name: Run tests
+    run: |
+      export SMOLVM_BACKEND=firecracker
+      pytest tests/
+```
+
+**macOS Runners**:
+
+```yaml  theme={null}
+steps:
+  - name: Setup SmolVM
+    run: |
+      pip install smolvm
+      ./scripts/system-setup-macos.sh
+  
+  - name: Run tests
+    run: |
+      export SMOLVM_BACKEND=qemu
+      pytest tests/
+```
+
+## Troubleshooting
+
+### "Unsupported backend" Error
+
+```python  theme={null}
+ValueError: Unsupported backend 'firecrackerr'. Supported values: auto, firecracker, qemu
+```
+
+**Solution**: Check spelling and use one of: `auto`, `firecracker`, `qemu`
+
+### KVM Not Available (Linux)
+
+```
+Error: KVM support not detected
+```
+
+**Solution**:
+
+1. Verify KVM modules: `lsmod | grep kvm`
+2. Check virtualization in BIOS
+3. Run system setup: `sudo ./scripts/system-setup.sh --configure-runtime`
+
+### QEMU Not Found (macOS)
+
+```
+Error: qemu-system-x86_64 not found
+```
+
+**Solution**:
+
+```bash  theme={null}
+brew install qemu
+# or run setup script
+./scripts/system-setup-macos.sh
+```
+
+### Wrong Backend Auto-Selected
+
+```bash  theme={null}
+# Force specific backend
+export SMOLVM_BACKEND=firecracker
+
+# Or in code
+vm = SmolVM(backend="firecracker")
+```
+
+## Next Steps
+
+* Configure [Networking](/smolvm/concepts/networking)
+* Review [Security Model](/smolvm/concepts/security)
+* Read [Architecture Overview](/smolvm/concepts/overview)
