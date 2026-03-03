@@ -1,0 +1,462 @@
+---
+title: "Tools"
+description: "Create and use tools with AI agents"
+---
+
+## Overview
+
+Agentor provides multiple ways to create tools that agents can use to interact with external systems, APIs, and data sources. Tools enable agents to perform actions beyond text generation.
+
+## Tool Decorators
+
+### @tool
+
+The `@tool` decorator creates dual-mode tools usable by both Agentor agents and the LLM client.
+
+```python  theme={null}
+from agentor import tool
+
+@tool
+def get_weather(city: str) -> str:
+    """Get the current weather for a city."""
+    return f"The weather in {city} is sunny and 72°F"
+```
+
+**Signature:**
+
+```python  theme={null}
+@tool
+def tool(
+    func: Optional[Callable] = None,
+    *,
+    name: Optional[str] = None,
+    description: Optional[str] = None,
+) -> BaseTool
+```
+
+**Parameters:**
+
+* `name` (str): Optional custom tool name (defaults to function name)
+* `description` (str): Optional description (defaults to docstring)
+
+**Example with custom name:**
+
+```python  theme={null}
+@tool(name="weather_lookup", description="Fetches weather data")
+def get_weather(city: str) -> str:
+    return f"Weather in {city}: Sunny"
+```
+
+### @function\_tool
+
+The `@function_tool` decorator creates tools compatible with the OpenAI function calling format.
+
+```python  theme={null}
+from agentor import function_tool
+
+@function_tool
+def calculate(expression: str) -> float:
+    """Evaluate a mathematical expression."""
+    return eval(expression)
+```
+
+**Parameters:**
+
+* `name_override` (str): Optional custom name for the tool
+* `strict_mode` (bool): Enable strict parameter validation (default: True)
+
+**Example:**
+
+```python  theme={null}
+from agentor import Agentor, function_tool
+
+@function_tool(name_override="math_calc")
+def calculate(x: int, y: int, operation: str) -> int:
+    """Perform basic arithmetic operations."""
+    if operation == "add":
+        return x + y
+    elif operation == "multiply":
+        return x * y
+    return 0
+
+agent = Agentor(
+    name="Math Agent",
+    tools=[calculate]
+)
+```
+
+## BaseTool Class
+
+`BaseTool` is the base class for creating custom tools with multiple capabilities.
+
+### Basic Usage
+
+```python  theme={null}
+from agentor.tools import BaseTool, capability
+
+class WeatherTool(BaseTool):
+    name = "weather"
+    description = "Get weather information"
+    
+    def __init__(self, api_key: str):
+        super().__init__(api_key=api_key)
+    
+    @capability
+    def get_current(self, city: str) -> str:
+        """Get current weather for a city."""
+        return f"Current weather in {city}: Sunny, 72°F"
+    
+    @capability
+    def get_forecast(self, city: str, days: int = 3) -> str:
+        """Get weather forecast for a city."""
+        return f"{days}-day forecast for {city}: Mostly sunny"
+```
+
+### Class Definition
+
+```python  theme={null}
+class BaseTool(ABC):
+    name: str = "un-named-tool"
+    description: str | None = None
+    
+    def __init__(self, api_key: Optional[str] = None):
+        ...
+```
+
+### Methods
+
+#### list\_capabilities
+
+List all capabilities of the tool.
+
+```python  theme={null}
+def list_capabilities() -> List[Tuple[str, FunctionType]]
+```
+
+**Returns:** List of (name, function) tuples for all capabilities
+
+#### to\_openai\_function
+
+Convert all capabilities to OpenAI-compatible FunctionTools.
+
+```python  theme={null}
+def to_openai_function() -> List[FunctionTool]
+```
+
+**Returns:** List of FunctionTool objects
+
+#### json\_schema
+
+Convert all capabilities to JSON Schema format.
+
+```python  theme={null}
+def json_schema() -> List[ToolType]
+```
+
+**Returns:** List of tool schemas
+
+#### serve
+
+Serve the tool as an MCP (Model Context Protocol) server.
+
+```python  theme={null}
+def serve(
+    name: Optional[str] = None,
+    port: int = 8000
+)
+```
+
+**Parameters:**
+
+* `name` (str): Optional server name (defaults to tool name)
+* `port` (int): Port to serve on (default: 8000)
+
+**Example:**
+
+```python  theme={null}
+weather = WeatherTool(api_key="...")
+weather.serve(port=8000)  # Serves MCP server on port 8000
+```
+
+#### from\_function
+
+Create a BaseTool from a standalone function.
+
+```python  theme={null}
+@staticmethod
+def from_function(
+    func: Callable,
+    name: str | None = None,
+    description: str | None = None
+) -> BaseTool
+```
+
+**Example:**
+
+```python  theme={null}
+from agentor.tools.base import BaseTool
+
+def weather_tool(city: str) -> str:
+    """Get weather for a city."""
+    return f"Weather in {city} is warm and sunny."
+
+tool = BaseTool.from_function(weather_tool)
+result = tool.run("London")
+print(result)  # "Weather in London is warm and sunny."
+```
+
+### @capability Decorator
+
+Mark a method as a tool capability that agents can invoke.
+
+```python  theme={null}
+from agentor.tools.base import capability
+
+@capability
+def my_capability(self, param: str) -> str:
+    """Capability description."""
+    return f"Result: {param}"
+```
+
+## Using Tools with Agents
+
+### Function Tools
+
+```python  theme={null}
+from agentor import Agentor, function_tool
+
+@function_tool
+def get_weather(city: str) -> str:
+    """Returns the weather in the given city."""
+    return f"The weather in {city} is sunny"
+
+agent = Agentor(
+    name="Weather Assistant",
+    tools=[get_weather],
+    instructions="Use the weather tool to answer questions."
+)
+
+result = agent.run("What's the weather in Tokyo?")
+```
+
+### BaseTool Instances
+
+```python  theme={null}
+from agentor import Agentor
+from agentor.tools import GetWeatherTool
+
+weather_tool = GetWeatherTool(api_key="your_api_key")
+
+agent = Agentor(
+    name="Weather Agent",
+    tools=[weather_tool],
+    instructions="Always use the weather tool to answer weather questions."
+)
+
+result = agent.run("What is the current weather in London?")
+```
+
+### Tool Registry
+
+Tools can be registered and referenced by string name:
+
+```python  theme={null}
+from agentor import Agentor
+
+agent = Agentor(
+    name="Multi-Tool Agent",
+    tools=["gmail", "get_weather"],  # Reference by name
+    instructions="Use the available tools to help the user."
+)
+```
+
+### MCP Servers
+
+```python  theme={null}
+import os
+from agentor import Agentor
+from agentor.mcp import MCPServerStreamableHttp
+
+mcp_server = MCPServerStreamableHttp(
+    name="Search Server",
+    params={
+        "url": "https://api.example.com/mcp",
+        "headers": {"Authorization": f"Bearer {os.environ['API_KEY']}"},
+        "timeout": 10,
+    },
+    cache_tools_list=True,
+    max_retry_attempts=3
+)
+
+agent = Agentor(
+    name="Search Agent",
+    tools=[mcp_server],
+    instructions="Use the search tool to find information."
+)
+```
+
+## Built-in Tools
+
+Agentor includes several built-in tools:
+
+### Calculator Tool
+
+```python  theme={null}
+from agentor import Agentor
+from agentor.tools import CalculatorTool
+
+agent = Agentor(
+    name="Math Assistant",
+    tools=[CalculatorTool()],
+    instructions="Use the calculator for all arithmetic."
+)
+
+result = agent.run("What is (37 * 12) - (144 / 3)?")
+```
+
+### Weather Tool
+
+```python  theme={null}
+import os
+from agentor import Agentor
+from agentor.tools import GetWeatherTool
+
+weather_api_key = os.environ.get("WEATHER_API_KEY")
+
+agent = Agentor(
+    name="Weather Agent",
+    tools=[GetWeatherTool(api_key=weather_api_key)],
+    instructions="Provide accurate weather information."
+)
+```
+
+## Tool Examples
+
+### Simple Function Tool
+
+```python  theme={null}
+from agentor import Agentor, function_tool
+import datetime
+
+@function_tool
+def get_current_time(timezone: str = "UTC") -> str:
+    """Get the current time in a specific timezone."""
+    return f"Current time in {timezone}: {datetime.datetime.now()}"
+
+agent = Agentor(
+    name="Time Assistant",
+    tools=[get_current_time]
+)
+```
+
+### Multi-Capability Tool
+
+```python  theme={null}
+from agentor.tools import BaseTool, capability
+import requests
+
+class APItool(BaseTool):
+    name = "api_client"
+    description = "Make HTTP API requests"
+    
+    @capability
+    def get(self, url: str) -> str:
+        """Make a GET request."""
+        response = requests.get(url)
+        return response.text
+    
+    @capability
+    def post(self, url: str, data: dict) -> str:
+        """Make a POST request."""
+        response = requests.post(url, json=data)
+        return response.text
+
+api_tool = APItool()
+```
+
+### Tool with State
+
+```python  theme={null}
+from agentor.tools import BaseTool, capability
+
+class CounterTool(BaseTool):
+    name = "counter"
+    description = "Track and increment a counter"
+    
+    def __init__(self):
+        super().__init__()
+        self.count = 0
+    
+    @capability
+    def increment(self, amount: int = 1) -> str:
+        """Increment the counter."""
+        self.count += amount
+        return f"Counter is now: {self.count}"
+    
+    @capability
+    def get_count(self) -> str:
+        """Get the current count."""
+        return f"Current count: {self.count}"
+    
+    @capability
+    def reset(self) -> str:
+        """Reset the counter to zero."""
+        self.count = 0
+        return "Counter reset to 0"
+```
+
+### Tool from Function
+
+```python  theme={null}
+from agentor.tools.base import BaseTool
+
+def search_database(query: str) -> str:
+    """Search the database for records."""
+    # Implementation here
+    return f"Found 5 results for: {query}"
+
+search_tool = BaseTool.from_function(
+    search_database,
+    name="db_search",
+    description="Search database records"
+)
+
+result = search_tool.run("user accounts")
+```
+
+## Best Practices
+
+1. **Clear Descriptions**: Always provide clear docstrings - they become tool descriptions for the LLM
+2. **Type Hints**: Use type hints for all parameters and return values
+3. **Error Handling**: Handle errors gracefully within tool functions
+4. **Focused Tools**: Keep tools focused on specific tasks
+5. **Idempotent Operations**: Make tools safe to retry when possible
+6. **Documentation**: Document expected inputs and outputs
+
+```python  theme={null}
+from agentor import function_tool
+from typing import Optional
+
+@function_tool
+def get_user_profile(user_id: str, include_history: bool = False) -> str:
+    """
+    Retrieve a user's profile information.
+    
+    Args:
+        user_id: The unique identifier for the user
+        include_history: Whether to include purchase history (default: False)
+    
+    Returns:
+        JSON string containing user profile data
+    """
+    try:
+        # Implementation
+        return '{"name": "Alice", "email": "alice@example.com"}'
+    except Exception as e:
+        return f"Error fetching user profile: {str(e)}"
+```
+
+## Related
+
+* [Agentor](/agentor/api/agentor) - Using tools with agents
+* [LLM](/agentor/api/llm) - Direct LLM usage with tools

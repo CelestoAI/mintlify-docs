@@ -1,0 +1,530 @@
+---
+title: "Deploying with Celesto CLI"
+description: "Deploy production-ready agents to the cloud with a single command"
+---
+
+The Celesto CLI provides fast, serverless deployment for Agentor agents, MCP servers, and AI applications with built-in observability and scalability.
+
+## Installation
+
+The Celesto CLI is installed automatically with Agentor:
+
+```bash  theme={null}
+pip install agentor
+```
+
+Verify installation:
+
+```bash  theme={null}
+celesto --version
+```
+
+## Quick Start
+
+Deploy an agent in three steps:
+
+<Steps>
+  ### Create Your Agent
+
+  ```python  theme={null}
+  # main.py
+  from agentor import Agentor
+
+  agent = Agentor(
+      name="Weather Agent",
+      model="gpt-5-mini",
+      tools=["get_weather"],
+      instructions="You are a helpful weather assistant."
+  )
+
+  agent.serve(port=8000)
+  ```
+
+  ### Configure Deployment
+
+  Create a `celesto.yaml` file (optional):
+
+  ```yaml  theme={null}
+  name: weather-agent
+  runtime: python3.11
+  entry_point: main.py
+  env_vars:
+    OPENAI_API_KEY: ${OPENAI_API_KEY}
+  ```
+
+  ### Deploy
+
+  ```bash  theme={null}
+  celesto deploy
+  ```
+</Steps>
+
+Your agent is now live at:
+
+```
+https://api.celesto.ai/deploy/apps/weather-agent
+```
+
+## Authentication
+
+Get your API key from the [Celesto Dashboard](https://celesto.ai/dashboard).
+
+Set it as an environment variable:
+
+```bash  theme={null}
+export CELESTO_API_KEY="your-api-key"
+```
+
+Or configure it directly:
+
+```bash  theme={null}
+celesto auth login --api-key your-api-key
+```
+
+## Deployment Options
+
+### Deploy Specific Directory
+
+```bash  theme={null}
+celesto deploy --folder ./my-agent
+```
+
+### Deploy with Custom Name
+
+```bash  theme={null}
+celesto deploy --name production-agent
+```
+
+### Deploy with Environment Variables
+
+```bash  theme={null}
+celesto deploy --env OPENAI_API_KEY=sk-xxx --env DEBUG=true
+```
+
+### Deploy MCP Server
+
+```python  theme={null}
+# mcp_server.py
+from agentor.mcp import LiteMCP
+
+mcp = LiteMCP(name="my-mcp-server", version="1.0.0")
+
+@mcp.tool(description="Get weather")
+def get_weather(location: str) -> str:
+    return f"Weather in {location}: Sunny, 72°F"
+
+if __name__ == "__main__":
+    mcp.serve(port=8000)
+```
+
+Deploy:
+
+```bash  theme={null}
+celesto deploy
+```
+
+Access at:
+
+```
+https://api.celesto.ai/deploy/apps/my-mcp-server/mcp
+```
+
+## Configuration File
+
+Create `celesto.yaml` for advanced configuration:
+
+```yaml  theme={null}
+# Application name (defaults to directory name)
+name: my-agent
+
+# Python runtime version
+runtime: python3.11
+
+# Entry point file
+entry_point: main.py
+
+# Environment variables
+env_vars:
+  OPENAI_API_KEY: ${OPENAI_API_KEY}
+  MODEL: gpt-5-mini
+  DEBUG: false
+
+# Dependencies (defaults to requirements.txt)
+dependencies: requirements.txt
+
+# Region (optional)
+region: us-east-1
+
+# Scaling configuration (optional)
+scaling:
+  min_instances: 1
+  max_instances: 10
+  target_cpu_utilization: 70
+```
+
+## Environment Variables
+
+### From .env File
+
+Create a `.env` file:
+
+```bash  theme={null}
+OPENAI_API_KEY=sk-xxx
+ANTHROPIC_API_KEY=sk-ant-xxx
+CELESTO_API_KEY=cel-xxx
+```
+
+Variables are automatically loaded during deployment.
+
+### From Command Line
+
+```bash  theme={null}
+celesto deploy --env OPENAI_API_KEY=sk-xxx --env MODEL=gpt-4o
+```
+
+### From YAML
+
+```yaml  theme={null}
+env_vars:
+  OPENAI_API_KEY: ${OPENAI_API_KEY}  # From local env
+  MODEL: gpt-5-mini                   # Hardcoded
+  DEBUG: ${DEBUG:-false}              # With default value
+```
+
+## Managing Deployments
+
+### List Deployments
+
+```bash  theme={null}
+celesto list
+```
+
+Output:
+
+```
+NAME              STATUS    URL
+weather-agent     running   https://api.celesto.ai/deploy/apps/weather-agent
+my-mcp-server     running   https://api.celesto.ai/deploy/apps/my-mcp-server
+```
+
+### Get Deployment Info
+
+```bash  theme={null}
+celesto info weather-agent
+```
+
+### View Logs
+
+```bash  theme={null}
+celesto logs weather-agent
+```
+
+Follow logs in real-time:
+
+```bash  theme={null}
+celesto logs weather-agent --follow
+```
+
+### Update Deployment
+
+Make changes to your code, then redeploy:
+
+```bash  theme={null}
+celesto deploy
+```
+
+The existing deployment will be updated.
+
+### Delete Deployment
+
+```bash  theme={null}
+celesto delete weather-agent
+```
+
+## Using Deployed Agents
+
+### HTTP Requests
+
+```python  theme={null}
+import requests
+
+url = "https://api.celesto.ai/deploy/apps/weather-agent/chat"
+headers = {
+    "Authorization": f"Bearer {CELESTO_API_KEY}",
+    "Content-Type": "application/json"
+}
+
+response = requests.post(
+    url,
+    json={"input": "What's the weather in Paris?"},
+    headers=headers
+)
+
+print(response.json())
+```
+
+### Streaming Requests
+
+```python  theme={null}
+import requests
+
+url = "https://api.celesto.ai/deploy/apps/weather-agent/chat"
+headers = {
+    "Authorization": f"Bearer {CELESTO_API_KEY}",
+    "Content-Type": "application/json"
+}
+
+response = requests.post(
+    url,
+    json={"input": "Tell me a story", "stream": True},
+    headers=headers,
+    stream=True
+)
+
+for line in response.iter_lines(decode_unicode=True):
+    if line:
+        print(line, flush=True)
+```
+
+### A2A Protocol
+
+Access the agent card:
+
+```bash  theme={null}
+curl https://api.celesto.ai/deploy/apps/weather-agent/.well-known/agent-card.json
+```
+
+Send A2A messages:
+
+```python  theme={null}
+import requests
+
+url = "https://api.celesto.ai/deploy/apps/weather-agent/"
+payload = {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "message/send",
+    "params": {
+        "message": {
+            "parts": [
+                {"kind": "text", "text": "What's the weather?"}
+            ]
+        }
+    }
+}
+
+response = requests.post(url, json=payload)
+print(response.json())
+```
+
+### MCP Protocol
+
+Connect to deployed MCP server:
+
+```python  theme={null}
+import asyncio
+from agentor import Agentor
+from agentor.mcp import MCPServerStreamableHttp
+
+async def main():
+    mcp_url = "https://api.celesto.ai/deploy/apps/my-mcp-server/mcp"
+    headers = {"Authorization": f"Bearer {CELESTO_API_KEY}"}
+    
+    async with MCPServerStreamableHttp(
+        name="Deployed MCP",
+        params={"url": mcp_url, "headers": headers}
+    ) as server:
+        agent = Agentor(
+            name="Agent",
+            model="gpt-5-mini",
+            tools=[server]
+        )
+        
+        result = await agent.arun("Use the weather tool")
+        print(result.final_output)
+
+asyncio.run(main())
+```
+
+## Production Best Practices
+
+<Steps>
+  ### Use Environment Variables for Secrets
+
+  Never hardcode API keys:
+
+  ```python  theme={null}
+  # Good
+  import os
+
+  agent = Agentor(
+      name="Agent",
+      model="gpt-5-mini",
+      api_key=os.environ.get("OPENAI_API_KEY")
+  )
+
+  # Bad
+  agent = Agentor(
+      name="Agent",
+      model="gpt-5-mini",
+      api_key="sk-hardcoded-key-bad"  # Don't do this!
+  )
+  ```
+
+  ### Pin Dependencies
+
+  Use specific versions in `requirements.txt`:
+
+  ```txt  theme={null}
+  agentor==0.1.0
+  requests==2.31.0
+  pydantic==2.5.0
+  ```
+
+  ### Enable Tracing
+
+  Automatic tracing is enabled when `CELESTO_API_KEY` is set:
+
+  ```python  theme={null}
+  from agentor import Agentor
+
+  # Tracing auto-enabled with CELESTO_API_KEY
+  agent = Agentor(
+      name="Production Agent",
+      model="gpt-5-mini"
+  )
+
+  # Or explicitly enable
+  agent = Agentor(
+      name="Production Agent",
+      model="gpt-5-mini",
+      enable_tracing=True
+  )
+  ```
+
+  View traces at: [https://celesto.ai/observe](https://celesto.ai/observe)
+
+  ### Set Timeouts
+
+  ```python  theme={null}
+  from agentor.mcp import MCPServerStreamableHttp
+
+  async with MCPServerStreamableHttp(
+      name="Server",
+      params={
+          "url": mcp_url,
+          "timeout": 30  # 30 second timeout
+      }
+  ) as server:
+      # Use server
+  ```
+
+  ### Handle Errors
+
+  ```python  theme={null}
+  try:
+      result = await agent.arun(user_input)
+  except Exception as e:
+      logger.error(f"Agent error: {e}")
+      # Fallback logic
+  ```
+
+  ### Use Health Checks
+
+  Add a health endpoint:
+
+  ```python  theme={null}
+  from fastapi import FastAPI
+  from agentor import Agentor
+
+  app = FastAPI()
+  agent = Agentor(name="Agent", model="gpt-5-mini")
+
+  @app.get("/health")
+  def health():
+      return {"status": "healthy"}
+
+  @app.post("/chat")
+  async def chat(message: str):
+      result = await agent.arun(message)
+      return {"response": result.final_output}
+  ```
+
+  ### Monitor Performance
+
+  View metrics in the Celesto dashboard:
+
+  * Request latency
+  * Error rates
+  * Token usage
+  * Throughput
+</Steps>
+
+## Troubleshooting
+
+### Deployment Fails
+
+Check logs:
+
+```bash  theme={null}
+celesto logs <app-name>
+```
+
+Common issues:
+
+* Missing dependencies in `requirements.txt`
+* Invalid environment variables
+* Syntax errors in code
+
+### Application Crashes
+
+View error logs:
+
+```bash  theme={null}
+celesto logs <app-name> --tail 100
+```
+
+Enable debug mode:
+
+```bash  theme={null}
+celesto deploy --env DEBUG=true
+```
+
+### Slow Performance
+
+* Check model selection (lighter models are faster)
+* Enable caching for MCP servers
+* Review trace data for bottlenecks
+
+### Connection Timeouts
+
+Increase timeout in client:
+
+```python  theme={null}
+response = requests.post(
+    url,
+    json={"input": "query"},
+    timeout=60  # 60 seconds
+)
+```
+
+## Cost Optimization
+
+* Use lighter models for simple tasks (`gpt-5-mini` vs `gpt-4o`)
+* Implement caching for repeated queries
+* Set appropriate `max_tokens` limits
+* Monitor token usage in dashboard
+
+## Support
+
+Get help:
+
+* [Documentation](https://docs.celesto.ai)
+* [Discord Community](https://discord.gg/KNb5UkrAmm)
+* [GitHub Issues](https://github.com/CelestoAI/agentor/issues)
+
+## Next Steps
+
+* Enable [observability](/agentor/guides/observability) to monitor production agents
+* Learn about [streaming responses](/agentor/guides/streaming) for better UX
+* Explore [agent communication](/agentor/guides/agent-communication) patterns

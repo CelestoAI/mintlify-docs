@@ -1,0 +1,187 @@
+---
+title: "GmailTool"
+description: "Read-only Gmail tool for searching and fetching messages"
+---
+
+`GmailTool` provides read-only access to Gmail for listing, searching, and fetching messages using the Gmail API.
+
+## Installation
+
+Install the Google dependencies:
+
+```bash  theme={null}
+pip install agentor[google]
+```
+
+## Authentication
+
+GmailTool requires Google OAuth2 credentials:
+
+1. Create credentials using the `superauth` library
+2. Save credentials to a JSON file
+3. Provide the path or set `GOOGLE_USER_CREDENTIALS` environment variable
+
+## Constructor
+
+<ParamField path="credentials_path" type="str">
+  Path to saved user credentials JSON file. Defaults to `GOOGLE_USER_CREDENTIALS` env var or `credentials.json`
+</ParamField>
+
+<ParamField path="credentials" type="CredentialRecord">
+  Pre-loaded credentials object. Overrides credentials\_path if provided
+</ParamField>
+
+## Methods
+
+### search\_messages
+
+Search Gmail using the same query syntax as the web UI.
+
+<ParamField path="query" type="str" required>
+  Gmail search query (e.g., `from:alice has:attachment newer_than:7d`)
+</ParamField>
+
+<ParamField path="label_ids" type="List[str]">
+  Optional Gmail label IDs to filter by
+</ParamField>
+
+<ParamField path="after" type="str">
+  ISO date string to filter messages after
+</ParamField>
+
+<ParamField path="before" type="str">
+  ISO date string to filter messages before
+</ParamField>
+
+<ParamField path="limit" type="int">
+  Number of messages to return (1-50, default: 20)
+</ParamField>
+
+### list\_messages
+
+List message IDs (fast, metadata-only).
+
+<ParamField path="label_ids" type="List[str]">
+  Optional Gmail label IDs to filter by
+</ParamField>
+
+<ParamField path="q" type="str">
+  Optional Gmail query string
+</ParamField>
+
+<ParamField path="limit" type="int">
+  Number of messages to return (1-50, default: 20)
+</ParamField>
+
+<ParamField path="page_token" type="str">
+  Pagination token from previous call
+</ParamField>
+
+<ParamField path="include_spam_trash" type="bool">
+  Whether to include spam and trash (default: False)
+</ParamField>
+
+### get\_message
+
+Fetch a single Gmail message (metadata only).
+
+<ParamField path="message_id" type="str" required>
+  Gmail message ID
+</ParamField>
+
+### get\_message\_body
+
+Fetch a single Gmail message body for display or summarization.
+
+<ParamField path="message_id" type="str" required>
+  Gmail message ID
+</ParamField>
+
+<ParamField path="prefer" type="str">
+  "text" or "html" (default: "text")
+</ParamField>
+
+<ParamField path="limit" type="int">
+  Max characters to return (default: 50000)
+</ParamField>
+
+## Usage
+
+### Basic setup
+
+```python  theme={null}
+from agentor import Agentor
+from agentor.tools import GmailTool
+
+gmail_tool = GmailTool(
+    credentials_path="./credentials.json"
+)
+
+agent = Agentor(
+    name="Email Assistant",
+    model="gpt-4o-mini",
+    tools=[gmail_tool]
+)
+
+result = agent.run("Search for unread emails from alice")
+print(result)
+```
+
+### Searching emails
+
+```python  theme={null}
+from agentor.tools import GmailTool
+
+gmail = GmailTool()
+
+# Search for unread emails
+result = gmail.search_messages("is:unread", limit=10)
+
+# Search for emails with attachments
+result = gmail.search_messages("has:attachment from:alice@example.com")
+
+# Search by date range
+result = gmail.search_messages(
+    "newer_than:7d",
+    after="2024-01-01",
+    before="2024-12-31"
+)
+```
+
+### Reading message bodies
+
+```python  theme={null}
+# Get message metadata
+message_data = gmail.get_message("18c5f7a2b3d4e5f6")
+
+# Get full message body
+body = gmail.get_message_body(
+    message_id="18c5f7a2b3d4e5f6",
+    prefer="text",
+    limit=10000
+)
+```
+
+## Privacy and security
+
+<Warning>
+  GmailTool is read-only and cannot send emails, delete messages, or modify your Gmail account. It requires explicit OAuth consent from users.
+</Warning>
+
+## Error handling
+
+```python  theme={null}
+# Missing credentials
+try:
+    gmail = GmailTool(credentials_path="missing.json")
+except FileNotFoundError as e:
+    print(e)  # Credentials file not found
+
+# Invalid message ID
+result = gmail.get_message("invalid-id")
+print(result)  # Error: ...
+```
+
+## Source reference
+
+`src/agentor/tools/gmail.py:19`

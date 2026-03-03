@@ -1,0 +1,155 @@
+---
+title: "GitHubTool"
+description: "Interact with GitHub repositories, issues, and pull requests"
+---
+
+`GitHubTool` provides methods to interact with GitHub repositories through the GitHub API using PyGithub.
+
+## Installation
+
+Install the GitHub dependency:
+
+```bash  theme={null}
+pip install agentor[github]
+```
+
+## Constructor
+
+<ParamField path="access_token" type="str" required>
+  GitHub personal access token or OAuth token for authentication
+</ParamField>
+
+<ParamField path="api_key" type="str">
+  Optional API key for MCP server usage
+</ParamField>
+
+## Methods
+
+### get\_issue
+
+Get details of a GitHub issue.
+
+<ParamField path="repo_name" type="str" required>
+  Repository name in format `owner/repo`
+</ParamField>
+
+<ParamField path="issue_number" type="int" required>
+  Issue number
+</ParamField>
+
+**Returns:** String with issue title, body, and state
+
+### create\_issue
+
+Create a new issue in a repository.
+
+<ParamField path="repo_name" type="str" required>
+  Repository name in format `owner/repo`
+</ParamField>
+
+<ParamField path="title" type="str" required>
+  Issue title
+</ParamField>
+
+<ParamField path="body" type="str">
+  Issue body/description
+</ParamField>
+
+**Returns:** URL of the created issue
+
+### create\_pr
+
+Create a pull request.
+
+<ParamField path="repo_name" type="str" required>
+  Repository name in format `owner/repo`
+</ParamField>
+
+<ParamField path="title" type="str" required>
+  Pull request title
+</ParamField>
+
+<ParamField path="head" type="str" required>
+  Branch name with changes
+</ParamField>
+
+<ParamField path="base" type="str">
+  Base branch name (default: "main")
+</ParamField>
+
+<ParamField path="body" type="str">
+  Pull request description
+</ParamField>
+
+**Returns:** URL of the created pull request
+
+## Usage
+
+### With Agentor agent
+
+```python  theme={null}
+import os
+from agentor import Agentor
+from agentor.tools import GitHubTool
+
+github_tool = GitHubTool(
+    access_token=os.getenv("GITHUB_TOKEN")
+)
+
+agent = Agentor(
+    name="GitHub Assistant",
+    model="gpt-4o-mini",
+    tools=[github_tool]
+)
+
+result = agent.run("Get issue #42 from owner/repo")
+print(result)
+```
+
+### Creating issues
+
+```python  theme={null}
+from agentor.tools import GitHubTool
+
+github = GitHubTool(access_token="ghp_xxx")
+
+# Create an issue
+result = github.create_issue(
+    repo_name="CelestoAI/agentor",
+    title="Feature request: Add XYZ",
+    body="Please add support for XYZ feature"
+)
+print(result)  # Issue created: https://github.com/...
+```
+
+### Creating pull requests
+
+```python  theme={null}
+# Create a PR from feature branch to main
+result = github.create_pr(
+    repo_name="CelestoAI/agentor",
+    title="Add new feature",
+    head="feature-branch",
+    base="main",
+    body="This PR adds a new feature..."
+)
+print(result)  # PR created: https://github.com/...
+```
+
+## Error handling
+
+The tool returns error messages as strings when operations fail:
+
+```python  theme={null}
+# Invalid repository
+result = github.get_issue("nonexistent/repo", 1)
+print(result)  # GitHub Error: Not Found
+
+# Invalid token
+result = github.create_issue("owner/repo", "Test")
+print(result)  # GitHub Error: Bad credentials
+```
+
+## Source reference
+
+`src/agentor/tools/github.py:13`

@@ -1,0 +1,384 @@
+---
+title: "Agentor"
+description: "Core class for building and deploying production-ready AI agents"
+---
+
+## Overview
+
+The `Agentor` class is the main entry point for building AI agents. It provides a simple interface to create agents with tools, serve them as APIs, and run them with various configurations.
+
+## Constructor
+
+```python  theme={null}
+Agentor(
+    name: str,
+    instructions: Optional[str] = None,
+    model: Optional[str | LitellmModel] = "gpt-5-nano",
+    tools: Optional[List[Union[FunctionTool, str, MCPServerStreamableHttp, BaseTool]]] = None,
+    output_type: type[Any] | AgentOutputSchemaBase | None = None,
+    debug: bool = False,
+    api_key: Optional[str] = None,
+    model_settings: Optional[ModelSettings] = None,
+    skills: Optional[List[str]] = None,
+    enable_tracing: bool = False,
+)
+```
+
+### Parameters
+
+<ParamField path="name" type="str" required>
+  The name of the agent. Used in API endpoints and agent identification.
+</ParamField>
+
+<ParamField path="instructions" type="str" default="None">
+  System prompt that defines the agent's behavior and personality. This guides how the agent responds to user queries.
+</ParamField>
+
+<ParamField path="model" type="str | LitellmModel" default="gpt-5-nano">
+  The LLM model to use. Supports any model from LiteLLM (e.g., `"gpt-4o"`, `"gemini/gemini-pro"`, `"anthropic/claude-4"`).
+  For non-OpenAI models, use the format `"provider/model-name"` and provide an `api_key`.
+</ParamField>
+
+<ParamField path="tools" type="List[Union[FunctionTool, str, MCPServerStreamableHttp, BaseTool]]" default="None">
+  List of tools available to the agent. Can be:
+
+  * `FunctionTool` objects created with `@function_tool`
+  * String names from the tool registry (e.g., `"gmail"`, `"get_weather"`)
+  * `MCPServerStreamableHttp` instances for MCP servers
+  * `BaseTool` subclasses with capabilities
+</ParamField>
+
+<ParamField path="output_type" type="type[Any] | AgentOutputSchemaBase" default="None">
+  Optional Pydantic model or schema to structure the agent's output.
+</ParamField>
+
+<ParamField path="debug" type="bool" default="False">
+  Enable debug mode for additional logging and diagnostics.
+</ParamField>
+
+<ParamField path="api_key" type="str" default="None">
+  API key for the LLM provider. Falls back to `OPENAI_API_KEY` environment variable if not provided.
+</ParamField>
+
+<ParamField path="model_settings" type="ModelSettings" default="None">
+  Advanced model configuration including temperature, top\_p, max\_tokens, etc. See [ModelSettings](/agentor/api/model-settings) for details.
+</ParamField>
+
+<ParamField path="skills" type="List[str]" default="None">
+  List of skill file paths to inject into the agent's system prompt.
+</ParamField>
+
+<ParamField path="enable_tracing" type="bool" default="False">
+  Enable LLM tracing and monitoring via Celesto. Requires `CELESTO_API_KEY` environment variable.
+</ParamField>
+
+## Methods
+
+### run
+
+Run the agent synchronously with a single prompt.
+
+```python  theme={null}
+def run(input: str) -> List[str] | str
+```
+
+**Parameters:**
+
+* `input` (str): The user's input prompt
+
+**Returns:** Agent response as a string or list of strings
+
+**Example:**
+
+```python  theme={null}
+from agentor import Agentor
+
+agent = Agentor(
+    name="Assistant",
+    instructions="You are a helpful assistant"
+)
+
+result = agent.run("Write a haiku about recursion in programming.")
+print(result.final_output)
+```
+
+### arun
+
+Run the agent asynchronously with support for batch processing and fallback models.
+
+```python  theme={null}
+async def arun(
+    input: list[str] | str | list[AgentInputType],
+    limit_concurrency: int = 10,
+    max_turns: int = 20,
+    fallback_models: Optional[List[str]] = None,
+) -> List[str] | str
+```
+
+**Parameters:**
+
+* `input`: A single prompt string, list of prompts for batch processing, or list of message dictionaries
+* `limit_concurrency` (int): Maximum concurrent tasks for batch prompts (default: 10)
+* `max_turns` (int): Maximum agent turns before stopping (default: 20)
+* `fallback_models` (List\[str]): Optional fallback models to try on rate limit or API errors
+
+**Returns:** Agent response(s)
+
+**Example:**
+
+```python  theme={null}
+import asyncio
+from agentor import Agentor
+
+agent = Agentor(name="Assistant", model="gpt-5-mini")
+
+# Single prompt
+result = await agent.arun("What is the weather in London?")
+print(result.final_output)
+
+# Batch prompts
+results = await agent.arun([
+    "What is the weather in London?",
+    "What is the weather in Paris?"
+])
+for result in results:
+    print(result.final_output)
+
+# With fallback models
+result = await agent.arun(
+    "Analyze this dataset",
+    fallback_models=["gpt-4o-mini", "gpt-4"]
+)
+```
+
+### chat
+
+Interactive chat interface with optional streaming support.
+
+```python  theme={null}
+async def chat(
+    input: str,
+    stream: bool = False,
+    serialize: bool = True,
+)
+```
+
+**Parameters:**
+
+* `input` (str): User message
+* `stream` (bool): Enable streaming responses (default: False)
+* `serialize` (bool): Serialize output to JSON (default: True)
+
+**Returns:** Agent response or async iterator for streaming
+
+### stream\_chat
+
+Stream agent responses in real-time.
+
+```python  theme={null}
+async def stream_chat(
+    input: str,
+    serialize: bool = True,
+) -> AsyncIterator[Union[str, AgentOutput]]
+```
+
+**Example:**
+
+```python  theme={null}
+import asyncio
+from agentor import Agentor
+
+agent = Agentor(name="Assistant", model="gpt-5-mini")
+
+async def main():
+    async for event in agent.stream_chat("Tell me a story"):
+        print(event, flush=True)
+
+asyncio.run(main())
+```
+
+### serve
+
+Serve the agent as an HTTP API with A2A protocol support.
+
+```python  theme={null}
+def serve(
+    host: Literal["0.0.0.0", "127.0.0.1", "localhost"] = "0.0.0.0",
+    port: int = 8000,
+    log_level: Literal["debug", "info", "warning", "error"] = "info",
+    access_log: bool = True,
+)
+```
+
+**Parameters:**
+
+* `host`: Server host address (default: "0.0.0.0")
+* `port` (int): Server port (default: 8000)
+* `log_level`: Logging level (default: "info")
+* `access_log` (bool): Enable access logging (default: True)
+
+**Example:**
+
+```python  theme={null}
+from agentor import Agentor
+
+agent = Agentor(
+    name="Weather Agent",
+    model="gpt-5-mini",
+    instructions="You are a helpful weather assistant."
+)
+
+# Serves at http://0.0.0.0:8000
+# Agent card available at http://0.0.0.0:8000/.well-known/agent-card.json
+agent.serve(port=8000)
+```
+
+### from\_md
+
+Create an Agentor instance from a markdown file with YAML frontmatter.
+
+```python  theme={null}
+@classmethod
+def from_md(
+    cls,
+    md_path: str | Path,
+    *,
+    model: Optional[str | LitellmModel] = None,
+    tools: Optional[List[Union[FunctionTool, str, MCPServerStreamableHttp, BaseTool]]] = None,
+    output_type: type[Any] | AgentOutputSchemaBase | None = None,
+    debug: bool = False,
+    api_key: Optional[str] = None,
+    model_settings: Optional[ModelSettings] = None,
+) -> Agentor
+```
+
+**Parameters:**
+
+* `md_path`: Path to markdown file
+* Other parameters override markdown frontmatter settings
+
+**Markdown Structure:**
+
+```markdown  theme={null}
+---
+name: Weather Agent
+tools: ["get_weather", "gmail"]
+model: gpt-4o
+temperature: 0.3
+---
+
+You are a helpful weather assistant with access to real-time data.
+```
+
+**Example:**
+
+```python  theme={null}
+from agentor import Agentor
+
+agent = Agentor.from_md("agents/weather_agent.md")
+result = agent.run("What's the weather in Tokyo?")
+```
+
+### think
+
+Make the agent "think" through a problem using chain-of-thought reasoning.
+
+```python  theme={null}
+def think(query: str) -> List[str] | str
+```
+
+**Parameters:**
+
+* `query` (str): The problem or question to analyze
+
+**Returns:** The agent's reasoning and conclusion
+
+## Usage Examples
+
+### Basic Agent
+
+```python  theme={null}
+from agentor import Agentor
+
+agent = Agentor(
+    name="Assistant",
+    instructions="You are a helpful assistant"
+)
+
+result = agent.run("Explain quantum computing in simple terms")
+print(result.final_output)
+```
+
+### Agent with Custom Model
+
+```python  theme={null}
+import os
+from agentor import Agentor
+
+agent = Agentor(
+    name="Assistant",
+    model="gemini/gemini-pro",
+    api_key=os.environ.get("GEMINI_API_KEY")
+)
+
+result = agent.run("What are the latest advances in AI?")
+```
+
+### Agent with Tools
+
+```python  theme={null}
+from agentor import Agentor, function_tool
+
+@function_tool
+def get_weather(city: str) -> str:
+    """Get the current weather for a city."""
+    return f"The weather in {city} is sunny and 72°F"
+
+agent = Agentor(
+    name="Weather Agent",
+    instructions="Use the weather tool to answer questions.",
+    tools=[get_weather]
+)
+
+result = agent.run("What's the weather in San Francisco?")
+```
+
+### Agent with Model Settings
+
+```python  theme={null}
+from agentor import Agentor, ModelSettings
+
+model_settings = ModelSettings(
+    temperature=0.7,
+    max_tokens=1000
+)
+
+agent = Agentor(
+    name="Creative Writer",
+    model="gpt-4o",
+    model_settings=model_settings,
+    instructions="You are a creative writing assistant."
+)
+```
+
+### Serving an Agent
+
+```python  theme={null}
+from agentor import Agentor
+
+agent = Agentor(
+    name="Customer Support",
+    model="gpt-5-mini",
+    instructions="You are a helpful customer support agent."
+)
+
+# Serves on http://0.0.0.0:8000
+# POST to /chat with {"input": "your message", "stream": false}
+agent.serve(port=8000)
+```
+
+## Related
+
+* [LLM](/agentor/api/llm) - Lightweight LLM client
+* [ModelSettings](/agentor/api/model-settings) - Configure model parameters
+* [Tools](/agentor/api/tools) - Create custom tools

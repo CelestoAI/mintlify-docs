@@ -1,0 +1,391 @@
+---
+title: "MCPAPIRouter"
+description: "Router for MCP JSON-RPC methods with FastAPI-like decorator API"
+---
+
+# MCPAPIRouter
+
+`MCPAPIRouter` provides a FastAPI-like decorator API for registering MCP tools, prompts, and resources. It handles JSON-RPC protocol communication and automatic schema generation.
+
+## Class Definition
+
+```python  theme={null}
+from agentor.mcp.api_router import MCPAPIRouter
+
+class MCPAPIRouter
+```
+
+Inspired by [FastMCP](https://github.com/modelcontextprotocol/python-sdk) from the official MCP Python SDK.
+
+## Constructor
+
+```python  theme={null}
+router = MCPAPIRouter(
+    prefix="/mcp",
+    name="agentor-mcp-server",
+    version="0.1.0",
+    instructions=None,
+    website_url=None,
+    icons=None,
+    dependencies=None,
+)
+```
+
+<ParamField path="prefix" type="str" default="/mcp">
+  URL prefix for MCP endpoints
+</ParamField>
+
+<ParamField path="name" type="str" default="agentor-mcp-server">
+  Server name returned in MCP initialize response
+</ParamField>
+
+<ParamField path="version" type="str" default="0.1.0">
+  Server version
+</ParamField>
+
+<ParamField path="instructions" type="str" optional>
+  Instructions for using the server, sent to clients during initialization
+</ParamField>
+
+<ParamField path="website_url" type="str" optional>
+  Server website URL
+</ParamField>
+
+<ParamField path="icons" type="List[Icon]" optional>
+  Server icons (from `mcp.types.Icon`)
+</ParamField>
+
+<ParamField path="dependencies" type="List[Callable]" optional>
+  FastAPI dependencies to apply to all MCP endpoints
+</ParamField>
+
+## Decorators
+
+### @tool()
+
+Register a tool that can be called by MCP clients.
+
+```python  theme={null}
+@router.tool(
+    name=None,
+    description=None,
+    input_schema=None,
+)
+def tool_function(param1: str, param2: int) -> str:
+    """Tool description from docstring"""
+    return "result"
+```
+
+<ParamField path="name" type="str" optional>
+  Tool name. Defaults to function name.
+</ParamField>
+
+<ParamField path="description" type="str" optional>
+  Tool description shown to LLMs. Defaults to function docstring.
+</ParamField>
+
+<ParamField path="input_schema" type="dict" optional>
+  JSON schema for tool parameters. Auto-generated from function signature if not provided.
+</ParamField>
+
+#### Example: Basic Tool
+
+```python  theme={null}
+@app.tool(description="Get weather for a location")
+def get_weather(location: str) -> str:
+    """Get current weather for a location"""
+    return f"Weather in {location}: Sunny, 72°F"
+```
+
+#### Example: Tool with Dependencies
+
+```python  theme={null}
+from fastapi import Depends
+from agentor.mcp.api_router import Context, get_context
+
+@app.tool()
+def authenticated_tool(
+    location: str,
+    ctx: Context = Depends(get_context)
+) -> str:
+    """Tool that accesses request context"""
+    user_agent = ctx.headers.get("user-agent")
+    session_id = ctx.cookies.get("session_id")
+    return f"Processing {location} for session {session_id}"
+```
+
+#### Example: Async Tool
+
+```python  theme={null}
+@app.tool()
+async def fetch_data(url: str) -> str:
+    """Asynchronously fetch data from URL"""
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            return await response.text()
+```
+
+### @prompt()
+
+Register a prompt template that can be retrieved by MCP clients.
+
+```python  theme={null}
+@router.prompt(
+    name=None,
+    description=None,
+    arguments=None,
+)
+def prompt_function(param1: str, param2: str = "default") -> str:
+    """Prompt description"""
+    return "prompt text"
+```
+
+<ParamField path="name" type="str" optional>
+  Prompt name. Defaults to function name.
+</ParamField>
+
+<ParamField path="description" type="str" optional>
+  Prompt description. Defaults to function docstring.
+</ParamField>
+
+<ParamField path="arguments" type="List[dict]" optional>
+  List of argument definitions. Auto-generated from function signature if not provided.
+
+  Each argument dict should have:
+
+  * `name` (str): Argument name
+  * `description` (str): Argument description
+  * `required` (bool): Whether the argument is required
+</ParamField>
+
+#### Example: Basic Prompt
+
+```python  theme={null}
+@app.prompt(description="Generate a greeting")
+def greeting(name: str, style: str = "formal") -> str:
+    """Generate a personalized greeting"""
+    if style == "formal":
+        return f"Good day, {name}. How may I assist you today?"
+    else:
+        return f"Hey {name}! What's up?"
+```
+
+#### Example: Prompt with Message Structure
+
+```python  theme={null}
+@app.prompt()
+def code_review(code: str, language: str) -> list:
+    """Generate a code review prompt"""
+    return [
+        {
+            "role": "user",
+            "content": {
+                "type": "text",
+                "text": f"Review this {language} code:\n\n{code}"
+            }
+        }
+    ]
+```
+
+### @resource()
+
+Register a resource that can be read by MCP clients.
+
+```python  theme={null}
+@router.resource(
+    uri="resource://path",
+    name=None,
+    description=None,
+    mime_type=None,
+)
+def resource_function(uri: str) -> str:
+    """Resource description"""
+    return "resource content"
+```
+
+<ParamField path="uri" type="str" required>
+  Resource URI identifier. Used by clients to request the resource.
+</ParamField>
+
+<ParamField path="name" type="str" optional>
+  Resource display name. Defaults to URI.
+</ParamField>
+
+<ParamField path="description" type="str" optional>
+  Resource description. Defaults to function docstring.
+</ParamField>
+
+<ParamField path="mime_type" type="str" optional>
+  MIME type of resource content (e.g., "application/json", "text/plain")
+</ParamField>
+
+#### Example: Basic Resource
+
+```python  theme={null}
+@app.resource(
+    uri="config://settings",
+    name="Settings",
+    mime_type="application/json"
+)
+def get_settings(uri: str) -> str:
+    """Get application settings"""
+    return '{"theme": "dark", "language": "en"}'
+```
+
+#### Example: Dynamic Resource
+
+```python  theme={null}
+@app.resource(
+    uri="file://data",
+    name="Data File",
+    mime_type="text/plain"
+)
+def get_file_data(uri: str) -> dict:
+    """Get file data with metadata"""
+    return {
+        "uri": uri,
+        "mimeType": "text/plain",
+        "text": "File content here"
+    }
+```
+
+### @method()
+
+Register a custom MCP JSON-RPC method handler.
+
+```python  theme={null}
+@router.method("custom/method")
+async def custom_handler(body: dict):
+    """Handle custom MCP method"""
+    params = body.get("params", {})
+    return {"result": "custom response"}
+```
+
+<ParamField path="method_name" type="str" required>
+  JSON-RPC method name to handle
+</ParamField>
+
+## Context and Dependencies
+
+### Context
+
+Access request-level data in tool functions.
+
+```python  theme={null}
+from agentor.mcp.api_router import Context, get_context
+from fastapi import Depends
+
+@app.tool()
+def my_tool(location: str, ctx: Context = Depends(get_context)) -> str:
+    user_agent = ctx.headers.get("user-agent")
+    session_id = ctx.cookies.get("session_id")
+    return f"Processing {location}"
+```
+
+<ParamField path="headers" type="Dict[str, str]">
+  HTTP headers from the request
+</ParamField>
+
+<ParamField path="cookies" type="Dict[str, str]">
+  Cookies from the request
+</ParamField>
+
+### get\_context()
+
+Dependency function to retrieve the current request context.
+
+```python  theme={null}
+def get_context() -> Context
+```
+
+Returns a `Context` object with headers and cookies. Returns empty context if called outside a request.
+
+### get\_headers()
+
+Get HTTP headers from the current request.
+
+```python  theme={null}
+def get_headers() -> Dict[str, str]
+```
+
+### get\_cookies()
+
+Get cookies from the current request.
+
+```python  theme={null}
+def get_cookies() -> Dict[str, str]
+```
+
+### get\_token()
+
+Extract bearer token from Authorization header.
+
+```python  theme={null}
+def get_token() -> str
+```
+
+Returns the token without the "Bearer " prefix, or `None` if no token is found.
+
+## Methods
+
+### get\_fastapi\_router()
+
+Get the underlying FastAPI router instance.
+
+```python  theme={null}
+fastapi_router = router.get_fastapi_router()
+```
+
+Returns an `APIRouter` instance that can be included in FastAPI applications.
+
+## Complete Example
+
+```python  theme={null}
+from agentor.mcp.api_router import MCPAPIRouter, Context, get_context
+from fastapi import Depends, FastAPI
+
+# Create router
+router = MCPAPIRouter(
+    prefix="/mcp",
+    name="example-server",
+    version="1.0.0",
+    instructions="Example MCP server with tools, prompts, and resources",
+)
+
+# Register tool
+@router.tool(description="Calculate sum of two numbers")
+def add(a: int, b: int) -> int:
+    """Add two numbers together"""
+    return a + b
+
+# Register tool with context
+@router.tool()
+def user_info(ctx: Context = Depends(get_context)) -> str:
+    """Get user agent from request"""
+    return ctx.headers.get("user-agent", "unknown")
+
+# Register prompt
+@router.prompt(description="Code review template")
+def review_prompt(language: str, code: str) -> str:
+    """Generate code review prompt"""
+    return f"Review this {language} code:\n\n{code}"
+
+# Register resource
+@router.resource(
+    uri="docs://readme",
+    name="README",
+    mime_type="text/markdown"
+)
+def readme(uri: str) -> str:
+    """Get README content"""
+    return "# Example Server\n\nThis is an example MCP server."
+
+# Use with FastAPI
+app = FastAPI()
+app.include_router(router.get_fastapi_router())
+```
+
+## See Also
+
+* [LiteMCP](/agentor/api/mcp/litemcp) - Full ASGI server built on MCPAPIRouter
+* [CelestoMCPHub](/agentor/api/mcp/hub) - Client for Celesto AI MCP Hub

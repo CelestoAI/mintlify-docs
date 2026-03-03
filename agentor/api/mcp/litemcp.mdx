@@ -1,0 +1,188 @@
+---
+title: "LiteMCP"
+description: "ASGI-compatible MCP server built on FastAPI with decorator-based API"
+---
+
+# LiteMCP
+
+`LiteMCP` is an ASGI-compatible Model Context Protocol (MCP) server built on FastAPI. It provides a decorator-based API for registering tools, prompts, and resources.
+
+## Class Definition
+
+```python  theme={null}
+from agentor.mcp.server import LiteMCP
+
+class LiteMCP(MCPAPIRouter)
+```
+
+Inherits from [`MCPAPIRouter`](/agentor/api/mcp/router) and adds ASGI compatibility with FastAPI.
+
+## Constructor
+
+```python  theme={null}
+app = LiteMCP(**kwargs)
+```
+
+<ParamField path="**kwargs" type="dict">
+  Additional arguments passed to `MCPAPIRouter`. Common options:
+
+  * `name` (str): Server name (default: "agentor-mcp-server")
+  * `version` (str): Server version (default: "0.1.0")
+  * `instructions` (str): Instructions for using the server
+  * `prefix` (str): URL prefix for MCP endpoints (default: "/mcp")
+  * `website_url` (str): Server website URL
+  * `icons` (List\[Icon]): Server icons
+  * `dependencies` (List\[Callable]): FastAPI dependencies
+</ParamField>
+
+## Methods
+
+### serve()
+
+Run the server with uvicorn.
+
+```python  theme={null}
+app.serve(
+    host="0.0.0.0",
+    port=8000,
+    enable_cors=True,
+    **uvicorn_kwargs
+)
+```
+
+<ParamField path="host" type="str" default="0.0.0.0">
+  Host to bind the server to
+</ParamField>
+
+<ParamField path="port" type="int" default="8000">
+  Port to bind the server to
+</ParamField>
+
+<ParamField path="enable_cors" type="bool" default="true">
+  Whether to enable CORS middleware with permissive settings
+</ParamField>
+
+<ParamField path="**uvicorn_kwargs" type="dict">
+  Additional arguments passed to `uvicorn.run()`, such as:
+
+  * `reload` (bool): Enable auto-reload
+  * `log_level` (str): Logging level ("debug", "info", "warning", "error")
+  * `workers` (int): Number of worker processes
+</ParamField>
+
+### run()
+
+**Deprecated.** Use `serve()` instead.
+
+```python  theme={null}
+app.run(*args, **kwargs)
+```
+
+## Decorators
+
+LiteMCP inherits all decorators from `MCPAPIRouter`:
+
+* `@app.tool()` - Register a tool
+* `@app.prompt()` - Register a prompt
+* `@app.resource()` - Register a resource
+* `@app.method()` - Register a custom MCP method handler
+
+See [MCPAPIRouter](/agentor/api/mcp/router) for detailed decorator documentation.
+
+## ASGI Interface
+
+`LiteMCP` implements the ASGI interface via `__call__`, making it compatible with any ASGI server:
+
+```python  theme={null}
+async def __call__(scope: dict, receive: Any, send: Any) -> None
+```
+
+This allows you to use LiteMCP with uvicorn CLI:
+
+```bash  theme={null}
+uvicorn mymodule:app --host 0.0.0.0 --port 8000 --reload
+```
+
+## Example Usage
+
+### Basic Server
+
+```python  theme={null}
+from agentor.mcp.server import LiteMCP
+
+# Create the ASGI app
+app = LiteMCP(
+    name="my-mcp-server",
+    version="1.0.0",
+    instructions="A simple MCP server example",
+)
+
+# Register a tool
+@app.tool(description="Get weather for a location")
+def get_weather(location: str) -> str:
+    """Get current weather for a location"""
+    return f"Weather in {location}: Sunny, 72°F"
+
+# Register a prompt
+@app.prompt(description="Generate a greeting")
+def greeting(name: str, style: str = "formal") -> str:
+    """Generate a personalized greeting"""
+    if style == "formal":
+        return f"Good day, {name}. How may I assist you today?"
+    else:
+        return f"Hey {name}! What's up?"
+
+# Register a resource
+@app.resource(
+    uri="config://settings",
+    name="Settings",
+    mime_type="application/json"
+)
+def get_settings(uri: str) -> str:
+    """Get application settings"""
+    return '{"theme": "dark", "language": "en"}'
+
+if __name__ == "__main__":
+    # Run with default settings
+    app.serve()
+```
+
+### Running with Different Methods
+
+```python  theme={null}
+# Method 1: Direct run (simplest)
+app.serve()
+
+# Method 2: Run with custom uvicorn settings
+app.serve(reload=True, log_level="debug")
+
+# Method 3: Use with uvicorn CLI
+# $ uvicorn mymodule:app --host 0.0.0.0 --port 8000 --reload
+
+# Method 4: Programmatic uvicorn
+import uvicorn
+uvicorn.run(app, host="0.0.0.0", port=8000)
+```
+
+### Custom Configuration
+
+```python  theme={null}
+from mcp.types import Icon
+
+app = LiteMCP(
+    name="weather-mcp-server",
+    version="2.0.0",
+    instructions="Provides weather information and forecasts",
+    prefix="/api/mcp",
+    website_url="https://example.com",
+    icons=[Icon(url="https://example.com/icon.png", type="image/png")],
+)
+
+# Run with CORS disabled and custom port
+app.serve(host="127.0.0.1", port=9000, enable_cors=False)
+```
+
+## See Also
+
+* [MCPAPIRouter](/agentor/api/mcp/router) - Base router class with decorator API
+* [CelestoMCPHub](/agentor/api/mcp/hub) - Client for connecting to Celesto AI MCP Hub

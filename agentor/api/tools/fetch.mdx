@@ -1,0 +1,147 @@
+---
+title: "FetchTool"
+description: "Fetch content from URLs using HTTP methods"
+---
+
+`FetchTool` provides a simple interface to fetch content from URLs using various HTTP methods.
+
+## Constructor
+
+No parameters required. Inherits from `BaseTool`.
+
+## Methods
+
+### fetch\_url
+
+Fetch content from a URL using HTTP requests.
+
+<ParamField path="url" type="str" required>
+  The URL to fetch
+</ParamField>
+
+<ParamField path="method" type="str">
+  HTTP method to use: GET, POST, PUT, DELETE, etc. (default: "GET")
+</ParamField>
+
+<ParamField path="headers" type="Dict[str, str]">
+  Optional headers to include in the request
+</ParamField>
+
+<ParamField path="body" type="str">
+  Optional body content for POST/PUT requests
+</ParamField>
+
+**Returns:** Response text or error message
+
+**Timeout:** 30 seconds
+
+## Usage
+
+### Basic GET request
+
+```python  theme={null}
+from agentor import Agentor
+from agentor.tools import FetchTool
+
+fetch_tool = FetchTool()
+
+agent = Agentor(
+    name="Web Fetcher",
+    model="gpt-4o-mini",
+    tools=[fetch_tool]
+)
+
+result = agent.run("Fetch the content from https://api.example.com/data")
+print(result)
+```
+
+### GET request with headers
+
+```python  theme={null}
+from agentor.tools import FetchTool
+
+fetch = FetchTool()
+
+result = fetch.fetch_url(
+    url="https://api.example.com/data",
+    method="GET",
+    headers={
+        "Authorization": "Bearer token123",
+        "Accept": "application/json"
+    }
+)
+print(result)
+```
+
+### POST request with body
+
+```python  theme={null}
+import json
+
+# POST JSON data
+result = fetch.fetch_url(
+    url="https://api.example.com/items",
+    method="POST",
+    headers={"Content-Type": "application/json"},
+    body=json.dumps({"name": "New Item", "value": 42})
+)
+print(result)
+```
+
+### Other HTTP methods
+
+```python  theme={null}
+# PUT request
+result = fetch.fetch_url(
+    url="https://api.example.com/items/123",
+    method="PUT",
+    headers={"Content-Type": "application/json"},
+    body=json.dumps({"name": "Updated Item"})
+)
+
+# DELETE request
+result = fetch.fetch_url(
+    url="https://api.example.com/items/123",
+    method="DELETE"
+)
+```
+
+## Error handling
+
+The tool returns error messages as strings:
+
+```python  theme={null}
+# HTTP error (404, 500, etc.)
+result = fetch.fetch_url("https://api.example.com/nonexistent")
+print(result)  # HTTP Error: 404 - Not Found
+
+# Network error
+result = fetch.fetch_url("https://invalid.domain.xyz")
+print(result)  # Error fetching URL: ...
+
+# Timeout (30 seconds)
+result = fetch.fetch_url("https://slow-api.example.com")
+print(result)  # Error fetching URL: timeout
+```
+
+## Use cases
+
+* Fetching data from REST APIs
+* Web scraping simple HTML pages
+* Testing API endpoints
+* Downloading content from URLs
+* Webhook testing
+
+## Notes
+
+<Note>
+  FetchTool uses `httpx` under the hood with a 30-second timeout for all requests.
+</Note>
+
+<Warning>
+  This tool makes actual HTTP requests. Be careful when using it with untrusted URLs or in production environments with rate limits.
+</Warning>
+
+## Source reference
+
+`src/agentor/tools/fetch.py:8`

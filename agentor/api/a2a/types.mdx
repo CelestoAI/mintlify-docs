@@ -1,0 +1,227 @@
+---
+title: "A2A Types"
+description: "Type definitions for the A2A protocol"
+---
+
+The A2A protocol uses types from the `a2a-sdk` package for agent-to-agent communication. These types follow the A2A protocol v0.3.0 specification.
+
+## Core Types
+
+### JSONRPCRequest
+
+Represents a JSON-RPC request in the A2A protocol.
+
+```python  theme={null}
+from a2a.types import JSONRPCRequest
+```
+
+**Fields:**
+
+* `id` - Unique identifier for the request
+* `method` - The RPC method to call (e.g., "message/send", "message/stream")
+* `params` - Parameters for the method
+* `jsonrpc` - Protocol version ("2.0")
+
+### JSONRPCResponse
+
+Represents a JSON-RPC response.
+
+```python  theme={null}
+from a2a.types import JSONRPCResponse
+```
+
+**Fields:**
+
+* `id` - Request identifier this response corresponds to
+* `result` - The result data (if successful)
+* `error` - Error information (if failed)
+* `jsonrpc` - Protocol version ("2.0")
+
+### JSONRPCError
+
+Represents an error in a JSON-RPC response.
+
+```python  theme={null}
+from a2a.types import JSONRPCError
+```
+
+**Fields:**
+
+* `code` - Numeric error code
+* `message` - Human-readable error message
+* `data` - Additional error details (optional)
+
+### AgentCard
+
+The agent card manifest that describes the agent's capabilities.
+
+```python  theme={null}
+from a2a.types import AgentCard
+```
+
+**Fields:**
+
+* `name` - Agent name
+* `description` - Agent description
+* `url` - Agent base URL
+* `version` - Agent version
+* `skills` - List of agent skills
+* `capabilities` - Supported capabilities
+* `additionalInterfaces` - Additional communication interfaces
+* `securitySchemes` - Authentication schemes
+* `security` - Security requirements
+* `defaultInputModes` - Default input content types
+* `defaultOutputModes` - Default output content types
+* `supportsAuthenticatedExtendedCard` - Whether extended card is supported
+* `signatures` - Cryptographic signatures
+
+### AgentSkill
+
+Describes a specific skill or capability the agent can perform.
+
+```python  theme={null}
+from a2a.types import AgentSkill
+```
+
+**Fields:**
+
+* `name` - Skill identifier
+* `description` - Skill description
+* `tags` - Categorization tags (optional)
+* `examples` - Usage examples (optional)
+
+### AgentCapabilities
+
+Describes the technical capabilities supported by the agent.
+
+```python  theme={null}
+from a2a.types import AgentCapabilities
+```
+
+**Fields:**
+
+* `streaming` - Whether the agent supports streaming responses
+* `statefulness` - Whether the agent maintains conversation state
+* `asyncProcessing` - Whether the agent supports asynchronous task processing
+
+### SendStreamingMessageRequest
+
+A specialized request type for streaming messages.
+
+```python  theme={null}
+from a2a.types import SendStreamingMessageRequest
+```
+
+Extends `JSONRPCRequest` with streaming-specific parameters.
+
+### Task
+
+Represents an asynchronous task.
+
+```python  theme={null}
+from a2a.types import Task
+```
+
+**Fields:**
+
+* `id` - Task identifier
+* `status` - Current task status
+* `state` - Task state information
+* `created` - Creation timestamp
+* `updated` - Last update timestamp
+
+### TaskStatus
+
+Enum representing task status values.
+
+```python  theme={null}
+from a2a.types import TaskStatus
+```
+
+**Values:**
+
+* `pending` - Task is queued
+* `working` - Task is in progress
+* `completed` - Task finished successfully
+* `failed` - Task encountered an error
+* `cancelled` - Task was cancelled
+
+### TaskState
+
+Represents the current state of a task.
+
+```python  theme={null}
+from a2a.types import TaskState
+```
+
+**Fields:**
+
+* `status` - Current status (TaskStatus)
+* `progress` - Progress percentage (0-100, optional)
+* `message` - Status message (optional)
+
+## Usage Example
+
+```python  theme={null}
+from a2a.types import (
+    AgentCard,
+    AgentCapabilities,
+    AgentSkill,
+    JSONRPCRequest,
+    JSONRPCResponse,
+    JSONRPCError,
+)
+
+# Create an agent card
+card = AgentCard(
+    name="My Agent",
+    description="A helpful assistant",
+    url="http://localhost:8000",
+    version="1.0.0",
+    skills=[
+        AgentSkill(
+            name="search",
+            description="Search the web for information"
+        )
+    ],
+    capabilities=AgentCapabilities(
+        streaming=True,
+        statefulness=True,
+        asyncProcessing=True
+    ),
+)
+
+# Handle a JSON-RPC request
+request = JSONRPCRequest(
+    id="123",
+    method="message/send",
+    params={"message": "Hello"},
+    jsonrpc="2.0"
+)
+
+# Create a response
+response = JSONRPCResponse(
+    id=request.id,
+    result={"message": "Hello! How can I help?"},
+    jsonrpc="2.0"
+)
+```
+
+## Import Path
+
+```python  theme={null}
+from a2a.types import (
+    AgentCapabilities,
+    AgentCard,
+    AgentSkill,
+    JSONRPCError,
+    JSONRPCRequest,
+    JSONRPCResponse,
+    SendStreamingMessageRequest,
+    Task,
+    TaskState,
+    TaskStatus,
+)
+```
+
+Source: `/home/daytona/workspace/source/src/agentor/a2a.py:4`

@@ -1,0 +1,124 @@
+---
+title: "Introduction to Agentor"
+description: "Build and deploy production-ready AI agents with MCP server support, A2A protocol, and serverless deployment"
+---
+
+<img src="https://raw.githubusercontent.com/CelestoAI/agentor/main/assets/CelestoAI.png" alt="Agentor" width="500" />
+
+## Welcome to Agentor
+
+Agentor is the fastest way to build and deploy long-running AI agents—with durability, observability, and security built in. It's an open-source Python framework that enables you to connect LLMs to tools, services, and other agents with minimal code.
+
+## Key features
+
+<CardGroup cols={2}>
+  <Card title="MCP server support" icon="server">
+    Full FastAPI-compatible MCP server with decorator API. Build custom MCP servers that integrate directly with FastAPI using standard patterns.
+  </Card>
+
+  <Card title="A2A protocol" icon="network-wired">
+    Built-in Agent-to-Agent protocol support with automatic agent card generation, enabling seamless interoperability between AI agents.
+  </Card>
+
+  <Card title="Serverless deployment" icon="rocket">
+    Fast serverless deployment with the Celesto platform. Deploy agents with a single command and get production-ready endpoints.
+  </Card>
+
+  <Card title="Observability" icon="chart-line">
+    Agent tracing and monitoring built-in. Track agent behavior, tool calls, and performance metrics automatically.
+  </Card>
+
+  <Card title="Tool search API" icon="magnifying-glass">
+    Reduce tool context bloat with semantic tool search. Agents automatically find the right tools based on the task at hand.
+  </Card>
+
+  <Card title="Agent skills" icon="puzzle-piece">
+    Load specialized instructions, scripts, and resources dynamically. Skills help agents pull just the right context when needed.
+  </Card>
+
+  <Card title="Multi-LLM support" icon="brain">
+    Use any LLM provider through LiteLLM integration. Support for OpenAI, Anthropic, Google, and more with unified API.
+  </Card>
+
+  <Card title="Extensible tools" icon="wrench">
+    Rich ecosystem of pre-built tools including Gmail, GitHub, PostgreSQL, web search, and more. Easy to add custom tools.
+  </Card>
+</CardGroup>
+
+## Quick example
+
+Build an agent, connect tools, and serve as an API in just a few lines:
+
+```python  theme={null}
+from agentor import Agentor
+from agentor.tools import GetWeatherTool
+
+agent = Agentor(
+    name="Weather Agent",
+    model="gpt-5-mini",
+    tools=[GetWeatherTool()]
+)
+
+# Run the agent
+result = agent.run("What is the weather in London?")
+print(result)
+
+# Serve agent with A2A protocol enabled
+agent.serve()
+```
+
+<Tip>
+  Agentor automatically enables A2A protocol when you call `agent.serve()`, making your agent discoverable and interoperable with other agents.
+</Tip>
+
+## Use cases
+
+Agentor excels at building:
+
+* **Task automation agents** - Automate workflows across multiple services and APIs
+* **Research assistants** - Connect agents to web search, databases, and knowledge bases
+* **Developer tools** - Build agents that interact with GitHub, Git, and development environments
+* **Business process agents** - Integrate with Gmail, Calendar, Slack, and CRMs
+* **Multi-agent systems** - Orchestrate specialized agents that communicate via A2A protocol
+
+## Get started
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/agentor/installation">
+    Install Agentor and set up your environment
+  </Card>
+
+  <Card title="Quick start" icon="bolt" href="/agentor/quickstart">
+    Build your first agent in under 5 minutes
+  </Card>
+
+  <Card title="MCP servers" icon="server" href="/agentor/guides/mcp-servers">
+    Learn how to build custom MCP servers with LiteMCP
+  </Card>
+
+  <Card title="A2A protocol" icon="network-wired" href="/agentor/concepts/a2a-protocol">
+    Enable agent-to-agent communication
+  </Card>
+</CardGroup>
+
+## Architecture
+
+Agentor is built on top of modern Python frameworks:
+
+* **Agents SDK** - Core agent runtime based on OpenAI's Swarm framework
+* **LiteLLM** - Unified interface to 100+ LLM providers
+* **FastAPI** - High-performance API framework for serving agents
+* **A2A SDK** - Agent-to-Agent protocol implementation
+* **MCP** - Model Context Protocol for tool and resource management
+
+## Community and support
+
+<CardGroup cols={2}>
+  <Card title="Discord" icon="discord" href="https://discord.gg/KNb5UkrAmm">
+    Join our community to get help and share ideas
+  </Card>
+
+  <Card title="GitHub" icon="github" href="https://github.com/CelestoAI/agentor">
+    View source code, report issues, and contribute
+  </Card>
+</CardGroup>

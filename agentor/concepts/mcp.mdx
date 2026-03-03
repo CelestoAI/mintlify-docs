@@ -1,0 +1,411 @@
+---
+title: "Model Context Protocol (MCP)"
+description: "Build and integrate MCP servers with LiteMCP - a FastAPI-native implementation"
+---
+
+## Overview
+
+Agentor includes **LiteMCP**, a production-ready MCP server implementation built on FastAPI. Unlike other implementations, LiteMCP is a native ASGI application that integrates seamlessly with existing FastAPI apps.
+
+## What is MCP?
+
+The [Model Context Protocol](https://modelcontextprotocol.io) is an open standard for connecting LLMs to external tools, resources, and prompts. MCP enables:
+
+* **Tools** - Functions the LLM can call
+* **Resources** - Static or dynamic data sources
+* **Prompts** - Reusable prompt templates
+
+## LiteMCP vs FastMCP
+
+LiteMCP offers key advantages over the official FastMCP implementation:
+
+| Feature               | LiteMCP     | FastMCP           |
+| --------------------- | ----------- | ----------------- |
+| Integration           | Native ASGI | Requires mounting |
+| FastAPI Patterns      | ✅ Standard  | ⚠️ Diverges       |
+| Built-in CORS         | ✅           | ❌                 |
+| Custom Methods        | ✅ Full      | ⚠️ Limited        |
+| With Existing Backend | ✅ Easy      | ⚠️ Complex        |
+
+## Quick Start
+
+Create an MCP server with the decorator API (src/agentor/mcp/server.py:14):
+
+```python  theme={null}
+from agentor.mcp import LiteMCP
+
+mcp = LiteMCP(
+    name="my-server",
+    version="1.0.0",
+    instructions="A simple MCP server"
+)
+
+@mcp.tool(description="Get weather for a given location")
+def get_weather(location: str) -> str:
+    return f"Weather in {location}: Sunny, 72°F"
+
+mcp.serve()
+```
+
+The server runs at `http://0.0.0.0:8000/mcp` by default.
+
+## Server Configuration
+
+### Constructor Parameters
+
+```python  theme={null}
+mcp = LiteMCP(
+    prefix="/mcp",                    # Endpoint prefix
+    name="weather-server",            # Server name
+    version="1.0.0",                  # Server version
+    instructions="Weather services",  # Description
+    website_url="https://example.com",
+    icons=[...],                      # Optional icons
+    dependencies=[...]                # FastAPI dependencies
+)
+```
+
+### Serving Options
+
+Serve with custom configuration (src/agentor/mcp/server.py:58):
+
+```python  theme={null}
+mcp.serve(
+    host="0.0.0.0",
+    port=8000,
+    enable_cors=True,  # Automatic CORS configuration
+    reload=True,       # Auto-reload on changes
+    log_level="debug"
+)
+```
+
+## Registering Tools
+
+Define tools with the `@tool` decorator (src/agentor/mcp/api\_router.py:564):
+
+```python  theme={null}
+@mcp.tool(
+    name="search_docs",
+    description="Search documentation",
+    input_schema={  # Optional: custom JSON schema
+        "type": "object",
+        "properties": {
+            "query": {"type": "string"},
+            "limit": {"type": "integer"}
+        },
+        "required": ["query"]
+    }
+)
+def search_docs(query: str, limit: int = 10) -> str:
+    """Search documentation database"""
+    return f"Found {limit} results for: {query}"
+```
+
+### Auto-generated Schemas
+
+If no `input_schema` is provided, LiteMCP generates it from function signatures (src/agentor/mcp/api\_router.py:221):
+
+```python  theme={null}
+@mcp.tool()
+def calculate(x: int, y: int, operation: str = "add") -> str:
+    """Perform arithmetic operations"""
+    if operation == "add":
+        return str(x + y)
+    return str(x - y)
+```
+
+Generated schema:
+
+```json  theme={null}
+{
+  "type": "object",
+  "properties": {
+    "x": {"type": "integer"},
+    "y": {"type": "integer"},
+    "operation": {"type": "string"}
+  },
+  "required": ["x", "y"]
+}
+```
+
+## Resources
+
+Register static or dynamic resources (src/agentor/mcp/api\_router.py:588):
+
+```python  theme={null}
+@mcp.resource(
+    uri="config://settings",
+    name="Application Settings",
+    description="Current app configuration",
+    mime_type="application/json"
+)
+def get_settings(uri: str) -> str:
+    """Return current settings"""
+    return '{"theme": "dark", "language": "en"}'
+```
+
+Clients can read resources using the MCP protocol:
+
+```json  theme={null}
+{
+  "method": "resources/read",
+  "params": {"uri": "config://settings"}
+}
+```
+
+## Prompts
+
+Create reusable prompt templates (src/agentor/mcp/api\_router.py:612):
+
+```python  theme={null}
+@mcp.prompt(
+    name="code_review",
+    description="Generate a code review prompt",
+    arguments=[
+        {
+            "name": "language",
+            "description": "Programming language",
+            "required": True
+        }
+    ]
+)
+def code_review_prompt(language: str, style: str = "thorough") -> str:
+    """Generate code review instructions"""
+    return f"Review this {language} code with a {style} approach."
+```
+
+## Authentication and Context
+
+Access request headers and authentication (src/agentor/mcp/api\_router.py:39):
+
+```python  theme={null}
+from agentor.mcp import get_token, get_context
+from fastapi import Depends
+
+@mcp.tool(description="Secure operation")
+def secure_operation(location: str, ctx = Depends(get_context)) -> str:
+    # Access headers
+    user_agent = ctx.headers.get("user-agent")
+    
+    # Access cookies
+    session_id = ctx.cookies.get("session_id")
+    
+    return f"Processing {location}"
+```
+
+### Token Extraction
+
+Get bearer tokens from Authorization headers (src/agentor/mcp/api\_router.py:93):
+
+```python  theme={null}
+from agentor.mcp import get_token
+
+@mcp.tool()
+def authenticated_tool(location: str) -> str:
+    token = get_token()  # Extracts from "Bearer <token>"
+    if token != "EXPECTED_SECRET":
+        return "Not authorized"
+    return f"Weather in {location}"
+```
+
+## Dependencies
+
+Use FastAPI's dependency injection (src/agentor/mcp/api\_router.py:290):
+
+```python  theme={null}
+from fastapi import Depends
+
+def get_db_connection():
+    return {"connection": "active"}
+
+@mcp.tool()
+def query_database(
+    query: str,
+    db = Depends(get_db_connection)
+) -> str:
+    """Execute database query"""
+    connection = db["connection"]
+    return f"Executed on {connection}: {query}"
+```
+
+LiteMCP automatically resolves dependencies before calling tools.
+
+## ASGI Application
+
+LiteMCP is a full ASGI application (src/agentor/mcp/server.py:50):
+
+```python  theme={null}
+app = LiteMCP(name="my-server")
+
+@app.tool()
+def my_tool(param: str) -> str:
+    return f"Result: {param}"
+
+# Use with any ASGI server
+import uvicorn
+uvicorn.run(app, host="0.0.0.0", port=8000)
+```
+
+Or deploy with Gunicorn:
+
+```bash  theme={null}
+gunicorn server:app -k uvicorn.workers.UvicornWorker
+```
+
+## Integration with FastAPI
+
+Embed LiteMCP into existing FastAPI applications:
+
+```python  theme={null}
+from fastapi import FastAPI
+from agentor.mcp import LiteMCP
+
+app = FastAPI()
+mcp = LiteMCP(name="tools")
+
+@mcp.tool()
+def helper_tool(input: str) -> str:
+    return f"Processed: {input}"
+
+# Include MCP router
+app.include_router(mcp.get_fastapi_router())
+
+# Add your own routes
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+```
+
+## Custom Method Handlers
+
+Register custom JSON-RPC methods (src/agentor/mcp/api\_router.py:651):
+
+```python  theme={null}
+@mcp.method("custom/action")
+async def handle_custom(body: dict):
+    params = body.get("params", {})
+    # Process custom request
+    return {"result": "success"}
+```
+
+## Complete Example
+
+From `examples/lite_mcp_example.py`:
+
+```python  theme={null}
+from agentor.mcp import LiteMCP
+
+app = LiteMCP(
+    name="my-mcp-server",
+    version="1.0.0",
+    instructions="A simple MCP server example",
+)
+
+@app.tool(description="Get weather for a location")
+def get_weather(location: str) -> str:
+    """Get current weather for a location"""
+    return f"🌤️ Weather in {location}: Sunny, 72°F"
+
+@app.prompt(description="Generate a greeting")
+def greeting(name: str, style: str = "formal") -> str:
+    """Generate a personalized greeting"""
+    if style == "formal":
+        return f"Good day, {name}. How may I assist you today?"
+    return f"Hey {name}! What's up?"
+
+@app.resource(uri="config://settings", name="Settings", mime_type="application/json")
+def get_settings(uri: str) -> str:
+    """Get application settings"""
+    return '{"theme": "dark", "language": "en"}'
+
+if __name__ == "__main__":
+    app.serve()
+```
+
+## Using MCP Servers with Agents
+
+Connect agents to external MCP servers:
+
+```python  theme={null}
+from agentor import Agentor, CelestoMCPHub
+from agents.mcp import MCPServerStreamableHttp
+
+# Connect to external MCP server
+mcp_server = MCPServerStreamableHttp(
+    name="External Tools",
+    params={
+        "url": "https://api.example.com/mcp",
+        "headers": {"Authorization": "Bearer TOKEN"},
+        "timeout": 10,
+        "cache_tools_list": True
+    }
+)
+
+agent = Agentor(
+    name="Agent",
+    tools=[mcp_server]
+)
+```
+
+### Celesto MCP Hub
+
+Connect to Celesto's hosted MCP servers (src/agentor/core/agent.py:676):
+
+```python  theme={null}
+from agentor import CelestoMCPHub
+
+async with CelestoMCPHub(api_key="YOUR_KEY") as mcp:
+    agent = Agentor(
+        name="Agent",
+        tools=[mcp]
+    )
+    result = await agent.arun("Use Celesto tools")
+```
+
+## Protocol Details
+
+LiteMCP implements MCP JSON-RPC 2.0:
+
+### Initialize Handshake
+
+```json  theme={null}
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "initialize",
+  "params": {"protocolVersion": "0.1.0"}
+}
+```
+
+Response includes server capabilities (src/agentor/mcp/api\_router.py:371):
+
+```json  theme={null}
+{
+  "protocolVersion": "0.1.0",
+  "capabilities": {
+    "tools": {"listChanged": true},
+    "resources": {"listChanged": true},
+    "prompts": {"listChanged": true}
+  },
+  "serverInfo": {
+    "name": "my-server",
+    "version": "1.0.0"
+  }
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Tools" icon="wrench" href="/agentor/concepts/tools">
+    Learn about the tool system
+  </Card>
+
+  <Card title="A2A Protocol" icon="network-wired" href="/agentor/concepts/a2a-protocol">
+    Enable agent-to-agent communication
+  </Card>
+
+  <Card title="Deployment" icon="rocket" href="/agentor/concepts/deployment">
+    Deploy MCP servers to production
+  </Card>
+</CardGroup>

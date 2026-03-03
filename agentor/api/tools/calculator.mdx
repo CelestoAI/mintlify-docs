@@ -1,0 +1,206 @@
+---
+title: "Calculator Tool"
+description: "Perform basic arithmetic operations"
+---
+
+The `CalculatorTool` provides basic arithmetic operations for agents, enabling precise numerical calculations.
+
+## Class Signature
+
+```python  theme={null}
+class CalculatorTool(BaseTool):
+    name = "calculator"
+    description = "Perform basic arithmetic operations"
+    
+    def __init__()
+```
+
+## Methods
+
+The calculator provides four basic arithmetic operations, all decorated with `@capability` to make them available to agents.
+
+### add
+
+Add two numbers together.
+
+```python  theme={null}
+@capability
+def add(self, a: float, b: float) -> str
+```
+
+<ParamField path="a" type="float" required>
+  The first number.
+</ParamField>
+
+<ParamField path="b" type="float" required>
+  The second number.
+</ParamField>
+
+**Returns:** String representation of the sum.
+
+### subtract
+
+Subtract the second number from the first.
+
+```python  theme={null}
+@capability
+def subtract(self, a: float, b: float) -> str
+```
+
+<ParamField path="a" type="float" required>
+  The first number.
+</ParamField>
+
+<ParamField path="b" type="float" required>
+  The second number to subtract.
+</ParamField>
+
+**Returns:** String representation of the difference.
+
+### multiply
+
+Multiply two numbers.
+
+```python  theme={null}
+@capability
+def multiply(self, a: float, b: float) -> str
+```
+
+<ParamField path="a" type="float" required>
+  The first number.
+</ParamField>
+
+<ParamField path="b" type="float" required>
+  The second number.
+</ParamField>
+
+**Returns:** String representation of the product.
+
+### divide
+
+Divide the first number by the second.
+
+```python  theme={null}
+@capability
+def divide(self, a: float, b: float) -> str
+```
+
+<ParamField path="a" type="float" required>
+  The numerator.
+</ParamField>
+
+<ParamField path="b" type="float" required>
+  The denominator (divisor).
+</ParamField>
+
+**Returns:** String representation of the quotient, or "Error: Division by zero" if b is 0.
+
+## Usage Example
+
+```python  theme={null}
+from agentor.tools import CalculatorTool
+
+# Initialize the calculator
+calc = CalculatorTool()
+
+# Perform calculations
+print(calc.add(10, 5))        # "15.0"
+print(calc.subtract(10, 5))   # "5.0"
+print(calc.multiply(10, 5))   # "50.0"
+print(calc.divide(10, 5))     # "2.0"
+print(calc.divide(10, 0))     # "Error: Division by zero"
+```
+
+## With Agentor Agent
+
+```python  theme={null}
+from agentor import Agentor
+from agentor.tools import CalculatorTool
+
+agent = Agentor(
+    name="Math Assistant",
+    model="gpt-4",
+    tools=[CalculatorTool()],
+    instructions="Perform accurate calculations using the calculator tool.",
+)
+
+result = agent.run("What is 1234 multiplied by 5678?")
+print(result.final_output)
+```
+
+## Multi-Step Calculations
+
+The agent can chain multiple operations together:
+
+```python  theme={null}
+from agentor import Agentor
+from agentor.tools import CalculatorTool
+
+agent = Agentor(
+    name="Calculator Agent",
+    model="gpt-4",
+    tools=[CalculatorTool()],
+    instructions="Break down complex calculations into steps.",
+)
+
+result = agent.run(
+    "Calculate (15 + 25) * 3 / 2 and explain each step"
+)
+print(result.final_output)
+```
+
+## Combined with Other Tools
+
+```python  theme={null}
+from agentor import Agentor
+from agentor.tools import CalculatorTool, WebSearchTool
+
+agent = Agentor(
+    name="Research Calculator",
+    model="gpt-4",
+    tools=[CalculatorTool(), WebSearchTool()],
+    instructions="""
+    Search for current data when needed, then perform 
+    accurate calculations using the calculator tool.
+    """,
+)
+
+result = agent.run(
+    "Find the current price of Bitcoin and calculate how much 2.5 BTC is worth"
+)
+print(result.final_output)
+```
+
+## Error Handling
+
+The tool handles division by zero gracefully:
+
+```python  theme={null}
+calc = CalculatorTool()
+
+result = calc.divide(10, 0)
+print(result)  # "Error: Division by zero"
+```
+
+## Return Type
+
+All methods return string representations of numbers to ensure compatibility with LLM agents and avoid floating-point precision issues in downstream processing.
+
+## Precision
+
+The calculator uses Python's `float` type, which provides:
+
+* Approximately 15-17 decimal digits of precision
+* Support for very large and very small numbers
+* Standard floating-point arithmetic behavior
+
+For applications requiring arbitrary precision, consider implementing a custom tool using Python's `decimal` module.
+
+## Best Practices
+
+1. **Use for Accuracy**: Prefer calculator tool over LLM arithmetic for precise calculations
+2. **Chain Operations**: Break complex formulas into multiple steps
+3. **Validate Results**: Have the agent explain calculations when needed
+4. **Combine Tools**: Use with web search for real-time data calculations
+
+Source: `/home/daytona/workspace/source/src/agentor/tools/calculator.py:4`

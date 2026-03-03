@@ -1,0 +1,245 @@
+---
+title: "ModelSettings"
+description: "Configure LLM model parameters and behavior"
+---
+
+## Overview
+
+`ModelSettings` is a configuration class from the `agents` library that controls LLM behavior including temperature, token limits, and other generation parameters. It's used with the [Agentor](/agentor/api/agentor) class to fine-tune model responses.
+
+## Import
+
+```python  theme={null}
+from agentor import ModelSettings
+```
+
+## Usage
+
+```python  theme={null}
+from agentor import Agentor, ModelSettings
+
+model_settings = ModelSettings(
+    temperature=0.7,
+    max_tokens=1000,
+    top_p=0.9
+)
+
+agent = Agentor(
+    name="Assistant",
+    model="gpt-4o",
+    model_settings=model_settings
+)
+```
+
+## Common Parameters
+
+While `ModelSettings` is defined in the `agents` library, here are the commonly used parameters:
+
+<ParamField path="temperature" type="float" default="1.0">
+  Controls randomness in outputs. Lower values (0.0-0.3) make outputs more focused and deterministic. Higher values (0.7-1.0) make outputs more creative and varied.
+
+  * `0.0-0.3`: Precise, consistent, factual responses
+  * `0.4-0.6`: Balanced creativity and consistency
+  * `0.7-1.0`: Creative, diverse, exploratory responses
+</ParamField>
+
+<ParamField path="max_tokens" type="int" default="Model-dependent">
+  Maximum number of tokens to generate in the response. Limits the length of the model's output.
+</ParamField>
+
+<ParamField path="top_p" type="float" default="1.0">
+  Nucleus sampling parameter. Controls diversity by limiting cumulative probability. Alternative to temperature.
+
+  * `0.1-0.5`: More focused, deterministic
+  * `0.9-1.0`: More diverse outputs
+</ParamField>
+
+<ParamField path="presence_penalty" type="float" default="0.0">
+  Penalizes tokens based on whether they appear in the text so far. Range: -2.0 to 2.0.
+
+  * Positive values encourage new topics
+  * Negative values encourage staying on topic
+</ParamField>
+
+<ParamField path="frequency_penalty" type="float" default="0.0">
+  Penalizes tokens based on their frequency in the text. Range: -2.0 to 2.0.
+
+  * Positive values reduce repetition
+  * Negative values allow more repetition
+</ParamField>
+
+<ParamField path="stop" type="List[str]" default="None">
+  Sequences where the model will stop generating. Maximum of 4 sequences.
+</ParamField>
+
+## Examples
+
+### Creative Writing
+
+```python  theme={null}
+from agentor import Agentor, ModelSettings
+
+creative_settings = ModelSettings(
+    temperature=0.9,
+    top_p=0.95,
+    max_tokens=2000,
+    presence_penalty=0.6
+)
+
+agent = Agentor(
+    name="Creative Writer",
+    model="gpt-4o",
+    model_settings=creative_settings,
+    instructions="You are a creative storytelling assistant."
+)
+
+result = agent.run("Write a short story about a time traveler")
+```
+
+### Precise Technical Responses
+
+```python  theme={null}
+from agentor import Agentor, ModelSettings
+
+precise_settings = ModelSettings(
+    temperature=0.2,
+    top_p=0.1,
+    max_tokens=1500
+)
+
+agent = Agentor(
+    name="Code Assistant",
+    model="gpt-4o",
+    model_settings=precise_settings,
+    instructions="You are a precise coding assistant."
+)
+
+result = agent.run("Explain how to implement a binary search tree")
+```
+
+### Concise Responses
+
+```python  theme={null}
+from agentor import Agentor, ModelSettings
+
+concise_settings = ModelSettings(
+    temperature=0.3,
+    max_tokens=100,
+    stop=["\n\n"]  # Stop at double newline
+)
+
+agent = Agentor(
+    name="Concise Assistant",
+    model="gpt-4o",
+    model_settings=concise_settings,
+    instructions="Provide brief, single-paragraph answers."
+)
+```
+
+### Reducing Repetition
+
+```python  theme={null}
+from agentor import Agentor, ModelSettings
+
+varied_settings = ModelSettings(
+    temperature=0.7,
+    frequency_penalty=0.5,
+    presence_penalty=0.3
+)
+
+agent = Agentor(
+    name="Varied Assistant",
+    model="gpt-4o",
+    model_settings=varied_settings
+)
+```
+
+### From Markdown File
+
+You can also specify temperature in markdown frontmatter:
+
+```markdown  theme={null}
+---
+name: Research Agent
+model: gpt-4o
+temperature: 0.5
+tools: ["web_search"]
+---
+
+You are a research assistant that provides accurate information.
+```
+
+```python  theme={null}
+from agentor import Agentor, ModelSettings
+
+# Temperature from markdown will be merged
+additional_settings = ModelSettings(
+    max_tokens=2000,
+    top_p=0.9
+)
+
+agent = Agentor.from_md(
+    "research_agent.md",
+    model_settings=additional_settings
+)
+```
+
+## Parameter Selection Guide
+
+### By Use Case
+
+| Use Case          | Temperature | Top P | Max Tokens | Notes                  |
+| ----------------- | ----------- | ----- | ---------- | ---------------------- |
+| Code generation   | 0.0-0.2     | 0.1   | 2000+      | Deterministic, precise |
+| Technical writing | 0.3-0.5     | 0.5   | 1500       | Balanced, accurate     |
+| Creative writing  | 0.8-1.0     | 0.95  | 2000+      | Diverse, imaginative   |
+| Summarization     | 0.3-0.5     | 0.5   | 500        | Concise, factual       |
+| Conversation      | 0.7-0.9     | 0.9   | 1000       | Natural, engaging      |
+| Data extraction   | 0.0-0.1     | 0.1   | 500        | Consistent, accurate   |
+
+### Combining Parameters
+
+```python  theme={null}
+from agentor import ModelSettings
+
+# Balanced configuration
+balanced = ModelSettings(
+    temperature=0.7,
+    top_p=0.9,
+    max_tokens=1500,
+    frequency_penalty=0.0,
+    presence_penalty=0.0
+)
+
+# High creativity
+creative = ModelSettings(
+    temperature=0.9,
+    top_p=0.95,
+    max_tokens=2000,
+    presence_penalty=0.6,
+    frequency_penalty=0.3
+)
+
+# Maximum precision
+precise = ModelSettings(
+    temperature=0.0,
+    top_p=0.1,
+    max_tokens=1000,
+    frequency_penalty=0.0,
+    presence_penalty=0.0
+)
+```
+
+## Notes
+
+* `ModelSettings` is imported from the `agents` library but re-exported by `agentor` for convenience
+* If not provided, Agentor uses sensible defaults via `get_default_model_settings()`
+* Temperature and top\_p are alternative sampling methods - typically you should adjust one or the other, not both
+* Different models may interpret these parameters differently
+* Some parameters may not be supported by all model providers
+
+## Related
+
+* [Agentor](/agentor/api/agentor) - Main agent class that uses ModelSettings
+* [LLM](/agentor/api/llm) - Lightweight LLM client
+* [LitellmModel](/agentor/api/agentor#litellmmodel) - Custom model wrapper

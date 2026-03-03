@@ -1,0 +1,126 @@
+---
+title: "Weather Tool"
+description: "Get current weather information for any location"
+---
+
+The `GetWeatherTool` provides real-time weather data using the WeatherAPI.com service.
+
+## Class Signature
+
+```python  theme={null}
+class GetWeatherTool(BaseTool):
+    name = "weather"
+    description = "Get current weather information for a location"
+    
+    def __init__(self, api_key: Optional[str] = None)
+```
+
+## Parameters
+
+<ParamField path="api_key" type="str" default="None">
+  WeatherAPI.com API key. If not provided, the tool will look for the `WEATHER_API_KEY` environment variable.
+
+  Get your API key at [weatherapi.com](https://www.weatherapi.com/).
+</ParamField>
+
+## Methods
+
+### get\_current\_weather
+
+Retrieve current weather information for a specified location.
+
+```python  theme={null}
+@capability
+def get_current_weather(self, location: str) -> str
+```
+
+<ParamField path="location" type="str" required>
+  The location to get weather for. Can be:
+
+  * City name (e.g., "London", "Paris")
+  * Coordinates (e.g., "48.8567,2.3508")
+  * US zip code (e.g., "10001")
+  * UK postcode (e.g., "SW1")
+  * IP address (e.g., "100.0.0.1")
+</ParamField>
+
+**Returns:** A formatted string containing:
+
+* Location name and country
+* Temperature in Celsius and Fahrenheit
+* Weather condition description
+* Humidity percentage
+* Wind speed in km/h
+
+## Usage Example
+
+```python  theme={null}
+from agentor.tools import GetWeatherTool
+import os
+
+# Initialize with API key
+weather_tool = GetWeatherTool(api_key="your_api_key_here")
+
+# Or use environment variable
+os.environ["WEATHER_API_KEY"] = "your_api_key_here"
+weather_tool = GetWeatherTool()
+
+# Get weather for a city
+result = weather_tool.get_current_weather("London")
+print(result)
+# Output:
+# Weather in London, United Kingdom:
+# Temperature: 15°C (59°F)
+# Condition: Partly cloudy
+# Humidity: 72%
+# Wind: 13 km/h
+```
+
+## With Agentor Agent
+
+```python  theme={null}
+from agentor import Agentor
+from agentor.tools import GetWeatherTool
+
+agent = Agentor(
+    name="Weather Assistant",
+    model="gpt-4",
+    tools=[GetWeatherTool()],
+    instructions="Provide weather information when asked.",
+)
+
+result = agent.run("What's the weather like in Tokyo?")
+print(result.final_output)
+```
+
+## Environment Setup
+
+```bash  theme={null}
+# Set your WeatherAPI.com API key
+export WEATHER_API_KEY="your_api_key_here"
+```
+
+## Error Handling
+
+The tool handles errors gracefully:
+
+* **Missing API key**: Returns an error message directing users to weatherapi.com
+* **HTTP errors**: Returns HTTP status code and error details
+* **Network errors**: Returns descriptive error message
+* **Invalid location**: Returns API error response
+
+## API Requirements
+
+This tool requires a free or paid API key from [WeatherAPI.com](https://www.weatherapi.com/):
+
+1. Sign up for a free account
+2. Generate an API key from the dashboard
+3. Set the `WEATHER_API_KEY` environment variable or pass it to the constructor
+
+Free tier includes:
+
+* 1 million calls per month
+* Current weather data
+* 3-day forecast
+
+Source: `/home/daytona/workspace/source/src/agentor/tools/weather.py:9`

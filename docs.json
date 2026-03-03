@@ -36,7 +36,16 @@
             ]
           },
           {
-            "group": "Agentor",
+            "group": "Agentor Get Started",
+            "icon": "rocket",
+            "pages": [
+              "agentor/introduction",
+              "agentor/installation",
+              "agentor/quickstart"
+            ]
+          },
+          {
+            "group": "Agentor Core Docs",
             "icon": "robot",
             "pages": [
               "agentor/overview",
@@ -46,6 +55,54 @@
               "agentor/agent-to-agent",
               "agentor/skills",
               "agentor/tracing"
+            ]
+          },
+          {
+            "group": "Agentor Concepts",
+            "icon": "lightbulb",
+            "pages": [
+              "agentor/concepts/agents",
+              "agentor/concepts/tools",
+              "agentor/concepts/mcp",
+              "agentor/concepts/a2a-protocol",
+              "agentor/concepts/skills",
+              "agentor/concepts/deployment"
+            ]
+          },
+          {
+            "group": "Agentor Guides",
+            "icon": "map",
+            "pages": [
+              "agentor/guides/building-agents",
+              "agentor/guides/custom-tools",
+              "agentor/guides/mcp-servers",
+              "agentor/guides/agent-communication",
+              "agentor/guides/streaming",
+              "agentor/guides/observability",
+              "agentor/guides/deployment"
+            ]
+          },
+          {
+            "group": "Agentor API Reference",
+            "icon": "code",
+            "pages": [
+              "agentor/api/agentor",
+              "agentor/api/model-settings",
+              "agentor/api/llm",
+              "agentor/api/tools",
+              "agentor/api/tools/weather",
+              "agentor/api/tools/web-search",
+              "agentor/api/tools/fetch",
+              "agentor/api/tools/git",
+              "agentor/api/tools/github",
+              "agentor/api/tools/gmail",
+              "agentor/api/tools/calculator",
+              "agentor/api/tools/shell",
+              "agentor/api/mcp/litemcp",
+              "agentor/api/mcp/router",
+              "agentor/api/mcp/hub",
+              "agentor/api/a2a/controller",
+              "agentor/api/a2a/types"
             ]
           },
           {

@@ -1,0 +1,284 @@
+---
+title: "LLM"
+description: "Lightweight LLM client for direct model interactions"
+---
+
+## Overview
+
+The `LLM` class provides a simple, direct interface for interacting with language models without the full agent framework. It's ideal for straightforward LLM calls where you don't need tools, memory, or agent capabilities.
+
+## Constructor
+
+```python  theme={null}
+LLM(
+    model: str,
+    system_prompt: str | None = None,
+    api_key: str | None = None
+)
+```
+
+### Parameters
+
+<ParamField path="model" type="str" required>
+  The LLM model to use. Supports any model from LiteLLM (e.g., `"gpt-4o"`, `"gemini/gemini-pro"`, `"anthropic/claude-4"`).
+</ParamField>
+
+<ParamField path="system_prompt" type="str" default="None">
+  Optional system prompt to set the model's behavior and context.
+</ParamField>
+
+<ParamField path="api_key" type="str" default="None">
+  API key for the LLM provider. Falls back to `OPENAI_API_KEY` or `LLM_API_KEY` environment variables if not provided.
+</ParamField>
+
+## Methods
+
+### chat
+
+Synchronous chat completion.
+
+```python  theme={null}
+def chat(
+    input: str | list[dict],
+    tools: List[ToolType] | None = None,
+    tool_choice: Literal[None, "auto", "required"] = "auto",
+    previous_response_id: str | None = None,
+) -> Response
+```
+
+**Parameters:**
+
+* `input`: User message as string or list of message dictionaries
+* `tools`: Optional list of tool definitions in OpenAI format
+* `tool_choice`: Control tool usage - `"auto"`, `"required"`, or `None`
+* `previous_response_id`: Optional ID to continue a previous conversation
+
+**Returns:** LiteLLM response object
+
+**Example:**
+
+```python  theme={null}
+from agentor import LLM
+
+llm = LLM(
+    model="gpt-4o",
+    system_prompt="You are a helpful assistant."
+)
+
+response = llm.chat("What is the capital of France?")
+print(response.choices[0].message.content)
+```
+
+### achat
+
+Asynchronous chat completion.
+
+```python  theme={null}
+async def achat(
+    input: str | list[dict],
+    tools: List[ToolType] | None = None,
+    tool_choice: Literal[None, "auto", "required"] = "auto",
+    previous_response_id: str | None = None,
+) -> Response
+```
+
+**Parameters:**
+
+* Same as `chat()` method
+
+**Returns:** LiteLLM response object
+
+**Example:**
+
+```python  theme={null}
+import asyncio
+from agentor import LLM
+
+llm = LLM(model="gpt-4o")
+
+async def main():
+    response = await llm.achat("Explain async programming")
+    print(response.choices[0].message.content)
+
+asyncio.run(main())
+```
+
+## Usage Examples
+
+### Basic Usage
+
+```python  theme={null}
+from agentor import LLM
+
+# Create LLM instance
+llm = LLM(
+    model="gpt-4o",
+    system_prompt="You are a helpful coding assistant."
+)
+
+# Simple chat
+response = llm.chat("How do I reverse a string in Python?")
+print(response.choices[0].message.content)
+```
+
+### With Custom API Key
+
+```python  theme={null}
+import os
+from agentor import LLM
+
+llm = LLM(
+    model="gemini/gemini-pro",
+    api_key=os.environ.get("GEMINI_API_KEY"),
+    system_prompt="You are an expert in machine learning."
+)
+
+response = llm.chat("Explain gradient descent")
+print(response.choices[0].message.content)
+```
+
+### Conversation History
+
+```python  theme={null}
+from agentor import LLM
+
+llm = LLM(model="gpt-4o")
+
+# Using message history
+messages = [
+    {"role": "user", "content": "My name is Alice"},
+    {"role": "assistant", "content": "Hello Alice! How can I help you today?"},
+    {"role": "user", "content": "What's my name?"}
+]
+
+response = llm.chat(messages)
+print(response.choices[0].message.content)  # "Your name is Alice"
+```
+
+### Async Usage
+
+```python  theme={null}
+import asyncio
+from agentor import LLM
+
+llm = LLM(
+    model="gpt-4o",
+    system_prompt="You are a concise assistant."
+)
+
+async def process_multiple():
+    tasks = [
+        llm.achat("What is AI?"),
+        llm.achat("What is ML?"),
+        llm.achat("What is DL?")
+    ]
+    responses = await asyncio.gather(*tasks)
+    
+    for response in responses:
+        print(response.choices[0].message.content)
+        print("---")
+
+asyncio.run(process_multiple())
+```
+
+### With Tools
+
+```python  theme={null}
+from agentor import LLM
+
+llm = LLM(model="gpt-4o")
+
+# Define tool schema
+tools = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_weather",
+            "description": "Get weather for a city",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "city": {
+                        "type": "string",
+                        "description": "City name"
+                    }
+                },
+                "required": ["city"]
+            }
+        }
+    }
+]
+
+response = llm.chat(
+    "What's the weather in London?",
+    tools=tools,
+    tool_choice="auto"
+)
+
+# Check if model wants to call a tool
+if response.choices[0].message.tool_calls:
+    tool_call = response.choices[0].message.tool_calls[0]
+    print(f"Tool: {tool_call.function.name}")
+    print(f"Arguments: {tool_call.function.arguments}")
+```
+
+### Environment Variables
+
+The LLM class automatically uses API keys from environment variables:
+
+```bash  theme={null}
+# For OpenAI models
+export OPENAI_API_KEY="sk-..."
+
+# Or use the generic LLM_API_KEY
+export LLM_API_KEY="your-api-key"
+```
+
+```python  theme={null}
+from agentor import LLM
+
+# API key automatically loaded from environment
+llm = LLM(model="gpt-4o")
+response = llm.chat("Hello!")
+```
+
+## When to Use LLM vs Agentor
+
+### Use `LLM` when:
+
+* You need simple, direct LLM calls
+* You don't need tool calling or agent capabilities
+* You want minimal overhead and maximum control
+* Building custom workflows or wrappers
+
+### Use `Agentor` when:
+
+* You need tool calling and function execution
+* You want agent-to-agent communication (A2A protocol)
+* You need to serve agents as APIs
+* You want built-in streaming and chat interfaces
+* You need structured outputs or complex workflows
+
+## Error Handling
+
+```python  theme={null}
+from agentor import LLM
+import litellm
+
+llm = LLM(model="gpt-4o")
+
+try:
+    response = llm.chat("Hello!")
+except litellm.RateLimitError:
+    print("Rate limit exceeded")
+except litellm.APIError as e:
+    print(f"API error: {e}")
+except ValueError as e:
+    print(f"Configuration error: {e}")
+```
+
+## Related
+
+* [Agentor](/agentor/api/agentor) - Full agent framework with tools and APIs
+* [ModelSettings](/agentor/api/model-settings) - Advanced model configuration
+* [Tools](/agentor/api/tools) - Create function tools for agents

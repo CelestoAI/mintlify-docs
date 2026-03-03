@@ -1,0 +1,333 @@
+---
+title: "Tool System"
+description: "Build and integrate tools for agent capabilities using the extensible tool registry"
+---
+
+## Overview
+
+Agentor provides a flexible tool system that allows agents to interact with external APIs, databases, and services. Tools can be registered globally, created as reusable classes, or defined inline.
+
+## Tool Types
+
+Agentor supports multiple tool formats:
+
+1. **Function Tools** - Decorated Python functions
+2. **BaseTool Classes** - Reusable tool classes with multiple capabilities
+3. **String References** - Tools registered in the global registry
+4. **MCP Servers** - External Model Context Protocol servers
+
+## Function Tools
+
+Create simple tools using the `@function_tool` decorator:
+
+```python  theme={null}
+from agentor import function_tool
+
+@function_tool
+def get_weather(city: str) -> str:
+    """Returns the weather in the given city."""
+    return f"The weather in {city} is sunny"
+
+agent = Agentor(
+    name="Weather Agent",
+    tools=[get_weather]
+)
+```
+
+### Type Hints and Descriptions
+
+The decorator automatically generates JSON schemas from type hints and docstrings. The LLM sees:
+
+```json  theme={null}
+{
+  "name": "get_weather",
+  "description": "Returns the weather in the given city.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "city": {"type": "string"}
+    },
+    "required": ["city"]
+  }
+}
+```
+
+## Tool Registry
+
+Register tools globally for reuse across agents (src/agentor/tools/registry.py:23):
+
+```python  theme={null}
+from agentor.tools.registry import register_global_tool
+from agents import RunContextWrapper
+from agentor.tools.registry import CelestoConfig
+
+@register_global_tool
+def get_weather(wrapper: RunContextWrapper[CelestoConfig], city: str) -> str:
+    """Returns the weather in the given city."""
+    api_key = wrapper.context.weather_api_key
+    # Fetch weather using API key
+    return f"Weather in {city}"
+```
+
+Use registered tools by name:
+
+```python  theme={null}
+agent = Agentor(
+    name="Agent",
+    tools=["get_weather"]  # Reference by string name
+)
+```
+
+### Built-in Tools
+
+Agentor includes these built-in tools in the registry:
+
+* `get_weather` - Weather information (src/agentor/tools/registry.py:33)
+* `current_datetime` - Current date and time (src/agentor/tools/registry.py:43)
+
+List available tools:
+
+```python  theme={null}
+from agentor.tools.registry import ToolRegistry
+
+tools = ToolRegistry.list()
+print(tools)  # ('get_weather', 'current_datetime')
+```
+
+## BaseTool Class
+
+Create reusable tool classes with multiple capabilities (src/agentor/tools/base.py:18):
+
+```python  theme={null}
+from agentor.tools.base import BaseTool, capability
+
+class WeatherTool(BaseTool):
+    name = "weather"
+    description = "Weather information tool"
+    
+    def __init__(self, api_key: str):
+        super().__init__(api_key=api_key)
+    
+    @capability
+    def get_current_weather(self, city: str) -> str:
+        """Get current weather for a city"""
+        return f"Weather in {city}: Sunny, 72°F"
+    
+    @capability
+    def get_forecast(self, city: str, days: int = 5) -> str:
+        """Get weather forecast for multiple days"""
+        return f"{days}-day forecast for {city}"
+
+# Use with agent
+agent = Agentor(
+    name="Weather Agent",
+    tools=[WeatherTool(api_key="YOUR_KEY")]
+)
+```
+
+### Capability Decorator
+
+The `@capability` decorator (src/agentor/tools/base.py:12) marks methods as agent-callable tools:
+
+```python  theme={null}
+def capability(func: Callable):
+    """Decorator to mark a method as a tool capability."""
+    func._is_capability = True
+    return func
+```
+
+Each capability becomes a separate tool for the LLM.
+
+### Dynamic Tools from Functions
+
+Create a tool from any function (src/agentor/tools/base.py:100):
+
+```python  theme={null}
+from agentor.tools.base import BaseTool
+
+def weather_tool(city: str):
+    """This function returns the weather of the city."""
+    return f"Weather in {city} is warm and sunny."
+
+tool = BaseTool.from_function(weather_tool)
+result = tool.run("London")
+print(result)  # Weather in London is warm and sunny.
+```
+
+## Serving Tools as MCP Servers
+
+Serve any `BaseTool` as a standalone MCP server (src/agentor/tools/base.py:73):
+
+```python  theme={null}
+class WeatherTool(BaseTool):
+    name = "weather-service"
+    
+    @capability
+    def get_weather(self, location: str) -> str:
+        return f"Weather in {location}"
+
+tool = WeatherTool()
+tool.serve(port=8000)
+```
+
+This automatically:
+
+1. Creates a LiteMCP server
+2. Registers all `@capability` methods as MCP tools
+3. Serves at `http://0.0.0.0:8000/mcp`
+
+## Built-in Tool Implementations
+
+Agentor includes production-ready tools in `src/agentor/tools/`:
+
+### Weather Tool
+
+```python  theme={null}
+from agentor.tools import GetWeatherTool
+
+weather = GetWeatherTool(api_key="YOUR_KEY")
+result = weather.get_current_weather("London")
+```
+
+### GitHub Tool
+
+```python  theme={null}
+from agentor.tools.github import GitHubTool
+
+gh = GitHubTool(api_key="YOUR_TOKEN")
+repos = gh.list_repositories("celestoai")
+```
+
+### Gmail Tool
+
+```python  theme={null}
+from agentor.tools.gmail import GmailTool
+
+gmail = GmailTool(credentials_path="credentials.json")
+emails = gmail.search_emails("from:user@example.com")
+```
+
+### Shell Tool
+
+```python  theme={null}
+from agentor.tools.shell import ShellTool
+
+shell = ShellTool()
+result = shell.run_command("ls -la")
+```
+
+<Warning>
+  Shell tools can execute arbitrary commands. Use with caution and proper sandboxing.
+</Warning>
+
+## Tool JSON Schema
+
+Convert tools to JSON schema for documentation (src/agentor/tools/base.py:58):
+
+```python  theme={null}
+tool = WeatherTool()
+schema = tool.json_schema()
+print(schema)
+```
+
+Output:
+
+```json  theme={null}
+[
+  {
+    "type": "function",
+    "name": "weather",
+    "description": "Weather information tool",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "city": {"type": "string"},
+        "days": {"type": "integer"}
+      },
+      "required": ["city"]
+    }
+  }
+]
+```
+
+## Tool Search API
+
+Reduce context bloat with semantic tool search:
+
+```python  theme={null}
+from agentor import ToolSearch
+
+tool_search = ToolSearch()
+agent = Agentor(
+    name="Agent",
+    tools=tool_search.search("weather operations")
+)
+```
+
+This returns only relevant tools based on the query, reducing token usage.
+
+## Error Handling
+
+Handle tool errors gracefully:
+
+```python  theme={null}
+@function_tool
+def risky_operation(param: str) -> str:
+    """Performs a risky operation"""
+    try:
+        # Perform operation
+        return "Success"
+    except Exception as e:
+        return f"Failed to execute: {e}"
+```
+
+The agent receives the error message and can adjust its strategy.
+
+## Tool Context and Authentication
+
+Tools receive context with API keys and configuration (src/agentor/tools/registry.py:15):
+
+```python  theme={null}
+from dataclasses import dataclass
+import os
+
+@dataclass
+class CelestoConfig:
+    weather_api_key: str | None = os.environ.get("WEATHER_API_KEY")
+    github_token: str | None = os.environ.get("GITHUB_TOKEN")
+```
+
+Tools access this context:
+
+```python  theme={null}
+@register_global_tool
+def github_operation(wrapper: RunContextWrapper[CelestoConfig], repo: str) -> str:
+    token = wrapper.context.github_token
+    # Use token for API calls
+    return f"Processed {repo}"
+```
+
+## OpenAI Function Conversion
+
+All tools automatically convert to OpenAI function format (src/agentor/tools/base.py:46):
+
+```python  theme={null}
+tools = weather_tool.to_openai_function()
+# Returns List[FunctionTool] compatible with agents library
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="MCP Integration" icon="plug" href="/agentor/concepts/mcp">
+    Connect external MCP servers as tools
+  </Card>
+
+  <Card title="Skills System" icon="graduation-cap" href="/agentor/concepts/skills">
+    Combine tools with contextual instructions
+  </Card>
+
+  <Card title="Tool search" icon="magnifying-glass" href="/agentor/concepts/tools#tool-search-api">
+    Use semantic search to reduce context size
+  </Card>
+</CardGroup>

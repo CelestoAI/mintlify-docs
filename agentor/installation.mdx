@@ -1,0 +1,182 @@
+---
+title: "Installation"
+description: "Install Agentor and configure your development environment"
+---
+
+## Requirements
+
+Before installing Agentor, ensure you have:
+
+* **Python 3.10 or higher** - Check your version with `python --version`
+* **pip** or **uv** package manager
+* An API key from your LLM provider (OpenAI, Anthropic, Google, etc.)
+
+## Install from PyPI
+
+The recommended method is to install Agentor from PyPI using pip:
+
+```bash  theme={null}
+pip install agentor
+```
+
+This installs the core framework with all required dependencies.
+
+<Tip>
+  For faster dependency resolution and better virtual environment management, consider using [uv](https://github.com/astral-sh/uv) instead of pip:
+
+  ```bash  theme={null}
+  pip install uv
+  uv pip install agentor
+  ```
+</Tip>
+
+## Install from source
+
+To install the latest development version directly from GitHub:
+
+```bash  theme={null}
+pip install git+https://github.com/celestoai/agentor@main
+```
+
+<Warning>
+  The development version may contain unreleased features and breaking changes. Use this only if you need cutting-edge features or want to contribute.
+</Warning>
+
+## Optional dependencies
+
+Agentor provides optional dependencies for specific tools and integrations:
+
+### Exa search
+
+```bash  theme={null}
+pip install agentor[exa]
+```
+
+### Git operations
+
+```bash  theme={null}
+pip install agentor[git]
+```
+
+### GitHub integration
+
+```bash  theme={null}
+pip install agentor[github]
+```
+
+### PostgreSQL database
+
+```bash  theme={null}
+pip install agentor[postgres]
+```
+
+### Slack integration
+
+```bash  theme={null}
+pip install agentor[slack]
+```
+
+### ScrapeGraph AI
+
+```bash  theme={null}
+pip install agentor[scrapegraph]
+```
+
+### Install all optional dependencies
+
+```bash  theme={null}
+pip install agentor[all]
+```
+
+## Set up environment variables
+
+Agentor requires API keys to connect to LLM providers. Create a `.env` file in your project root:
+
+```bash .env theme={null}
+# OpenAI (for gpt-4, gpt-5, etc.)
+OPENAI_API_KEY=sk-...
+
+# Anthropic (for Claude models)
+ANTHROPIC_API_KEY=sk-ant-...
+
+# Google (for Gemini models)
+GEMINI_API_KEY=...
+
+# Celesto (for observability and deployment)
+CELESTO_API_KEY=...
+```
+
+<Note>
+  You only need the API key for the LLM provider you plan to use. Agentor supports 100+ LLM providers through LiteLLM.
+</Note>
+
+## Load environment variables
+
+In your Python code, load the environment variables:
+
+```python  theme={null}
+import dotenv
+
+dotenv.load_dotenv()
+```
+
+Or set them directly in your shell:
+
+```bash  theme={null}
+export OPENAI_API_KEY=sk-...
+export CELESTO_API_KEY=...
+```
+
+## Verify installation
+
+Confirm Agentor is installed correctly:
+
+```python  theme={null}
+import agentor
+
+print(agentor.__version__)
+```
+
+You should see the version number printed (e.g., `0.0.21`).
+
+## Enable observability (optional)
+
+To enable automatic tracing and monitoring, set your Celesto API key:
+
+```bash  theme={null}
+export CELESTO_API_KEY=your_api_key
+```
+
+Get your API key from the [Celesto dashboard](https://celesto.ai/dashboard).
+
+When the `CELESTO_API_KEY` environment variable is set, Agentor automatically enables LLM monitoring and tracing:
+
+```python  theme={null}
+from agentor import Agentor
+
+# Tracing enabled automatically if CELESTO_API_KEY is set
+agent = Agentor(
+    name="My Agent",
+    model="gpt-5-mini"
+)
+```
+
+View traces at [https://celesto.ai/observe](https://celesto.ai/observe).
+
+To disable automatic tracing:
+
+```bash  theme={null}
+export CELESTO_DISABLE_AUTO_TRACING=True
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Quick start" icon="bolt" href="/agentor/quickstart">
+    Build your first agent in under 5 minutes
+  </Card>
+
+  <Card title="Model settings" icon="gear" href="/agentor/api/model-settings">
+    Learn about model settings and configuration options
+  </Card>
+</CardGroup>

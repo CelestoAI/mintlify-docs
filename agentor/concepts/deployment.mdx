@@ -1,0 +1,562 @@
+---
+title: "Deployment"
+description: "Deploy Agentor agents and MCP servers to production with Celesto AI or self-hosted infrastructure"
+---
+
+## Overview
+
+Agentor provides multiple deployment options:
+
+1. **Celesto AI Platform** - One-command deployment with observability
+2. **Self-hosted Servers** - Deploy with uvicorn, gunicorn, or Docker
+3. **Serverless** - Deploy to AWS Lambda, Cloud Run, etc.
+4. **ASGI Servers** - Use with any ASGI-compatible platform
+
+## Celesto AI Deployment
+
+The fastest way to deploy agents to production.
+
+### Prerequisites
+
+```bash  theme={null}
+pip install agentor
+```
+
+The `celesto` CLI is automatically installed with Agentor.
+
+### Deploy Command
+
+From your project directory:
+
+```bash  theme={null}
+celesto deploy
+```
+
+Your agent is deployed to:
+
+```
+https://api.celesto.ai/deploy/apps/<app-name>
+```
+
+### Configuration
+
+Create a `celesto.yaml` (optional):
+
+```yaml  theme={null}
+name: my-weather-agent
+runtime: python3.11
+env:
+  OPENAI_API_KEY: ${OPENAI_API_KEY}
+  WEATHER_API_KEY: ${WEATHER_API_KEY}
+```
+
+### Environment Variables
+
+Set required API keys:
+
+```bash  theme={null}
+export CELESTO_API_KEY="your-celesto-key"
+export OPENAI_API_KEY="your-openai-key"
+```
+
+Find your Celesto API key at: [https://celesto.ai/dashboard](https://celesto.ai/dashboard)
+
+### Observability
+
+Automatic tracing is enabled when `CELESTO_API_KEY` is set (src/agentor/core/agent.py:119):
+
+```python  theme={null}
+agent = Agentor(
+    name="Production Agent",
+    model="gpt-4o",
+    # Tracing auto-enabled with CELESTO_API_KEY
+)
+```
+
+View traces at: [https://celesto.ai/observe](https://celesto.ai/observe)
+
+Disable auto-tracing:
+
+```bash  theme={null}
+export CELESTO_DISABLE_AUTO_TRACING=True
+```
+
+## Self-Hosted Deployment
+
+### Local Development
+
+Run agents locally (src/agentor/core/agent.py:513):
+
+```python  theme={null}
+from agentor import Agentor
+
+agent = Agentor(
+    name="Weather Agent",
+    model="gpt-5-mini",
+    tools=["get_weather"]
+)
+
+agent.serve(
+    host="0.0.0.0",
+    port=8000,
+    log_level="info",
+    access_log=True
+)
+```
+
+Access at `http://localhost:8000`.
+
+### Production Server
+
+For production, use Gunicorn with uvicorn workers:
+
+```bash  theme={null}
+gunicorn server:app \
+  -k uvicorn.workers.UvicornWorker \
+  --workers 4 \
+  --bind 0.0.0.0:8000
+```
+
+Create `server.py`:
+
+```python  theme={null}
+from agentor import Agentor
+
+agent = Agentor(
+    name="Production Agent",
+    model="gpt-4o",
+    tools=["get_weather"]
+)
+
+app = agent._create_app(host="0.0.0.0", port=8000)
+```
+
+### uvicorn Deployment
+
+Run with uvicorn directly:
+
+```bash  theme={null}
+uvicorn server:app \
+  --host 0.0.0.0 \
+  --port 8000 \
+  --workers 4 \
+  --log-level info
+```
+
+## Docker Deployment
+
+### Dockerfile
+
+Create a `Dockerfile`:
+
+```dockerfile  theme={null}
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+EXPOSE 8000
+
+CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+### Build and Run
+
+```bash  theme={null}
+# Build image
+docker build -t my-agent .
+
+# Run container
+docker run -p 8000:8000 \
+  -e OPENAI_API_KEY=$OPENAI_API_KEY \
+  my-agent
+```
+
+### Docker Compose
+
+Create `docker-compose.yml`:
+
+```yaml  theme={null}
+version: '3.8'
+
+services:
+  agent:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - CELESTO_API_KEY=${CELESTO_API_KEY}
+    restart: unless-stopped
+```
+
+Run:
+
+```bash  theme={null}
+docker-compose up -d
+```
+
+## Kubernetes Deployment
+
+### Deployment YAML
+
+```yaml  theme={null}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agentor-agent
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: agentor-agent
+  template:
+    metadata:
+      labels:
+        app: agentor-agent
+    spec:
+      containers:
+      - name: agent
+        image: my-agent:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: agent-secrets
+              key: openai-api-key
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: agentor-agent
+spec:
+  selector:
+    app: agentor-agent
+  ports:
+  - port: 80
+    targetPort: 8000
+  type: LoadBalancer
+```
+
+Deploy:
+
+```bash  theme={null}
+kubectl apply -f deployment.yaml
+```
+
+## MCP Server Deployment
+
+Deploy LiteMCP servers (src/agentor/mcp/server.py:14):
+
+```python  theme={null}
+from agentor.mcp import LiteMCP
+
+app = LiteMCP(
+    name="production-mcp",
+    version="1.0.0"
+)
+
+@app.tool()
+def production_tool(param: str) -> str:
+    return f"Result: {param}"
+
+if __name__ == "__main__":
+    app.serve(host="0.0.0.0", port=8000)
+```
+
+### MCP with Gunicorn
+
+```bash  theme={null}
+gunicorn mcp_server:app \
+  -k uvicorn.workers.UvicornWorker \
+  --workers 4
+```
+
+### MCP as ASGI App
+
+LiteMCP is a full ASGI application (src/agentor/mcp/server.py:50):
+
+```python  theme={null}
+# Use with any ASGI server
+import uvicorn
+
+app = LiteMCP(name="my-mcp")
+uvicorn.run(app, host="0.0.0.0", port=8000)
+```
+
+## Serverless Deployment
+
+### AWS Lambda
+
+Use Mangum for Lambda compatibility:
+
+```bash  theme={null}
+pip install mangum
+```
+
+```python  theme={null}
+from agentor import Agentor
+from mangum import Mangum
+
+agent = Agentor(
+    name="Lambda Agent",
+    model="gpt-4o",
+    tools=["get_weather"]
+)
+
+app = agent._create_app(host="0.0.0.0", port=8000)
+handler = Mangum(app)
+```
+
+### Google Cloud Run
+
+Create `app.yaml`:
+
+```yaml  theme={null}
+runtime: python311
+entrypoint: gunicorn -k uvicorn.workers.UvicornWorker server:app
+
+env_variables:
+  OPENAI_API_KEY: "your-key"
+```
+
+Deploy:
+
+```bash  theme={null}
+gcloud run deploy my-agent \
+  --source . \
+  --platform managed \
+  --region us-central1
+```
+
+## Environment Configuration
+
+### Production Settings
+
+Configure for production (src/agentor/config.py):
+
+```python  theme={null}
+import os
+from dataclasses import dataclass
+
+@dataclass
+class Config:
+    base_url: str = os.getenv("CELESTO_BASE_URL", "https://api.celesto.ai")
+    api_key: str | None = os.getenv("CELESTO_API_KEY")
+    disable_auto_tracing: bool = os.getenv("CELESTO_DISABLE_AUTO_TRACING", "False") == "True"
+```
+
+### Required Environment Variables
+
+```bash  theme={null}
+# LLM Provider (choose one)
+export OPENAI_API_KEY="sk-..."
+export ANTHROPIC_API_KEY="sk-ant-..."
+export GEMINI_API_KEY="..."
+
+# Celesto Platform (optional)
+export CELESTO_API_KEY="..."
+
+# Tool-specific keys
+export WEATHER_API_KEY="..."
+export GITHUB_TOKEN="..."
+```
+
+## Health Checks
+
+Agents automatically include health endpoints (src/agentor/core/agent.py:573):
+
+```python  theme={null}
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+```
+
+Test:
+
+```bash  theme={null}
+curl http://localhost:8000/health
+```
+
+## Monitoring
+
+### Logging
+
+Configure logging levels:
+
+```python  theme={null}
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
+agent.serve(log_level="info")
+```
+
+### Tracing
+
+Enable Celesto tracing (src/agentor/tracer.py):
+
+```python  theme={null}
+from agentor.tracer import setup_celesto_tracing
+
+setup_celesto_tracing(
+    endpoint="https://api.celesto.ai/traces/ingest",
+    token="your-celesto-key"
+)
+```
+
+### Metrics
+
+Integrate with Prometheus:
+
+```python  theme={null}
+from prometheus_client import Counter, Histogram
+from fastapi import FastAPI
+
+app = agent._create_app(host="0.0.0.0", port=8000)
+
+request_count = Counter('requests_total', 'Total requests')
+request_duration = Histogram('request_duration_seconds', 'Request duration')
+```
+
+## Load Balancing
+
+### Nginx Configuration
+
+```nginx  theme={null}
+upstream agentor_backend {
+    server 127.0.0.1:8000;
+    server 127.0.0.1:8001;
+    server 127.0.0.1:8002;
+}
+
+server {
+    listen 80;
+    server_name agent.example.com;
+
+    location / {
+        proxy_pass http://agentor_backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+
+## Security
+
+### API Authentication
+
+Implement authentication middleware:
+
+```python  theme={null}
+from fastapi import Header, HTTPException
+
+async def verify_token(authorization: str = Header(None)):
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401)
+    token = authorization.split(" ")[1]
+    if token != "expected-token":
+        raise HTTPException(status_code=403)
+
+app = agent._create_app(host="0.0.0.0", port=8000)
+app.add_middleware(verify_token)
+```
+
+### HTTPS/TLS
+
+Use a reverse proxy (Nginx, Caddy) or configure uvicorn with SSL:
+
+```bash  theme={null}
+uvicorn server:app \
+  --ssl-keyfile ./key.pem \
+  --ssl-certfile ./cert.pem
+```
+
+## Performance Tuning
+
+### Worker Configuration
+
+Optimal workers = (2 × CPU cores) + 1:
+
+```bash  theme={null}
+gunicorn server:app \
+  -k uvicorn.workers.UvicornWorker \
+  --workers 9 \
+  --worker-connections 1000 \
+  --max-requests 1000 \
+  --max-requests-jitter 50
+```
+
+### Concurrency Control
+
+Limit concurrent requests (src/agentor/core/agent.py:393):
+
+```python  theme={null}
+results = await agent.arun(
+    batch_prompts,
+    limit_concurrency=10  # Max 10 concurrent tasks
+)
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**Port already in use:**
+
+```bash  theme={null}
+lsof -i :8000
+kill -9 <PID>
+```
+
+**Module not found:**
+
+```bash  theme={null}
+pip install -e .
+```
+
+**API key errors:**
+
+```bash  theme={null}
+env | grep API_KEY
+```
+
+### Debug Mode
+
+Enable detailed logging:
+
+```python  theme={null}
+agent.serve(
+    log_level="debug",
+    access_log=True
+)
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Agents" icon="robot" href="/agentor/concepts/agents">
+    Learn about agent configuration
+  </Card>
+
+  <Card title="A2A Protocol" icon="network-wired" href="/agentor/concepts/a2a-protocol">
+    Deploy A2A-compatible agents
+  </Card>
+
+  <Card title="MCP Servers" icon="plug" href="/agentor/concepts/mcp">
+    Deploy MCP servers
+  </Card>
+
+  <Card title="Celesto AI" icon="cloud" href="https://celesto.ai">
+    Deploy to Celesto platform
+  </Card>
+</CardGroup>
