@@ -204,7 +204,7 @@ repos = gh.list_repositories("celestoai")
 from agentor.tools.gmail import GmailTool
 
 gmail = GmailTool(credentials_path="credentials.json")
-emails = gmail.search_emails("from:user@example.com")
+emails = gmail.search_messages("from:user@example.com")
 ```
 
 ### Shell Tool

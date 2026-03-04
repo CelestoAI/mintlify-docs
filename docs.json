@@ -50,7 +50,7 @@
             ]
           },
           {
-            "group": "Agentor Concepts",
+            "group": "Concepts",
             "icon": "lightbulb",
             "pages": [
               "agentor/concepts/agents",

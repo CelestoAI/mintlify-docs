@@ -130,12 +130,12 @@ from a2a.types import Task
 * `created` - Creation timestamp
 * `updated` - Last update timestamp
 
-### TaskStatus
+### TaskState
 
-Enum representing task status values.
+Enum representing task state values.
 
 ```python  theme={null}
-from a2a.types import TaskStatus
+from a2a.types import TaskState
 ```
 
 **Values:**
@@ -146,19 +146,26 @@ from a2a.types import TaskStatus
 * `failed` - Task encountered an error
 * `cancelled` - Task was cancelled
 
-### TaskState
+### TaskStatus
 
-Represents the current state of a task.
+Represents the current status details of a task.
 
 ```python  theme={null}
-from a2a.types import TaskState
+from a2a.types import TaskStatus
 ```
 
 **Fields:**
 
-* `status` - Current status (TaskStatus)
+* `state` - Current task state (`TaskState`)
 * `progress` - Progress percentage (0-100, optional)
 * `message` - Status message (optional)
+
+```python  theme={null}
+from a2a.types import TaskState, TaskStatus
+
+in_progress = TaskStatus(state=TaskState.working)
+done = TaskStatus(state=TaskState.completed)
+```
 
 ## Usage Example
 
