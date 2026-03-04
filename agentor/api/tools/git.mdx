@@ -1,0 +1,167 @@
+---
+title: "GitTool"
+description: "Execute Git commands on repositories"
+---
+
+`GitTool` provides methods to execute common Git operations on local repositories.
+
+## Installation
+
+Install the Git dependency:
+
+```bash  theme={null}
+pip install agentor[git]
+```
+
+## Constructor
+
+<ParamField path="api_key" type="str">
+  Optional API key for MCP server usage
+</ParamField>
+
+## Methods
+
+### clone
+
+Clone a repository from a remote URL.
+
+<ParamField path="repo_url" type="str" required>
+  Git repository URL (HTTPS or SSH)
+</ParamField>
+
+<ParamField path="to_path" type="str" required>
+  Local path where repository will be cloned
+</ParamField>
+
+**Returns:** Success message or error
+
+### pull
+
+Pull changes from the remote repository.
+
+<ParamField path="repo_path" type="str" required>
+  Path to local Git repository
+</ParamField>
+
+**Returns:** Success message or error
+
+### commit
+
+Commit all changes in the repository.
+
+<ParamField path="repo_path" type="str" required>
+  Path to local Git repository
+</ParamField>
+
+<ParamField path="message" type="str" required>
+  Commit message
+</ParamField>
+
+**Returns:** Confirmation with commit message
+
+### push
+
+Push commits to the remote repository.
+
+<ParamField path="repo_path" type="str" required>
+  Path to local Git repository
+</ParamField>
+
+**Returns:** Success message or error
+
+### status
+
+Get the current status of the repository.
+
+<ParamField path="repo_path" type="str" required>
+  Path to local Git repository
+</ParamField>
+
+**Returns:** Git status output
+
+## Usage
+
+### With Agentor agent
+
+```python  theme={null}
+from agentor import Agentor
+from agentor.tools import GitTool
+
+git_tool = GitTool()
+
+agent = Agentor(
+    name="Git Assistant",
+    model="gpt-4o-mini",
+    tools=[git_tool]
+)
+
+result = agent.run("Check the status of /path/to/repo")
+print(result)
+```
+
+### Clone a repository
+
+```python  theme={null}
+from agentor.tools import GitTool
+
+git = GitTool()
+
+result = git.clone(
+    repo_url="https://github.com/CelestoAI/agentor.git",
+    to_path="./agentor"
+)
+print(result)  # Cloned https://github.com/... to ./agentor
+```
+
+### Commit and push workflow
+
+```python  theme={null}
+# Check status
+status = git.status("/path/to/repo")
+print(status)
+
+# Commit changes (automatically stages all changes)
+result = git.commit(
+    repo_path="/path/to/repo",
+    message="Add new feature"
+)
+print(result)  # Committed with message: Add new feature
+
+# Push to remote
+result = git.push("/path/to/repo")
+print(result)  # Successfully pushed changes.
+```
+
+### Pull updates
+
+```python  theme={null}
+# Pull latest changes from remote
+result = git.pull("/path/to/repo")
+print(result)  # Successfully pulled changes.
+```
+
+## Notes
+
+<Note>
+  The `commit` method automatically stages all changes (equivalent to `git add -A`) before committing.
+</Note>
+
+<Warning>
+  GitTool requires appropriate Git credentials for push/pull operations. Make sure SSH keys or credential helpers are configured.
+</Warning>
+
+## Error handling
+
+```python  theme={null}
+# Invalid repository path
+result = git.status("/invalid/path")
+print(result)  # Error getting status: ...
+
+# Push without remote configured
+result = git.push("/path/to/repo")
+print(result)  # Error pushing changes: ...
+```
+
+## Source reference
+
+`src/agentor/tools/git.py:25`

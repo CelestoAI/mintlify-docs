@@ -1,0 +1,504 @@
+---
+title: "Building MCP Servers"
+description: "Create Model Context Protocol servers with LiteMCP for tool sharing and integration"
+---
+
+The Model Context Protocol (MCP) enables standardized communication between AI applications and external tools. Agentor's LiteMCP makes it easy to build MCP servers that work with any MCP client.
+
+## What is LiteMCP?
+
+LiteMCP is a FastAPI-native MCP server implementation. Unlike other solutions, it integrates directly with FastAPI using standard ASGI patterns, making it easy to add to existing applications.
+
+### LiteMCP vs FastMCP
+
+| Feature               | LiteMCP     | FastMCP           |
+| --------------------- | ----------- | ----------------- |
+| Integration           | Native ASGI | Requires mounting |
+| FastAPI Patterns      | ✅ Standard  | ⚠️ Diverges       |
+| Built-in CORS         | ✅           | ❌                 |
+| Custom Methods        | ✅ Full      | ⚠️ Limited        |
+| With Existing Backend | ✅ Easy      | ⚠️ Complex        |
+
+## Quick Start
+
+Create a basic MCP server:
+
+```python  theme={null}
+from agentor.mcp import LiteMCP
+
+# Create the server
+mcp = LiteMCP(
+    name="my-mcp-server",
+    version="1.0.0",
+    instructions="A simple MCP server example"
+)
+
+# Register a tool
+@mcp.tool(description="Get weather for a location")
+def get_weather(location: str) -> str:
+    """Get current weather for a location."""
+    return f"🌤️ Weather in {location}: Sunny, 72°F"
+
+# Serve the MCP server
+if __name__ == "__main__":
+    mcp.serve(port=8000)
+```
+
+Your MCP server is now running at `http://localhost:8000/mcp`!
+
+## Server Components
+
+### Tools
+
+Tools are functions that agents can call:
+
+```python  theme={null}
+from agentor.mcp import LiteMCP
+
+mcp = LiteMCP(name="utilities")
+
+@mcp.tool(description="Convert temperature between units")
+def convert_temperature(value: float, from_unit: str, to_unit: str) -> str:
+    """
+    Convert temperature between Celsius, Fahrenheit, and Kelvin.
+    
+    Args:
+        value: Temperature value
+        from_unit: Source unit (C, F, or K)
+        to_unit: Target unit (C, F, or K)
+    """
+    # Conversion logic
+    if from_unit == "C" and to_unit == "F":
+        result = (value * 9/5) + 32
+    elif from_unit == "F" and to_unit == "C":
+        result = (value - 32) * 5/9
+    elif from_unit == "C" and to_unit == "K":
+        result = value + 273.15
+    elif from_unit == "K" and to_unit == "C":
+        result = value - 273.15
+    else:
+        return f"Conversion {from_unit} to {to_unit} not implemented"
+    
+    return f"{value}°{from_unit} = {result:.2f}°{to_unit}"
+```
+
+### Prompts
+
+Prompts are reusable templates for common tasks:
+
+````python  theme={null}
+@mcp.prompt(description="Generate a code review prompt")
+def code_review(language: str, code: str) -> list:
+    """Generate a structured code review prompt."""
+    return [
+        {
+            "role": "user",
+            "content": {
+                "type": "text",
+                "text": f"Please review this {language} code:\n\n```{language}\n{code}\n```\n\nProvide feedback on:\n1. Code quality\n2. Best practices\n3. Potential bugs\n4. Performance"
+            }
+        }
+    ]
+
+@mcp.prompt(description="Create a debug prompt")
+def debug_help(error_message: str, code_snippet: str) -> list:
+    """Generate a debugging assistance prompt."""
+    return [
+        {
+            "role": "user",
+            "content": {
+                "type": "text",
+                "text": f"I'm getting this error:\n{error_message}\n\nIn this code:\n```\n{code_snippet}\n```\n\nHelp me debug it."
+            }
+        }
+    ]
+````
+
+### Resources
+
+Resources provide access to data or content:
+
+```python  theme={null}
+@mcp.resource(
+    uri="config://settings",
+    name="Application Settings",
+    mime_type="application/json"
+)
+def get_settings(uri: str) -> str:
+    """Get application configuration."""
+    settings = {
+        "theme": "dark",
+        "language": "en",
+        "notifications": True
+    }
+    import json
+    return json.dumps(settings, indent=2)
+
+@mcp.resource(
+    uri="docs://readme",
+    name="README",
+    mime_type="text/markdown"
+)
+def get_readme(uri: str) -> str:
+    """Get project README."""
+    return """
+# My Project
+
+This is an example MCP server.
+
+## Features
+- Feature 1
+- Feature 2
+    """
+```
+
+## Authentication & Context
+
+Access request headers, cookies, and authentication tokens:
+
+```python  theme={null}
+from agentor.mcp import LiteMCP, Context, get_context, get_token
+from fastapi import Depends
+
+mcp = LiteMCP(name="secure-server")
+
+@mcp.tool(description="Get user data with authentication")
+def get_user_data(
+    user_id: str,
+    ctx: Context = Depends(get_context)
+) -> str:
+    """
+    Fetch user data with context access.
+    
+    Args:
+        user_id: The user ID to fetch
+        ctx: Request context (injected automatically)
+    """
+    # Access headers
+    user_agent = ctx.headers.get("user-agent")
+    auth_header = ctx.headers.get("authorization")
+    
+    # Access cookies
+    session_id = ctx.cookies.get("session_id")
+    
+    # Your logic here
+    return f"User data for {user_id} (session: {session_id})"
+
+@mcp.tool(description="Secure operation with token validation")
+def secure_operation(action: str) -> str:
+    """Perform a secure operation."""
+    token = get_token()  # Get bearer token from Authorization header
+    
+    if token != "SECRET_TOKEN":
+        return "Error: Unauthorized"
+    
+    return f"Performed {action} successfully"
+```
+
+## Integration Patterns
+
+### Standalone Server
+
+Run LiteMCP as a standalone application:
+
+```python  theme={null}
+from agentor.mcp import LiteMCP
+
+app = LiteMCP(
+    name="my-server",
+    version="1.0.0"
+)
+
+@app.tool(description="Example tool")
+def my_tool(param: str) -> str:
+    return f"Result: {param}"
+
+if __name__ == "__main__":
+    # Method 1: Direct run
+    app.serve(port=8000)
+    
+    # Method 2: With custom settings
+    # app.serve(port=8000, enable_cors=True, reload=True)
+```
+
+### With Existing FastAPI App
+
+Integrate MCP into your existing FastAPI application:
+
+```python  theme={null}
+from fastapi import FastAPI
+from agentor.mcp import MCPAPIRouter
+
+app = FastAPI()
+
+# Your existing routes
+@app.get("/")
+def home():
+    return {"message": "Welcome"}
+
+@app.get("/health")
+def health():
+    return {"status": "healthy"}
+
+# Add MCP router
+mcp_router = MCPAPIRouter(
+    name="my-mcp",
+    version="1.0.0"
+)
+
+@mcp_router.tool(description="Get data")
+def get_data(id: str) -> str:
+    return f"Data for {id}"
+
+# Include the MCP router
+app.include_router(mcp_router.get_fastapi_router())
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+```
+
+Now your MCP endpoints are available at `/mcp` alongside your existing API.
+
+### With ASGI Servers
+
+LiteMCP is a native ASGI application:
+
+```python  theme={null}
+# server.py
+from agentor.mcp import LiteMCP
+
+app = LiteMCP(name="my-server")
+
+@app.tool(description="Example")
+def example(text: str) -> str:
+    return f"Echo: {text}"
+```
+
+Run with any ASGI server:
+
+```bash  theme={null}
+# Uvicorn
+uvicorn server:app --host 0.0.0.0 --port 8000 --reload
+
+# Hypercorn
+hypercorn server:app --bind 0.0.0.0:8000
+
+# Daphne  
+daphne -b 0.0.0.0 -p 8000 server:app
+```
+
+## Using MCP Servers with Agents
+
+### Connect to HTTP MCP Server
+
+```python  theme={null}
+import asyncio
+from agentor import Agentor
+from agentor.mcp import MCPServerStreamableHttp
+
+async def main():
+    async with MCPServerStreamableHttp(
+        name="My MCP Server",
+        params={
+            "url": "http://localhost:8000/mcp",
+            "timeout": 10,
+            "headers": {"Authorization": "Bearer token123"},
+        },
+        cache_tools_list=True,
+        max_retry_attempts=3
+    ) as server:
+        agent = Agentor(
+            name="Assistant",
+            model="gpt-5-mini",
+            instructions="You are a helpful assistant with access to external tools.",
+            tools=[server]  # Pass the MCP server as a tool
+        )
+        
+        result = await agent.arun("Use the weather tool to check London")
+        print(result.final_output)
+
+asyncio.run(main())
+```
+
+### Connect to Celesto MCP Hub
+
+Access shared MCP servers via Celesto:
+
+```python  theme={null}
+import asyncio
+from agentor import Agentor, CelestoMCPHub
+
+async def main():
+    async with CelestoMCPHub(
+        api_key="your-celesto-api-key",
+        timeout=10
+    ) as hub:
+        agent = Agentor(
+            name="Search Agent",
+            model="gpt-5-mini",
+            tools=[hub]
+        )
+        
+        result = await agent.arun("Search for recent AI news")
+        print(result.final_output)
+
+asyncio.run(main())
+```
+
+## Complete Example
+
+Here's a full-featured MCP server:
+
+```python  theme={null}
+from agentor.mcp import LiteMCP, Context, get_context, get_token
+from fastapi import Depends
+import json
+
+app = LiteMCP(
+    name="production-mcp-server",
+    version="2.0.0",
+    instructions="Production-ready MCP server with tools, prompts, and resources"
+)
+
+# Tool with authentication
+@app.tool(description="Get weather data")
+def get_weather(location: str) -> str:
+    """Get weather for a location."""
+    token = get_token()
+    if not token or token != "valid-token":
+        return "Error: Unauthorized"
+    
+    # Mock weather data
+    return f"Weather in {location}: Sunny, 72°F, Humidity: 45%"
+
+# Tool with context
+@app.tool(description="Personalized greeting")
+def greet_user(name: str, ctx: Context = Depends(get_context)) -> str:
+    """Greet user with personalization."""
+    session = ctx.cookies.get("session_id", "unknown")
+    return f"Hello {name}! Session: {session}"
+
+# Prompt template
+@app.prompt(description="Generate email draft")
+def email_template(recipient: str, topic: str) -> list:
+    """Create an email draft template."""
+    return [{
+        "role": "user",
+        "content": {
+            "type": "text",
+            "text": f"Draft a professional email to {recipient} about {topic}"
+        }
+    }]
+
+# Resource
+@app.resource(
+    uri="data://config",
+    name="Configuration",
+    mime_type="application/json"
+)
+def get_config(uri: str) -> str:
+    """Get server configuration."""
+    config = {
+        "version": "2.0.0",
+        "features": ["weather", "greetings", "email"],
+        "max_requests": 1000
+    }
+    return json.dumps(config, indent=2)
+
+if __name__ == "__main__":
+    app.serve(
+        host="0.0.0.0",
+        port=8000,
+        enable_cors=True
+    )
+```
+
+## Best Practices
+
+<Steps>
+  ### Use Descriptive Names
+
+  Choose clear, descriptive names for tools and servers:
+
+  ```python  theme={null}
+  # Good
+  @mcp.tool(description="Convert currency between USD, EUR, and GBP")
+  def convert_currency(amount: float, from_currency: str, to_currency: str) -> str:
+      pass
+
+  # Less clear
+  @mcp.tool(description="Convert")
+  def convert(a: float, b: str, c: str) -> str:
+      pass
+  ```
+
+  ### Implement Authentication
+
+  Secure your MCP server:
+
+  ```python  theme={null}
+  @mcp.tool(description="Protected operation")
+  def protected_op(data: str) -> str:
+      token = get_token()
+      if not is_valid_token(token):
+          return "Error: Unauthorized"
+      # Process data
+  ```
+
+  ### Enable CORS for Web Clients
+
+  ```python  theme={null}
+  app.serve(
+      host="0.0.0.0",
+      port=8000,
+      enable_cors=True  # Enable for web browsers
+  )
+  ```
+
+  ### Cache Tool Lists
+
+  When connecting to MCP servers:
+
+  ```python  theme={null}
+  async with MCPServerStreamableHttp(
+      name="Server",
+      params={"url": "http://localhost:8000/mcp"},
+      cache_tools_list=True,  # Cache for better performance
+      max_retry_attempts=3
+  ) as server:
+      # Use server
+  ```
+
+  ### Handle Errors Gracefully
+
+  ```python  theme={null}
+  @mcp.tool(description="Fetch data")
+  def fetch_data(source: str) -> str:
+      try:
+          # Fetch logic
+          return data
+      except Exception as e:
+          return f"Error: {str(e)}"
+  ```
+</Steps>
+
+## Deployment
+
+Deploy your MCP server to Celesto:
+
+```bash  theme={null}
+celesto deploy
+```
+
+Your MCP server will be available at:
+
+```
+https://api.celesto.ai/deploy/apps/<app-name>/mcp
+```
+
+## Next Steps
+
+* Learn about [agent-to-agent communication](/agentor/guides/agent-communication) using A2A protocol
+* Set up [observability](/agentor/guides/observability) for your MCP servers
+* Deploy with the [Celesto CLI](/agentor/guides/deployment)

@@ -1,93 +1,53 @@
 ---
 title: "Welcome to Celesto AI"
 sidebarTitle: "Introduction"
-description: "Fastest way to build and deploy long-running AI agents—with durability, observability, and security."
+description: "Production control plane for AI agents, secure runtimes, and integrations."
 ---
 
 # Command Center for AI Agents
 
-<Columns cols={2}>
-  <div style={{ flex:3,display:"flex",alignItems:"center" }}>
-  Celesto is a production control plane for AI agents and MCP tools—combining runtime, security, and observability so teams can deploy always-on agent systems with one workflow.
+Celesto is a production control plane for AI agents and MCP tools, combining runtime, security, and observability so teams can deploy always-on agent systems with one workflow.
 
-  </div>
-
-  <div style={{ flex:1,display:"flex",justifyContent:"center",alignItems:"center" }}>
-  <img
-    src="/assets/undraw_stars_5pgw.svg"
-    alt="Celesto AI Platform"
-    width="240"
-  />
-
-  </div>
-</Columns>
-
-<Card title="Quickstart" icon="bolt" href="/agentor/overview">
-  Build your first AI agent in 5 minutes
-</Card>
-
----
-
-## Why Celesto?
-
-<CardGroup cols={3}>
-  <Card title="🚀 Fast Development" icon="code">
-    Build agents with simple Python APIs. No complex infrastructure setup required.
-  </Card>
-  <Card title="🔒 A2A Security" icon="shield">
-    Built-in OAuth, authentication, and secure _Agent-to-Agent_ communication.
-  </Card>
-  <Card title="🔌 100+ Integrations" icon="plug">
-    Connect to databases, APIs, and external services via MCP protocol.
-  </Card>
-</CardGroup>
-
----
-
-## Quick Example
-
-Build an AI Agent with tool access in just a few lines:
-
-```python
-from agentor.tools import WebSearchTool
-from agentor import Agentor
-
-agent = Agentor(
-    name="research_assistant",
-    model="gpt-5",
-    tools=[WebSearchTool()]
-)
-
-# Run agent with natural language
-result = agent.run("Find the latest AI research papers on arxiv")
-print(result)
-```
-
-<Tip>
-  Check out our [Quickstart Guide](/agentor/overview) to build your first agent in minutes.
-</Tip>
-
----
-
-## Core Features
+## Products
 
 <CardGroup cols={2}>
-  <Card title="Agentor - Build Agents" icon="robot" href="/agentor/overview">
-    Open-source Python framework for building and deploying agents and AI tools.
+  <Card title="Agentor (OSS)" icon="robot" href="/agentor/home">
+    Build production-ready AI agents with tool use, MCP server support, A2A communication, and deployment workflows.
   </Card>
-  <Card title="SuperAuth - Security Layer" icon="lock" href="/superauth/google-oauth-setup">
-    Enterprise-grade security layer with OAuth 2.0, role-based access control, and secure agent-to-agent communication.
+
+  <Card title="SmolVM (OSS)" icon="box" href="/smolvm/introduction">
+    Run untrusted agent-generated code safely in microVM sandboxes with fast startup and strong isolation.
   </Card>
-  <Card title="Tool Use & MCP Servers" icon="wrench" href="/agentor/tools/overview">
-    Access 100+ prebuilt tools for real-time integrations with databases, APIs, and external services via MCP protocol.
+
+  <Card title="SuperAuth" icon="lock" href="/superauth/google-oauth-setup">
+    Add OAuth-based access and secure identity flows for agent tools and integrations like Gmail and Calendar.
   </Card>
-  <Card title="Deploy Anywhere" icon="cloud" href="https://celesto.ai/">
-    Deploy agents with one command using the Celesto CLI with built-in auto-scaling, monitoring, and CI/CD support.
+
+  <Card title="Celesto Platform" icon="table-cells" href="/celesto-sdk/overview">
+    Use the Celesto SDK and platform APIs to connect managed tools, orchestrate workloads, and operate agents reliably.
   </Card>
 </CardGroup>
 
----
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="Customer Support Agents" icon="headset" href="/enterprise/use-cases/customer-support-Agent">
+    Resolve tickets faster with context-aware agents that can query systems and take actions safely.
+  </Card>
+
+  <Card title="E-commerce Agents" icon="shopping-cart" href="/enterprise/use-cases/ecommerce-Agent">
+    Power shopping assistants for catalog search, recommendations, and order workflows.
+  </Card>
+
+  <Card title="HR Agents" icon="users" href="/enterprise/use-cases/human-resource-Agent">
+    Automate onboarding, policy Q&A, and internal support with governed agent workflows.
+  </Card>
+
+  <Card title="SDR Agents" icon="chart-line" href="/enterprise/use-cases/SDR-Agent">
+    Assist sales outreach and qualification with research, personalization, and CRM-aware execution.
+  </Card>
+</CardGroup>
 
 <Card title="Need Help?" icon="discord" href="https://discord.gg/KNb5UkrAmm">
-  Join our Discord community to get help, share ideas, and connect with other developers.
+  Join our Discord community to get help, share ideas, and connect with other builders.
 </Card>

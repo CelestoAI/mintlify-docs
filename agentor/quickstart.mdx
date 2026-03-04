@@ -1,0 +1,285 @@
+---
+title: "Quickstart"
+description: "Build your first AI agent with Agentor in under 5 minutes"
+---
+
+Get up and running with Agentor by building a simple weather agent and then exploring more advanced features.
+
+## Prerequisites
+
+Before starting, make sure you have:
+
+* Python 3.10 or higher installed
+* An API key for an LLM provider (OpenAI, Anthropic, or Google)
+
+## Installation
+
+<Steps>
+  <Step title="Install Agentor">
+    Install Agentor using pip:
+
+    ```bash  theme={null}
+    pip install agentor
+    ```
+  </Step>
+
+  <Step title="Set up your API key">
+    Set your LLM provider API key as an environment variable:
+
+    ```bash  theme={null}
+    # For OpenAI
+    export OPENAI_API_KEY="your-api-key-here"
+
+    # For Anthropic
+    export ANTHROPIC_API_KEY="your-api-key-here"
+
+    # For Google
+    export GEMINI_API_KEY="your-api-key-here"
+    ```
+  </Step>
+</Steps>
+
+## Build your first agent
+
+Create a simple weather agent that can answer questions about the weather:
+
+```python  theme={null}
+from agentor import Agentor
+
+agent = Agentor(
+    name="Weather Agent",
+    model="gpt-4o-mini",
+    tools=["get_weather"]
+)
+
+# Run the agent
+result = agent.run("What is the weather in London?")
+print(result)
+```
+
+<Note>
+  The `get_weather` tool is a built-in tool that uses the WeatherAPI.com service. You'll need to set the `WEATHER_API_KEY` environment variable to use it.
+</Note>
+
+## Run with streaming
+
+See agent responses in real-time with streaming:
+
+```python  theme={null}
+import asyncio
+from agentor import Agentor
+
+agent = Agentor(
+    name="Weather Agent",
+    model="gpt-4o-mini",
+    tools=["get_weather"]
+)
+
+async def main():
+    async for event in agent.stream_chat("What is the weather in Tokyo?"):
+        print(event, flush=True)
+
+asyncio.run(main())
+```
+
+## Add custom instructions
+
+Guide your agent's behavior with custom instructions:
+
+```python  theme={null}
+from agentor import Agentor
+
+agent = Agentor(
+    name="Weather Bot",
+    model="gpt-4o-mini",
+    instructions="You are a friendly weather assistant. Always include temperature in both Celsius and Fahrenheit.",
+    tools=["get_weather"]
+)
+
+result = agent.run("How's the weather in Paris?")
+print(result)
+```
+
+## Use multiple tools
+
+Combine multiple tools to create more capable agents:
+
+```python  theme={null}
+from agentor import Agentor, function_tool
+
+@function_tool
+def calculate_temperature_diff(temp1: float, temp2: float) -> str:
+    """Calculate the temperature difference between two values."""
+    diff = abs(temp1 - temp2)
+    return f"The temperature difference is {diff}°F"
+
+agent = Agentor(
+    name="Weather Analyzer",
+    model="gpt-4o-mini",
+    tools=["get_weather", calculate_temperature_diff]
+)
+
+result = agent.run("What's the temperature difference between London and Paris?")
+print(result)
+```
+
+## Serve as an API
+
+Turn your agent into a REST API with a single line:
+
+```python  theme={null}
+from agentor import Agentor
+
+agent = Agentor(
+    name="Weather Agent",
+    model="gpt-4o-mini",
+    tools=["get_weather"]
+)
+
+# Serve the agent on port 8000
+agent.serve(port=8000)
+```
+
+This creates a FastAPI server with these endpoints:
+
+* `POST /chat` - Send messages to the agent
+* `GET /.well-known/agent-card.json` - A2A protocol agent card
+
+### Query the API
+
+Use curl to interact with your agent API:
+
+```bash  theme={null}
+curl -X 'POST' \
+  'http://localhost:8000/chat' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "input": "What is the weather in London?"
+}'
+```
+
+## Deploy to production
+
+Deploy your agent to Celesto AI's serverless platform:
+
+<Steps>
+  <Step title="Install the Celesto CLI">
+    The CLI is included with Agentor:
+
+    ```bash  theme={null}
+    celesto --version
+    ```
+  </Step>
+
+  <Step title="Create your agent file">
+    Save your agent code to a Python file (e.g., `agent.py`):
+
+    ```python  theme={null}
+    from agentor import Agentor
+
+    agent = Agentor(
+        name="Weather Agent",
+        model="gpt-4o-mini",
+        tools=["get_weather"]
+    )
+
+    if __name__ == "__main__":
+        agent.serve()
+    ```
+  </Step>
+
+  <Step title="Deploy">
+    Deploy your agent with a single command:
+
+    ```bash  theme={null}
+    celesto deploy
+    ```
+
+    Your agent will be available at:
+
+    ```
+    https://api.celesto.ai/deploy/apps/<app-name>
+    ```
+  </Step>
+</Steps>
+
+## Use different LLM providers
+
+Agentor supports multiple LLM providers through LiteLLM:
+
+<CodeGroup>
+  ```python OpenAI theme={null}
+  from agentor import Agentor
+
+  agent = Agentor(
+      name="My Agent",
+      model="gpt-4o-mini",  # or gpt-4o, gpt-4-turbo
+      tools=["get_weather"]
+  )
+  ```
+
+  ```python Anthropic theme={null}
+  from agentor import Agentor
+
+  agent = Agentor(
+      name="My Agent",
+      model="anthropic/claude-3.5-sonnet",
+      tools=["get_weather"]
+  )
+  ```
+
+  ```python Google theme={null}
+  from agentor import Agentor
+
+  agent = Agentor(
+      name="My Agent",
+      model="gemini/gemini-2.0-flash-exp",
+      tools=["get_weather"]
+  )
+  ```
+</CodeGroup>
+
+## Configure model parameters
+
+Fine-tune model behavior with `ModelSettings`:
+
+```python  theme={null}
+from agentor import Agentor, ModelSettings
+
+agent = Agentor(
+    name="Creative Writer",
+    model="gpt-4o",
+    model_settings=ModelSettings(
+        temperature=0.9,  # More creative
+        max_tokens=2000,
+        top_p=0.95
+    ),
+    tools=[]
+)
+
+result = agent.run("Write a short story about a robot learning to paint")
+print(result)
+```
+
+## Next steps
+
+Now that you've built your first agent, explore more advanced features:
+
+<CardGroup cols={2}>
+  <Card title="Building agents" icon="robot" href="/agentor/guides/building-agents">
+    Learn advanced agent patterns and best practices
+  </Card>
+
+  <Card title="Custom tools" icon="wrench" href="/agentor/guides/custom-tools">
+    Create custom tools for your agents
+  </Card>
+
+  <Card title="MCP servers" icon="server" href="/agentor/guides/mcp-servers">
+    Build MCP servers with LiteMCP
+  </Card>
+
+  <Card title="Agent communication" icon="network-wired" href="/agentor/guides/agent-communication">
+    Enable agent-to-agent communication with A2A protocol
+  </Card>
+</CardGroup>

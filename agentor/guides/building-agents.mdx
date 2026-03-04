@@ -1,0 +1,307 @@
+---
+title: "Building Agents"
+description: "Learn how to build production-ready AI agents with Agentor"
+---
+
+Agentor makes it easy to build AI agents with tool access, model flexibility, and production-ready features. This guide covers everything from basic agent creation to advanced patterns.
+
+## Quick Start
+
+Create your first agent in just a few lines:
+
+```python  theme={null}
+from agentor import Agentor
+
+agent = Agentor(
+    name="Weather Agent",
+    model="gpt-5-mini",
+    instructions="You are a helpful weather assistant."
+)
+
+result = agent.run("What is the weather in London?")
+print(result)
+```
+
+## Core Concepts
+
+### Agent Configuration
+
+Every agent has three key components:
+
+* **name**: Identifies your agent
+* **model**: The LLM to use (supports any LiteLLM model)
+* **instructions**: System prompt that defines agent behavior
+
+```python  theme={null}
+agent = Agentor(
+    name="Research Assistant",
+    model="anthropic/claude-3.5-sonnet",
+    instructions="You are a research assistant that provides detailed, well-sourced answers.",
+    api_key="your-api-key"  # Optional: model-specific API key
+)
+```
+
+### Model Selection
+
+Agentor supports any model available through LiteLLM. Use the `provider/model-name` format:
+
+```python  theme={null}
+# OpenAI models
+agent = Agentor(name="Agent", model="gpt-5-mini")
+agent = Agentor(name="Agent", model="gpt-4o")
+
+# Anthropic models  
+agent = Agentor(name="Agent", model="anthropic/claude-3.5-sonnet")
+
+# Google models
+agent = Agentor(name="Agent", model="gemini/gemini-2.5-pro")
+
+# Custom models
+agent = Agentor(name="Agent", model="openai/gpt-4o-mini", api_key=os.environ.get("OPENAI_API_KEY"))
+```
+
+### Model Settings
+
+Customize model behavior with `ModelSettings`:
+
+```python  theme={null}
+from agentor import Agentor, ModelSettings
+
+model_settings = ModelSettings(
+    temperature=0.7,
+    max_tokens=2000,
+    top_p=0.9
+)
+
+agent = Agentor(
+    name="Creative Writer",
+    model="gpt-5-mini",
+    model_settings=model_settings
+)
+```
+
+## Running Agents
+
+### Synchronous Execution
+
+For simple, blocking execution:
+
+```python  theme={null}
+result = agent.run("Explain quantum computing in simple terms")
+print(result)
+```
+
+### Async Execution
+
+For better performance and concurrent operations:
+
+```python  theme={null}
+import asyncio
+
+async def main():
+    result = await agent.arun("What is the capital of France?")
+    print(result.final_output)
+
+asyncio.run(main())
+```
+
+### Batch Processing
+
+Process multiple prompts concurrently:
+
+```python  theme={null}
+import asyncio
+from agentor import Agentor
+
+async def main():
+    agent = Agentor(name="Assistant", model="gpt-5-mini")
+    
+    prompts = [
+        "What is the weather in London?",
+        "What is the weather in Paris?",
+        "What is the weather in Tokyo?"
+    ]
+    
+    # Process all prompts concurrently with controlled concurrency
+    results = await agent.arun(prompts, limit_concurrency=10)
+    
+    for result in results:
+        print(result.final_output)
+
+asyncio.run(main())
+```
+
+### Conversation Context
+
+Maintain conversation history with message format:
+
+```python  theme={null}
+messages = [
+    {"role": "user", "content": "Hello, I need help with Python."},
+    {"role": "assistant", "content": "I'd be happy to help! What do you need?"},
+    {"role": "user", "content": "How do I read a file?"}
+]
+
+result = await agent.arun(messages)
+```
+
+## Agent from Markdown
+
+Create agents from markdown files with frontmatter:
+
+```markdown  theme={null}
+---
+name: WeatherBot
+tools: [get_weather]
+model: gpt-4o-mini
+temperature: 0.3
+---
+You are a concise weather assistant. Always provide temperature in Celsius.
+```
+
+Load the agent:
+
+```python  theme={null}
+from agentor import Agentor
+
+agent = Agentor.from_md("weatherbot.md")
+result = agent.run("What's the weather in Paris?")
+```
+
+## Advanced Features
+
+### Fallback Models
+
+Automatically retry with fallback models on rate limits or errors:
+
+```python  theme={null}
+result = await agent.arun(
+    "Complex task here",
+    fallback_models=["gpt-4o-mini", "anthropic/claude-3-haiku"]
+)
+```
+
+### Structured Outputs
+
+Get typed responses with Pydantic models:
+
+```python  theme={null}
+from pydantic import BaseModel
+
+class WeatherResponse(BaseModel):
+    location: str
+    temperature: float
+    conditions: str
+    humidity: int
+
+agent = Agentor(
+    name="Weather Agent",
+    model="gpt-5-mini",
+    output_type=WeatherResponse
+)
+
+result = agent.run("What's the weather in London?")
+# result will be a WeatherResponse object
+```
+
+### Agent Skills
+
+Skills are folders of instructions and scripts that agents load dynamically:
+
+```python  theme={null}
+from agentor import Agentor
+from agentor.tools import ShellTool
+
+agent = Agentor(
+    name="Assistant",
+    model="gemini/gemini-2-flash-preview",
+    instructions="Your job is to create GIFs. Lean on skills and tools.",
+    skills=[".skills/slack-gif-creator"],
+    tools=[ShellTool()]
+)
+
+result = await agent.arun("Create a cat gif")
+```
+
+Skill folder structure:
+
+```
+example-skill/
+├── SKILL.md        # Required: instructions + metadata
+├── scripts/        # Optional: helper scripts
+├── assets/         # Optional: templates/resources  
+└── references/     # Optional: docs or checklists
+```
+
+### Thinking Mode
+
+Get the agent's reasoning process:
+
+```python  theme={null}
+result = agent.think("Should I invest in cryptocurrency?")
+print(result.final_output)
+```
+
+## Best Practices
+
+<Steps>
+  ### Choose the Right Model
+
+  Match the model to your use case:
+
+  * **Fast responses**: `gpt-5-mini`, `gpt-4o-mini`
+  * **Complex reasoning**: `anthropic/claude-3.5-sonnet`, `gpt-4o`
+  * **Cost-effective**: `gemini/gemini-2.5-flash`
+
+  ### Write Clear Instructions
+
+  Good instructions are:
+
+  * Specific about the agent's role
+  * Clear about expected behavior
+  * Include relevant constraints
+
+  ```python  theme={null}
+  instructions = """
+  You are a technical support agent for a SaaS product.
+
+  Guidelines:
+  - Always be polite and professional
+  - Ask clarifying questions before assuming
+  - Provide step-by-step solutions
+  - If unsure, escalate to human support
+  """
+  ```
+
+  ### Handle Errors Gracefully
+
+  ```python  theme={null}
+  try:
+      result = await agent.arun(user_input)
+  except Exception as e:
+      print(f"Agent error: {e}")
+      # Fallback logic
+  ```
+
+  ### Use Async for Production
+
+  Async execution provides better performance and resource utilization:
+
+  ```python  theme={null}
+  async def process_requests(requests):
+      agent = Agentor(name="Assistant", model="gpt-5-mini")
+      results = await agent.arun(
+          requests,
+          limit_concurrency=20,
+          max_turns=15
+      )
+      return results
+  ```
+</Steps>
+
+## Next Steps
+
+* Learn how to add [custom tools](/agentor/guides/custom-tools) to your agents
+* Set up [streaming responses](/agentor/guides/streaming) for real-time output
+* Deploy your agent with the [Celesto CLI](/agentor/guides/deployment)
+* Enable [observability](/agentor/guides/observability) for production monitoring

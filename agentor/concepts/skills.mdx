@@ -1,0 +1,404 @@
+---
+title: "Skills System"
+description: "Dynamically load specialized instructions and resources to improve agent performance on specific tasks"
+---
+
+## Overview
+
+Skills are folders of instructions, scripts, and resources that agents load dynamically to improve performance on specialized tasks. The agent first sees only a skill's name and short description. When the task matches, it loads the full `SKILL.md` and can execute commands the skill references.
+
+## How Skills Work
+
+1. **Starts light** - Agent discovers skills by name/description only
+2. **Loads on demand** - Pulls full instructions from `SKILL.md` when relevant
+3. **Executes safely** - Runs skill-driven commands in isolated environment
+
+## Skill Structure
+
+A skill is a directory with this layout:
+
+```
+example-skill/
+├── SKILL.md        # Required: instructions + metadata
+├── scripts/        # Optional: helper scripts
+├── assets/         # Optional: templates/resources
+└── references/     # Optional: docs or checklists
+```
+
+### SKILL.md Format
+
+The `SKILL.md` file contains YAML frontmatter and markdown content:
+
+````markdown  theme={null}
+---
+name: Slack GIF Creator
+description: Create GIFs for Slack from video files
+---
+
+# Slack GIF Creator
+
+This skill helps create optimized GIFs for Slack.
+
+## Usage
+
+1. Accept a video file path or URL
+2. Use ffmpeg to convert to GIF
+3. Optimize for Slack's size limits (< 1MB)
+
+## Commands
+
+```bash
+ffmpeg -i input.mp4 -vf "scale=480:-1" -r 10 output.gif
+````
+
+## Notes
+
+* Slack prefers GIFs under 1MB
+* 480px width is optimal
+* 10 fps is usually sufficient
+
+````
+
+## Loading Skills
+
+The `Skills` class (src/agentor/skills.py:8) loads skills from paths:
+
+```python
+from agentor.skills import Skills
+
+# Load from directory
+skill = Skills.load_from_path(".skills/slack-gif-creator")
+
+# Load from SKILL.md directly
+skill = Skills.load_from_path(".skills/slack-gif-creator/SKILL.md")
+````
+
+### Skill Attributes
+
+```python  theme={null}
+@dataclass
+class Skills:
+    name: str          # From YAML frontmatter
+    description: str   # From YAML frontmatter
+    location: str      # File path
+```
+
+## Using Skills with Agents
+
+Pass skill paths to the agent constructor (src/agentor/core/agent.py:182):
+
+```python  theme={null}
+from agentor import Agentor
+from agentor.tools import ShellTool
+
+agent = Agentor(
+    name="Assistant",
+    model="gemini/gemini-3-flash-preview",
+    instructions="Your job is to create GIFs. Use available skills.",
+    skills=[".skills/slack-gif-creator"],
+    tools=[ShellTool()],
+)
+
+result = await agent.chat("produce a cat gif")
+```
+
+### Multiple Skills
+
+Provide multiple skills for different capabilities:
+
+```python  theme={null}
+agent = Agentor(
+    name="Developer Assistant",
+    skills=[
+        ".skills/git-workflow",
+        ".skills/python-debugging",
+        ".skills/api-testing"
+    ],
+    tools=[ShellTool()]
+)
+```
+
+## Skill Injection
+
+Skills are injected into the agent's system prompt as XML (src/agentor/core/agent.py:227):
+
+```python  theme={null}
+def _inject_skills(self, skills: List[str]) -> str:
+    """Inject skills into the agent system prompt."""
+    instructions = []
+    for skill in skills:
+        skill = Skills.load_from_path(skill)
+        instructions.append(f"{skill.to_xml()}")
+    return "<available_skills>" + "".join(instructions) + "</available_skills>"
+```
+
+### XML Format
+
+Skills are serialized to XML (src/agentor/skills.py:34):
+
+```xml  theme={null}
+<available_skills>
+  <skill>
+    <name>Slack GIF Creator</name>
+    <description>Create GIFs for Slack from video files</description>
+    <location>.skills/slack-gif-creator/SKILL.md</location>
+  </skill>
+</available_skills>
+```
+
+The agent sees this in its system prompt and can load the full skill content when needed.
+
+## Example: GIF Creator Skill
+
+From the README example:
+
+```python  theme={null}
+from agentor.tools import ShellTool
+from agentor import Agentor
+
+agent = Agentor(
+    name="GIF Assistant",
+    model="gemini/gemini-3-flash-preview",
+    instructions="Create GIFs using available tools and skills.",
+    skills=[".skills/slack-gif-creator"],
+    tools=[ShellTool()],
+)
+
+async for chunk in await agent.chat("produce a cat gif", stream=True):
+    print(chunk)
+```
+
+The agent:
+
+1. Sees the skill name and description in its prompt
+2. Recognizes the task matches the skill
+3. Loads full instructions from `.skills/slack-gif-creator/SKILL.md`
+4. Uses ShellTool to execute ffmpeg commands from the skill
+5. Creates an optimized GIF for Slack
+
+## Creating Custom Skills
+
+### 1. Create Directory Structure
+
+```bash  theme={null}
+mkdir -p .skills/my-skill/{scripts,assets,references}
+```
+
+### 2. Write SKILL.md
+
+````markdown  theme={null}
+---
+name: My Custom Skill
+description: Brief description of what this skill does
+---
+
+# My Custom Skill
+
+Detailed instructions for the agent.
+
+## When to Use
+
+Use this skill when:
+- Condition 1
+- Condition 2
+
+## Steps
+
+1. First step
+2. Second step
+
+## Example Commands
+
+```bash
+# Helpful commands the agent can run
+ls -la
+````
+
+## Tips
+
+* Important tip 1
+* Important tip 2
+
+````
+
+### 3. Add Scripts (Optional)
+
+Place helper scripts in `scripts/`:
+
+```bash
+# scripts/process.sh
+#!/bin/bash
+echo "Processing $1"
+````
+
+### 4. Add Resources (Optional)
+
+Place templates or reference files:
+
+```
+assets/
+  template.json
+  config.yaml
+
+references/
+  api-docs.md
+  troubleshooting.md
+```
+
+## Skill Best Practices
+
+### Clear Descriptions
+
+Write concise descriptions that help the agent decide when to use the skill:
+
+```yaml  theme={null}
+---
+name: Docker Deployment
+description: Build and deploy Docker containers to production
+---
+```
+
+### Step-by-Step Instructions
+
+Provide clear, ordered steps:
+
+```markdown  theme={null}
+## Deployment Process
+
+1. Build the Docker image: `docker build -t app:latest .`
+2. Tag for registry: `docker tag app:latest registry.io/app:latest`
+3. Push to registry: `docker push registry.io/app:latest`
+4. Deploy to production: `kubectl apply -f deployment.yaml`
+```
+
+### Include Examples
+
+Show concrete examples the agent can follow:
+
+````markdown  theme={null}
+## Example: Deploy Web App
+
+```bash
+# Build and deploy
+docker build -t myapp:v1.0 .
+docker push registry.io/myapp:v1.0
+kubectl set image deployment/myapp app=registry.io/myapp:v1.0
+````
+
+````
+
+### Safety Warnings
+
+Include warnings for destructive operations:
+
+```markdown
+## Important
+
+⚠️ Always backup the database before running migrations.
+⚠️ Never run `DROP DATABASE` in production.
+````
+
+## Tool Integration
+
+Skills work best with tools that can execute their instructions:
+
+### Shell Tool
+
+For command execution:
+
+```python  theme={null}
+from agentor.tools import ShellTool
+
+agent = Agentor(
+    skills=[".skills/bash-operations"],
+    tools=[ShellTool()]
+)
+```
+
+### File Tools
+
+For file manipulation:
+
+```python  theme={null}
+from agentor.tools.base import BaseTool, capability
+
+class FileTool(BaseTool):
+    @capability
+    def read_file(self, path: str) -> str:
+        with open(path) as f:
+            return f.read()
+
+agent = Agentor(
+    skills=[".skills/file-processing"],
+    tools=[FileTool()]
+)
+```
+
+## JSON Serialization
+
+Export skills to JSON (src/agentor/skills.py:43):
+
+```python  theme={null}
+skill = Skills.load_from_path(".skills/my-skill")
+json_data = skill.to_json()
+print(json_data)
+```
+
+Output:
+
+```json  theme={null}
+{
+  "name": "My Skill",
+  "description": "Skill description",
+  "location": ".skills/my-skill/SKILL.md"
+}
+```
+
+## Error Handling
+
+The loader validates skill structure (src/agentor/skills.py:14):
+
+```python  theme={null}
+# Raises FileNotFoundError if path doesn't exist
+skill = Skills.load_from_path("invalid/path")
+
+# Raises ValueError if not a markdown file
+skill = Skills.load_from_path("file.txt")
+```
+
+## Skill Discovery
+
+Agents see skill summaries in their system prompt:
+
+```xml  theme={null}
+<available_skills>
+  <skill>
+    <name>Git Workflow</name>
+    <description>Standard Git operations and best practices</description>
+    <location>.skills/git-workflow/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>Python Debugging</name>
+    <description>Debug Python applications using pdb and logging</description>
+    <location>.skills/python-debugging/SKILL.md</location>
+  </skill>
+</available_skills>
+```
+
+The agent can then request the full content when needed.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Tools" icon="wrench" href="/agentor/concepts/tools">
+    Learn about tools that execute skill instructions
+  </Card>
+
+  <Card title="Agents" icon="robot" href="/agentor/concepts/agents">
+    Understand agent architecture and lifecycle
+  </Card>
+
+  <Card title="Examples" icon="code" href="https://github.com/celestoai/agentor/tree/main/docs/examples">
+    See example skills and implementations
+  </Card>
+</CardGroup>

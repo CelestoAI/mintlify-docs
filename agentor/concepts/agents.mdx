@@ -1,0 +1,239 @@
+---
+title: "Agent Architecture"
+description: "Understand the Agentor agent lifecycle, configuration, and execution model"
+---
+
+## Overview
+
+Agentor agents are built on top of the `Agent` class from the agents library, providing a high-level abstraction for creating production-ready AI agents with tools, skills, and external integrations.
+
+## Agent Class
+
+The core `Agentor` class (src/agentor/core/agent.py:138) provides the primary interface for building agents:
+
+```python  theme={null}
+from agentor import Agentor
+
+agent = Agentor(
+    name="Weather Agent",
+    instructions="You are a helpful weather assistant",
+    model="gpt-5-mini",
+    tools=["get_weather"],
+)
+```
+
+### Constructor Parameters
+
+<ParamField path="name" type="str" required>
+  Agent name used in logs, traces, and A2A protocol agent cards
+</ParamField>
+
+<ParamField path="instructions" type="str">
+  System prompt defining agent behavior and personality
+</ParamField>
+
+<ParamField path="model" type="str | LitellmModel" default="gpt-5-nano">
+  Model identifier. Supports any LiteLLM provider format:
+
+  * `"gpt-5-mini"` - OpenAI models
+  * `"gemini/gemini-2.5-pro"` - Google models
+  * `"anthropic/claude-3.5"` - Anthropic models
+</ParamField>
+
+<ParamField path="tools" type="List[FunctionTool | str | MCPServerStreamableHttp | BaseTool]">
+  Tools available to the agent. Can be:
+
+  * String names from the tool registry (e.g., `"get_weather"`)
+  * FunctionTool instances decorated with `@function_tool`
+  * BaseTool subclasses with `@capability` methods
+  * MCP server connections
+</ParamField>
+
+<ParamField path="output_type" type="type[Any] | AgentOutputSchemaBase">
+  Pydantic model for structured output validation
+</ParamField>
+
+<ParamField path="model_settings" type="ModelSettings">
+  Model configuration including temperature, top\_p, max\_tokens
+</ParamField>
+
+<ParamField path="skills" type="List[str]">
+  Paths to skill directories (see [Skills](/agentor/concepts/skills))
+</ParamField>
+
+<ParamField path="enable_tracing" type="bool" default={false}>
+  Enable Celesto AI tracing and observability
+</ParamField>
+
+<ParamField path="api_key" type="str">
+  API key for the LLM provider
+</ParamField>
+
+## Creating Agents from Markdown
+
+Agents can be defined in markdown files with YAML frontmatter (src/agentor/core/agent.py:236):
+
+```markdown  theme={null}
+---
+name: WeatherBot
+tools: [get_weather]
+model: gpt-4o-mini
+temperature: 0.3
+---
+You are a concise weather assistant.
+```
+
+Load the agent:
+
+```python  theme={null}
+from agentor import Agentor
+
+agent = Agentor.from_md("agent.md")
+result = agent.run("Weather in Paris?")
+```
+
+## Agent Lifecycle
+
+### Synchronous Execution
+
+The `run()` method (src/agentor/core/agent.py:367) provides synchronous execution:
+
+```python  theme={null}
+result = agent.run("What is the weather in London?")
+print(result)
+```
+
+### Asynchronous Execution
+
+The `arun()` method (src/agentor/core/agent.py:370) supports async execution with batch processing:
+
+```python  theme={null}
+import asyncio
+
+# Single prompt
+result = await agent.arun("What is the weather in London?")
+
+# Batch processing with concurrency control
+results = await agent.arun(
+    ["Weather in London?", "Weather in Paris?", "Weather in Tokyo?"],
+    limit_concurrency=10,
+    max_turns=20
+)
+```
+
+#### Fallback Models
+
+Handle rate limits gracefully with fallback models (src/agentor/core/agent.py:415):
+
+```python  theme={null}
+result = await agent.arun(
+    "Complex task",
+    fallback_models=["gpt-4o-mini", "gemini/gemini-pro"]
+)
+```
+
+If the primary model fails with rate limit or API errors, Agentor automatically retries with fallback models in order.
+
+### Streaming Responses
+
+Stream agent responses in real-time (src/agentor/core/agent.py:487):
+
+```python  theme={null}
+async for chunk in agent.chat("Tell me about AI", stream=True):
+    print(chunk, end="", flush=True)
+```
+
+The `stream_chat()` method (src/agentor/core/agent.py:498) returns an async iterator of `AgentOutput` objects:
+
+```python  theme={null}
+async for event in agent.stream_chat("Question", serialize=False):
+    if event.message:
+        print(event.message)
+```
+
+## Model Configuration
+
+Configure model behavior with `ModelSettings` (src/agentor/core/agent.py:211):
+
+```python  theme={null}
+from agentor import Agentor, ModelSettings
+
+model_settings = ModelSettings(
+    temperature=0.7,
+    top_p=0.9,
+    max_tokens=2000
+)
+
+agent = Agentor(
+    name="Creative Writer",
+    model="gpt-4o",
+    model_settings=model_settings
+)
+```
+
+## Multi-Agent Systems
+
+Agentor supports hierarchical multi-agent orchestration. The framework includes specialized agents:
+
+* **Concept Research Agent** - Topic research and information gathering
+* **Coder Agent** - Code-related operations
+* **Google Agent** - Workspace integration
+* **Main Triage Agent** - Request routing and delegation
+
+See `src/agentor/agenthub/main.py` for the orchestration implementation.
+
+## Agent Context
+
+Agents receive a `RunContextWrapper` with configuration (src/agentor/tools/registry.py:33):
+
+```python  theme={null}
+from agents import RunContextWrapper
+from agentor.tools.registry import CelestoConfig
+
+@register_global_tool
+def get_weather(wrapper: RunContextWrapper[CelestoConfig], city: str) -> str:
+    """Returns the weather in the given city."""
+    api_key = wrapper.context.weather_api_key
+    # Use API key to fetch weather
+    return f"Weather in {city}"
+```
+
+## Tracing and Observability
+
+Enable automatic tracing with Celesto AI (src/agentor/core/agent.py:119):
+
+```python  theme={null}
+agent = Agentor(
+    name="My Agent",
+    model="gpt-4o",
+    enable_tracing=True  # Requires CELESTO_API_KEY
+)
+```
+
+Traces are automatically sent to `https://celesto.ai/observe`.
+
+To disable auto-tracing:
+
+```bash  theme={null}
+export CELESTO_DISABLE_AUTO_TRACING=True
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Tools" icon="wrench" href="/agentor/concepts/tools">
+    Learn how to add tools to your agents
+  </Card>
+
+  <Card title="Skills" icon="brain" href="/agentor/concepts/skills">
+    Add specialized skills to improve agent performance
+  </Card>
+
+  <Card title="Deployment" icon="rocket" href="/agentor/concepts/deployment">
+    Deploy your agent to production
+  </Card>
+
+  <Card title="A2A Protocol" icon="network-wired" href="/agentor/concepts/a2a-protocol">
+    Enable agent-to-agent communication
+  </Card>
+</CardGroup>

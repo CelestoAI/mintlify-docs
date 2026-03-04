@@ -1,0 +1,430 @@
+---
+title: "Creating Custom Tools"
+description: "Build and integrate custom tools to extend agent capabilities"
+---
+
+Tools give your agents the ability to interact with external systems, perform calculations, access APIs, and more. Agentor provides multiple ways to create and use custom tools.
+
+## Quick Start
+
+Create a simple tool using the `@function_tool` decorator:
+
+```python  theme={null}
+from agents import function_tool
+from agentor import Agentor
+
+@function_tool
+def get_weather(city: str) -> str:
+    """Get the current weather for a city."""
+    # Your implementation here
+    return f"The weather in {city} is sunny and 72°F"
+
+agent = Agentor(
+    name="Weather Agent",
+    model="gpt-5-mini",
+    tools=[get_weather]
+)
+
+result = agent.run("What's the weather in London?")
+```
+
+## Tool Creation Methods
+
+### Function Tools
+
+The simplest way to create tools is with decorated functions:
+
+```python  theme={null}
+from agents import function_tool
+
+@function_tool
+def calculate_total(price: float, quantity: int, tax_rate: float = 0.1) -> str:
+    """
+    Calculate total price including tax.
+    
+    Args:
+        price: Unit price of the item
+        quantity: Number of items
+        tax_rate: Tax rate as decimal (default: 0.1 for 10%)
+    """
+    subtotal = price * quantity
+    tax = subtotal * tax_rate
+    total = subtotal + tax
+    return f"Subtotal: ${subtotal:.2f}, Tax: ${tax:.2f}, Total: ${total:.2f}"
+```
+
+Key points:
+
+* Function name becomes the tool name
+* Docstring becomes the tool description (helps the LLM understand when to use it)
+* Type hints are required for parameters
+* Return type should be `str` or JSON-serializable
+
+### BaseTool Classes
+
+For more complex tools with multiple capabilities:
+
+```python  theme={null}
+from agentor.tools.base import BaseTool, capability
+
+class CalculatorTool(BaseTool):
+    name = "calculator"
+    description = "Perform basic arithmetic operations"
+
+    @capability
+    def add(self, a: float, b: float) -> str:
+        """
+        Add two numbers.
+        
+        Args:
+            a: The first number
+            b: The second number
+        """
+        return str(a + b)
+
+    @capability
+    def subtract(self, a: float, b: float) -> str:
+        """
+        Subtract two numbers.
+        
+        Args:
+            a: The first number  
+            b: The second number
+        """
+        return str(a - b)
+
+    @capability
+    def multiply(self, a: float, b: float) -> str:
+        """
+        Multiply two numbers.
+        
+        Args:
+            a: The first number
+            b: The second number
+        """
+        return str(a * b)
+
+    @capability
+    def divide(self, a: float, b: float) -> str:
+        """
+        Divide two numbers.
+        
+        Args:
+            a: The first number
+            b: The divisor
+        """
+        if b == 0:
+            return "Error: Division by zero"
+        return str(a / b)
+
+# Use the tool
+agent = Agentor(
+    name="Calculator Agent",
+    model="gpt-5-mini",
+    tools=[CalculatorTool()],
+    instructions="You are a precise math assistant. Always use the calculator tool."
+)
+
+result = agent.run("What is (37 * 12) - (144 / 3)?")
+```
+
+### Dynamic Tools with from\_function
+
+Create tools dynamically from any function:
+
+```python  theme={null}
+from agentor.tools.base import BaseTool
+
+def get_stock_price(symbol: str) -> str:
+    """Get current stock price for a symbol."""
+    # Implementation here
+    return f"Stock price for {symbol}: $150.25"
+
+tool = BaseTool.from_function(
+    get_stock_price,
+    name="stock_price",
+    description="Get real-time stock prices"
+)
+
+agent = Agentor(
+    name="Finance Agent",
+    model="gpt-5-mini",
+    tools=[tool]
+)
+```
+
+## Using Built-in Tools
+
+Agentor comes with pre-built tools. Reference them by name:
+
+```python  theme={null}
+agent = Agentor(
+    name="Assistant",
+    model="gpt-5-mini",
+    tools=["get_weather"]  # Reference by string name
+)
+```
+
+Available built-in tools:
+
+* `get_weather` - Weather information
+* `calculator` - Basic arithmetic
+* `web_search` - Internet search
+* And more in the registry
+
+## Real-World Tool Examples
+
+### API Integration Tool
+
+```python  theme={null}
+import requests
+from agents import function_tool
+
+@function_tool
+def search_github(query: str, limit: int = 5) -> str:
+    """
+    Search GitHub repositories.
+    
+    Args:
+        query: Search query
+        limit: Maximum number of results
+    """
+    url = "https://api.github.com/search/repositories"
+    params = {"q": query, "per_page": limit}
+    response = requests.get(url, params=params)
+    
+    if response.status_code != 200:
+        return f"Error: {response.status_code}"
+    
+    repos = response.json()["items"]
+    results = []
+    for repo in repos:
+        results.append(f"{repo['full_name']}: {repo['description']} ({repo['stargazers_count']} stars)")
+    
+    return "\n".join(results)
+```
+
+### Database Tool
+
+```python  theme={null}
+import sqlite3
+from agentor.tools.base import BaseTool, capability
+
+class DatabaseTool(BaseTool):
+    name = "database"
+    description = "Query and manage database"
+    
+    def __init__(self, db_path: str):
+        super().__init__()
+        self.db_path = db_path
+    
+    @capability
+    def query(self, sql: str) -> str:
+        """
+        Execute a SELECT query.
+        
+        Args:
+            sql: The SQL SELECT statement
+        """
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute(sql)
+            results = cursor.fetchall()
+            conn.close()
+            return str(results)
+        except Exception as e:
+            return f"Error: {str(e)}"
+    
+    @capability  
+    def insert(self, table: str, data: dict) -> str:
+        """
+        Insert data into a table.
+        
+        Args:
+            table: Table name
+            data: Dictionary of column:value pairs
+        """
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            columns = ", ".join(data.keys())
+            placeholders = ", ".join(["?" for _ in data])
+            sql = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
+            cursor.execute(sql, list(data.values()))
+            conn.commit()
+            conn.close()
+            return "Success"
+        except Exception as e:
+            return f"Error: {str(e)}"
+```
+
+### File Operations Tool
+
+```python  theme={null}
+from agentor.tools.base import BaseTool, capability
+import os
+
+class FileOperationsTool(BaseTool):
+    name = "file_ops"
+    description = "Read and write files"
+    
+    @capability
+    def read_file(self, path: str) -> str:
+        """
+        Read contents of a file.
+        
+        Args:
+            path: File path
+        """
+        try:
+            with open(path, 'r') as f:
+                return f.read()
+        except Exception as e:
+            return f"Error reading file: {str(e)}"
+    
+    @capability
+    def write_file(self, path: str, content: str) -> str:
+        """
+        Write content to a file.
+        
+        Args:
+            path: File path
+            content: Content to write
+        """
+        try:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, 'w') as f:
+                f.write(content)
+            return f"Successfully wrote to {path}"
+        except Exception as e:
+            return f"Error writing file: {str(e)}"
+    
+    @capability
+    def list_directory(self, path: str) -> str:
+        """
+        List files in a directory.
+        
+        Args:
+            path: Directory path
+        """
+        try:
+            files = os.listdir(path)
+            return "\n".join(files)
+        except Exception as e:
+            return f"Error listing directory: {str(e)}"
+```
+
+## Tool Best Practices
+
+<Steps>
+  ### Write Descriptive Docstrings
+
+  The LLM uses your docstrings to understand when to use the tool:
+
+  ```python  theme={null}
+  @function_tool
+  def send_email(to: str, subject: str, body: str) -> str:
+      """
+      Send an email to a recipient.
+      
+      Use this when the user wants to send an email or contact someone.
+      
+      Args:
+          to: Recipient email address
+          subject: Email subject line
+          body: Email body content
+      """
+      # Implementation
+  ```
+
+  ### Use Type Hints
+
+  Type hints are required and help with validation:
+
+  ```python  theme={null}
+  from typing import List, Optional
+
+  @function_tool
+  def search_products(
+      query: str,
+      category: Optional[str] = None,
+      max_results: int = 10
+  ) -> str:
+      """Search for products."""
+      # Implementation
+  ```
+
+  ### Handle Errors Gracefully
+
+  Always return error messages as strings:
+
+  ```python  theme={null}
+  @function_tool
+  def fetch_data(url: str) -> str:
+      """Fetch data from a URL."""
+      try:
+          response = requests.get(url, timeout=10)
+          response.raise_for_status()
+          return response.text
+      except requests.RequestException as e:
+          return f"Error fetching data: {str(e)}"
+  ```
+
+  ### Return Structured Data
+
+  Return formatted strings that are easy for the LLM to parse:
+
+  ```python  theme={null}
+  @function_tool
+  def get_user_info(user_id: str) -> str:
+      """Get user information."""
+      user = fetch_user(user_id)  # Your implementation
+      return f"""
+      Name: {user['name']}
+      Email: {user['email']}
+      Status: {user['status']}
+      Last Login: {user['last_login']}
+      """
+  ```
+
+  ### Add API Keys via Constructor
+
+  For tools that need credentials:
+
+  ```python  theme={null}
+  class APITool(BaseTool):
+      name = "api_tool"
+      description = "Access external API"
+      
+      def __init__(self, api_key: str):
+          super().__init__(api_key=api_key)
+      
+      @capability
+      def fetch(self, endpoint: str) -> str:
+          """Fetch data from API endpoint."""
+          headers = {"Authorization": f"Bearer {self.api_key}"}
+          # Implementation
+
+  # Usage
+  tool = APITool(api_key=os.environ.get("API_KEY"))
+  agent = Agentor(name="Agent", model="gpt-5-mini", tools=[tool])
+  ```
+</Steps>
+
+## Serving Tools as MCP Servers
+
+You can serve any BaseTool as an MCP server:
+
+```python  theme={null}
+tool = CalculatorTool()
+tool.serve(name="calculator-server", port=8000)
+```
+
+This makes your tool available to any MCP client. See [Building MCP Servers](/agentor/guides/mcp-servers) for more details.
+
+## Next Steps
+
+* Learn about [building MCP servers](/agentor/guides/mcp-servers) for tool sharing
+* Add [streaming support](/agentor/guides/streaming) to see tool calls in real-time
+* Deploy tools with the [Celesto CLI](/agentor/guides/deployment)

@@ -1,0 +1,214 @@
+---
+title: "CelestoMCPHub"
+description: "Client for connecting to Celesto AI's MCP Hub service"
+---
+
+# CelestoMCPHub
+
+`CelestoMCPHub` is a context manager that provides access to Celesto AI's MCP Hub, which aggregates multiple MCP servers and their tools into a single endpoint.
+
+## Class Definition
+
+```python  theme={null}
+from agentor import CelestoMCPHub
+
+class CelestoMCPHub
+```
+
+## Constructor
+
+```python  theme={null}
+hub = CelestoMCPHub(
+    timeout=10,
+    max_retry_attempts=3,
+    cache_tools_list=True,
+    api_key=None,
+)
+```
+
+<ParamField path="timeout" type="int" default="10">
+  Timeout in seconds for MCP requests
+</ParamField>
+
+<ParamField path="max_retry_attempts" type="int" default="3">
+  Maximum number of retry attempts for failed requests
+</ParamField>
+
+<ParamField path="cache_tools_list" type="bool" default="true">
+  Whether to cache the list of available tools
+</ParamField>
+
+<ParamField path="api_key" type="str" optional>
+  Celesto AI API key. If not provided, reads from environment variable or config.
+</ParamField>
+
+## Usage
+
+`CelestoMCPHub` is designed to be used as an async context manager with the `async with` statement:
+
+```python  theme={null}
+async with CelestoMCPHub() as mcp_hub:
+    # Use mcp_hub here
+    pass
+```
+
+The context manager handles connection and cleanup automatically:
+
+* `__aenter__`: Connects to the MCP Hub and returns an `MCPServerStreamableHttp` instance
+* `__aexit__`: Cleans up the connection when exiting the context
+
+## Example Usage
+
+### Basic Usage with Agent
+
+```python  theme={null}
+from agentor import Agentor, CelestoMCPHub
+import asyncio
+
+async def main():
+    async with CelestoMCPHub() as mcp_hub:
+        agent = Agentor(
+            name="Weather Agent",
+            model="gpt-5-mini",
+            tools=[mcp_hub]
+        )
+        result = await agent.arun("What is the weather in London?")
+        print(result)
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+### Custom Configuration
+
+```python  theme={null}
+import asyncio
+from agentor import Agentor, CelestoMCPHub
+
+async def main():
+    # Create hub with custom settings
+    async with CelestoMCPHub(
+        timeout=30,
+        max_retry_attempts=5,
+        cache_tools_list=False,
+        api_key="your-api-key-here"
+    ) as mcp_hub:
+        agent = Agentor(
+            name="Research Agent",
+            model="gpt-5",
+            tools=[mcp_hub],
+            instructions="You are a research assistant with access to multiple tools."
+        )
+        
+        result = await agent.arun(
+            "Research the latest developments in AI and summarize them."
+        )
+        print(result)
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+### Multiple Agents with Shared Hub
+
+```python  theme={null}
+import asyncio
+from agentor import Agentor, CelestoMCPHub
+
+async def main():
+    async with CelestoMCPHub() as mcp_hub:
+        # Create multiple agents sharing the same hub
+        weather_agent = Agentor(
+            name="Weather Agent",
+            model="gpt-5-mini",
+            tools=[mcp_hub],
+            instructions="Provide weather information."
+        )
+        
+        research_agent = Agentor(
+            name="Research Agent",
+            model="gpt-5",
+            tools=[mcp_hub],
+            instructions="Conduct research and analysis."
+        )
+        
+        # Use agents
+        weather = await weather_agent.arun("What's the weather in Tokyo?")
+        research = await research_agent.arun("Find information about quantum computing.")
+        
+        print("Weather:", weather)
+        print("Research:", research)
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+## Configuration
+
+### API Key
+
+The API key can be provided in three ways (in order of precedence):
+
+1. **Constructor parameter:**
+   ```python  theme={null}
+   hub = CelestoMCPHub(api_key="your-api-key")
+   ```
+
+2. **Environment variable:**
+   ```bash  theme={null}
+   export CELESTO_API_KEY="your-api-key"
+   ```
+
+3. **Configuration file:**
+   The API key is read from `celesto_config.api_key`
+
+If no API key is found, a `ValueError` is raised.
+
+### Connection Parameters
+
+The hub connects to the Celesto AI MCP endpoint with the following settings:
+
+* **URL:** `{celesto_config.base_url}/mcp`
+* **Authentication:** Bearer token using the provided API key
+* **Headers:** `Authorization: Bearer {api_key}`
+
+## Error Handling
+
+```python  theme={null}
+import asyncio
+from agentor import Agentor, CelestoMCPHub
+
+async def main():
+    try:
+        async with CelestoMCPHub() as mcp_hub:
+            agent = Agentor(
+                name="Agent",
+                model="gpt-5-mini",
+                tools=[mcp_hub]
+            )
+            result = await agent.arun("Your query here")
+            print(result)
+    except ValueError as e:
+        print(f"Configuration error: {e}")
+    except Exception as e:
+        print(f"Error: {e}")
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+## Under the Hood
+
+When you use `CelestoMCPHub`, it:
+
+1. Creates an `MCPServerStreamableHttp` instance with the Celesto AI MCP endpoint
+2. Connects to the hub during `__aenter__`
+3. Returns the connected MCP server instance for use as a tool
+4. Automatically cleans up the connection during `__aexit__`
+
+The hub provides access to all tools registered across multiple MCP servers hosted by Celesto AI, allowing agents to use a wide range of capabilities through a single integration.
+
+## See Also
+
+* [LiteMCP](/agentor/api/mcp/litemcp) - Create your own MCP server
+* [MCPAPIRouter](/agentor/api/mcp/router) - Router for MCP JSON-RPC methods

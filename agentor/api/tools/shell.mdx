@@ -1,0 +1,182 @@
+---
+title: "Shell Tool"
+description: "Execute shell commands securely from agents"
+---
+
+The `ShellTool` allows agents to execute shell commands in a controlled environment with timeout support and custom execution contexts.
+
+## Class Signature
+
+```python  theme={null}
+class ShellTool(BaseTool):
+    name = "shell_tool"
+    description = "Execute shell commands"
+    
+    def __init__(
+        self,
+        executor: Callable[[ShellCommandRequest], str] = None,
+        verbose: bool = False,
+        *args,
+        **kwargs,
+    )
+```
+
+## Parameters
+
+<ParamField path="executor" type="Callable[[ShellCommandRequest], str]" default="None">
+  Custom command executor function. If not provided, uses the default `_shell_executor` that runs commands using `subprocess.run`.
+</ParamField>
+
+<ParamField path="verbose" type="bool" default="False">
+  Enable verbose output to print commands before execution and results after completion.
+</ParamField>
+
+<ParamField path="*args" type="tuple">
+  Additional positional arguments passed to `BaseTool`.
+</ParamField>
+
+<ParamField path="**kwargs" type="dict">
+  Additional keyword arguments passed to `BaseTool`.
+</ParamField>
+
+## Methods
+
+### run
+
+Execute a shell command with the specified parameters.
+
+```python  theme={null}
+@capability
+def run(self, request: ShellCommandRequest)
+```
+
+<ParamField path="request" type="ShellCommandRequest" required>
+  A request object containing command execution parameters.
+</ParamField>
+
+**Returns:** Command output (stdout + stderr) as a string.
+
+## ShellCommandRequest
+
+The request model for shell command execution.
+
+```python  theme={null}
+class ShellCommandRequest(BaseModel):
+    command: str
+    working_directory: str | None = None
+    env: dict | None = None
+    timeout_ms: int | None = None
+```
+
+<ParamField path="command" type="str" required>
+  The shell command to execute. Will be properly split using `shlex.split()`.
+</ParamField>
+
+<ParamField path="working_directory" type="str" default="None">
+  Working directory for command execution. Defaults to current working directory.
+</ParamField>
+
+<ParamField path="env" type="dict" default="None">
+  Additional environment variables to set. Merged with existing environment.
+</ParamField>
+
+<ParamField path="timeout_ms" type="int" default="None">
+  Execution timeout in milliseconds. No timeout if not specified.
+</ParamField>
+
+## Usage Example
+
+```python  theme={null}
+from agentor.tools import ShellTool
+from agentor.tools.shell import ShellCommandRequest
+
+# Initialize the tool
+shell = ShellTool(verbose=True)
+
+# Execute a simple command
+request = ShellCommandRequest(command="ls -la")
+result = shell.run(request)
+print(result)
+
+# Execute with custom working directory
+request = ShellCommandRequest(
+    command="git status",
+    working_directory="/path/to/repo"
+)
+result = shell.run(request)
+
+# Execute with environment variables and timeout
+request = ShellCommandRequest(
+    command="npm install",
+    working_directory="/path/to/project",
+    env={"NODE_ENV": "production"},
+    timeout_ms=30000  # 30 second timeout
+)
+result = shell.run(request)
+```
+
+## With Agentor Agent
+
+```python  theme={null}
+from agentor import Agentor
+from agentor.tools import ShellTool
+
+agent = Agentor(
+    name="DevOps Assistant",
+    model="gpt-4",
+    tools=[ShellTool()],
+    instructions="Help with system administration tasks using shell commands.",
+)
+
+result = agent.run("List all files in the current directory")
+print(result.final_output)
+```
+
+## Custom Executor
+
+You can provide a custom executor function for specialized command handling:
+
+```python  theme={null}
+from agentor.tools import ShellTool
+from agentor.tools.shell import ShellCommandRequest
+
+def custom_executor(request: ShellCommandRequest) -> str:
+    # Custom validation
+    if "rm -rf" in request.command:
+        return "Error: Dangerous command blocked"
+    
+    # Custom execution logic
+    # ... your implementation ...
+    return "Command executed"
+
+shell = ShellTool(executor=custom_executor)
+```
+
+## Error Handling
+
+The tool handles various error conditions:
+
+* **Timeout**: Returns "Command execution timed out"
+* **Command not found**: Returns "Error executing command: ..."
+* **Permission denied**: Returns subprocess error message
+* **Other exceptions**: Returns descriptive error message
+
+## Security Considerations
+
+* Commands are properly escaped using `shlex.split()` to prevent injection
+* Both stdout and stderr are captured
+* Timeout support prevents runaway processes
+* Custom executors can implement additional validation
+* Consider restricting available commands in production environments
+
+## Alias
+
+`LocalShellTool` is an alias for `ShellTool`:
+
+```python  theme={null}
+from agentor.tools.shell import LocalShellTool
+
+shell = LocalShellTool()
+```
+
+Source: `/home/daytona/workspace/source/src/agentor/tools/shell.py:18`

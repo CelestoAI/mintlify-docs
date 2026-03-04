@@ -1,0 +1,152 @@
+---
+title: "A2AController"
+description: "A2A protocol controller for agent-to-agent communication"
+---
+
+The `A2AController` class provides a FastAPI-compatible router that implements the A2A (Agent-to-Agent) protocol v0.3.0. It automatically exposes an agent card manifest and handles JSON-RPC based messaging.
+
+## Class Signature
+
+```python  theme={null}
+class A2AController(APIRouter):
+    def __init__(
+        self,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        url: Optional[str] = None,
+        version: str = "0.0.1",
+        skills: Optional[List[AgentSkill]] = None,
+        capabilities: Optional[AgentCapabilities] = None,
+        **kwargs,
+    )
+```
+
+## Parameters
+
+<ParamField path="name" type="str" default="Agentor">
+  The name of the agent.
+</ParamField>
+
+<ParamField path="description" type="str" default="Agentor is a framework for building, prototyping and deploying AI Agents.">
+  A description of the agent's purpose and capabilities.
+</ParamField>
+
+<ParamField path="url" type="str" default="http://0.0.0.0:8000">
+  The base URL where the agent is hosted.
+</ParamField>
+
+<ParamField path="version" type="str" default="0.0.1">
+  The version of the agent.
+</ParamField>
+
+<ParamField path="skills" type="List[AgentSkill]" default="[]">
+  A list of skills that the agent can perform.
+</ParamField>
+
+<ParamField path="capabilities" type="AgentCapabilities" default="AgentCapabilities(streaming=True, statefulness=True, asyncProcessing=True)">
+  The capabilities supported by the agent (streaming, statefulness, async processing).
+</ParamField>
+
+<ParamField path="**kwargs" type="dict">
+  Additional keyword arguments passed to the FastAPI `APIRouter`.
+</ParamField>
+
+## Methods
+
+### add\_handler
+
+Register a handler function for a specific A2A protocol method.
+
+```python  theme={null}
+def add_handler(
+    self,
+    method: Literal["message/send", "message/stream", "tasks/get", "tasks/cancel"],
+    handler: Callable,
+)
+```
+
+<ParamField path="method" type="Literal">
+  The A2A protocol method to handle. Must be one of:
+
+  * `message/send` - Non-streaming message handling
+  * `message/stream` - Streaming message handling with Server-Sent Events
+  * `tasks/get` - Retrieve task status
+  * `tasks/cancel` - Cancel a running task
+</ParamField>
+
+<ParamField path="handler" type="Callable">
+  An async function that processes the request and returns the appropriate response type.
+</ParamField>
+
+### get\_handler
+
+Retrieve the registered handler for a specific method.
+
+```python  theme={null}
+def get_handler(
+    self,
+    method: Literal["message/send", "message/stream", "tasks/get", "tasks/cancel"],
+) -> Callable
+```
+
+### run
+
+Main JSON-RPC endpoint that routes requests to the appropriate handler.
+
+```python  theme={null}
+async def run(self, a2a_request: JSONRPCRequest, request: Request)
+```
+
+## Endpoints
+
+The controller automatically exposes these endpoints:
+
+* `GET /.well-known/agent-card.json` - Returns the agent card manifest following A2A protocol v0.3.0
+* `POST /` - Main JSON-RPC endpoint for A2A protocol operations
+
+## Usage Example
+
+```python  theme={null}
+from agentor.a2a import A2AController
+from a2a.types import AgentSkill, JSONRPCResponse
+from fastapi import FastAPI
+
+# Create the A2A controller
+controller = A2AController(
+    name="My Agent",
+    description="A helpful AI assistant",
+    url="http://localhost:8000",
+    skills=[
+        AgentSkill(
+            name="answer_questions",
+            description="Answer user questions"
+        )
+    ],
+)
+
+# Register a message handler
+async def handle_message(request):
+    # Process the message
+    return JSONRPCResponse(
+        id=request.id,
+        result={"message": "Response text"}
+    )
+
+controller.add_handler("message/send", handle_message)
+
+# Mount to FastAPI app
+app = FastAPI()
+app.include_router(controller)
+```
+
+## Agent Card
+
+The agent card is automatically generated and exposed at `/.well-known/agent-card.json`. It includes:
+
+* Agent metadata (name, description, version, URL)
+* Supported skills
+* Capabilities (streaming, statefulness, async processing)
+* Security schemes and authentication requirements
+* Supported input/output modes
+
+Source: `/home/daytona/workspace/source/src/agentor/a2a.py:20`
