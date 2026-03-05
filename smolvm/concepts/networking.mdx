@@ -9,32 +9,24 @@ SmolVM provides automatic networking setup with TAP devices, NAT, and port forwa
 
 Each SmolVM instance gets its own isolated network configuration:
 
-```
-┌─────────────────────────────────────────┐
-│ Host System                              │
-│                                          │
-│  ┌──────────┐         ┌──────────┐     │
-│  │   VM 1   │         │   VM 2   │     │
-│  │172.16.0.2│         │172.16.0.3│     │
-│  └────┬─────┘         └────┬─────┘     │
-│       │                    │            │
-│  ┌────┴─────┐         ┌────┴─────┐     │
-│  │  tap0    │         │  tap1    │     │
-│  │172.16.0.1│         │172.16.0.1│     │
-│  └────┬─────┘         └────┬─────┘     │
-│       │                    │            │
-│       └────────┬───────────┘            │
-│                │                        │
-│           ┌────┴─────┐                  │
-│           │   NAT    │                  │
-│           │(nftables)│                  │
-│           └────┬─────┘                  │
-│                │                        │
-│           ┌────┴──────┐                 │
-│           │  eth0     │                 │
-│           │(Internet) │                 │
-│           └───────────┘                 │
-└─────────────────────────────────────────┘
+```mermaid
+flowchart TB
+  subgraph Host["Host System"]
+    VM1["VM 1<br/>172.16.0.2"]
+    VM2["VM 2<br/>172.16.0.3"]
+    TAP0["tap0<br/>172.16.0.1"]
+    TAP1["tap1<br/>172.16.0.1"]
+    NAT["NAT<br/>(nftables)"]
+    ETH0["eth0"]
+
+    VM1 --> TAP0
+    VM2 --> TAP1
+    TAP0 --> NAT
+    TAP1 --> NAT
+    NAT --> ETH0
+  end
+
+  ETH0 --> Internet["Internet"]
 ```
 
 ## Network Configuration
