@@ -1,10 +1,10 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "maple",
+  "theme": "mint",
   "name": "Celesto AI",
   "colors": {
     "primary": "#FF5722",
-    "light": "#FF8A50",
+    "light": "#FF5722",
     "dark": "#FF5722"
   },
   "favicon": "favicon.png",
@@ -247,7 +247,7 @@
   "appearance": {
     "default": "dark"
   },
-  "description": "Celesto AI enables developers to effortlessly deploy, connect, and orchestrate AI agents by providing an all-in-one, developer-first platform that abstracts away complex infrastructure management.",
+  "description": "Deploy long-running agents and MCP servers, with built-in security and observability.",
   "interaction": {
     "drilldown": true
   },
@@ -259,5 +259,8 @@
   },
   "seo": {
     "indexing": "all"
+  },
+  "background": {
+    "decoration": "grid"
   }
 }
