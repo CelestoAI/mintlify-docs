@@ -9,18 +9,20 @@ SmolVM is built as a layered system that abstracts Firecracker and QEMU microVMs
 
 SmolVM follows a clean layered architecture:
 
-```
-User Application
-       ↓
-   facade.py (SmolVM class) - High-level API
-       ↓
-   vm.py (SmolVMManager) - Lifecycle orchestration
-       ↓
-   ┌──────────┬──────────┬──────────┐
-   ↓          ↓          ↓          ↓
- api.py   storage.py network.py  host.py
-   ↓          ↓          ↓          ↓
-Firecracker SQLite   nftables   KVM/QEMU
+```mermaid
+flowchart TB
+  User["User Application"] --> Facade["facade.py<br/>(SmolVM class)<br/>High-level API"]
+  Facade --> VM["vm.py<br/>(SmolVMManager)<br/>Lifecycle orchestration"]
+
+  VM --> API["api.py"]
+  VM --> Storage["storage.py"]
+  VM --> Network["network.py"]
+  VM --> Host["host.py"]
+
+  API --> Firecracker["Firecracker"]
+  Storage --> SQLite["SQLite"]
+  Network --> Nftables["nftables"]
+  Host --> Hypervisor["KVM/QEMU"]
 ```
 
 ### Component Responsibilities
@@ -213,24 +215,15 @@ CREATE TABLE ssh_forwards (
 
 ### State Transitions
 
-```
-     create()         start()
-[None] --------→ [CREATED] --------→ [RUNNING]
-                     ↑                  |
-                     |                  | stop()
-                     |                  ↓
-                     └────────────── [STOPPED]
-                                        |
-                                        | delete()
-                                        ↓
-                                     [None]
-
-                  (process dies)
-                 [RUNNING] --------→ [ERROR]
-                                        |
-                                        | reconcile() + delete()
-                                        ↓
-                                     [None]
+```mermaid
+stateDiagram-v2
+  [*] --> NONE
+  NONE --> CREATED: create()
+  CREATED --> RUNNING: start()
+  RUNNING --> STOPPED: stop()
+  STOPPED --> NONE: delete()
+  RUNNING --> ERROR: process dies
+  ERROR --> NONE: reconcile() + delete()
 ```
 
 ### Concurrency Safety
