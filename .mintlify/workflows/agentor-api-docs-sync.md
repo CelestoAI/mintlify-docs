@@ -1,5 +1,5 @@
 ---
-name: "Agentor API docs sync"
+name: "API docs sync"
 on:
   push:
     - repo: "celestoai/agentor"
