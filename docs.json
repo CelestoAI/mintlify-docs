@@ -12,8 +12,8 @@
     "global": {
       "anchors": [
         {
-          "anchor": "Try Celesto now",
-          "icon": "flask",
+          "anchor": "Get started",
+          "icon": "rocket-launch",
           "href": "https://celesto.ai"
         },
         {
