@@ -3,9 +3,10 @@ name: "Agentor API docs sync"
 on:
   push:
     - repo: "celestoai/agentor"
+    - repo: "celestoai/SmolVM"
 ---
 
-Please update the Agentor docs.
+Please update the Agentor or SmolVM docs based on which repo has the changes.
 
 # General principles
 - Follow progressive disclosure of complexity
