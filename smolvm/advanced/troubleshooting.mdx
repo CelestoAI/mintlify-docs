@@ -32,6 +32,69 @@ The `smolvm doctor` command validates:
 ## Common Issues
 
 <AccordionGroup>
+  <Accordion title="Docker image build fails with daemon errors">
+    **Problem**: Image builds fail because Docker is not installed, the daemon is not running, or your user lacks permission to access it.
+
+    SmolVM automatically diagnoses the specific Docker issue and returns a targeted error message. The three most common scenarios are:
+
+    **Docker not installed:**
+    ```
+    Docker is required to build images. Install Docker Desktop (macOS) or docker.io (Linux).
+    ```
+
+    **Daemon not running:**
+    ```
+    Docker is installed, but SmolVM could not reach the Docker daemon.
+    Start Docker Desktop or the Docker service and try again.
+    ```
+
+    **Permission denied:**
+    ```
+    Docker is installed, but this user cannot access the Docker daemon socket.
+    Make sure Docker Desktop is running or grant access to /var/run/docker.sock.
+    ```
+
+    **Solution**:
+
+    1. Install Docker if missing:
+
+    ```bash  theme={null}
+    # macOS
+    brew install --cask docker
+
+    # Debian/Ubuntu
+    sudo apt-get install docker.io
+    ```
+
+    2. Start the Docker daemon:
+
+    ```bash  theme={null}
+    # macOS
+    open -a Docker
+
+    # Linux
+    sudo systemctl start docker
+    ```
+
+    3. Fix socket permissions (Linux):
+
+    ```bash  theme={null}
+    sudo usermod -aG docker $USER
+    newgrp docker  # Or log out and back in
+    ```
+
+    You can also check Docker status programmatically before building:
+
+    ```python  theme={null}
+    from smolvm.build import ImageBuilder
+
+    builder = ImageBuilder()
+    if not builder.check_docker():
+        error = builder.docker_requirement_error()
+        print(error)  # Specific diagnosis and fix suggestion
+    ```
+  </Accordion>
+
   <Accordion title="KVM not available: /dev/kvm not found">
     **Problem**: The Firecracker backend requires KVM hardware virtualization.
 

@@ -28,10 +28,10 @@ builder = ImageBuilder(cache_dir=Path("/var/cache/smolvm"))
 
 ### `check_docker()`
 
-Check if Docker is available on the system.
+Check if Docker is installed and the daemon is reachable.
 
 <ResponseField name="return" type="bool">
-  Returns `True` if Docker is available, `False` otherwise.
+  Returns `True` if Docker is available and the daemon responds, `False` otherwise.
 </ResponseField>
 
 ```python  theme={null}
@@ -40,6 +40,36 @@ if builder.check_docker():
 else:
     print("Docker is required to build images")
 ```
+
+### `docker_requirement_error()`
+
+Create a diagnostic `ImageError` with a specific message based on what is wrong with Docker. This method inspects the Docker installation and returns a targeted error that tells the user exactly how to fix the problem.
+
+The method distinguishes between these scenarios:
+
+- **Docker not installed** — prompts to install Docker Desktop or `docker.io`
+- **Daemon not running** — prompts to start Docker Desktop or the Docker service
+- **Permission denied on socket** — prompts to grant access to `/var/run/docker.sock`
+- **Daemon timeout** — reports that Docker is not responding
+- **Other errors** — includes the original Docker error output for debugging
+
+<ResponseField name="return" type="ImageError">
+  An `ImageError` with a human-readable message describing the problem and how to fix it.
+</ResponseField>
+
+```python  theme={null}
+builder = ImageBuilder()
+
+if not builder.check_docker():
+    error = builder.docker_requirement_error()
+    print(error)
+    # Example: "Docker is installed, but SmolVM could not reach the Docker daemon.
+    #           Start Docker Desktop or the Docker service and try again."
+```
+
+<Note>
+  You don't need to call this method directly in most cases. All build methods (`build_alpine_ssh`, `build_alpine_ssh_key`, `build_debian_ssh_key`) automatically call it and raise the resulting `ImageError` when Docker is unavailable.
+</Note>
 
 ### `build_alpine_ssh(name, ssh_password, rootfs_size_mb, kernel_url)`
 
