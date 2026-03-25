@@ -113,15 +113,88 @@ Custom host, port, and beta features:
 smolvm ui --host 0.0.0.0 --port 9000 --allow-beta
 ```
 
-## Dashboard Features
+## Dashboard features
 
 The SmolVM dashboard provides:
 
 * **VM Management**: Create, start, stop, and delete VMs
 * **Real-time Monitoring**: View VM status, resource usage, and logs
 * **Network Configuration**: Manage port forwarding and network settings
+* **Process Inspection**: View running processes inside a VM directly from the dashboard
 * **Console Access**: Web-based terminal access to VMs
 * **Environment Variables**: GUI for managing VM environment variables
+
+### Process inspection
+
+You can view the list of running processes inside any active VM without needing to SSH in manually. The dashboard connects to the guest over SSH behind the scenes and returns a structured table of processes.
+
+To use process inspection:
+
+<Steps>
+  <Step title="Open a VM detail card">
+    Click on any running VM in the dashboard to open its detail panel.
+  </Step>
+  <Step title="Expand the Processes section">
+    Click the **Processes** toggle at the bottom of the VM detail card. The process list loads automatically when you expand it for the first time.
+  </Step>
+  <Step title="Review the process table">
+    The table shows each process with the following columns:
+
+    | Column  | Description                          |
+    | ------- | ------------------------------------ |
+    | PID     | Process ID                           |
+    | User    | Owner of the process                 |
+    | VSZ     | Virtual memory size (in KB)          |
+    | Stat    | Process state code (e.g. `S`, `R`)   |
+    | Command | The full command that started the process |
+  </Step>
+  <Step title="Refresh the list">
+    Click the refresh icon next to the Processes heading to re-fetch the latest process data.
+  </Step>
+</Steps>
+
+<Note>
+  Process inspection is only available for VMs in the **running** state. The toggle is disabled for stopped or starting VMs.
+</Note>
+
+#### Dashboard API endpoint
+
+The process list is served by the dashboard API at:
+
+```
+GET /api/vms/{vm_id}/processes
+```
+
+**Response example:**
+
+```json
+{
+  "vm_id": "vm-abcdef12",
+  "processes": [
+    {
+      "pid": "1",
+      "user": "root",
+      "vsz": "4536",
+      "stat": "Ss",
+      "command": "/sbin/init"
+    },
+    {
+      "pid": "127",
+      "user": "root",
+      "vsz": "8212",
+      "stat": "Ss",
+      "command": "/usr/sbin/sshd -D"
+    }
+  ]
+}
+```
+
+| Status code | Meaning                                      |
+| ----------- | -------------------------------------------- |
+| `200`       | Success — process list returned              |
+| `404`       | VM not found                                 |
+| `409`       | VM is not running or has no network config   |
+| `502`       | SSH connection to the guest failed           |
 
 ## Environment Variables
 
