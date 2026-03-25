@@ -1,0 +1,167 @@
+---
+title: "Sandbox runtimes"
+description: "API reference for SmolVMRuntime and E2BCodeInterpreterRuntime"
+---
+
+## Overview
+
+Sandbox runtimes let you run shell commands inside isolated environments instead of directly on your machine. Pass a runtime as the `executor` to `ShellTool` to sandbox all command execution.
+
+## SandboxRuntime
+
+Base class for all sandbox runtimes.
+
+```python  theme={null}
+class SandboxRuntime:
+    def __call__(self, request: ShellCommandRequest) -> str:
+        raise NotImplementedError
+```
+
+All runtimes implement `__call__`, which accepts a `ShellCommandRequest` and returns the command output as a string.
+
+## SmolVMRuntime
+
+Runs commands inside a lightweight local virtual machine using SmolVM.
+
+```python  theme={null}
+from agentor.runtime import SmolVMRuntime
+
+SmolVMRuntime(
+    timeout: int | None = None,
+    start: bool = True,
+    **smolvm_kwargs,
+)
+```
+
+### Parameters
+
+<ParamField path="timeout" type="int" default="None">
+  Default timeout in seconds for command execution.
+</ParamField>
+
+<ParamField path="start" type="bool" default="True">
+  Whether to start the VM immediately on creation.
+</ParamField>
+
+<ParamField path="**smolvm_kwargs" type="dict">
+  Additional keyword arguments passed to the `SmolVM` constructor. Common options include:
+  - `mem_size_mib` (int) — VM memory in MiB
+  - `disk_size_mib` (int) — VM disk size in MiB
+</ParamField>
+
+### Methods
+
+#### \_\_call\_\_
+
+```python  theme={null}
+def __call__(self, request: ShellCommandRequest) -> str
+```
+
+Executes a shell command in the VM. Handles working directories, environment variables, and timeouts from the request.
+
+#### close
+
+```python  theme={null}
+def close()
+```
+
+Stops the VM and releases resources.
+
+### Example
+
+```python  theme={null}
+from agentor import Agentor
+from agentor.tools import ShellTool
+from agentor.runtime import SmolVMRuntime
+
+runtime = SmolVMRuntime(mem_size_mib=1024, disk_size_mib=2048)
+
+agent = Agentor(
+    name="Sandbox Agent",
+    model="gpt-5-mini",
+    tools=[ShellTool(executor=runtime)]
+)
+
+result = agent.run("Create a Python script that prints hello world, then run it")
+print(result)
+
+runtime.close()
+```
+
+<Note>
+  SmolVM requires macOS with Apple Silicon or Linux with KVM support. Install with `pip install smolvm`.
+</Note>
+
+## E2BCodeInterpreterRuntime
+
+Runs commands in a cloud-based E2B sandbox.
+
+```python  theme={null}
+from agentor.runtime import E2BCodeInterpreterRuntime
+
+E2BCodeInterpreterRuntime(
+    timeout: int | None = None,
+)
+```
+
+### Parameters
+
+<ParamField path="timeout" type="int" default="None">
+  Default timeout in seconds for command execution.
+</ParamField>
+
+### Methods
+
+#### \_\_call\_\_
+
+```python  theme={null}
+def __call__(self, request: ShellCommandRequest) -> str
+```
+
+Executes code in the E2B sandbox. Returns the execution logs.
+
+### Example
+
+```python  theme={null}
+from agentor import Agentor
+from agentor.tools import ShellTool
+from agentor.runtime import E2BCodeInterpreterRuntime
+
+runtime = E2BCodeInterpreterRuntime(timeout=60)
+
+agent = Agentor(
+    name="Cloud Agent",
+    model="gpt-5-mini",
+    tools=[ShellTool(executor=runtime)]
+)
+
+result = agent.run("Install pandas and create a sample dataframe")
+print(result)
+```
+
+<Note>
+  E2B requires the `e2b-code-interpreter` package and an `E2B_API_KEY` environment variable. Install with `pip install e2b-code-interpreter`.
+</Note>
+
+## Using with ShellTool
+
+Both runtimes plug into `ShellTool` through its `executor` parameter:
+
+```python  theme={null}
+from agentor.tools import ShellTool
+from agentor.runtime import SmolVMRuntime
+
+# Local execution (default)
+shell = ShellTool()
+
+# SmolVM sandbox
+shell = ShellTool(executor=SmolVMRuntime(mem_size_mib=1024))
+
+# E2B cloud sandbox
+shell = ShellTool(executor=E2BCodeInterpreterRuntime(timeout=60))
+```
+
+## Related
+
+- [Sandbox runtimes guide](/agentor/guides/sandbox-runtimes) — Choosing and configuring runtimes
+- [Shell tool](/agentor/api/tools/shell) — ShellTool API reference

@@ -48,7 +48,7 @@ from agentor import Agentor
 
 agent = Agentor(
     name="Weather Agent",
-    model="gpt-4o-mini",
+    model="gpt-5-mini",
     tools=["get_weather"]
 )
 
@@ -71,7 +71,7 @@ from agentor import Agentor
 
 agent = Agentor(
     name="Weather Agent",
-    model="gpt-4o-mini",
+    model="gpt-5-mini",
     tools=["get_weather"]
 )
 
@@ -91,7 +91,7 @@ from agentor import Agentor
 
 agent = Agentor(
     name="Weather Bot",
-    model="gpt-4o-mini",
+    model="gpt-5-mini",
     instructions="You are a friendly weather assistant. Always include temperature in both Celsius and Fahrenheit.",
     tools=["get_weather"]
 )
@@ -115,7 +115,7 @@ def calculate_temperature_diff(temp1: float, temp2: float) -> str:
 
 agent = Agentor(
     name="Weather Analyzer",
-    model="gpt-4o-mini",
+    model="gpt-5-mini",
     tools=["get_weather", calculate_temperature_diff]
 )
 
@@ -132,7 +132,7 @@ from agentor import Agentor
 
 agent = Agentor(
     name="Weather Agent",
-    model="gpt-4o-mini",
+    model="gpt-5-mini",
     tools=["get_weather"]
 )
 
@@ -180,7 +180,7 @@ Deploy your agent to Celesto AI's serverless platform:
 
     agent = Agentor(
         name="Weather Agent",
-        model="gpt-4o-mini",
+        model="gpt-5-mini",
         tools=["get_weather"]
     )
 
@@ -214,7 +214,7 @@ Agentor supports multiple LLM providers through LiteLLM:
 
   agent = Agentor(
       name="My Agent",
-      model="gpt-4o-mini",  # or gpt-4o, gpt-4-turbo
+      model="gpt-5-mini",  # or gpt-4o, gpt-5-nano
       tools=["get_weather"]
   )
   ```

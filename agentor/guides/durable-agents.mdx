@@ -1,0 +1,190 @@
+---
+title: "Durable agents"
+description: "Build long-running agents that persist state and can resume after crashes or restarts"
+---
+
+Durable agents save every step of their work to disk, so they can pick up right where they left off if something goes wrong. This is useful for agents that run complex, multi-step tasks where losing progress would be costly.
+
+## How it works
+
+A durable agent logs every event (user messages, LLM responses, tool calls, and results) to a JSONL file on disk. If the agent stops mid-task, you can resume it by passing the same `run_id`.
+
+## Prerequisites
+
+- Python 3.10+
+- Agentor installed (`pip install agentor`)
+- An LLM API key (OpenAI, Anthropic, Google, etc.)
+
+## Quick start
+
+<Steps>
+  <Step title="Create a tool">
+    Define a tool for your durable agent using the `@tool` decorator:
+
+    ```python  theme={null}
+    from agentor import tool
+
+    @tool
+    def get_weather(city: str) -> str:
+        """Get the current weather for a city."""
+        return f"The weather in {city} is sunny, 72°F"
+    ```
+  </Step>
+
+  <Step title="Create a durable agent">
+    Initialize a `DurableAgent` with your model and tools:
+
+    ```python  theme={null}
+    from agentor.durable import DurableAgent
+
+    agent = DurableAgent(
+        model="openai/gpt-5-mini",
+        tools=[get_weather],
+        runs_dir="runs",
+        verbose=True
+    )
+    ```
+  </Step>
+
+  <Step title="Run the agent">
+    Start a new run with an input prompt:
+
+    ```python  theme={null}
+    result = agent.run(input_text="What is the weather in San Francisco?")
+
+    print(result.status)        # "completed"
+    print(result.final_answer)  # The agent's response
+    print(result.run_id)        # Unique ID for this run
+    ```
+  </Step>
+</Steps>
+
+## Resuming a run
+
+If a run stops before completing (due to a crash, timeout, or reaching the step limit), you can resume it:
+
+```python  theme={null}
+from agentor.durable import DurableAgent
+
+agent = DurableAgent(
+    model="openai/gpt-5-mini",
+    tools=[get_weather]
+)
+
+# Resume using the run_id from a previous run
+result = agent.run(run_id="abc123def456")
+
+if result.status == "completed":
+    print(result.final_answer)
+elif result.status == "running":
+    # Still needs more steps — call run() again with the same run_id
+    result = agent.run(run_id=result.run_id, max_steps=20)
+```
+
+## Run status values
+
+The `RunResult.status` field tells you where the run stands:
+
+| Status | Meaning |
+|---|---|
+| `completed` | The agent finished and produced a final answer |
+| `running` | The agent hit the step limit but isn't done yet — resume with the same `run_id` |
+| `failed` | An error occurred during execution |
+
+## Step limits
+
+The `max_steps` parameter controls how many LLM calls or tool executions happen in a single `run()` call. This prevents runaway agents:
+
+```python  theme={null}
+# Allow up to 5 steps per call
+result = agent.run(input_text="Research this topic", max_steps=5)
+
+if result.status == "running":
+    # Continue with more steps
+    result = agent.run(run_id=result.run_id, max_steps=10)
+```
+
+The default is `max_steps=10`.
+
+## Event log
+
+Every run produces a JSONL file in the `runs_dir` directory. Each line is a JSON event with these fields:
+
+```json  theme={null}
+{
+  "run_id": "abc123",
+  "step_index": 0,
+  "type": "user_message",
+  "timestamp": "2026-03-25T12:00:00Z",
+  "payload": {
+    "content": "What is the weather in San Francisco?"
+  }
+}
+```
+
+Event types include:
+
+- `user_message` — The initial input from the user
+- `llm_response` — The raw LLM response
+- `tool_call` — A tool invocation requested by the LLM
+- `tool_result` — The output from a tool execution
+- `run_status` — Final status (completed or failed)
+
+## Complete example
+
+```python  theme={null}
+from agentor import tool
+from agentor.durable import DurableAgent
+
+@tool
+def search_database(query: str) -> str:
+    """Search a database for records."""
+    return f"Found 3 results for: {query}"
+
+@tool
+def summarize(text: str) -> str:
+    """Summarize a piece of text."""
+    return f"Summary: {text[:100]}..."
+
+agent = DurableAgent(
+    model="openai/gpt-5-mini",
+    tools=[search_database, summarize],
+    runs_dir="my_runs",
+    verbose=True
+)
+
+# Start a new run
+result = agent.run(
+    input_text="Search for recent AI papers and summarize the findings",
+    max_steps=10
+)
+
+print(f"Status: {result.status}")
+print(f"Run ID: {result.run_id}")
+
+if result.status == "completed":
+    print(f"Answer: {result.final_answer}")
+```
+
+## When to use durable agents
+
+Durable agents are a good fit when:
+
+- **Tasks take a long time** — Multi-step research, data processing, or code generation that may exceed timeout limits
+- **Reliability matters** — You can't afford to lose progress if a service restarts
+- **Auditability is required** — You need a complete log of every decision the agent made
+- **Step-by-step control** — You want to limit how many steps run at once
+
+For simpler use cases where you don't need persistence, the standard `Agentor` class is easier to work with.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Durable agent API" icon="code" href="/agentor/api/durable-agent">
+    Full API reference for DurableAgent and RunResult
+  </Card>
+
+  <Card title="Building agents" icon="robot" href="/agentor/guides/building-agents">
+    Learn the basics of building agents with Agentor
+  </Card>
+</CardGroup>

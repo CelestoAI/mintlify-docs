@@ -1,0 +1,73 @@
+---
+title: "Exa search tool"
+description: "Search the web using the Exa AI search engine"
+---
+
+The `ExaSearchTool` provides web search capabilities using the Exa AI search API, which is optimized for finding relevant content for AI applications.
+
+## Installation
+
+```bash  theme={null}
+pip install agentor[exa]
+```
+
+## Class signature
+
+```python  theme={null}
+class ExaSearchTool(BaseTool):
+    name = "exa_search"
+    description = "Search the web using Exa"
+
+    def __init__(self, api_key: Optional[str] = None)
+```
+
+<ParamField path="api_key" type="str" default="None">
+  Exa API key. Falls back to the `EXA_API_KEY` environment variable if not provided.
+</ParamField>
+
+## Methods
+
+### search
+
+Search the web using Exa.
+
+```python  theme={null}
+@capability
+def search(self, query: str, num_results: int = 5) -> str
+```
+
+<ParamField path="query" type="str" required>
+  The search query.
+</ParamField>
+
+<ParamField path="num_results" type="int" default="5">
+  Number of results to return.
+</ParamField>
+
+## Usage
+
+```python  theme={null}
+from agentor import Agentor
+from agentor.tools import ExaSearchTool
+
+agent = Agentor(
+    name="Research Agent",
+    model="gpt-5-mini",
+    tools=[ExaSearchTool()],
+    instructions="Search the web to answer user questions with current information."
+)
+
+result = agent.run("What are the latest developments in quantum computing?")
+print(result)
+```
+
+## Environment variables
+
+| Variable | Description |
+|---|---|
+| `EXA_API_KEY` | Exa API key from [exa.ai](https://exa.ai) |
+
+## Related
+
+- [Web search tool](/agentor/api/tools/web-search) — OpenAI's built-in web search
+- [Tools overview](/agentor/api/tools) — All available tools

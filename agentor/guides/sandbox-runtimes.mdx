@@ -1,0 +1,127 @@
+---
+title: "Sandbox runtimes"
+description: "Run agent shell commands in isolated sandbox environments using SmolVM or E2B"
+---
+
+By default, the `ShellTool` executes commands directly on your machine. Sandbox runtimes let you run those commands inside an isolated virtual machine instead, so agents can't accidentally modify your system or access sensitive files.
+
+Agentor supports two sandbox providers: **SmolVM** (lightweight local VMs) and **E2B** (cloud-based sandboxes).
+
+## SmolVM runtime
+
+SmolVM creates lightweight virtual machines on your local machine. It's fast to start and doesn't require a cloud account.
+
+### Prerequisites
+
+- Install SmolVM: `pip install smolvm`
+- macOS with Apple Silicon, or Linux with KVM support
+
+### Basic usage
+
+```python  theme={null}
+from agentor import Agentor
+from agentor.tools import ShellTool
+from agentor.runtime import SmolVMRuntime
+
+# Create a sandbox runtime
+runtime = SmolVMRuntime(
+    mem_size_mib=1024,
+    disk_size_mib=2048
+)
+
+# Pass the runtime as the executor for ShellTool
+agent = Agentor(
+    name="Sandbox Agent",
+    model="gpt-5-mini",
+    tools=[ShellTool(executor=runtime)],
+    instructions="You can run shell commands in a sandboxed environment."
+)
+
+result = agent.run("List the files in the home directory")
+print(result)
+```
+
+### Configuration
+
+```python  theme={null}
+from agentor.runtime import SmolVMRuntime
+
+runtime = SmolVMRuntime(
+    timeout=60,           # Default timeout in seconds
+    start=True,           # Start the VM immediately (default: True)
+    mem_size_mib=1024,    # VM memory in MiB
+    disk_size_mib=2048,   # VM disk size in MiB
+)
+```
+
+The `SmolVMRuntime` accepts any keyword arguments supported by `SmolVM` (such as `mem_size_mib` and `disk_size_mib`).
+
+### Cleanup
+
+When you're done with the runtime, call `close()` to stop the VM:
+
+```python  theme={null}
+runtime.close()
+```
+
+## E2B runtime
+
+E2B provides cloud-based sandbox environments. It's useful when you need consistent environments across machines or don't have local VM support.
+
+### Prerequisites
+
+- Install E2B: `pip install e2b-code-interpreter`
+- Set the `E2B_API_KEY` environment variable
+
+### Basic usage
+
+```python  theme={null}
+from agentor import Agentor
+from agentor.tools import ShellTool
+from agentor.runtime import E2BCodeInterpreterRuntime
+
+# Create an E2B sandbox
+runtime = E2BCodeInterpreterRuntime(timeout=60)
+
+agent = Agentor(
+    name="Cloud Sandbox Agent",
+    model="gpt-5-mini",
+    tools=[ShellTool(executor=runtime)]
+)
+
+result = agent.run("Install numpy and run a quick calculation")
+print(result)
+```
+
+## How sandbox runtimes work
+
+Sandbox runtimes plug into the `ShellTool` through its `executor` parameter. When an agent calls the shell tool, the command is routed to the sandbox instead of your local machine:
+
+1. The agent decides to run a shell command
+2. `ShellTool` passes the `ShellCommandRequest` to the sandbox runtime
+3. The runtime executes the command inside the isolated environment
+4. The output is returned to the agent
+
+This means you can swap between local execution, SmolVM, and E2B without changing your agent code — just change the `executor`.
+
+## Choosing a runtime
+
+| Feature | Local (default) | SmolVM | E2B |
+|---|---|---|---|
+| Isolation | None | Full VM | Full sandbox |
+| Setup | None | Install `smolvm` | API key required |
+| Speed | Fastest | Fast | Network latency |
+| Cost | Free | Free | Per-usage billing |
+| Best for | Development | Local sandboxing | Cloud deployments |
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Shell tool API" icon="terminal" href="/agentor/api/tools/shell">
+    Full API reference for ShellTool
+  </Card>
+
+  <Card title="Sandbox runtime API" icon="code" href="/agentor/api/sandbox-runtime">
+    API reference for SmolVMRuntime and E2BCodeInterpreterRuntime
+  </Card>
+</CardGroup>

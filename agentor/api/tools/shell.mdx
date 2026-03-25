@@ -169,6 +169,23 @@ The tool handles various error conditions:
 * Custom executors can implement additional validation
 * Consider restricting available commands in production environments
 
+## Sandbox runtimes
+
+Instead of running commands on your local machine, you can use a sandbox runtime for isolated execution:
+
+```python  theme={null}
+from agentor.tools import ShellTool
+from agentor.runtime import SmolVMRuntime, E2BCodeInterpreterRuntime
+
+# SmolVM - lightweight local VM
+shell = ShellTool(executor=SmolVMRuntime(mem_size_mib=1024))
+
+# E2B - cloud-based sandbox
+shell = ShellTool(executor=E2BCodeInterpreterRuntime(timeout=60))
+```
+
+See the [sandbox runtimes guide](/agentor/guides/sandbox-runtimes) for details.
+
 ## Alias
 
 `LocalShellTool` is an alias for `ShellTool`:
@@ -179,4 +196,7 @@ from agentor.tools.shell import LocalShellTool
 shell = LocalShellTool()
 ```
 
-Source: `/home/daytona/workspace/source/src/agentor/tools/shell.py:18`
+## Related
+
+- [Sandbox runtime API](/agentor/api/sandbox-runtime) — SmolVMRuntime and E2BCodeInterpreterRuntime reference
+- [Tools overview](/agentor/api/tools) — All available tools

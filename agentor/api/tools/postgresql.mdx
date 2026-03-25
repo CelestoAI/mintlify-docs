@@ -1,0 +1,85 @@
+---
+title: "PostgreSQL tool"
+description: "Execute SQL queries and list tables in PostgreSQL databases"
+---
+
+The `PostgreSQLTool` lets agents query PostgreSQL databases, execute SQL statements, and list tables.
+
+## Installation
+
+```bash  theme={null}
+pip install agentor[postgres]
+```
+
+## Class signature
+
+```python  theme={null}
+class PostgreSQLTool(BaseTool):
+    name = "postgresql"
+    description = "PostgreSQL database tool"
+
+    def __init__(self, api_key: Optional[str] = None)
+```
+
+<ParamField path="api_key" type="str" default="None">
+  PostgreSQL connection string (e.g., `"postgresql://user:pass@host:5432/db"`). Falls back to the `DATABASE_URL` environment variable if not provided.
+</ParamField>
+
+## Methods
+
+### execute_query
+
+Execute a SQL query against the database.
+
+```python  theme={null}
+@capability
+def execute_query(self, query: str, params: dict | None = None) -> str
+```
+
+<ParamField path="query" type="str" required>
+  The SQL query to execute.
+</ParamField>
+
+<ParamField path="params" type="dict" default="None">
+  Optional query parameters for parameterized queries.
+</ParamField>
+
+### list_tables
+
+List all tables in the connected database.
+
+```python  theme={null}
+@capability
+def list_tables(self) -> str
+```
+
+## Usage
+
+```python  theme={null}
+from agentor import Agentor
+from agentor.tools import PostgreSQLTool
+
+agent = Agentor(
+    name="Database Agent",
+    model="gpt-5-mini",
+    tools=[PostgreSQLTool()],
+    instructions="Help users query and explore their database. Always use parameterized queries."
+)
+
+result = agent.run("List all tables in the database")
+print(result)
+```
+
+<Warning>
+  Be cautious when giving agents database access. Consider using a read-only database user and limiting accessible tables in production.
+</Warning>
+
+## Environment variables
+
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | PostgreSQL connection string |
+
+## Related
+
+- [Tools overview](/agentor/api/tools) — All available tools

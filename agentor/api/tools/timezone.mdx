@@ -1,0 +1,58 @@
+---
+title: "Timezone tool"
+description: "Get current time in any timezone and list available timezones"
+---
+
+The `TimezoneTool` provides time-related capabilities, letting agents check the current time in any timezone and list all available timezones.
+
+## Class signature
+
+```python  theme={null}
+class TimezoneTool(BaseTool):
+    name = "timezone"
+```
+
+## Methods
+
+### get_current_time
+
+Get the current time in a specific timezone.
+
+```python  theme={null}
+@capability
+def get_current_time(self, timezone: str = "UTC") -> str
+```
+
+<ParamField path="timezone" type="str" default="UTC">
+  The timezone name (e.g., `"US/Eastern"`, `"Europe/London"`, `"Asia/Tokyo"`).
+</ParamField>
+
+### list_timezones
+
+List all available timezone names.
+
+```python  theme={null}
+@capability
+def list_timezones(self) -> str
+```
+
+## Usage
+
+```python  theme={null}
+from agentor import Agentor
+from agentor.tools import TimezoneTool
+
+agent = Agentor(
+    name="Time Assistant",
+    model="gpt-5-mini",
+    tools=[TimezoneTool()],
+    instructions="Help users with time-related questions."
+)
+
+result = agent.run("What time is it in Tokyo right now?")
+print(result)
+```
+
+## Related
+
+- [Tools overview](/agentor/api/tools) — All available tools

@@ -46,7 +46,9 @@
               "agentor/deploy",
               "agentor/tracing",
               "agentor/agent-to-agent",
-              "agentor/skills"
+              "agentor/skills",
+              "agentor/guides/durable-agents",
+              "agentor/guides/sandbox-runtimes"
             ]
           },
           {
@@ -83,7 +85,9 @@
               "agentor/guides/streaming",
               "agentor/guides/observability",
               "agentor/guides/agent-communication",
-              "agentor/guides/deployment"
+              "agentor/guides/deployment",
+              "agentor/guides/durable-agents",
+              "agentor/guides/sandbox-runtimes"
             ]
           },
           {
@@ -93,6 +97,8 @@
               "agentor/api/agentor",
               "agentor/api/model-settings",
               "agentor/api/llm",
+              "agentor/api/durable-agent",
+              "agentor/api/sandbox-runtime",
               "agentor/api/tools",
               "agentor/api/tools/weather",
               "agentor/api/tools/web-search",
@@ -102,6 +108,12 @@
               "agentor/api/tools/gmail",
               "agentor/api/tools/calculator",
               "agentor/api/tools/shell",
+              "agentor/api/tools/slack",
+              "agentor/api/tools/postgresql",
+              "agentor/api/tools/timezone",
+              "agentor/api/tools/exa-search",
+              "agentor/api/tools/linkedin",
+              "agentor/api/tools/scrapegraph",
               "agentor/api/mcp/litemcp",
               "agentor/api/mcp/router",
               "agentor/api/mcp/hub",

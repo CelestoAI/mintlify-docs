@@ -1,0 +1,67 @@
+---
+title: "LinkedIn scraper tool"
+description: "Scrape LinkedIn profile data using Bright Data"
+---
+
+The `LinkedInScraperTool` lets agents retrieve LinkedIn profile information through the Bright Data API.
+
+## Class signature
+
+```python  theme={null}
+class LinkedInScraperTool(BaseTool):
+    name = "linkedin_scraper"
+    description = "Scrape LinkedIn profile data"
+
+    def __init__(self, api_key: Optional[str] = None)
+```
+
+<ParamField path="api_key" type="str" default="None">
+  Bright Data API key. Falls back to the `BRIGHT_DATA_API_KEY` environment variable if not provided.
+</ParamField>
+
+## Methods
+
+### scrape_profile
+
+Scrape a LinkedIn profile by URL.
+
+```python  theme={null}
+@capability
+def scrape_profile(self, linkedin_url: str, force_refresh: bool = False) -> str
+```
+
+<ParamField path="linkedin_url" type="str" required>
+  The full LinkedIn profile URL (e.g., `"https://linkedin.com/in/username"`).
+</ParamField>
+
+<ParamField path="force_refresh" type="bool" default="False">
+  Force a fresh scrape instead of using cached data.
+</ParamField>
+
+## Usage
+
+```python  theme={null}
+from agentor import Agentor
+from agentor.tools import LinkedInScraperTool
+
+agent = Agentor(
+    name="Recruiter Agent",
+    model="gpt-5-mini",
+    tools=[LinkedInScraperTool()],
+    instructions="Help find and summarize professional profiles."
+)
+
+result = agent.run("Look up the LinkedIn profile at https://linkedin.com/in/example")
+print(result)
+```
+
+## Environment variables
+
+| Variable | Description |
+|---|---|
+| `BRIGHT_DATA_API_KEY` | Bright Data API key |
+| `BRIGHT_DATA_DATASET_ID` | Bright Data dataset ID (default: `gd_l1viktl72bvl7bjuj0`) |
+
+## Related
+
+- [Tools overview](/agentor/api/tools) — All available tools

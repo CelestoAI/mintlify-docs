@@ -1,0 +1,139 @@
+---
+title: "ScrapeGraph tool"
+description: "AI-powered web scraping using ScrapeGraphAI"
+---
+
+The `ScrapeGraphAI` tool provides AI-powered web scraping capabilities, including smart scraping with natural language prompts, search scraping, and website crawling.
+
+## Installation
+
+```bash  theme={null}
+pip install agentor[scrapegraph]
+```
+
+## Class signature
+
+```python  theme={null}
+class ScrapeGraphAI(BaseTool):
+    name = "scrapegraph"
+    description = "AI-powered web scraping tool"
+
+    def __init__(self, api_key: Optional[str] = None)
+```
+
+<ParamField path="api_key" type="str" default="None">
+  ScrapeGraphAI API key. Falls back to the `SCRAPEGRAPH_API_KEY` environment variable if not provided.
+</ParamField>
+
+## Methods
+
+### smartscraper
+
+Scrape a website using a natural language prompt to extract specific data.
+
+```python  theme={null}
+@capability
+def smartscraper(self, website_url: str, user_prompt: str) -> str
+```
+
+<ParamField path="website_url" type="str" required>
+  The URL to scrape.
+</ParamField>
+
+<ParamField path="user_prompt" type="str" required>
+  Natural language description of what data to extract.
+</ParamField>
+
+### searchscraper
+
+Search the web and extract structured data from results.
+
+```python  theme={null}
+@capability
+def searchscraper(self, user_prompt: str, num_results: int = 3, extraction_mode: bool = True) -> str
+```
+
+<ParamField path="user_prompt" type="str" required>
+  The search query.
+</ParamField>
+
+<ParamField path="num_results" type="int" default="3">
+  Number of search results to process.
+</ParamField>
+
+<ParamField path="extraction_mode" type="bool" default="True">
+  Whether to extract structured data from results.
+</ParamField>
+
+### markdownify
+
+Convert a webpage to clean Markdown.
+
+```python  theme={null}
+@capability
+def markdownify(self, website_url: str) -> str
+```
+
+### scrape
+
+Scrape raw content from a webpage.
+
+```python  theme={null}
+@capability
+def scrape(self, website_url: str) -> str
+```
+
+### smartcrawler
+
+Crawl a website following links to a specified depth.
+
+```python  theme={null}
+@capability
+def smartcrawler(
+    self,
+    website_url: str,
+    user_prompt: str,
+    max_depth: int = 1,
+    max_pages: int = 3,
+    sitemap: bool = True,
+    extraction_mode: bool = False,
+    data_schema: dict | None = None,
+) -> str
+```
+
+### sitemap
+
+Retrieve the sitemap of a website.
+
+```python  theme={null}
+@capability
+def sitemap(self, website_url: str) -> str
+```
+
+## Usage
+
+```python  theme={null}
+from agentor import Agentor
+from agentor.tools import ScrapeGraphAI
+
+agent = Agentor(
+    name="Web Researcher",
+    model="gpt-5-mini",
+    tools=[ScrapeGraphAI()],
+    instructions="Scrape websites to answer user questions."
+)
+
+result = agent.run("Extract the pricing information from https://example.com/pricing")
+print(result)
+```
+
+## Environment variables
+
+| Variable | Description |
+|---|---|
+| `SCRAPEGRAPH_API_KEY` | ScrapeGraphAI API key |
+
+## Related
+
+- [Fetch tool](/agentor/api/tools/fetch) — Simple HTTP requests
+- [Tools overview](/agentor/api/tools) — All available tools

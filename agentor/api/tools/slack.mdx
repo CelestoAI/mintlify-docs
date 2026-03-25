@@ -1,0 +1,81 @@
+---
+title: "Slack tool"
+description: "Send messages and list channels in Slack workspaces"
+---
+
+The `SlackTool` lets agents send messages to Slack channels and list available channels in a workspace.
+
+## Installation
+
+```bash  theme={null}
+pip install agentor[slack]
+```
+
+## Class signature
+
+```python  theme={null}
+class SlackTool(BaseTool):
+    name = "slack"
+    description = "Slack messaging tool"
+
+    def __init__(self, api_key: Optional[str] = None)
+```
+
+<ParamField path="api_key" type="str" default="None">
+  Slack Bot Token. Falls back to the `SLACK_BOT_TOKEN` environment variable if not provided.
+</ParamField>
+
+## Methods
+
+### send_message
+
+Send a message to a Slack channel.
+
+```python  theme={null}
+@capability
+def send_message(self, channel: str, text: str) -> str
+```
+
+<ParamField path="channel" type="str" required>
+  The channel ID or name to send the message to.
+</ParamField>
+
+<ParamField path="text" type="str" required>
+  The message text to send.
+</ParamField>
+
+### list_channels
+
+List all channels in the Slack workspace.
+
+```python  theme={null}
+@capability
+def list_channels(self) -> str
+```
+
+## Usage
+
+```python  theme={null}
+from agentor import Agentor
+from agentor.tools import SlackTool
+
+agent = Agentor(
+    name="Slack Agent",
+    model="gpt-5-mini",
+    tools=[SlackTool()],
+    instructions="Help users communicate with their team via Slack."
+)
+
+result = agent.run("Send a message to #general saying 'Hello team!'")
+print(result)
+```
+
+## Environment variables
+
+| Variable | Description |
+|---|---|
+| `SLACK_BOT_TOKEN` | Slack Bot User OAuth Token (starts with `xoxb-`) |
+
+## Related
+
+- [Tools overview](/agentor/api/tools) — All available tools

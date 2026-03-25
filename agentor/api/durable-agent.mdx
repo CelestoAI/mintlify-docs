@@ -1,0 +1,160 @@
+---
+title: "DurableAgent"
+description: "API reference for building long-running agents with persistent state"
+---
+
+## Overview
+
+The `DurableAgent` class creates agents that persist every step of their execution to disk. If the agent stops mid-task, you can resume it later using the same `run_id`.
+
+## Constructor
+
+```python  theme={null}
+DurableAgent(
+    model: str,
+    tools: List[Any],
+    runs_dir: str = "runs",
+    verbose: bool = False,
+)
+```
+
+### Parameters
+
+<ParamField path="model" type="str" required>
+  The LLM model to use, in LiteLLM format (e.g., `"openai/gpt-5-mini"`, `"gpt-4-turbo"`, `"anthropic/claude-4-sonnet"`).
+</ParamField>
+
+<ParamField path="tools" type="List[Any]" required>
+  List of tool objects. These should be `BaseTool` instances created with the `@tool` decorator or `BaseTool` subclasses.
+</ParamField>
+
+<ParamField path="runs_dir" type="str" default="runs">
+  Directory where run event logs are stored. Each run creates a JSONL file at `{runs_dir}/{run_id}.jsonl`.
+</ParamField>
+
+<ParamField path="verbose" type="bool" default="False">
+  Enable verbose logging to print each step as it executes.
+</ParamField>
+
+## Methods
+
+### run
+
+Start a new run or resume an existing one.
+
+```python  theme={null}
+def run(
+    input_text: str | None = None,
+    run_id: str | None = None,
+    max_steps: int = 10,
+) -> RunResult
+```
+
+<ParamField path="input_text" type="str" default="None">
+  The user's input prompt. Required when starting a new run. Ignored when resuming an existing run.
+</ParamField>
+
+<ParamField path="run_id" type="str" default="None">
+  The ID of a previous run to resume. When provided, the agent replays the event log and continues from where it left off.
+</ParamField>
+
+<ParamField path="max_steps" type="int" default="10">
+  Maximum number of LLM calls and tool executions in this invocation. Prevents runaway agents.
+</ParamField>
+
+**Returns:** A `RunResult` object.
+
+**Example — new run:**
+
+```python  theme={null}
+from agentor.durable import DurableAgent
+
+agent = DurableAgent(model="openai/gpt-5-mini", tools=[my_tool])
+result = agent.run(input_text="Analyze this data")
+```
+
+**Example — resume a run:**
+
+```python  theme={null}
+result = agent.run(run_id="abc123def456", max_steps=20)
+```
+
+## RunResult
+
+The return type from `DurableAgent.run()`.
+
+```python  theme={null}
+@dataclass
+class RunResult:
+    run_id: str
+    status: Literal["running", "completed", "failed"]
+    final_answer: Optional[str]
+    events: List[Dict[str, Any]]
+```
+
+### Fields
+
+<ResponseField name="run_id" type="str" required>
+  Unique identifier for this run. Use this to resume the run later.
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  Current status of the run. One of:
+  - `"completed"` — The agent finished and produced a final answer
+  - `"running"` — The agent hit the step limit but hasn't finished
+  - `"failed"` — An error occurred during execution
+</ResponseField>
+
+<ResponseField name="final_answer" type="string">
+  The agent's final response. Only present when `status` is `"completed"`.
+</ResponseField>
+
+<ResponseField name="events" type="array">
+  Complete list of events from the run log.
+</ResponseField>
+
+## Event types
+
+The JSONL log stores these event types:
+
+| Type | Payload fields | Description |
+|---|---|---|
+| `user_message` | `content` | The user's input text |
+| `llm_response` | `raw` | Full LLM response object |
+| `tool_call` | `tool_call_id`, `tool_name`, `args`, `status` | A tool invocation from the LLM |
+| `tool_result` | `tool_call_id`, `tool_name`, `output` or `error` | The result of running a tool |
+| `run_status` | `status`, `final_answer` or `error` | Final run status |
+
+## Usage example
+
+```python  theme={null}
+from agentor import tool
+from agentor.durable import DurableAgent
+
+@tool
+def search(query: str) -> str:
+    """Search for information."""
+    return f"Results for: {query}"
+
+agent = DurableAgent(
+    model="openai/gpt-5-mini",
+    tools=[search],
+    runs_dir="my_runs",
+    verbose=True
+)
+
+# Start a run
+result = agent.run(input_text="Find recent AI research papers")
+
+# Check status and handle accordingly
+if result.status == "completed":
+    print(result.final_answer)
+elif result.status == "running":
+    # Resume with more steps
+    result = agent.run(run_id=result.run_id, max_steps=20)
+```
+
+## Related
+
+- [Durable agents guide](/agentor/guides/durable-agents) — Step-by-step guide for building durable agents
+- [Tools](/agentor/api/tools) — Creating tools for agents
