@@ -1,0 +1,111 @@
+---
+title: "ExaSearchTool"
+description: "Search the web using the Exa neural search API"
+---
+
+The `ExaSearchTool` lets your agent search the web using [Exa](https://exa.ai/), a neural search engine designed for AI applications. It returns relevant web pages based on natural language queries.
+
+## Installation
+
+Install the Exa dependency:
+
+```bash  theme={null}
+pip install agentor[exa]
+```
+
+## Constructor
+
+```python  theme={null}
+class ExaSearchTool(BaseTool):
+    name = "exa_search"
+    description = "Search the web using Exa API."
+
+    def __init__(self, api_key: Optional[str] = None)
+```
+
+<ParamField path="api_key" type="str">
+  Exa API key. Get one from [exa.ai](https://exa.ai/).
+</ParamField>
+
+## Methods
+
+### search
+
+Search the web for a query.
+
+<ParamField path="query" type="str" required>
+  The search query in natural language.
+</ParamField>
+
+<ParamField path="num_results" type="int" default="5">
+  Number of results to return.
+</ParamField>
+
+**Returns:** Search results as a string, including titles, URLs, and snippets.
+
+<Note>
+  Exa uses `autoprompt` by default, which optimizes your query for better neural search results.
+</Note>
+
+## Usage
+
+### With an Agentor agent
+
+```python  theme={null}
+import os
+from agentor import Agentor
+from agentor.tools import ExaSearchTool
+
+exa_tool = ExaSearchTool(
+    api_key=os.getenv("EXA_API_KEY")
+)
+
+agent = Agentor(
+    name="Research Agent",
+    model="gpt-4o-mini",
+    tools=[exa_tool],
+    instructions="Search the web to find accurate, up-to-date information."
+)
+
+result = agent.run("Find recent articles about AI agent frameworks")
+print(result.final_output)
+```
+
+### Searching directly
+
+```python  theme={null}
+from agentor.tools import ExaSearchTool
+
+exa = ExaSearchTool(api_key="your-exa-key")
+
+# Basic search
+result = exa.search("best practices for building AI agents")
+print(result)
+
+# Limit results
+result = exa.search(
+    query="Python async programming tutorials",
+    num_results=3
+)
+print(result)
+```
+
+## Environment setup
+
+```bash  theme={null}
+export EXA_API_KEY=your-exa-api-key
+```
+
+## Error handling
+
+The tool returns error messages as strings when operations fail:
+
+```python  theme={null}
+exa = ExaSearchTool(api_key="invalid-key")
+result = exa.search("test query")
+print(result)  # Error performing search: ...
+```
+
+## Source reference
+
+`src/agentor/tools/exa.py:11`

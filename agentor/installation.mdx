@@ -82,11 +82,21 @@ pip install agentor[slack]
 pip install agentor[scrapegraph]
 ```
 
-### Install all optional dependencies
+#### Install all optional dependencies
 
 ```bash  theme={null}
 pip install agentor[all]
 ```
+
+## Known dependency issues
+
+<Warning>
+  LiteLLM versions `1.82.7` and `1.82.8` have been excluded due to a known security issue. Agentor automatically avoids these versions during installation. If you have either version installed, upgrade with:
+
+  ```bash  theme={null}
+  pip install --upgrade litellm
+  ```
+</Warning>
 
 ## Set up environment variables
 

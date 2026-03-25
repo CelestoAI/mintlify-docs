@@ -1,0 +1,134 @@
+---
+title: "PostgreSQLTool"
+description: "Execute SQL queries on PostgreSQL databases from agents"
+---
+
+The `PostgreSQLTool` lets your agent run SQL queries against a PostgreSQL database. You can execute SELECT queries to read data or run INSERT, UPDATE, and DELETE statements to modify it.
+
+## Installation
+
+Install the PostgreSQL dependency:
+
+```bash  theme={null}
+pip install agentor[postgres]
+```
+
+## Constructor
+
+```python  theme={null}
+class PostgreSQLTool(BaseTool):
+    name = "postgresql"
+    description = "Execute SQL queries on a PostgreSQL database."
+
+    def __init__(self, dsn: str, api_key: Optional[str] = None)
+```
+
+<ParamField path="dsn" type="str" required>
+  PostgreSQL connection string (DSN). For example: `postgresql://user:password@localhost:5432/mydb`.
+</ParamField>
+
+<ParamField path="api_key" type="str">
+  Optional API key passed to the `BaseTool` parent class for MCP server usage.
+</ParamField>
+
+## Methods
+
+### execute\_query
+
+Execute a SQL query against the database.
+
+<ParamField path="query" type="str" required>
+  The SQL query to execute.
+</ParamField>
+
+<ParamField path="params" type="List[Any]" default="None">
+  Optional list of parameters for parameterized queries. Use these to safely pass user input and prevent SQL injection.
+</ParamField>
+
+**Returns:** For SELECT queries, returns the query results as a string. For other queries, returns `"Query executed successfully."`.
+
+### list\_tables
+
+List all tables in the `public` schema.
+
+**Returns:** A string representation of all table names in the public schema.
+
+## Usage
+
+### With an Agentor agent
+
+```python  theme={null}
+import os
+from agentor import Agentor
+from agentor.tools import PostgreSQLTool
+
+db_tool = PostgreSQLTool(
+    dsn=os.getenv("DATABASE_URL")
+)
+
+agent = Agentor(
+    name="Database Assistant",
+    model="gpt-4o-mini",
+    tools=[db_tool],
+    instructions="Help users query the database. Always use parameterized queries for user input."
+)
+
+result = agent.run("How many users signed up this month?")
+print(result.final_output)
+```
+
+### Running queries directly
+
+```python  theme={null}
+from agentor.tools import PostgreSQLTool
+
+db = PostgreSQLTool(dsn="postgresql://user:pass@localhost:5432/mydb")
+
+# SELECT query
+result = db.execute_query("SELECT name, email FROM users LIMIT 5")
+print(result)
+
+# Parameterized query
+result = db.execute_query(
+    "SELECT * FROM orders WHERE status = %s",
+    params=["pending"]
+)
+print(result)
+
+# INSERT query
+result = db.execute_query(
+    "INSERT INTO logs (message) VALUES (%s)",
+    params=["Agent executed a task"]
+)
+print(result)  # Query executed successfully.
+```
+
+### Listing tables
+
+```python  theme={null}
+result = db.list_tables()
+print(result)  # [('users',), ('orders',), ('products',)]
+```
+
+## Error handling
+
+The tool returns error messages as strings when operations fail:
+
+```python  theme={null}
+# Connection error
+db = PostgreSQLTool(dsn="postgresql://bad:creds@localhost/db")
+result = db.execute_query("SELECT 1")
+print(result)  # Database error: could not connect to server...
+
+# Invalid SQL
+result = db.execute_query("SELEC * FROM users")
+print(result)  # Database error: syntax error at or near "SELEC"
+```
+
+<Warning>
+  Always use parameterized queries (the `params` argument) when passing user-provided values to prevent SQL injection attacks.
+</Warning>
+
+## Source reference
+
+`src/agentor/tools/postgres.py:25`

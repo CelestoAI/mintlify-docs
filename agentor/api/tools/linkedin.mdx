@@ -1,0 +1,124 @@
+---
+title: "LinkedInScraperTool"
+description: "Scrape LinkedIn profile data using Bright Data"
+---
+
+The `LinkedInScraperTool` lets your agent retrieve public LinkedIn profile data. It uses the [Bright Data](https://brightdata.com/) datasets API to scrape profile information.
+
+## Constructor
+
+```python  theme={null}
+class LinkedInScraperTool(BaseTool):
+    name = "linkedin_scraper"
+    description = "Scrape LinkedIn profile data using Bright Data datasets."
+
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        dataset_id: Optional[str] = None
+    )
+```
+
+<ParamField path="api_key" type="str">
+  Bright Data API key. Defaults to the `BRIGHT_DATA_API_KEY` environment variable.
+</ParamField>
+
+<ParamField path="dataset_id" type="str">
+  Bright Data dataset ID for LinkedIn profiles. Defaults to the `BRIGHT_DATA_DATASET_ID` environment variable or a built-in fallback.
+</ParamField>
+
+## Methods
+
+### scrape\_profile
+
+Scrape a LinkedIn profile and return the profile data.
+
+<ParamField path="linkedin_url" type="str" required>
+  The full LinkedIn profile URL (e.g., `https://www.linkedin.com/in/username`).
+</ParamField>
+
+<ParamField path="force_refresh" type="bool" default="False">
+  Retained for API compatibility. Currently unused.
+</ParamField>
+
+**Returns:** A JSON string with the profile data. The response includes a `status` field:
+- `"ok"` with `results` when data is immediately available
+- `"pending"` with a `snapshot_id` when the scrape is queued for processing
+
+## Usage
+
+### With an Agentor agent
+
+```python  theme={null}
+import os
+from agentor import Agentor
+from agentor.tools import LinkedInScraperTool
+
+linkedin_tool = LinkedInScraperTool(
+    api_key=os.getenv("BRIGHT_DATA_API_KEY")
+)
+
+agent = Agentor(
+    name="Recruiter Assistant",
+    model="gpt-4o-mini",
+    tools=[linkedin_tool],
+    instructions="Help look up LinkedIn profiles when given a profile URL."
+)
+
+result = agent.run(
+    "Look up the LinkedIn profile at https://www.linkedin.com/in/example-user"
+)
+print(result.final_output)
+```
+
+### Scraping directly
+
+```python  theme={null}
+import json
+from agentor.tools import LinkedInScraperTool
+
+scraper = LinkedInScraperTool(api_key="your-bright-data-key")
+
+result = scraper.scrape_profile(
+    linkedin_url="https://www.linkedin.com/in/example-user"
+)
+data = json.loads(result)
+print(data["status"])   # "ok" or "pending"
+print(data["profile"])  # "example-user"
+```
+
+## Environment setup
+
+Set the following environment variables:
+
+```bash  theme={null}
+# Required - your Bright Data API key
+export BRIGHT_DATA_API_KEY=your-api-key
+
+# Optional - custom dataset ID
+export BRIGHT_DATA_DATASET_ID=your-dataset-id
+```
+
+## Error handling
+
+The tool returns error messages as strings when operations fail:
+
+```python  theme={null}
+scraper = LinkedInScraperTool()
+
+# Missing API key
+result = scraper.scrape_profile("https://www.linkedin.com/in/user")
+print(result)  # Error: BRIGHT_DATA_API_KEY is required to use the LinkedIn scraper.
+
+# Invalid URL
+result = scraper.scrape_profile("not-a-linkedin-url")
+print(result)  # Error: Could not extract LinkedIn username from the provided URL.
+
+# Empty URL
+result = scraper.scrape_profile("")
+print(result)  # Error: LinkedIn profile URL is required.
+```
+
+## Source reference
+
+`src/agentor/tools/linkedin.py:11`

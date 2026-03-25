@@ -1,0 +1,141 @@
+---
+title: "SlackTool"
+description: "Send messages and list channels in Slack workspaces"
+---
+
+The `SlackTool` lets your agent send messages to Slack channels and list available channels in a workspace. It wraps the [Slack SDK](https://slack.dev/python-slack-sdk/) `WebClient` for straightforward integration.
+
+## Installation
+
+Install the Slack dependency:
+
+```bash  theme={null}
+pip install agentor[slack]
+```
+
+## Constructor
+
+```python  theme={null}
+class SlackTool(BaseTool):
+    name = "slack"
+    description = "Interact with Slack."
+
+    def __init__(self, token: str, api_key: Optional[str] = None)
+```
+
+<ParamField path="token" type="str" required>
+  Slack Bot User OAuth Token. You can find this in your Slack app settings under **OAuth & Permissions**.
+</ParamField>
+
+<ParamField path="api_key" type="str">
+  Optional API key passed to the `BaseTool` parent class for MCP server usage.
+</ParamField>
+
+## Methods
+
+### send\_message
+
+Send a message to a Slack channel.
+
+<ParamField path="channel" type="str" required>
+  The channel ID or name to send the message to (e.g., `#general` or `C01234ABCDE`).
+</ParamField>
+
+<ParamField path="text" type="str" required>
+  The message text to send.
+</ParamField>
+
+**Returns:** A confirmation string with the message timestamp, or an error message.
+
+### list\_channels
+
+List all public channels in the workspace.
+
+**Returns:** A newline-separated list of channels in `#name (id)` format, or an error message.
+
+## Usage
+
+### With an Agentor agent
+
+```python  theme={null}
+import os
+from agentor import Agentor
+from agentor.tools import SlackTool
+
+slack_tool = SlackTool(
+    token=os.getenv("SLACK_BOT_TOKEN")
+)
+
+agent = Agentor(
+    name="Slack Assistant",
+    model="gpt-4o-mini",
+    tools=[slack_tool],
+    instructions="Help users send messages and manage Slack channels."
+)
+
+result = agent.run("Send 'Hello team!' to the #general channel")
+print(result.final_output)
+```
+
+### Sending messages directly
+
+```python  theme={null}
+from agentor.tools import SlackTool
+
+slack = SlackTool(token="xoxb-your-token")
+
+# Send a message
+result = slack.send_message(
+    channel="#general",
+    text="Deployment completed successfully!"
+)
+print(result)  # Message sent: 1234567890.123456
+```
+
+### Listing channels
+
+```python  theme={null}
+result = slack.list_channels()
+print(result)
+# #general (C01234ABCDE)
+# #engineering (C05678FGHIJ)
+# #random (C09012KLMNO)
+```
+
+## Error handling
+
+The tool returns error messages as strings when operations fail:
+
+```python  theme={null}
+# Invalid token
+slack = SlackTool(token="invalid-token")
+result = slack.send_message("#general", "Hello")
+print(result)  # Slack API Error: invalid_auth
+```
+
+## Environment setup
+
+To use the Slack tool, you need a Slack Bot Token:
+
+<Steps>
+  <Step title="Create a Slack app">
+    Go to [api.slack.com/apps](https://api.slack.com/apps) and create a new app.
+  </Step>
+  <Step title="Add bot permissions">
+    Under **OAuth & Permissions**, add the scopes your agent needs (e.g., `chat:write`, `channels:read`).
+  </Step>
+  <Step title="Install to workspace">
+    Install the app to your workspace and copy the **Bot User OAuth Token**.
+  </Step>
+  <Step title="Set the token">
+    Store the token as an environment variable:
+
+    ```bash  theme={null}
+    export SLACK_BOT_TOKEN=xoxb-your-token
+    ```
+  </Step>
+</Steps>
+
+## Source reference
+
+`src/agentor/tools/slack.py:17`

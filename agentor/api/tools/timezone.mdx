@@ -1,0 +1,76 @@
+---
+title: "TimezoneTool"
+description: "Get current time across different timezones"
+---
+
+The `TimezoneTool` gives your agent the ability to check the current time in any timezone and list available timezones. It uses the `pytz` library, which is included with Agentor by default.
+
+## Constructor
+
+```python  theme={null}
+class TimezoneTool(BaseTool):
+    name = "timezone"
+    description = "Get current time in different timezones"
+```
+
+No additional parameters are required.
+
+## Methods
+
+### get\_current\_time
+
+Get the current date and time in a specific timezone.
+
+<ParamField path="timezone" type="str" default="UTC">
+  The timezone identifier (e.g., `UTC`, `America/New_York`, `Europe/London`, `Asia/Tokyo`).
+</ParamField>
+
+**Returns:** A formatted date and time string (e.g., `2026-03-25 12:30:00 EDT`), or an error message for unknown timezones.
+
+### list\_timezones
+
+List available timezone identifiers.
+
+**Returns:** A string with the first 50 timezone names.
+
+## Usage
+
+### With an Agentor agent
+
+```python  theme={null}
+from agentor import Agentor
+from agentor.tools import TimezoneTool
+
+agent = Agentor(
+    name="Time Assistant",
+    model="gpt-4o-mini",
+    tools=[TimezoneTool()],
+    instructions="Help users check the current time in different cities and timezones."
+)
+
+result = agent.run("What time is it in Tokyo right now?")
+print(result.final_output)
+```
+
+### Using directly
+
+```python  theme={null}
+from agentor.tools import TimezoneTool
+
+tz = TimezoneTool()
+
+# Get current time in a timezone
+print(tz.get_current_time("America/New_York"))  # 2026-03-25 13:30:00 EDT
+print(tz.get_current_time("Asia/Tokyo"))         # 2026-03-26 02:30:00 JST
+print(tz.get_current_time())                      # 2026-03-25 17:30:00 UTC
+
+# Handle invalid timezone
+print(tz.get_current_time("Mars/Olympus"))  # Error: Unknown timezone 'Mars/Olympus'
+
+# List available timezones
+print(tz.list_timezones())
+```
+
+## Source reference
+
+`src/agentor/tools/timezone.py:8`

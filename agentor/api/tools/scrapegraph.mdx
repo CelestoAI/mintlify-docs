@@ -1,0 +1,222 @@
+---
+title: "ScrapeGraphAI"
+description: "AI-powered web scraping, crawling, and content extraction"
+---
+
+The `ScrapeGraphAI` tool gives your agent the ability to scrape, crawl, and extract structured information from websites using AI. It wraps the [ScrapeGraph](https://scrapegraphai.com/) API and provides multiple scraping strategies.
+
+## Installation
+
+Install the ScrapeGraphAI dependency:
+
+```bash  theme={null}
+pip install agentor[scrapegraph]
+```
+
+## Constructor
+
+```python  theme={null}
+class ScrapeGraphAI(BaseTool):
+    name = "scrapegraph"
+    description = "Scrape websites using ScrapeGraphAI."
+
+    def __init__(self, api_key: Optional[str] = None)
+```
+
+<ParamField path="api_key" type="str">
+  ScrapeGraphAI API key. Get one from [scrapegraphai.com](https://scrapegraphai.com/).
+</ParamField>
+
+## Methods
+
+### smartscraper
+
+Extract specific information from a webpage using a natural language prompt.
+
+<ParamField path="website_url" type="str" required>
+  The URL of the website to scrape.
+</ParamField>
+
+<ParamField path="user_prompt" type="str" required>
+  A natural language description of what information to extract.
+</ParamField>
+
+**Returns:** Extracted information as a string.
+
+### searchscraper
+
+Search the web and extract information using AI.
+
+<ParamField path="user_prompt" type="str" required>
+  A natural language description of what to search for and extract.
+</ParamField>
+
+<ParamField path="num_results" type="int" default="3">
+  Number of search results to process.
+</ParamField>
+
+<ParamField path="extraction_mode" type="bool" default="True">
+  Whether to extract structured information from results.
+</ParamField>
+
+**Returns:** Search results and extracted information as a string.
+
+### markdownify
+
+Convert a webpage to clean markdown format.
+
+<ParamField path="website_url" type="str" required>
+  The URL of the website to convert.
+</ParamField>
+
+**Returns:** The page content in markdown format.
+
+### scrape
+
+Scrape a website and return its raw content.
+
+<ParamField path="website_url" type="str" required>
+  The URL of the website to scrape.
+</ParamField>
+
+**Returns:** The raw page content as a string.
+
+### smartcrawler
+
+Crawl multiple pages of a website and optionally extract structured data.
+
+<ParamField path="website_url" type="str" required>
+  The starting URL to crawl.
+</ParamField>
+
+<ParamField path="user_prompt" type="str" required>
+  A prompt describing what to extract. Used when `extraction_mode` is `True`.
+</ParamField>
+
+<ParamField path="max_depth" type="int" default="1">
+  Maximum crawl depth from the starting URL.
+</ParamField>
+
+<ParamField path="max_pages" type="int" default="3">
+  Maximum number of pages to crawl.
+</ParamField>
+
+<ParamField path="sitemap" type="bool" default="True">
+  Whether to use the site's sitemap for discovery.
+</ParamField>
+
+<ParamField path="extraction_mode" type="bool" default="False">
+  Whether to extract structured data. Requires `data_schema` when enabled.
+</ParamField>
+
+<ParamField path="data_schema" type="Dict[str, Any]" default="None">
+  JSON schema defining the structure of data to extract. Required when `extraction_mode` is `True`.
+</ParamField>
+
+**Returns:** Crawl results as a string.
+
+### sitemap
+
+Get the sitemap of a website.
+
+<ParamField path="website_url" type="str" required>
+  The URL of the website.
+</ParamField>
+
+**Returns:** The sitemap content as a string.
+
+## Usage
+
+### With an Agentor agent
+
+```python  theme={null}
+import os
+from agentor import Agentor
+from agentor.tools import ScrapeGraphAI
+
+scraper = ScrapeGraphAI(
+    api_key=os.getenv("SCRAPEGRAPH_API_KEY")
+)
+
+agent = Agentor(
+    name="Research Assistant",
+    model="gpt-4o-mini",
+    tools=[scraper],
+    instructions="Help users extract information from websites."
+)
+
+result = agent.run("Get the pricing plans from https://example.com/pricing")
+print(result.final_output)
+```
+
+### Smart scraping
+
+```python  theme={null}
+from agentor.tools import ScrapeGraphAI
+
+scraper = ScrapeGraphAI(api_key="sgai-xxx")
+
+# Extract specific information
+result = scraper.smartscraper(
+    website_url="https://example.com/about",
+    user_prompt="Extract the company name, founding year, and team size"
+)
+print(result)
+```
+
+### Crawling with extraction
+
+```python  theme={null}
+# Crawl and extract structured data
+result = scraper.smartcrawler(
+    website_url="https://example.com/blog",
+    user_prompt="Extract article titles and dates",
+    max_depth=2,
+    max_pages=10,
+    extraction_mode=True,
+    data_schema={
+        "type": "object",
+        "properties": {
+            "title": {"type": "string"},
+            "date": {"type": "string"},
+            "url": {"type": "string"}
+        }
+    }
+)
+print(result)
+```
+
+### Converting pages to markdown
+
+```python  theme={null}
+result = scraper.markdownify(
+    website_url="https://example.com/docs/getting-started"
+)
+print(result)
+```
+
+## Error handling
+
+All methods return error messages as strings when operations fail:
+
+```python  theme={null}
+# Missing API key
+scraper = ScrapeGraphAI(api_key=None)  # Raises ImportError
+
+# Invalid URL
+result = scraper.scrape(website_url="not-a-url")
+print(result)  # Error in scrape: ...
+
+# extraction_mode without schema
+result = scraper.smartcrawler(
+    website_url="https://example.com",
+    user_prompt="Extract data",
+    extraction_mode=True
+    # Missing data_schema!
+)
+print(result)  # Error in smartcrawler: data_schema is required when extraction_mode=True
+```
+
+## Source reference
+
+`src/agentor/tools/scrapegraphai.py:15`

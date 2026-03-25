@@ -1,18 +1,16 @@
 ---
 title: "Tool use with Agentor"
 sidebarTitle: "Tool use with Agentor"
-description: "Learn about tool use with Agentor."
+description: "Give your agents access to external tools and APIs with a single decorator."
 ---
 
+Agentor handles the complexity of [tool calling](./overview) for you. You write a regular Python function, add a decorator, and Agentor takes care of generating the tool schema, parsing the LLM's response, and calling your function with the right arguments.
 
-**[Agentor](https://github.com/CelestoAI/agentor)** simplifies the [tool use](./overview) process by automatically
-generating the tool schema from the function definition, parsing the function signature, and calling the function when required.
+## Function tools
 
+The quickest way to create a tool is the `@function_tool` decorator. It turns any Python function into a tool that agents can use:
 
-To create an Agent with access to external tools or APIs, you need to define a function and decorate it with the `@function_tool` decorator.
-
-
-```python
+```python  theme={null}
 from agentor import Agentor, function_tool
 
 @function_tool
@@ -25,8 +23,6 @@ result = agent.run("What is the weather in London?")
 print(result)
 ```
 
-The result will be the weather in London.
-
 ```markdown
 RunResult:
 - Last agent: Agent(name="Weather Agent", ...)
@@ -34,4 +30,115 @@ RunResult:
     London weather: sunny right now. Would you like the temperature or a short forecast?
 ```
 
-In the next section, we will learn about how to build and use MCP Servers with Agentor.
+The `@function_tool` decorator reads your function's name, docstring, and type hints to automatically generate the tool schema the LLM needs. This means:
+
+- The **function name** becomes the tool name
+- The **docstring** becomes the tool description (the LLM reads this to decide when to use the tool)
+- **Type hints** define the parameter schema
+
+## The @tool decorator
+
+The `@tool` decorator creates a dual-mode tool that works with both Agentor agents and the lower-level `LLM` client:
+
+```python  theme={null}
+from agentor import Agentor, tool
+
+@tool
+def search_contacts(name: str, limit: int = 5) -> str:
+    """Search for contacts by name."""
+    return f"Found {limit} contacts matching '{name}'"
+
+agent = Agentor(name="Contact Agent", tools=[search_contacts])
+result = agent.run("Find contacts named Alice")
+```
+
+You can customize the tool name and description:
+
+```python  theme={null}
+@tool(name="contact_lookup", description="Look up contacts in the CRM system")
+def search_contacts(name: str) -> str:
+    """Search for contacts by name."""
+    return f"Found contacts matching '{name}'"
+```
+
+## Multi-capability tools
+
+For tools with multiple related operations, use the `BaseTool` class with the `@capability` decorator:
+
+```python  theme={null}
+from agentor.tools.base import BaseTool, capability
+
+class NotesTool(BaseTool):
+    name = "notes"
+    description = "Create and search notes"
+
+    def __init__(self):
+        super().__init__()
+        self.notes = []
+
+    @capability
+    def add_note(self, title: str, content: str) -> str:
+        """Add a new note."""
+        self.notes.append({"title": title, "content": content})
+        return f"Note '{title}' saved"
+
+    @capability
+    def search_notes(self, query: str) -> str:
+        """Search notes by keyword."""
+        matches = [n for n in self.notes if query.lower() in n["title"].lower()]
+        return str(matches) if matches else "No notes found"
+```
+
+Each `@capability` method becomes a separate tool the agent can call.
+
+## Built-in tools
+
+Agentor includes pre-built tools for common tasks. You can reference them by name or instantiate them directly:
+
+```python  theme={null}
+from agentor import Agentor
+from agentor.tools import CalculatorTool, GetWeatherTool, ShellTool
+
+# Instantiate and pass to the agent
+agent = Agentor(
+    name="Multi-Tool Agent",
+    model="gpt-4o-mini",
+    tools=[CalculatorTool(), ShellTool()]
+)
+```
+
+The full list of built-in tools:
+
+| Tool | Description | Requires |
+|------|-------------|----------|
+| `CalculatorTool` | Arithmetic operations | - |
+| `GetWeatherTool` | Weather data | `WEATHER_API_KEY` |
+| `WebSearchTool` | Web search | - |
+| `ExaSearchTool` | Neural web search | `pip install agentor[exa]` |
+| `FetchTool` | HTTP requests | - |
+| `GitTool` | Git operations | `pip install agentor[git]` |
+| `GitHubTool` | GitHub API | `pip install agentor[github]` |
+| `GmailTool` | Gmail access | Google OAuth credentials |
+| `ShellTool` | Shell commands | - |
+| `SlackTool` | Slack messaging | `pip install agentor[slack]` |
+| `PostgreSQLTool` | Database queries | `pip install agentor[postgres]` |
+| `ScrapeGraphAI` | AI web scraping | `pip install agentor[scrapegraph]` |
+| `LinkedInScraperTool` | LinkedIn profiles | `BRIGHT_DATA_API_KEY` |
+| `TimezoneTool` | Timezone lookups | - |
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Custom tools guide" icon="wrench" href="/agentor/guides/custom-tools">
+    Learn patterns for building production-ready custom tools.
+  </Card>
+  <Card title="Build an MCP server" icon="server" href="/agentor/tools/LiteMCP">
+    Serve your tools as an MCP server for any LLM client to use.
+  </Card>
+  <Card title="Tool search" icon="magnifying-glass" href="/agentor/tools/tool-search">
+    Reduce context bloat by dynamically discovering relevant tools.
+  </Card>
+  <Card title="Tools API reference" icon="code" href="/agentor/api/tools">
+    Full API reference for tool decorators and the BaseTool class.
+  </Card>
+</CardGroup>
