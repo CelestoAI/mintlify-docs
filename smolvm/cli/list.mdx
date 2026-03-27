@@ -1,0 +1,98 @@
+---
+title: "smolvm list"
+description: "List all SmolVMs and their current status"
+---
+
+## Synopsis
+
+```bash  theme={null}
+smolvm list [OPTIONS]
+```
+
+## Description
+
+The `list` command displays all known SmolVMs along with their current status, IP address, SSH port, and process ID. You can filter the output by VM state to quickly find running or stopped VMs.
+
+## Options
+
+<ParamField path="--status" type="string" default="None">
+  Filter VMs by lifecycle state. Valid values:
+
+  * `created` — VMs that have been created but not yet started
+  * `running` — VMs currently running
+  * `stopped` — VMs that have been stopped
+  * `error` — VMs in an error state
+</ParamField>
+
+## Examples
+
+### List all VMs
+
+```bash  theme={null}
+smolvm list
+```
+
+**Example output:**
+
+```
+VM ID         STATUS   IP ADDRESS    SSH PORT  PID
+----------    -------  -----------   --------  -----
+vm-a1b2c3d4   running  172.16.0.2   -         12345
+vm-e5f6g7h8   stopped  -            -         -
+my-agent-vm   running  172.16.0.3   2222      12400
+
+Total: 3 VM(s).
+```
+
+### Filter by status
+
+Show only running VMs:
+
+```bash  theme={null}
+smolvm list --status running
+```
+
+**Example output:**
+
+```
+VM ID         STATUS   IP ADDRESS    SSH PORT  PID
+----------    -------  -----------   --------  -----
+vm-a1b2c3d4   running  172.16.0.2   -         12345
+my-agent-vm   running  172.16.0.3   2222      12400
+
+Total: 2 VM(s).
+```
+
+### No VMs found
+
+When no VMs match:
+
+```bash  theme={null}
+smolvm list --status error
+```
+
+```
+No VMs found with status 'error'.
+```
+
+## Output columns
+
+| Column       | Description                                          |
+| ------------ | ---------------------------------------------------- |
+| `VM ID`      | Unique identifier for the VM                         |
+| `STATUS`     | Current lifecycle state (`created`, `running`, `stopped`, `error`) |
+| `IP ADDRESS` | Guest IP address (or `-` if no network is configured)  |
+| `SSH PORT`   | Host-side SSH port (or `-` if not applicable)          |
+| `PID`        | Host process ID of the VM (or `-` if not running)      |
+
+## Exit codes
+
+| Code | Description               |
+| ---- | ------------------------- |
+| `0`  | Success                   |
+| `1`  | Error listing VMs         |
+
+## Related commands
+
+* [`smolvm cleanup`](/smolvm/cli/cleanup) — Remove stale VMs and resources
+* [`smolvm doctor`](/smolvm/cli/doctor) — Diagnose system setup

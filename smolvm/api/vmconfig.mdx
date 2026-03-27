@@ -18,7 +18,7 @@ All VMConfig instances are immutable (frozen) after creation.
 ## Fields
 
 <ParamField path="vm_id" type="str" default="auto-generated">
-  Unique identifier for the VM. Must be lowercase alphanumeric with hyphens, matching the pattern `^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$` or `^[a-z0-9]$`.
+  Unique identifier for the VM. Must be lowercase alphanumeric with hyphens or underscores, matching the pattern `^[a-z0-9][a-z0-9_-]{0,62}[a-z0-9]$` or `^[a-z0-9]$`.
 
   If omitted or explicitly set to `None`, SmolVM auto-generates an ID in the format `vm-<8-char-hex>`.
 </ParamField>
@@ -37,6 +37,10 @@ All VMConfig instances are immutable (frozen) after creation.
 
 <ParamField path="rootfs_path" type="Path" required>
   Path to the root filesystem image. The path must exist and point to a valid file.
+</ParamField>
+
+<ParamField path="extra_drives" type="list[Path]" default="[]">
+  Additional block device images to attach to the VM. Each path must exist and point to a valid file.
 </ParamField>
 
 <ParamField path="boot_args" type="str" default="console=ttyS0 reboot=k panic=1 pci=off">
@@ -72,6 +76,12 @@ All VMConfig instances are immutable (frozen) after creation.
   Requires an SSH-capable image (boot args must contain `init=/init`).
 </ParamField>
 
+<ParamField path="network_rate_limit_mbps" type="int | None" default="None">
+  Network bandwidth rate limit in megabits per second. When set, both inbound and outbound traffic are throttled using a token-bucket rate limiter. Must be at least 1 Mbps if specified.
+
+  Only applies to the Firecracker backend.
+</ParamField>
+
 ## Validation Rules
 
 ### Path Validation
@@ -99,7 +109,7 @@ The `vm_id` must:
 
 * Be lowercase
 * Start and end with alphanumeric characters
-* Contain only lowercase letters, numbers, and hyphens
+* Contain only lowercase letters, numbers, hyphens, and underscores
 * Be 1-64 characters long
 
 ## Usage Examples
@@ -284,15 +294,17 @@ with SmolVM(config) as vm:
 
 ## Field Summary
 
-| Field                   | Type             | Default                                    | Range/Validation                     |
-| ----------------------- | ---------------- | ------------------------------------------ | ------------------------------------ |
-| `vm_id`                 | `str`            | Auto-generated                             | `^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$`  |
-| `vcpu_count`            | `int`            | `2`                                        | 1-32                                 |
-| `mem_size_mib`          | `int`            | `512`                                      | 128-16384                            |
-| `kernel_path`           | `Path`           | Required                                   | Must exist as file                   |
-| `rootfs_path`           | `Path`           | Required                                   | Must exist as file                   |
-| `boot_args`             | `str`            | `"console=ttyS0 reboot=k panic=1 pci=off"` | Any string                           |
-| `backend`               | `str \| None`    | `None`                                     | `"firecracker"`, `"qemu"`, `None`    |
-| `disk_mode`             | `Literal`        | `"isolated"`                               | `"isolated"`, `"shared"`             |
-| `retain_disk_on_delete` | `bool`           | `False`                                    | `True`, `False`                      |
-| `env_vars`              | `dict[str, str]` | `{}`                                       | Keys must be valid shell identifiers |
+| Field                      | Type             | Default                                    | Range/Validation                      |
+| -------------------------- | ---------------- | ------------------------------------------ | ------------------------------------- |
+| `vm_id`                    | `str`            | Auto-generated                             | `^[a-z0-9][a-z0-9_-]{0,62}[a-z0-9]$` |
+| `vcpu_count`               | `int`            | `2`                                        | 1-32                                  |
+| `mem_size_mib`             | `int`            | `512`                                      | 128-16384                             |
+| `kernel_path`              | `Path`           | Required                                   | Must exist as file                    |
+| `rootfs_path`              | `Path`           | Required                                   | Must exist as file                    |
+| `extra_drives`             | `list[Path]`     | `[]`                                       | Each must exist as file               |
+| `boot_args`                | `str`            | `"console=ttyS0 reboot=k panic=1 pci=off"` | Any string                            |
+| `backend`                  | `str \| None`    | `None`                                     | `"firecracker"`, `"qemu"`, `None`     |
+| `disk_mode`                | `Literal`        | `"isolated"`                               | `"isolated"`, `"shared"`              |
+| `retain_disk_on_delete`    | `bool`           | `False`                                    | `True`, `False`                       |
+| `env_vars`                 | `dict[str, str]` | `{}`                                       | Keys must be valid shell identifiers  |
+| `network_rate_limit_mbps`  | `int \| None`    | `None`                                     | >= 1 if set (Firecracker only)        |
