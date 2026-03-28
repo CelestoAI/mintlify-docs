@@ -151,6 +151,9 @@
             "icon": "terminal",
             "pages": [
               "smolvm/cli/overview",
+              "smolvm/cli/create",
+              "smolvm/cli/ssh",
+              "smolvm/cli/list",
               "smolvm/cli/cleanup",
               "smolvm/cli/doctor",
               "smolvm/cli/env",

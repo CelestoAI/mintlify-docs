@@ -1,0 +1,102 @@
+---
+title: "smolvm list"
+description: "List all VMs and their current status"
+---
+
+The `list` command shows every VM that SmolVM is tracking, along with its current status, IP address, SSH port, and process ID. You can optionally filter by status to find exactly what you need.
+
+## Synopsis
+
+```bash
+smolvm list [OPTIONS]
+```
+
+## Options
+
+<ParamField path="--status" type="string">
+  Filter VMs by their current state. Choices: `created`, `running`, `stopped`, `error`.
+
+  When omitted, all VMs are shown regardless of status.
+</ParamField>
+
+## Examples
+
+### List all VMs
+
+```bash
+smolvm list
+```
+
+**Example output:**
+
+```
+VM ID          STATUS   IP ADDRESS    SSH PORT  PID
+-------------  -------  ------------  --------  -----
+my-agent       running  172.16.0.2    10022     48201
+dev-box        stopped  -             -         -
+test-runner    running  172.16.0.3    10023     48305
+
+Total: 3 VM(s).
+```
+
+### Filter by status
+
+Show only running VMs:
+
+```bash
+smolvm list --status running
+```
+
+**Example output:**
+
+```
+VM ID          STATUS   IP ADDRESS    SSH PORT  PID
+-------------  -------  ------------  --------  -----
+my-agent       running  172.16.0.2    10022     48201
+test-runner    running  172.16.0.3    10023     48305
+
+Total: 2 VM(s).
+```
+
+Show only stopped VMs:
+
+```bash
+smolvm list --status stopped
+```
+
+### No VMs found
+
+When there are no VMs matching your query:
+
+```bash
+smolvm list --status error
+```
+
+**Output:**
+
+```
+No VMs found with status 'error'.
+```
+
+## Output columns
+
+| Column       | Description                                           |
+| ------------ | ----------------------------------------------------- |
+| **VM ID**    | The name you assigned when creating the VM            |
+| **STATUS**   | Current state: `created`, `running`, `stopped`, or `error` |
+| **IP ADDRESS** | The guest's private IP address (shown as `-` if unavailable) |
+| **SSH PORT** | Host port mapped to the guest's SSH service (shown as `-` if unavailable) |
+| **PID**      | Process ID of the VM on the host (shown as `-` if not running) |
+
+## Exit codes
+
+| Code | Description                       |
+| ---- | --------------------------------- |
+| `0`  | Success                           |
+| `1`  | Error — could not retrieve VM list |
+
+## Related commands
+
+- [`smolvm create`](/smolvm/cli/create) — Create a new VM
+- [`smolvm ssh`](/smolvm/cli/ssh) — Connect to a VM from this list
+- [`smolvm cleanup`](/smolvm/cli/cleanup) — Remove stale or unused VMs

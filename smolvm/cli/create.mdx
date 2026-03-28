@@ -1,0 +1,109 @@
+---
+title: "smolvm create"
+description: "Create a named VM from the command line and leave it running"
+---
+
+The `create` command spins up a new virtual machine with a name you choose. Once the VM boots and SSH is ready, it stays running so you can connect to it whenever you need to.
+
+## Synopsis
+
+```bash
+smolvm create --name <vm_name> [OPTIONS]
+```
+
+## Options
+
+<ParamField path="--name" type="string" required>
+  A unique identifier for the VM. You use this name to reference the VM in other commands like `smolvm ssh`.
+</ParamField>
+
+<ParamField path="--memory-mib" type="integer" default="512">
+  Amount of memory to allocate to the VM, in mebibytes (MiB).
+</ParamField>
+
+<ParamField path="--disk-size-mib" type="integer" default="512">
+  Root filesystem size in mebibytes (MiB).
+</ParamField>
+
+<ParamField path="--backend" type="string" default="auto">
+  Hypervisor backend to use. Choices: `auto`, `firecracker`, `qemu`.
+
+  - `auto` — picks the best backend for your platform automatically
+  - `firecracker` — use Firecracker (Linux with KVM only)
+  - `qemu` — use QEMU (Linux or macOS)
+</ParamField>
+
+<ParamField path="--boot-timeout" type="float" default="30">
+  Maximum seconds to wait for the VM to boot and become reachable via SSH.
+</ParamField>
+
+## Examples
+
+### Create a VM with default settings
+
+```bash
+smolvm create --name my-agent
+```
+
+**Example output:**
+
+```
+Created VM 'my-agent'.
+  Backend: firecracker
+  IP address: 172.16.0.2
+  SSH port: 10022
+  Next: smolvm ssh my-agent
+```
+
+### Create a VM with more memory
+
+Allocate 1 GiB of RAM and 2 GiB of disk space:
+
+```bash
+smolvm create --name big-vm --memory-mib 1024 --disk-size-mib 2048
+```
+
+### Create a VM with a specific backend
+
+Force the QEMU backend (useful on macOS):
+
+```bash
+smolvm create --name qemu-vm --backend qemu
+```
+
+### Create a VM with a longer boot timeout
+
+If your environment is slower to start, increase the timeout:
+
+```bash
+smolvm create --name slow-start --boot-timeout 60
+```
+
+## What happens during create
+
+1. SmolVM builds a VM configuration using the options you provide (or sensible defaults).
+2. A guest root filesystem and kernel are prepared.
+3. The VM process starts under the selected backend.
+4. SmolVM waits for the VM to boot and for the SSH server inside the guest to become reachable.
+5. Once ready, the command prints the VM details and exits — the VM keeps running in the background.
+
+## Next steps
+
+After creating a VM, you can:
+
+- **Connect via SSH**: `smolvm ssh my-agent`
+- **Set environment variables**: `smolvm env set my-agent API_KEY=sk-...`
+- **List running VMs**: `smolvm list`
+
+## Exit codes
+
+| Code | Description                                              |
+| ---- | -------------------------------------------------------- |
+| `0`  | Success — VM created and SSH is ready                    |
+| `1`  | Error — VM failed to start or SSH did not become ready   |
+
+## Related commands
+
+- [`smolvm ssh`](/smolvm/cli/ssh) — Connect to a running VM
+- [`smolvm list`](/smolvm/cli/list) — View all VMs and their status
+- [`smolvm cleanup`](/smolvm/cli/cleanup) — Remove stale or unused VMs

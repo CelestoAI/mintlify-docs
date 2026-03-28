@@ -1,0 +1,105 @@
+---
+title: "smolvm ssh"
+description: "Open an interactive SSH session into an existing VM"
+---
+
+The `ssh` command opens an interactive terminal session inside one of your VMs. If the VM is stopped or was just created, SmolVM automatically starts it before connecting.
+
+## Synopsis
+
+```bash
+smolvm ssh <vm_id> [OPTIONS]
+```
+
+## Arguments
+
+<ParamField path="vm_id" type="string" required>
+  The identifier of the VM to connect to. This is the name you provided when you ran `smolvm create`.
+</ParamField>
+
+## Options
+
+<ParamField path="--ssh-key" type="string" default="~/.smolvm/keys/id_ed25519">
+  Path to the SSH private key used to authenticate with the VM.
+</ParamField>
+
+<ParamField path="--ssh-user" type="string" default="root">
+  SSH user to connect as.
+</ParamField>
+
+<ParamField path="--boot-timeout" type="float" default="30">
+  Maximum seconds to wait for the VM to boot and SSH to become ready. Only applies when the VM needs to be started first.
+</ParamField>
+
+## Examples
+
+### Connect to a running VM
+
+```bash
+smolvm ssh my-agent
+```
+
+This drops you into an interactive shell inside the VM. Press `Ctrl+D` or type `exit` to disconnect.
+
+### Connect with a custom SSH key
+
+```bash
+smolvm ssh my-agent --ssh-key ~/.ssh/custom_key
+```
+
+### Connect as a different user
+
+```bash
+smolvm ssh my-agent --ssh-user ubuntu
+```
+
+### Combine options
+
+```bash
+smolvm ssh my-agent --ssh-user ubuntu --ssh-key ~/.ssh/id_rsa --boot-timeout 60
+```
+
+## How it works
+
+1. SmolVM looks up the VM by the identifier you provide.
+2. If the VM is in a **created** or **stopped** state, SmolVM starts it and waits for SSH readiness.
+3. If the VM is in an **error** state, the command exits with a message asking you to recreate or inspect the VM.
+4. Once SSH is ready, SmolVM hands off to the system `ssh` binary for a fully interactive session.
+
+<Note>
+  Because `smolvm ssh` delegates to the system's `ssh` binary, you get full terminal features like tab-completion, colors, and interactive programs.
+</Note>
+
+## Typical workflow
+
+```bash
+# Create a VM
+smolvm create --name dev-box
+
+# SSH into it
+smolvm ssh dev-box
+
+# Inside the VM — run commands, install packages, etc.
+apt-get update && apt-get install -y python3
+exit
+
+# VM stays running after you disconnect
+smolvm list
+```
+
+## Exit codes
+
+| Code | Description                                                |
+| ---- | ---------------------------------------------------------- |
+| `0`  | SSH session ended normally                                 |
+| `1`  | Error — VM is in error state, SSH binary not found, or connection failed |
+
+<Warning>
+  If you see `Error: ssh binary not found`, install the `openssh-client` package on your host system.
+</Warning>
+
+## Related commands
+
+- [`smolvm create`](/smolvm/cli/create) — Create a new VM to connect to
+- [`smolvm list`](/smolvm/cli/list) — View all VMs and their status
+- [`smolvm env`](/smolvm/cli/env) — Set environment variables before connecting

@@ -27,6 +27,9 @@ The `smolvm` CLI provides the following commands:
 
 | Command          | Description                                   |
 | ---------------- | --------------------------------------------- |
+| `smolvm create`  | Create a named VM and leave it running        |
+| `smolvm ssh`     | SSH into an existing VM                       |
+| `smolvm list`    | List all VMs and their status                 |
 | `smolvm cleanup` | Clean stale SmolVM resources and VMs          |
 | `smolvm doctor`  | Run host diagnostics for the selected backend |
 | `smolvm env`     | Manage environment variables on a running VM  |
@@ -43,6 +46,9 @@ smolvm --help
 Display help for a specific subcommand:
 
 ```bash  theme={null}
+smolvm create --help
+smolvm ssh --help
+smolvm list --help
 smolvm cleanup --help
 smolvm doctor --help
 smolvm env --help
@@ -58,6 +64,18 @@ The following script aliases are also available:
 ## Next Steps
 
 <CardGroup cols={2}>
+  <Card title="Create Command" icon="plus" href="/smolvm/cli/create">
+    Spin up a new VM from the command line
+  </Card>
+
+  <Card title="SSH Command" icon="terminal" href="/smolvm/cli/ssh">
+    Open an interactive session in a VM
+  </Card>
+
+  <Card title="List Command" icon="list" href="/smolvm/cli/list">
+    View all VMs and their status
+  </Card>
+
   <Card title="Cleanup Command" icon="broom" href="/smolvm/cli/cleanup">
     Clean up stale VMs and resources
   </Card>
