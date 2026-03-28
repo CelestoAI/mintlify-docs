@@ -1,0 +1,287 @@
+---
+title: "Agent framework tools"
+description: "Use SmolVM as a sandboxed code execution tool in LangChain, OpenAI Agents SDK, and PydanticAI"
+---
+
+SmolVM can plug into popular AI agent frameworks as a tool, giving your agent a secure sandbox to run shell commands. Each framework has its own way of defining tools — this guide shows you how to wrap SmolVM for each one.
+
+All examples follow the same pattern: the agent calls a tool that spins up an ephemeral microVM, runs a command inside it, and returns the output. The VM is automatically destroyed after each call, so every execution starts from a clean slate.
+
+## Prerequisites
+
+Before using any of these integrations, make sure your SmolVM runtime is healthy:
+
+```bash
+smolvm doctor
+```
+
+You also need an OpenAI API key set in your environment:
+
+```bash
+export OPENAI_API_KEY=your-key-here
+```
+
+## LangChain
+
+Install the required packages:
+
+```bash
+pip install smolvm langchain langchain-openai
+```
+
+Define a SmolVM-backed tool using LangChain's `@tool` decorator:
+
+```python
+from langchain.tools import tool
+from smolvm import SmolVM
+
+
+@tool
+def run_in_smolvm(command: str, timeout: int = 30) -> str:
+    """Run a shell command inside an ephemeral SmolVM sandbox.
+
+    Args:
+        command: Shell command to execute inside the sandbox guest.
+        timeout: Maximum number of seconds to wait for the command.
+    """
+    with SmolVM() as vm:
+        result = vm.run(command, timeout=timeout)
+        return (
+            f"exit_code: {result.exit_code}\n"
+            f"stdout:\n{result.stdout.strip() or '<empty>'}\n"
+            f"stderr:\n{result.stderr.strip() or '<empty>'}"
+        )
+```
+
+Then wire it into an agent:
+
+```python
+import os
+from langchain.agents import create_agent
+
+agent = create_agent(
+    model=os.environ.get("LANGCHAIN_MODEL", "openai:gpt-4.1"),
+    tools=[run_in_smolvm],
+    system_prompt=(
+        "You are a coding assistant with access to a secure SmolVM sandbox. "
+        "For shell or Python inspection requests, call run_in_smolvm exactly "
+        "once and then summarize the result."
+    ),
+)
+
+result = agent.invoke({
+    "messages": [{"role": "user", "content": "Run uname -a inside the sandbox"}]
+})
+```
+
+## OpenAI Agents SDK
+
+Install the required packages:
+
+```bash
+pip install smolvm openai-agents
+```
+
+Use the `@function_tool` decorator from the OpenAI Agents SDK:
+
+```python
+import asyncio
+import os
+
+from agents import Agent, Runner, function_tool
+from smolvm import SmolVM
+
+
+@function_tool
+def run_in_smolvm(command: str, timeout: int = 30) -> str:
+    """Run a shell command inside an ephemeral SmolVM sandbox.
+
+    Args:
+        command: Shell command to execute inside the sandbox guest.
+        timeout: Maximum number of seconds to wait for the command.
+    """
+    with SmolVM() as vm:
+        result = vm.run(command, timeout=timeout)
+        return (
+            f"exit_code: {result.exit_code}\n"
+            f"stdout:\n{result.stdout.strip() or '<empty>'}\n"
+            f"stderr:\n{result.stderr.strip() or '<empty>'}"
+        )
+
+
+async def main():
+    agent = Agent(
+        name="SmolVM Assistant",
+        model=os.environ.get("OPENAI_AGENTS_MODEL", "gpt-4.1"),
+        instructions=(
+            "You are a coding assistant with access to a secure SmolVM sandbox. "
+            "For shell or Python inspection requests, call run_in_smolvm exactly "
+            "once and then summarize the result."
+        ),
+        tools=[run_in_smolvm],
+    )
+    result = await Runner.run(
+        agent, "Run uname -a inside the sandbox"
+    )
+    print(result.final_output)
+
+
+asyncio.run(main())
+```
+
+## PydanticAI
+
+Install the required packages:
+
+```bash
+pip install smolvm pydantic-ai
+```
+
+### Ephemeral sandbox (one VM per call)
+
+Each tool invocation creates a fresh VM and tears it down when the command finishes. This is the simplest approach and works well when calls are independent.
+
+```python
+import os
+from pydantic_ai import Agent
+from smolvm import SmolVM
+
+agent = Agent(
+    os.environ.get("PYDANTICAI_MODEL", "openai:gpt-4.1"),
+    instructions=(
+        "You are a coding assistant with access to a secure SmolVM sandbox. "
+        "For shell or Python inspection requests, call run_in_smolvm exactly "
+        "once and then summarize the result."
+    ),
+)
+
+
+@agent.tool_plain(docstring_format="google", require_parameter_descriptions=True)
+def run_in_smolvm(command: str, timeout: int = 30) -> str:
+    """Run a shell command inside an ephemeral SmolVM sandbox.
+
+    Args:
+        command: Shell command to execute inside the sandbox guest.
+        timeout: Maximum number of seconds to wait for the command.
+    """
+    with SmolVM() as vm:
+        result = vm.run(command, timeout=timeout)
+        return (
+            f"exit_code: {result.exit_code}\n"
+            f"stdout:\n{result.stdout.strip() or '<empty>'}\n"
+            f"stderr:\n{result.stderr.strip() or '<empty>'}"
+        )
+
+
+result = agent.run_sync("Run uname -a inside the sandbox")
+print(result.output)
+```
+
+### Reusable sandbox (persistent VM across calls)
+
+When your agent needs to maintain state between tool calls — for example, writing a file in one call and reading it in the next — you can reuse the same VM across multiple runs using PydanticAI's `deps_type` and `RunContext`.
+
+```python
+import os
+from dataclasses import dataclass
+from pydantic_ai import Agent, RunContext
+from smolvm import SmolVM
+
+
+@dataclass
+class SandboxDeps:
+    """Holds the VM ID so the same sandbox persists across calls."""
+    vm_id: str | None = None
+
+
+agent = Agent(
+    os.environ.get("PYDANTICAI_MODEL", "openai:gpt-4.1"),
+    deps_type=SandboxDeps,
+    instructions=(
+        "You are a coding assistant with access to a reusable SmolVM sandbox. "
+        "For shell and file-system tasks, call run_in_reusable_smolvm exactly "
+        "once and then summarize the result."
+    ),
+)
+
+
+def _connect_vm(deps: SandboxDeps) -> SmolVM:
+    """Return the active sandbox, creating it on first use."""
+    if deps.vm_id is None:
+        vm = SmolVM()
+        vm.start()
+        deps.vm_id = vm.vm_id
+        return vm
+    return SmolVM.from_id(deps.vm_id)
+
+
+@agent.tool(docstring_format="google", require_parameter_descriptions=True)
+def run_in_reusable_smolvm(
+    ctx: RunContext[SandboxDeps],
+    command: str,
+    timeout: int = 30,
+) -> str:
+    """Run a shell command inside a reusable SmolVM sandbox.
+
+    Args:
+        command: Shell command to execute inside the sandbox guest.
+        timeout: Maximum number of seconds to wait for the command.
+    """
+    vm = _connect_vm(ctx.deps)
+    try:
+        result = vm.run(command, timeout=timeout)
+        return (
+            f"exit_code: {result.exit_code}\n"
+            f"stdout:\n{result.stdout.strip() or '<empty>'}\n"
+            f"stderr:\n{result.stderr.strip() or '<empty>'}"
+        )
+    finally:
+        vm.close()
+```
+
+Use it across multiple turns:
+
+```python
+deps = SandboxDeps()
+try:
+    # First turn — write a file
+    first = agent.run_sync(
+        "Write 'hello from SmolVM' to /tmp/note.txt", deps=deps
+    )
+    print(first.output)
+
+    # Second turn — read the same file
+    second = agent.run_sync(
+        "Read /tmp/note.txt", deps=deps
+    )
+    print(second.output)
+finally:
+    # Clean up the VM when you're done
+    if deps.vm_id:
+        vm = SmolVM.from_id(deps.vm_id)
+        vm.delete()
+        vm.close()
+```
+
+## Choosing an approach
+
+| Approach | Best for | Trade-off |
+|---|---|---|
+| Ephemeral (one VM per call) | Independent code execution tasks | Clean slate every time, but slower due to VM boot per call |
+| Reusable (persistent VM) | Multi-step workflows with shared state | Faster subsequent calls, but you must manage cleanup |
+
+<Tip>
+Start with ephemeral VMs. Only switch to reusable sandboxes when your agent needs to maintain state between calls, such as installing packages and then using them.
+</Tip>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="AI agent integration" icon="robot" href="/smolvm/guides/ai-agent-integration">
+    Explore more integration patterns including long-running workspaces and web browsing agents
+  </Card>
+
+  <Card title="Environment variables" icon="code" href="/smolvm/guides/environment-variables">
+    Inject API keys and configuration into your sandboxed VMs
+  </Card>
+</CardGroup>
