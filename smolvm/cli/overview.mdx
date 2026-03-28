@@ -25,12 +25,15 @@ pip install 'smolvm[dashboard]'
 
 The `smolvm` CLI provides the following commands:
 
-| Command          | Description                                   |
-| ---------------- | --------------------------------------------- |
-| `smolvm cleanup` | Clean stale SmolVM resources and VMs          |
-| `smolvm doctor`  | Run host diagnostics for the selected backend |
-| `smolvm env`     | Manage environment variables on a running VM  |
-| `smolvm ui`      | Start the SmolVM dashboard UI server          |
+| Command          | Description                                          |
+| ---------------- | ---------------------------------------------------- |
+| `smolvm list`    | List VMs and their status                            |
+| `smolvm create`  | Create a named SSH-ready VM and leave it running     |
+| `smolvm ssh`     | SSH into an existing VM, auto-starting if needed     |
+| `smolvm env`     | Manage environment variables on a running VM         |
+| `smolvm cleanup` | Clean stale SmolVM resources and VMs                 |
+| `smolvm doctor`  | Run host diagnostics for the selected backend        |
+| `smolvm ui`      | Start the SmolVM dashboard UI server                 |
 
 ## Getting Help
 
@@ -43,9 +46,12 @@ smolvm --help
 Display help for a specific subcommand:
 
 ```bash  theme={null}
+smolvm list --help
+smolvm create --help
+smolvm ssh --help
+smolvm env --help
 smolvm cleanup --help
 smolvm doctor --help
-smolvm env --help
 smolvm ui --help
 ```
 
@@ -58,16 +64,28 @@ The following script aliases are also available:
 ## Next Steps
 
 <CardGroup cols={2}>
+  <Card title="List Command" icon="list" href="/smolvm/cli/list">
+    View running VMs and their status
+  </Card>
+
+  <Card title="Create Command" icon="plus" href="/smolvm/cli/create">
+    Create named, SSH-ready VMs
+  </Card>
+
+  <Card title="SSH Command" icon="terminal" href="/smolvm/cli/ssh">
+    Connect to VMs via SSH
+  </Card>
+
+  <Card title="Environment Commands" icon="gear" href="/smolvm/cli/env">
+    Manage VM environment variables
+  </Card>
+
   <Card title="Cleanup Command" icon="broom" href="/smolvm/cli/cleanup">
     Clean up stale VMs and resources
   </Card>
 
   <Card title="Doctor Command" icon="stethoscope" href="/smolvm/cli/doctor">
     Diagnose system requirements
-  </Card>
-
-  <Card title="Environment Commands" icon="gear" href="/smolvm/cli/env">
-    Manage VM environment variables
   </Card>
 
   <Card title="UI Command" icon="window" href="/smolvm/cli/ui">

@@ -1,0 +1,75 @@
+---
+title: "smolvm ssh"
+description: "Connect to a SmolVM instance over SSH from the command line"
+---
+
+The `smolvm ssh` command opens an interactive SSH session to an existing VM. If the VM is not running yet, SmolVM automatically starts it before connecting.
+
+## Usage
+
+```bash  theme={null}
+smolvm ssh VM_ID [--ssh-key PATH] [--ssh-user USER] [--boot-timeout SECONDS]
+```
+
+## Arguments
+
+| Argument   | Description                |
+| ---------- | -------------------------- |
+| `VM_ID`    | Identifier of the target VM |
+
+## Options
+
+| Flag              | Description                                           | Default                            |
+| ----------------- | ----------------------------------------------------- | ---------------------------------- |
+| `--ssh-key`       | Path to SSH private key                               | `~/.smolvm/keys/id_ed25519`       |
+| `--ssh-user`      | SSH user to connect as                                | `root`                             |
+| `--boot-timeout`  | Seconds to wait for VM boot and SSH readiness         | 30                                 |
+
+## Auto-start behavior
+
+When you SSH into a VM that is in the `CREATED` or `STOPPED` state, SmolVM automatically starts it for you. You will see a notice while the VM boots:
+
+```
+Notice: VM 'my-vm' isn't running yet. SSH may take a little longer while SmolVM starts it.
+```
+
+This means you don't need to manually start a VM before connecting — just run `smolvm ssh` and SmolVM handles the rest.
+
+<Note>
+  If the VM is in an `ERROR` state, the command exits with an error message instead of attempting to start it. Recreate the VM or inspect its logs to resolve the issue.
+</Note>
+
+## Examples
+
+Connect to a running VM:
+
+```bash  theme={null}
+smolvm ssh my-agent-vm
+```
+
+Connect with a custom SSH key:
+
+```bash  theme={null}
+smolvm ssh my-agent-vm --ssh-key ~/.ssh/id_rsa
+```
+
+Allow more time for a cold-start boot:
+
+```bash  theme={null}
+smolvm ssh my-agent-vm --boot-timeout 60
+```
+
+## Typical workflow
+
+A common pattern is to create a VM and then SSH into it:
+
+```bash  theme={null}
+smolvm create --name dev-sandbox
+smolvm ssh dev-sandbox
+```
+
+You can also reconnect to the same VM later from a different terminal or session:
+
+```bash  theme={null}
+smolvm ssh dev-sandbox
+```

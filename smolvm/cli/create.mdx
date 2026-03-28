@@ -1,0 +1,64 @@
+---
+title: "smolvm create"
+description: "Create a named SSH-ready VM from the command line"
+---
+
+The `smolvm create` command builds and boots a new VM with SSH access ready to go. Once the VM is running you can connect to it with `smolvm ssh`.
+
+## Usage
+
+```bash  theme={null}
+smolvm create --name NAME [--memory-mib MIB] [--disk-size-mib MIB] [--backend BACKEND] [--boot-timeout SECONDS]
+```
+
+## Options
+
+| Flag                 | Description                                        | Default |
+| -------------------- | -------------------------------------------------- | ------- |
+| `--name` (required)  | VM identifier to create                            | —       |
+| `--memory-mib`       | Guest memory in MiB                                | 512     |
+| `--disk-size-mib`    | Root filesystem size in MiB                        | 512     |
+| `--backend`          | Backend override: `auto`, `firecracker`, or `qemu` | auto    |
+| `--boot-timeout`     | Seconds to wait for VM boot and SSH readiness      | 30      |
+
+## Examples
+
+Create a VM with default settings:
+
+```bash  theme={null}
+smolvm create --name my-agent-vm
+```
+
+```
+Created VM 'my-agent-vm'.
+  Backend: firecracker
+  IP address: 172.16.0.2
+  SSH port: 2222
+  Next: smolvm ssh my-agent-vm
+```
+
+Create a VM with more resources:
+
+```bash  theme={null}
+smolvm create --name heavy-worker --memory-mib 2048 --disk-size-mib 4096
+```
+
+Create a VM using the QEMU backend (macOS):
+
+```bash  theme={null}
+smolvm create --name mac-sandbox --backend qemu
+```
+
+## What happens during create
+
+When you run `smolvm create`, SmolVM:
+
+1. Generates SSH keys (if not already present in `~/.smolvm/keys/`)
+2. Builds an Alpine Linux image with SSH pre-configured
+3. Boots the VM with the specified resources
+4. Waits for SSH to become available
+5. Prints connection details so you can start using the VM immediately
+
+<Tip>
+  After creating a VM, connect to it with `smolvm ssh my-agent-vm`. You can also use the Python SDK to interact with it programmatically via `SmolVM.from_id("my-agent-vm")`.
+</Tip>
