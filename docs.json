@@ -154,6 +154,7 @@
               "smolvm/cli/cleanup",
               "smolvm/cli/doctor",
               "smolvm/cli/env",
+              "smolvm/cli/stop",
               "smolvm/cli/ui"
             ]
           },

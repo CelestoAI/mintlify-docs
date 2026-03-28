@@ -30,6 +30,7 @@ The `smolvm` CLI provides the following commands:
 | `smolvm cleanup` | Clean stale SmolVM resources and VMs          |
 | `smolvm doctor`  | Run host diagnostics for the selected backend |
 | `smolvm env`     | Manage environment variables on a running VM  |
+| `smolvm stop`    | Stop a running VM gracefully                  |
 | `smolvm ui`      | Start the SmolVM dashboard UI server          |
 
 ## Getting Help
@@ -46,6 +47,7 @@ Display help for a specific subcommand:
 smolvm cleanup --help
 smolvm doctor --help
 smolvm env --help
+smolvm stop --help
 smolvm ui --help
 ```
 
@@ -68,6 +70,10 @@ The following script aliases are also available:
 
   <Card title="Environment Commands" icon="gear" href="/smolvm/cli/env">
     Manage VM environment variables
+  </Card>
+
+  <Card title="Stop Command" icon="stop" href="/smolvm/cli/stop">
+    Stop a running VM gracefully
   </Card>
 
   <Card title="UI Command" icon="window" href="/smolvm/cli/ui">
