@@ -1,0 +1,335 @@
+---
+title: "BrowserSession"
+description: "API reference for the BrowserSession class that manages disposable browser sessions inside SmolVM microVMs"
+---
+
+## Overview
+
+The `BrowserSession` class manages a disposable Chromium browser running inside a SmolVM microVM. It handles the full lifecycle — provisioning the VM, starting the browser, exposing CDP and live-view endpoints, and tearing everything down when you are done.
+
+## Constructor
+
+```python
+BrowserSession(
+    config: BrowserSessionConfig | None = None,
+    *,
+    session_id: str | None = None,
+    data_dir: Path | None = None,
+    socket_dir: Path | None = None,
+    ssh_key_path: str | None = None,
+)
+```
+
+<ParamField path="config" type="BrowserSessionConfig | None" default="None">
+  Session configuration. Mutually exclusive with `session_id`. If both are omitted, a default `BrowserSessionConfig()` is used (headless, ephemeral profile).
+</ParamField>
+
+<ParamField path="session_id" type="str | None" default="None">
+  ID of an existing session to reconnect to. Mutually exclusive with `config`.
+</ParamField>
+
+<ParamField path="data_dir" type="Path | None" default="None">
+  Override the default SmolVM data directory.
+</ParamField>
+
+<ParamField path="socket_dir" type="Path | None" default="None">
+  Override the default socket directory.
+</ParamField>
+
+<ParamField path="ssh_key_path" type="str | None" default="None">
+  SSH private key path. If omitted, SmolVM uses its default key.
+</ParamField>
+
+### Raises
+
+* `ValueError`: If both `config` and `session_id` are provided.
+
+## Class methods
+
+### from_id
+
+```python
+@classmethod
+BrowserSession.from_id(
+    session_id: str,
+    *,
+    data_dir: Path | None = None,
+    socket_dir: Path | None = None,
+    ssh_key_path: str | None = None,
+) -> BrowserSession
+```
+
+Reconnect to an existing browser session by its session ID.
+
+<ParamField path="session_id" type="str" required>
+  Browser session identifier to reconnect to.
+</ParamField>
+
+<ResponseField name="return" type="BrowserSession">
+  A BrowserSession instance attached to the existing session.
+</ResponseField>
+
+## Lifecycle methods
+
+### start
+
+```python
+def start(self, boot_timeout: float = 90.0) -> BrowserSession
+```
+
+Start the browser session. Boots the underlying VM, launches Chromium inside the guest, and exposes the CDP endpoint (and live-view endpoint if mode is `"live"`).
+
+<ParamField path="boot_timeout" type="float" default="90.0">
+  Maximum seconds to wait for the VM and browser to become ready.
+</ParamField>
+
+<ResponseField name="return" type="BrowserSession">
+  Returns `self` for method chaining.
+</ResponseField>
+
+#### Raises
+
+* `SmolVMError`: If the VM is unavailable, the CDP port is not exposed in time, or `network_policy_id` is set (not yet implemented).
+
+### stop
+
+```python
+def stop(self) -> BrowserSession
+```
+
+Stop the browser session. Gracefully shuts down the guest browser, collects artifacts, deletes the VM, and removes persisted session state.
+
+<ResponseField name="return" type="BrowserSession">
+  Returns `self` for method chaining.
+</ResponseField>
+
+### delete
+
+```python
+def delete(self) -> None
+```
+
+Alias for `stop()`.
+
+### close
+
+```python
+def close(self) -> None
+```
+
+Release local resources (Playwright runtime, SSH connections) without changing the remote session state. Use this when you want to disconnect from a session without stopping it.
+
+## Browser automation methods
+
+### connect_playwright
+
+```python
+def connect_playwright(self) -> Browser
+```
+
+Connect Playwright to the browser session over CDP. Returns a Playwright `Browser` object you can use to create contexts and pages.
+
+<ResponseField name="return" type="Browser">
+  A Playwright Browser instance connected via CDP.
+</ResponseField>
+
+#### Raises
+
+* `SmolVMError`: If the session is not started or Playwright is not installed.
+
+<Note>
+  Requires `playwright` to be installed: `pip install playwright`
+</Note>
+
+### screenshot
+
+```python
+def screenshot(
+    self,
+    destination: str | Path,
+    *,
+    full_page: bool = True,
+) -> Path
+```
+
+Capture a screenshot of the current page and save it locally.
+
+<ParamField path="destination" type="str | Path" required>
+  Local file path to save the screenshot to.
+</ParamField>
+
+<ParamField path="full_page" type="bool" default="True">
+  Capture the full scrollable page, not just the viewport.
+</ParamField>
+
+<ResponseField name="return" type="Path">
+  Path to the saved screenshot file.
+</ResponseField>
+
+### open_live_view
+
+```python
+def open_live_view(self) -> bool
+```
+
+Open the live-view URL in your default browser. Only available when the session was started with `mode="live"`.
+
+<ResponseField name="return" type="bool">
+  Whether the browser was opened successfully.
+</ResponseField>
+
+#### Raises
+
+* `SmolVMError`: If the session does not have a live-view URL.
+
+## File transfer methods
+
+### push_file
+
+```python
+def push_file(self, local_path: str | Path, guest_path: str) -> None
+```
+
+Upload a file from the host into the guest VM.
+
+<ParamField path="local_path" type="str | Path" required>
+  Path to the local file to upload.
+</ParamField>
+
+<ParamField path="guest_path" type="str" required>
+  Destination path inside the guest VM.
+</ParamField>
+
+### pull_file
+
+```python
+def pull_file(self, guest_path: str, local_path: str | Path) -> Path
+```
+
+Download a file from the guest VM to the host.
+
+<ParamField path="guest_path" type="str" required>
+  Path to the file inside the guest VM.
+</ParamField>
+
+<ParamField path="local_path" type="str | Path" required>
+  Destination path on the host.
+</ParamField>
+
+<ResponseField name="return" type="Path">
+  Path to the downloaded file.
+</ResponseField>
+
+## Artifact methods
+
+### collect_artifacts
+
+```python
+def collect_artifacts(self) -> Path | None
+```
+
+Collect guest logs, downloads, and recordings into the local artifacts directory. Returns `None` if the VM is not running.
+
+<ResponseField name="return" type="Path | None">
+  Path to the downloaded artifact archive, or `None` if collection was not possible.
+</ResponseField>
+
+#### Raises
+
+* `SmolVMError`: If the archive creation fails inside the guest.
+
+### logs
+
+```python
+def logs(self, tail: int = 100) -> str
+```
+
+Return combined host and guest logs for the browser session.
+
+<ParamField path="tail" type="int" default="100">
+  Number of lines to return from the end of each log file.
+</ParamField>
+
+<ResponseField name="return" type="str">
+  Combined log output.
+</ResponseField>
+
+## Utility methods
+
+### refresh
+
+```python
+def refresh(self) -> BrowserSession
+```
+
+Refresh session info from the persisted state store.
+
+<ResponseField name="return" type="BrowserSession">
+  Returns `self` for method chaining.
+</ResponseField>
+
+## Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `session_id` | `str` | Stable browser session identifier |
+| `vm_id` | `str` | Underlying SmolVM identifier |
+| `info` | `BrowserSessionInfo` | Current session info |
+| `status` | `BrowserSessionState` | Current session status |
+| `cdp_url` | `str \| None` | CDP endpoint URL (available after start) |
+| `live_url` | `str \| None` | Live-view URL (only in `"live"` mode) |
+| `artifacts_dir` | `Path \| None` | Local artifacts directory |
+| `config` | `BrowserSessionConfig` | Resolved session configuration |
+| `data_dir` | `Path` | SmolVM data directory |
+
+## Context manager
+
+`BrowserSession` implements the context manager protocol for automatic lifecycle management:
+
+```python
+from smolvm import BrowserSession, BrowserSessionConfig
+
+with BrowserSession(BrowserSessionConfig(mode="live")) as session:
+    # Session auto-starts on entry
+    print(session.cdp_url)
+# Session auto-stops on exit
+```
+
+**On entry (`__enter__`):** Calls `start()` if the session was created (not reconnected) and is not already ready.
+
+**On exit (`__exit__`):** Calls `stop()` for sessions created by this instance, then `close()`.
+
+## Usage examples
+
+### Headless automation
+
+```python
+from smolvm import BrowserSession
+
+with BrowserSession() as session:
+    browser = session.connect_playwright()
+    page = browser.new_context().new_page()
+    page.goto("https://example.com")
+    print(page.title())
+```
+
+### Live mode with video recording
+
+```python
+from smolvm import BrowserSession, BrowserSessionConfig
+
+with BrowserSession(
+    BrowserSessionConfig(
+        mode="live",
+        record_video=True,
+        viewport={"width": 1440, "height": 900},
+    )
+) as session:
+    session.open_live_view()
+    browser = session.connect_playwright()
+    page = browser.new_context().new_page()
+    page.goto("https://example.com")
+
+    session.screenshot("screenshot.png")
+    session.collect_artifacts()
+```

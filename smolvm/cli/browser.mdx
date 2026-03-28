@@ -1,0 +1,174 @@
+---
+title: "Browser commands"
+description: "CLI reference for managing disposable browser sessions with SmolVM"
+---
+
+The `smolvm browser` command group lets you create, manage, and inspect disposable browser sessions from the command line. Each session runs an isolated Chromium instance inside a SmolVM microVM.
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `smolvm browser start` | Create and start a browser session |
+| `smolvm browser stop` | Stop and delete a browser session |
+| `smolvm browser list` | List browser sessions |
+| `smolvm browser open` | Open a live session in your default browser |
+| `smolvm browser logs` | Print session logs |
+
+## smolvm browser start
+
+Create and start a new browser session.
+
+```bash
+smolvm browser start [options]
+```
+
+### Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--session-id` | auto-generated | Optional session identifier |
+| `--backend` | `auto` | Backend override: `auto`, `firecracker`, or `qemu` |
+| `--mode` | `headless` | Browser mode: `headless` or `live` |
+| `--profile-mode` | `ephemeral` | Profile lifecycle: `ephemeral` or `persistent` |
+| `--profile-id` | — | Persistent profile identifier (required with `--profile-mode persistent`) |
+| `--timeout-minutes` | `30` | Session TTL in minutes |
+| `--viewport-width` | `1280` | Browser viewport width |
+| `--viewport-height` | `720` | Browser viewport height |
+| `--memory-mib` | `2048` | Guest memory in MiB |
+| `--disk-size-mib` | `4096` | Root filesystem size in MiB |
+| `--record-video` | off | Record the session (requires `--mode live`) |
+| `--no-downloads` | off | Disable browser downloads inside the guest |
+| `--boot-timeout` | `90` | Maximum seconds to wait for boot |
+| `--json` | off | Emit machine-readable JSON output |
+
+### Examples
+
+```bash
+# Start a headless session
+smolvm browser start
+
+# Start a live session you can watch in your browser
+smolvm browser start --mode live
+
+# Start with a custom viewport and more memory
+smolvm browser start --mode live --viewport-width 1920 --viewport-height 1080 --memory-mib 4096
+
+# Start with JSON output for scripts or agents
+smolvm browser start --mode headless --json
+
+# Start a persistent profile session
+smolvm browser start --profile-mode persistent --profile-id my-account
+```
+
+## smolvm browser stop
+
+Stop and delete a browser session, or stop all sessions.
+
+```bash
+smolvm browser stop <session_id>
+smolvm browser stop --all
+```
+
+### Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `session_id` | Browser session identifier to stop |
+| `--all` | Stop and delete all browser sessions |
+
+<Note>
+  `session_id` and `--all` are mutually exclusive — provide one or the other.
+</Note>
+
+### Examples
+
+```bash
+# Stop a specific session
+smolvm browser stop browser-a1b2c3d4
+
+# Stop all sessions
+smolvm browser stop --all
+```
+
+## smolvm browser list
+
+List browser sessions with their status and endpoints.
+
+```bash
+smolvm browser list [options]
+```
+
+### Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--status` | all | Filter by status: `created`, `starting`, `ready`, `stopping`, `error` |
+| `--json` | off | Emit machine-readable JSON output |
+
+### Examples
+
+```bash
+# List all sessions
+smolvm browser list
+
+# List only ready sessions
+smolvm browser list --status ready
+
+# JSON output for scripts
+smolvm browser list --json
+```
+
+## smolvm browser open
+
+Open a live browser session in your default local browser. This launches the noVNC live-view URL.
+
+```bash
+smolvm browser open <session_id>
+```
+
+### Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `session_id` | Browser session identifier to open |
+
+<Note>
+  The session must have been started with `--mode live` for the live view to be available.
+</Note>
+
+## smolvm browser logs
+
+Print combined host and guest logs for a browser session.
+
+```bash
+smolvm browser logs <session_id>
+```
+
+### Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `session_id` | Browser session identifier |
+
+## JSON output
+
+When you pass `--json` to `start` or `list`, SmolVM outputs a structured JSON envelope:
+
+```json
+{
+  "ok": true,
+  "command": "browser.start",
+  "exit_code": 0,
+  "data": {
+    "session_id": "browser-a1b2c3d4",
+    "vm_id": "browser-a1b2c3d4",
+    "status": "ready",
+    "cdp_url": "http://127.0.0.1:52341",
+    "live_url": "http://127.0.0.1:52342/vnc.html?autoconnect=1&resize=scale"
+  },
+  "error": null
+}
+```
+
+This format is consistent with other SmolVM CLI commands and is designed for easy parsing by agents and scripts.

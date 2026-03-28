@@ -27,6 +27,7 @@ The `smolvm` CLI provides the following commands:
 
 | Command          | Description                                   |
 | ---------------- | --------------------------------------------- |
+| `smolvm browser` | Manage disposable browser sessions            |
 | `smolvm cleanup` | Clean stale SmolVM resources and VMs          |
 | `smolvm doctor`  | Run host diagnostics for the selected backend |
 | `smolvm env`     | Manage environment variables on a running VM  |
@@ -43,6 +44,7 @@ smolvm --help
 Display help for a specific subcommand:
 
 ```bash  theme={null}
+smolvm browser --help
 smolvm cleanup --help
 smolvm doctor --help
 smolvm env --help
@@ -58,6 +60,10 @@ The following script aliases are also available:
 ## Next Steps
 
 <CardGroup cols={2}>
+  <Card title="Browser Commands" icon="globe" href="/smolvm/cli/browser">
+    Manage disposable browser sessions
+  </Card>
+
   <Card title="Cleanup Command" icon="broom" href="/smolvm/cli/cleanup">
     Clean up stale VMs and resources
   </Card>

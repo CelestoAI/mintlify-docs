@@ -140,6 +140,7 @@
             "pages": [
               "smolvm/guides/basic-usage",
               "smolvm/guides/vm-lifecycle",
+              "smolvm/guides/browser-sessions",
               "smolvm/guides/port-forwarding",
               "smolvm/guides/environment-variables",
               "smolvm/guides/custom-images",
@@ -151,6 +152,7 @@
             "icon": "terminal",
             "pages": [
               "smolvm/cli/overview",
+              "smolvm/cli/browser",
               "smolvm/cli/cleanup",
               "smolvm/cli/doctor",
               "smolvm/cli/env",
@@ -171,6 +173,8 @@
             "icon": "book",
             "pages": [
               "smolvm/api/smolvm",
+              "smolvm/api/browsersession",
+              "smolvm/api/browsersessionconfig",
               "smolvm/api/vmconfig",
               "smolvm/api/commandresult",
               "smolvm/api/vminfo",

@@ -1,0 +1,249 @@
+---
+title: "Browser sessions"
+description: "Run disposable Chromium browsers inside isolated SmolVM microVMs for safe web automation"
+---
+
+SmolVM can spin up a fully isolated Chromium browser inside a microVM and give you a connection URL to control it. This lets AI agents browse the web, fill out forms, or take screenshots without any risk to your host machine.
+
+Each browser session runs in its own disposable VM. When the session ends, the VM and all its data are destroyed automatically.
+
+## What you get
+
+When you start a browser session, SmolVM provisions a microVM with Chromium pre-installed and exposes two endpoints on your local machine:
+
+- **CDP URL** — a Chrome DevTools Protocol endpoint you can connect to from Playwright, Puppeteer, or any CDP client
+- **Live view URL** (optional) — a noVNC link you can open in your own browser to watch or interact with the session in real time
+
+SmolVM also collects session artifacts like downloads, logs, and video recordings into a local directory.
+
+## Quickstart
+
+The fastest way to start a browser session is with the context manager. The session starts automatically on entry and stops on exit:
+
+```python
+from smolvm import BrowserSession, BrowserSessionConfig
+
+with BrowserSession(BrowserSessionConfig(mode="live")) as session:
+    print(f"CDP URL: {session.cdp_url}")
+    print(f"Live view: {session.live_url}")
+
+    # Connect with Playwright (requires: pip install playwright)
+    browser = session.connect_playwright()
+    context = browser.contexts[0] if browser.contexts else browser.new_context()
+    page = context.pages[0] if context.pages else context.new_page()
+    page.goto("https://example.com", wait_until="networkidle")
+
+    # Take a screenshot
+    session.screenshot("artifacts/example.png")
+```
+
+<Note>
+  Playwright is optional. You can connect any CDP-compatible tool to the `cdp_url`.
+  Install Playwright with `pip install playwright`.
+</Note>
+
+## Session modes
+
+SmolVM browser sessions support two modes:
+
+| Mode | Description | Use case |
+|------|-------------|----------|
+| `headless` | No visual output, CDP endpoint only | Automated scraping, testing |
+| `live` | CDP endpoint + noVNC live view | Debugging, human-in-the-loop |
+
+```python
+# Headless mode (default) — automation only
+session = BrowserSession(BrowserSessionConfig(mode="headless"))
+
+# Live mode — watch the browser in real time
+session = BrowserSession(BrowserSessionConfig(mode="live"))
+```
+
+In live mode, open the `live_url` in your browser or call `session.open_live_view()` to launch it automatically.
+
+## Profile modes
+
+By default, each session gets a fresh browser profile that is discarded when the session ends. If you need to preserve cookies, local storage, or login state across sessions, use a persistent profile.
+
+### Ephemeral profiles (default)
+
+```python
+# Every session starts clean — no cookies, no history
+with BrowserSession() as session:
+    session.start()
+    # ...
+```
+
+### Persistent profiles
+
+```python
+from smolvm import BrowserSession, BrowserSessionConfig
+
+# First session: log in and save state
+session = BrowserSession(
+    BrowserSessionConfig(
+        profile_mode="persistent",
+        profile_id="my-account",
+        mode="headless",
+    )
+)
+session.start()
+# ... perform login ...
+session.stop()
+
+# Later session: reuse the saved profile
+session = BrowserSession(
+    BrowserSessionConfig(
+        profile_mode="persistent",
+        profile_id="my-account",
+        mode="headless",
+    )
+)
+session.start()
+# Cookies and login state are preserved
+```
+
+<Warning>
+  When using persistent profiles, `profile_id` is required. The same `profile_id`
+  always maps to the same underlying VM disk, so profile state survives across sessions.
+</Warning>
+
+## Configuration options
+
+You can customize memory, disk, viewport size, and more through `BrowserSessionConfig`:
+
+```python
+from smolvm import BrowserSession, BrowserSessionConfig
+
+config = BrowserSessionConfig(
+    mode="live",                # "headless" or "live"
+    viewport={"width": 1440, "height": 900},
+    mem_size_mib=4096,          # VM memory (default: 2048)
+    disk_size_mib=8192,         # VM disk (default: 4096)
+    timeout_minutes=60,         # Session TTL (default: 30)
+    record_video=True,          # Record the session (requires mode="live")
+    allow_downloads=True,       # Allow file downloads (default: True)
+    env_vars={"API_KEY": "sk-..."}, # Inject env vars into the guest
+)
+
+with BrowserSession(config) as session:
+    print(session.cdp_url)
+```
+
+See the [BrowserSessionConfig reference](/smolvm/api/browsersessionconfig) for the full list of parameters.
+
+## Collecting artifacts
+
+SmolVM can collect downloads, logs, and video recordings from the guest VM into a local directory:
+
+```python
+with BrowserSession(BrowserSessionConfig(mode="live", record_video=True)) as session:
+    browser = session.connect_playwright()
+    # ... perform actions ...
+
+    # Collect artifacts before the session ends
+    artifacts_path = session.collect_artifacts()
+    print(f"Artifacts saved to: {artifacts_path}")
+```
+
+The artifacts directory contains a `guest-artifacts.tar.gz` archive with:
+- Browser logs from `/var/log/smolvm-browser/`
+- Downloaded files
+- Video recordings (if `record_video=True`)
+
+You can also check the artifacts directory path at any time with `session.artifacts_dir`.
+
+## File transfer
+
+You can push files into the browser VM or pull files out:
+
+```python
+with BrowserSession() as session:
+    # Upload a file to the guest
+    session.push_file("local/config.json", "/tmp/config.json")
+
+    # Download a file from the guest
+    session.pull_file("/tmp/result.json", "local/result.json")
+```
+
+## Reconnecting to a session
+
+If you need to reconnect to a running browser session from a different process, use `BrowserSession.from_id()`:
+
+```python
+from smolvm import BrowserSession
+
+# Reconnect by session ID
+session = BrowserSession.from_id("browser-a1b2c3d4")
+print(f"Status: {session.status}")
+print(f"CDP URL: {session.cdp_url}")
+session.close()
+```
+
+## Using the CLI
+
+You can also manage browser sessions from the command line:
+
+```bash
+# Start a live browser session
+smolvm browser start --mode live
+
+# Start with JSON output (useful for scripts and agents)
+smolvm browser start --mode live --json
+
+# List active sessions
+smolvm browser list
+
+# Open the live view in your default browser
+smolvm browser open <session_id>
+
+# View session logs
+smolvm browser logs <session_id>
+
+# Stop a specific session
+smolvm browser stop <session_id>
+
+# Stop all sessions
+smolvm browser stop --all
+```
+
+See the [browser CLI reference](/smolvm/cli/browser) for the full list of commands and options.
+
+## AI agent integration
+
+Browser sessions are designed to work as tools for AI agents. Here is an example that wraps a browser session as an agent tool:
+
+```python
+from smolvm import BrowserSession, BrowserSessionConfig
+
+def browse_url(url: str) -> str:
+    """AI agent tool: visit a URL and return the page title."""
+    with BrowserSession(BrowserSessionConfig(mode="headless")) as session:
+        browser = session.connect_playwright()
+        context = browser.new_context()
+        page = context.new_page()
+        page.goto(url, wait_until="networkidle")
+        return page.title()
+```
+
+For a complete example with video recording and screenshots, see the [browser session example](https://github.com/celestoai/smolvm/blob/main/examples/browser_session.py).
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="BrowserSession API" icon="code" href="/smolvm/api/browsersession">
+    Full API reference for the BrowserSession class
+  </Card>
+
+  <Card title="BrowserSessionConfig" icon="gear" href="/smolvm/api/browsersessionconfig">
+    All configuration options for browser sessions
+  </Card>
+
+  <Card title="Browser CLI" icon="terminal" href="/smolvm/cli/browser">
+    Command-line interface for managing browser sessions
+  </Card>
+
+  <Card title="AI agent integration" icon="robot" href="/smolvm/guides/ai-agent-integration">
+    Integrate SmolVM with AI agent frameworks
+  </Card>
+</CardGroup>
