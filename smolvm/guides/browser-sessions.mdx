@@ -1,0 +1,220 @@
+---
+title: "Browser sessions"
+description: "Run isolated browser environments inside SmolVM for web automation, testing, and AI computer use"
+---
+
+SmolVM can spin up a full Chromium browser inside a microVM, giving your code or AI agent a secure, disposable browser that is completely isolated from the host. You connect to it over the Chrome DevTools Protocol (CDP), so any tool that speaks CDP (Playwright, Puppeteer, Selenium) works out of the box.
+
+## How it works
+
+A `BrowserSession` boots a microVM with Chromium pre-installed, exposes the browser's CDP port on localhost, and optionally starts a live noVNC view so you can watch the browser in real time. When the session ends, the VM and all its data are destroyed.
+
+<CardGroup cols={2}>
+  <Card title="Hardware isolation" icon="shield">
+    The browser runs inside a KVM-backed microVM, not on the host. Even if a web page exploits a browser vulnerability, it stays contained.
+  </Card>
+
+  <Card title="CDP access" icon="plug">
+    Connect any CDP-compatible library (Playwright, Puppeteer) to the session's CDP URL and automate the browser as usual.
+  </Card>
+
+  <Card title="Live view" icon="eye">
+    Start sessions in `live` mode to get a noVNC URL you can open in your own browser to watch and interact with the guest browser.
+  </Card>
+
+  <Card title="Ephemeral by default" icon="trash">
+    Each session gets a fresh browser profile. When the session stops, everything is cleaned up automatically.
+  </Card>
+</CardGroup>
+
+## Quick start
+
+The simplest way to start a browser session is with the context manager. SmolVM handles VM boot, browser launch, and cleanup for you.
+
+```python
+from smolvm import BrowserSession, BrowserSessionConfig
+
+with BrowserSession(BrowserSessionConfig(mode="live")) as session:
+    print(f"CDP URL: {session.cdp_url}")
+    print(f"Live URL: {session.live_url}")
+
+    # Connect Playwright to the running browser
+    browser = session.connect_playwright()
+    context = browser.contexts[0] if browser.contexts else browser.new_context()
+    page = context.pages[0] if context.pages else context.new_page()
+
+    page.goto("https://example.com", wait_until="networkidle")
+    print(page.title())
+```
+
+<Note>
+  Playwright must be installed separately: `pip install playwright`. You do not need to run `playwright install` because SmolVM provides its own Chromium inside the guest VM.
+</Note>
+
+## Session modes
+
+### Headless mode
+
+The default mode. No live view is exposed, which uses less memory and is ideal for automated pipelines.
+
+```python
+session_config = BrowserSessionConfig(mode="headless")
+```
+
+### Live mode
+
+Starts a noVNC server inside the guest so you can watch the browser in real time. Open the `live_url` in any browser on the host.
+
+```python
+session_config = BrowserSessionConfig(
+    mode="live",
+    viewport={"width": 1440, "height": 900},
+)
+```
+
+<Tip>
+  Live mode is useful for debugging automation scripts, demos, and AI computer use tasks where you want to see what the agent is doing.
+</Tip>
+
+## Screenshots and artifacts
+
+### Capturing screenshots
+
+You can capture screenshots directly through the session or through Playwright.
+
+```python
+# Via the session helper
+session.screenshot("output/page.png")
+
+# Via Playwright
+browser = session.connect_playwright()
+page = browser.contexts[0].pages[0]
+page.screenshot(path="output/page.png", full_page=True)
+```
+
+### Collecting artifacts
+
+At the end of a session, you can collect guest-side logs, downloads, and recordings into a local directory.
+
+```python
+with BrowserSession(BrowserSessionConfig(mode="live", record_video=True)) as session:
+    browser = session.connect_playwright()
+    # ... do work ...
+
+    # Collect all guest artifacts before the session stops
+    artifacts_path = session.collect_artifacts()
+    print(f"Artifacts saved to: {artifacts_path}")
+```
+
+## File transfer
+
+You can push files into the guest VM or pull files out using the session's SSH channel.
+
+```python
+# Upload a file to the guest
+session.push_file("local/config.json", "/tmp/config.json")
+
+# Download a file from the guest
+session.pull_file("/tmp/results.csv", "local/results.csv")
+```
+
+## Persistent browser profiles
+
+By default, each session creates a fresh, ephemeral browser profile. If you need to preserve cookies, local storage, or other browser state across sessions, use persistent profile mode.
+
+```python
+config = BrowserSessionConfig(
+    profile_mode="persistent",
+    profile_id="my-project",
+)
+
+# First session: log in and build up state
+with BrowserSession(config) as session:
+    browser = session.connect_playwright()
+    # ... log in, accept cookies, etc.
+
+# Later session: state is preserved
+with BrowserSession(config) as session:
+    browser = session.connect_playwright()
+    # Cookies and local storage from the first session are still here
+```
+
+## Computer use with AI agents
+
+SmolVM browser sessions pair naturally with AI models that support computer use. The model sees screenshots of the browser and issues mouse/keyboard actions, while SmolVM provides the isolated environment.
+
+Here is a simplified example using OpenAI's computer use API:
+
+```python
+from smolvm import BrowserSession, BrowserSessionConfig
+from openai import OpenAI
+
+client = OpenAI()
+
+with BrowserSession(
+    BrowserSessionConfig(
+        mode="live",
+        viewport={"width": 1440, "height": 900},
+    )
+) as session:
+    browser = session.connect_playwright()
+    context = browser.contexts[0]
+    page = context.pages[0]
+    page.goto("https://example.com", wait_until="domcontentloaded")
+
+    # Take a screenshot and send it to the model
+    screenshot_bytes = page.screenshot(type="png")
+
+    response = client.responses.create(
+        model="gpt-5.4",
+        tools=[{"type": "computer"}],
+        input="Visit the site and find the main heading.",
+    )
+
+    # Loop: execute model actions, screenshot, repeat
+    # See the full computer_use_browser.py example for the complete loop
+```
+
+<Info>
+  The SmolVM repository includes a full, production-ready computer use example at `examples/agent_tools/computer_use_browser.py`. It handles action dispatch, domain allowlisting, safety checks, and multi-step agentic loops.
+</Info>
+
+## Configuration reference
+
+The `BrowserSessionConfig` model accepts these fields:
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `mode` | `"headless"` \| `"live"` | `"headless"` | Browser display mode |
+| `backend` | `"firecracker"` \| `"qemu"` \| `"auto"` | `"auto"` | VM backend |
+| `viewport` | `{"width": int, "height": int}` | `1280x720` | Browser viewport size |
+| `profile_mode` | `"ephemeral"` \| `"persistent"` | `"ephemeral"` | Whether to retain browser profile data |
+| `profile_id` | `str \| None` | `None` | Profile identifier (required when `profile_mode="persistent"`) |
+| `timeout_minutes` | `int` | `30` | Session expiry timeout (1-240 minutes) |
+| `record_video` | `bool` | `False` | Record video of the session (requires `mode="live"`) |
+| `allow_downloads` | `bool` | `True` | Allow file downloads in the guest browser |
+| `env_vars` | `dict[str, str]` | `{}` | Environment variables injected into the guest VM |
+| `mem_size_mib` | `int` | `2048` | Guest VM memory in MiB (512-16384) |
+| `disk_size_mib` | `int` | `4096` | Root filesystem size in MiB (2048-16384) |
+
+For the full API reference, see the [BrowserSession API page](/smolvm/api/browser-session).
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="AI agent integration" icon="robot" href="/smolvm/guides/ai-agent-integration">
+    See how browser sessions fit into broader agent workflows
+  </Card>
+
+  <Card title="BrowserSession API" icon="book" href="/smolvm/api/browser-session">
+    Full API reference for BrowserSession and BrowserSessionConfig
+  </Card>
+
+  <Card title="Port forwarding" icon="network-wired" href="/smolvm/guides/port-forwarding">
+    Learn how SmolVM exposes guest services on localhost
+  </Card>
+
+  <Card title="Custom images" icon="box" href="/smolvm/guides/custom-images">
+    Build specialized VM images for your use case
+  </Card>
+</CardGroup>

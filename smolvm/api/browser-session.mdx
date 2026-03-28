@@ -1,0 +1,407 @@
+---
+title: "BrowserSession"
+description: "API reference for BrowserSession, BrowserSessionConfig, and BrowserSessionInfo"
+---
+
+## Overview
+
+The `BrowserSession` class manages a disposable or persistent Chromium browser running inside a SmolVM guest. It handles VM creation, browser startup, CDP port forwarding, and cleanup.
+
+## Constructor
+
+```python
+BrowserSession(
+    config: BrowserSessionConfig | None = None,
+    *,
+    session_id: str | None = None,
+    data_dir: Path | None = None,
+    socket_dir: Path | None = None,
+    ssh_key_path: str | None = None,
+)
+```
+
+<ParamField path="config" type="BrowserSessionConfig | None" default="None">
+  Configuration for a new browser session. Mutually exclusive with `session_id`.
+  If both `config` and `session_id` are omitted, a default `BrowserSessionConfig` is used.
+</ParamField>
+
+<ParamField path="session_id" type="str | None" default="None">
+  ID of an existing session to reconnect to. Mutually exclusive with `config`.
+</ParamField>
+
+<ParamField path="data_dir" type="Path | None" default="None">
+  Override the default SmolVM data directory.
+</ParamField>
+
+<ParamField path="socket_dir" type="Path | None" default="None">
+  Override the default socket directory.
+</ParamField>
+
+<ParamField path="ssh_key_path" type="str | None" default="None">
+  SSH private key path. If omitted, SmolVM generates or reuses a default key.
+</ParamField>
+
+### Raises
+
+* `ValueError`: If both `config` and `session_id` are provided.
+
+## Class methods
+
+### from\_id
+
+```python
+@classmethod
+BrowserSession.from_id(
+    session_id: str,
+    *,
+    data_dir: Path | None = None,
+    socket_dir: Path | None = None,
+    ssh_key_path: str | None = None,
+) -> BrowserSession
+```
+
+Reconnect to an existing browser session by ID.
+
+<ParamField path="session_id" type="str" required>
+  Session identifier to reconnect to.
+</ParamField>
+
+<ResponseField name="return" type="BrowserSession">
+  A BrowserSession instance attached to the existing session.
+</ResponseField>
+
+## Lifecycle methods
+
+### start
+
+```python
+def start(self, boot_timeout: float = 90.0) -> BrowserSession
+```
+
+Start the browser session. Boots the guest VM, launches Chromium, and exposes CDP and live-view endpoints on localhost.
+
+<ParamField path="boot_timeout" type="float" default="90.0">
+  Maximum seconds to wait for the VM and browser to become ready.
+</ParamField>
+
+<ResponseField name="return" type="BrowserSession">
+  Returns `self` for method chaining.
+</ResponseField>
+
+#### Raises
+
+* `SmolVMError`: If the browser or CDP port does not come up within the timeout.
+
+### stop
+
+```python
+def stop(self) -> BrowserSession
+```
+
+Stop the browser session. Collects artifacts, deletes the VM, and removes the session record.
+
+<ResponseField name="return" type="BrowserSession">
+  Returns `self` for method chaining.
+</ResponseField>
+
+### delete
+
+```python
+def delete(self) -> None
+```
+
+Alias for `stop()`.
+
+### close
+
+```python
+def close(self) -> None
+```
+
+Release local resources (Playwright runtime, SSH connections) without changing the remote session state.
+
+## Browser methods
+
+### connect\_playwright
+
+```python
+def connect_playwright(self) -> Browser
+```
+
+Connect Playwright to the running browser over CDP. Returns a Playwright `Browser` object.
+
+<ResponseField name="return" type="Browser">
+  A Playwright Browser instance connected to the guest Chromium.
+</ResponseField>
+
+#### Raises
+
+* `SmolVMError`: If the session is not started, or if Playwright is not installed.
+
+### screenshot
+
+```python
+def screenshot(
+    self,
+    destination: str | Path,
+    *,
+    full_page: bool = True,
+) -> Path
+```
+
+Capture a screenshot of the current page and save it locally.
+
+<ParamField path="destination" type="str | Path" required>
+  Local file path for the screenshot.
+</ParamField>
+
+<ParamField path="full_page" type="bool" default="True">
+  Capture the full scrollable page or just the visible viewport.
+</ParamField>
+
+<ResponseField name="return" type="Path">
+  Path to the saved screenshot file.
+</ResponseField>
+
+### open\_live\_view
+
+```python
+def open_live_view(self) -> bool
+```
+
+Open the live-view noVNC URL in the host's default browser.
+
+#### Raises
+
+* `SmolVMError`: If the session does not have a `live_url` (only available in `live` mode).
+
+## File transfer methods
+
+### push\_file
+
+```python
+def push_file(self, local_path: str | Path, guest_path: str) -> None
+```
+
+Upload a file from the host into the guest VM.
+
+<ParamField path="local_path" type="str | Path" required>
+  Path to the local file.
+</ParamField>
+
+<ParamField path="guest_path" type="str" required>
+  Destination path inside the guest.
+</ParamField>
+
+### pull\_file
+
+```python
+def pull_file(self, guest_path: str, local_path: str | Path) -> Path
+```
+
+Download a file from the guest VM to the host.
+
+<ParamField path="guest_path" type="str" required>
+  Path inside the guest.
+</ParamField>
+
+<ParamField path="local_path" type="str | Path" required>
+  Destination path on the host.
+</ParamField>
+
+<ResponseField name="return" type="Path">
+  Path to the downloaded file.
+</ResponseField>
+
+## Artifact and log methods
+
+### collect\_artifacts
+
+```python
+def collect_artifacts(self) -> Path | None
+```
+
+Collect guest-side logs, downloads, and recordings into a local artifacts directory. Returns `None` if the VM is not running.
+
+<ResponseField name="return" type="Path | None">
+  Path to the local `guest-artifacts.tar.gz` file, or `None`.
+</ResponseField>
+
+### logs
+
+```python
+def logs(self, tail: int = 100) -> str
+```
+
+Return combined host and guest logs for the browser session.
+
+<ParamField path="tail" type="int" default="100">
+  Number of lines to include from each log file.
+</ParamField>
+
+<ResponseField name="return" type="str">
+  Combined log output as a string.
+</ResponseField>
+
+## Properties
+
+| Property | Type | Description |
+|---|---|---|
+| `session_id` | `str` | Stable browser session identifier |
+| `vm_id` | `str` | Underlying SmolVM identifier |
+| `info` | `BrowserSessionInfo` | Current session info |
+| `status` | `BrowserSessionState` | Current session status |
+| `cdp_url` | `str \| None` | CDP endpoint on localhost (available after `start()`) |
+| `live_url` | `str \| None` | noVNC live-view URL (only in `live` mode) |
+| `artifacts_dir` | `Path \| None` | Local directory for collected artifacts |
+| `config` | `BrowserSessionConfig` | Resolved session configuration |
+| `data_dir` | `Path` | SmolVM data directory |
+
+## Context manager
+
+`BrowserSession` supports the context manager protocol:
+
+```python
+with BrowserSession(BrowserSessionConfig(mode="live")) as session:
+    # Session auto-starts on entry
+    browser = session.connect_playwright()
+    # ... do work ...
+# Session auto-stops and cleans up on exit
+```
+
+On entry (`__enter__`): auto-starts the session if it was created (not reconnected) and is not already ready.
+
+On exit (`__exit__`): stops and deletes the session if it was created by this instance, then releases all local resources.
+
+---
+
+## BrowserSessionConfig
+
+Configuration model for launching a browser session.
+
+```python
+BrowserSessionConfig(
+    mode: str = "headless",
+    backend: str = "auto",
+    browser: str = "chromium",
+    viewport: dict | None = None,
+    profile_mode: str = "ephemeral",
+    profile_id: str | None = None,
+    timeout_minutes: int = 30,
+    record_video: bool = False,
+    allow_downloads: bool = True,
+    env_vars: dict[str, str] = {},
+    mem_size_mib: int = 2048,
+    disk_size_mib: int = 4096,
+)
+```
+
+<ParamField body="mode" type="Literal['headless', 'live']" default="headless">
+  `"headless"` runs the browser without a display. `"live"` starts a noVNC server for real-time viewing.
+</ParamField>
+
+<ParamField body="backend" type="Literal['firecracker', 'qemu', 'auto']" default="auto">
+  VM backend. `"auto"` picks the best available backend for your platform.
+</ParamField>
+
+<ParamField body="browser" type="Literal['chromium']" default="chromium">
+  Browser engine. Currently only `"chromium"` is supported.
+</ParamField>
+
+<ParamField body="viewport" type="dict | None" default="None">
+  Browser viewport as `{"width": int, "height": int}`. Defaults to 1280x720.
+</ParamField>
+
+<ParamField body="profile_mode" type="Literal['ephemeral', 'persistent']" default="ephemeral">
+  `"ephemeral"` creates a fresh profile each time. `"persistent"` retains browser state (cookies, local storage) across sessions.
+</ParamField>
+
+<ParamField body="profile_id" type="str | None" default="None">
+  Profile identifier. Required when `profile_mode="persistent"`.
+</ParamField>
+
+<ParamField body="timeout_minutes" type="int" default="30">
+  Session expiry timeout in minutes. Range: 1-240.
+</ParamField>
+
+<ParamField body="record_video" type="bool" default="False">
+  Record video of the browser session. Requires `mode="live"`.
+</ParamField>
+
+<ParamField body="allow_downloads" type="bool" default="True">
+  Allow file downloads inside the guest browser.
+</ParamField>
+
+<ParamField body="env_vars" type="dict[str, str]" default="{}">
+  Environment variables injected into the guest VM at boot time.
+</ParamField>
+
+<ParamField body="mem_size_mib" type="int" default="2048">
+  Guest VM memory in MiB. Range: 512-16384.
+</ParamField>
+
+<ParamField body="disk_size_mib" type="int" default="4096">
+  Root filesystem size in MiB. Range: 2048-16384.
+</ParamField>
+
+### Validation rules
+
+- `profile_id` is required when `profile_mode="persistent"`
+- `record_video` requires `mode="live"`
+- `network_policy_id` is reserved for future use
+
+---
+
+## BrowserSessionInfo
+
+Runtime information about a browser session.
+
+<ResponseField name="session_id" type="str" required>
+  The session identifier.
+</ResponseField>
+
+<ResponseField name="vm_id" type="str" required>
+  The underlying VM identifier.
+</ResponseField>
+
+<ResponseField name="status" type="BrowserSessionState" required>
+  Current session state.
+</ResponseField>
+
+<ResponseField name="cdp_url" type="str | None">
+  CDP endpoint URL (set after the session starts).
+</ResponseField>
+
+<ResponseField name="live_url" type="str | None">
+  noVNC live-view URL (set in `live` mode after start).
+</ResponseField>
+
+<ResponseField name="debug_port" type="int | None">
+  Host-side port forwarded to the CDP debug port.
+</ResponseField>
+
+<ResponseField name="profile_id" type="str | None">
+  Profile identifier for persistent sessions.
+</ResponseField>
+
+<ResponseField name="expires_at" type="datetime | None">
+  UTC timestamp when the session expires.
+</ResponseField>
+
+<ResponseField name="artifacts_dir" type="Path | None">
+  Local directory for collected artifacts.
+</ResponseField>
+
+---
+
+## BrowserSessionState
+
+Enum representing the lifecycle states of a browser session.
+
+| Value | Description |
+|---|---|
+| `CREATED` | Session record exists, VM not yet started |
+| `STARTING` | VM is booting and browser is launching |
+| `READY` | Browser is running and CDP is accessible |
+| `STOPPING` | Session is shutting down |
+| `ERROR` | An error occurred during startup or operation |

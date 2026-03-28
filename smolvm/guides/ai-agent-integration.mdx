@@ -167,75 +167,148 @@ For agents that need persistent state across multiple interactions:
   </Step>
 </Steps>
 
-## Integration Pattern 3: Web Browsing Agent
+## Integration Pattern 3: Browser sessions
 
-Provide agents with isolated browser environments:
+SmolVM provides a dedicated `BrowserSession` class that boots a microVM with Chromium pre-installed and exposes it over the Chrome DevTools Protocol (CDP). This is the recommended way to give agents browser access.
 
-```python  theme={null}
-from smolvm import SmolVM, VMConfig
-from smolvm.build import ImageBuilder, SSH_BOOT_ARGS
-from smolvm.utils import ensure_ssh_key
+```python
+from smolvm import BrowserSession, BrowserSessionConfig
 
-def create_browser_vm() -> SmolVM:
-    """Create a VM with headless browser for agent use."""
-    private_key, public_key = ensure_ssh_key()
+with BrowserSession(
+    BrowserSessionConfig(mode="live", viewport={"width": 1440, "height": 900})
+) as session:
+    print(f"CDP URL: {session.cdp_url}")
+    print(f"Live URL: {session.live_url}")
 
-    builder = ImageBuilder()
-    kernel, rootfs = builder.build_debian_ssh_key(
-        ssh_public_key=public_key,
-        rootfs_size_mb=2048,
-    )
+    # Connect any CDP-compatible library
+    browser = session.connect_playwright()
+    context = browser.contexts[0] if browser.contexts else browser.new_context()
+    page = context.pages[0] if context.pages else context.new_page()
 
-    config = VMConfig(
-        vm_id="browser-agent",
-        vcpu_count=2,
-        mem_size_mib=2048,
-        kernel_path=kernel,
-        rootfs_path=rootfs,
-        boot_args=SSH_BOOT_ARGS,
-    )
-
-    vm = SmolVM(config, ssh_key_path=str(private_key))
-    vm.start()
-
-    # Install headless browser
-    vm.run("apt-get update && apt-get install -y chromium chromium-driver")
-    vm.run("pip3 install selenium")
-
-    return vm
-
-def browse_url(vm: SmolVM, url: str) -> str:
-    """Use agent VM to fetch and return page content."""
-    script = f'''
-import sys
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-
-options = Options()
-options.add_argument("--headless")
-options.add_argument("--no-sandbox")
-options.add_argument("--disable-dev-shm-usage")
-
-driver = webdriver.Chrome(options=options)
-try:
-    driver.get("{url}")
-    print(driver.page_source)
-finally:
-    driver.quit()
-'''
-
-    vm.run(f"cat > /tmp/browse.py << 'EOF'\n{script}\nEOF")
-    result = vm.run("python3 /tmp/browse.py", timeout=60)
-
-    return result.stdout if result.ok else f"Error: {result.stderr}"
-
-# Usage
-with create_browser_vm() as vm:
-    html = browse_url(vm, "https://example.com")
-    print(html)
+    page.goto("https://example.com", wait_until="networkidle")
+    session.screenshot("output/screenshot.png")
 ```
 
-## Real-world Example: OpenClaw Agent Environment
+Use `mode="live"` to get a noVNC URL for watching the browser in real time, or `mode="headless"` for automated pipelines.
+
+<Info>
+  For a full walkthrough of browser sessions including persistent profiles, file transfer, and video recording, see the [browser sessions guide](/smolvm/guides/browser-sessions).
+</Info>
+
+### Computer use with AI models
+
+Browser sessions pair naturally with AI models that support computer use (vision + mouse/keyboard actions). The model sees screenshots and issues actions, while SmolVM provides the isolated environment.
+
+```python
+from smolvm import BrowserSession, BrowserSessionConfig
+from openai import OpenAI
+
+client = OpenAI()
+
+with BrowserSession(
+    BrowserSessionConfig(mode="live", viewport={"width": 1440, "height": 900})
+) as session:
+    browser = session.connect_playwright()
+    page = browser.contexts[0].pages[0]
+    page.goto("https://example.com", wait_until="domcontentloaded")
+
+    # Send the task and screenshot to the model
+    response = client.responses.create(
+        model="gpt-5.4",
+        tools=[{"type": "computer"}],
+        input="Find the main heading on the page.",
+    )
+
+    # The model responds with mouse/keyboard actions
+    # Execute them via Playwright, screenshot, and loop
+    # See examples/agent_tools/computer_use_browser.py for the full loop
+```
+
+## Agent framework examples
+
+SmolVM works with popular agent frameworks out of the box. Here are ready-to-use examples for the most common ones.
+
+<Tabs>
+  <Tab title="OpenAI Agents SDK">
+    ```python
+    import asyncio
+    from agents import Agent, Runner, function_tool
+    from smolvm import SmolVM
+
+    @function_tool
+    def run_in_smolvm(command: str, timeout: int = 30) -> str:
+        """Run a shell command inside an ephemeral SmolVM sandbox."""
+        with SmolVM() as vm:
+            result = vm.run(command, timeout=timeout)
+            return f"exit_code: {result.exit_code}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+
+    agent = Agent(
+        name="SmolVM Assistant",
+        model="gpt-4.1",
+        instructions="You are a coding assistant with a secure SmolVM sandbox.",
+        tools=[run_in_smolvm],
+    )
+
+    async def main():
+        result = await Runner.run(agent, "Run `uname -a` in the sandbox")
+        print(result.final_output)
+
+    asyncio.run(main())
+    ```
+  </Tab>
+  <Tab title="LangChain">
+    ```python
+    from langchain.tools import tool
+    from langchain.agents import create_agent
+    from smolvm import SmolVM
+
+    @tool
+    def run_in_smolvm(command: str, timeout: int = 30) -> str:
+        """Run a shell command inside an ephemeral SmolVM sandbox."""
+        with SmolVM() as vm:
+            result = vm.run(command, timeout=timeout)
+            return f"exit_code: {result.exit_code}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+
+    agent = create_agent(
+        model="openai:gpt-4.1",
+        tools=[run_in_smolvm],
+        system_prompt="You are a coding assistant with a secure SmolVM sandbox.",
+    )
+
+    result = agent.invoke({
+        "messages": [{"role": "user", "content": "Run `uname -a` in the sandbox"}]
+    })
+    ```
+  </Tab>
+  <Tab title="PydanticAI">
+    ```python
+    from pydantic_ai import Agent
+    from smolvm import SmolVM
+
+    agent = Agent(
+        "openai:gpt-4.1",
+        instructions="You are a coding assistant with a secure SmolVM sandbox.",
+    )
+
+    @agent.tool_plain(docstring_format="google", require_parameter_descriptions=True)
+    def run_in_smolvm(command: str, timeout: int = 30) -> str:
+        """Run a shell command inside an ephemeral SmolVM sandbox.
+
+        Args:
+            command: Shell command to execute inside the sandbox guest.
+            timeout: Maximum number of seconds to wait for the command.
+        """
+        with SmolVM() as vm:
+            result = vm.run(command, timeout=timeout)
+            return f"exit_code: {result.exit_code}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+
+    result = agent.run_sync("Run `uname -a` in the sandbox")
+    print(result.output)
+    ```
+  </Tab>
+</Tabs>
+
+## Real-world example: OpenClaw agent environment
 
 From `examples/openclaw.py` - complete integration with the OpenClaw AI agent framework:
 
@@ -441,22 +514,22 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         print(output)
 ```
 
-## Next Steps
+## Next steps
 
 <CardGroup cols={2}>
-  <Card title="Basic Usage" icon="play" href="/smolvm/guides/basic-usage">
+  <Card title="Browser sessions" icon="globe" href="/smolvm/guides/browser-sessions">
+    Full guide to isolated browser environments
+  </Card>
+
+  <Card title="Basic usage" icon="play" href="/smolvm/guides/basic-usage">
     Learn fundamental SmolVM operations
   </Card>
 
-  <Card title="Custom Images" icon="box" href="/smolvm/guides/custom-images">
+  <Card title="Custom images" icon="box" href="/smolvm/guides/custom-images">
     Build specialized images for your agents
   </Card>
 
-  <Card title="Environment Variables" icon="code" href="/smolvm/guides/environment-variables">
+  <Card title="Environment variables" icon="code" href="/smolvm/guides/environment-variables">
     Configure agent environments dynamically
-  </Card>
-
-  <Card title="Port Forwarding" icon="network-wired" href="/smolvm/guides/port-forwarding">
-    Expose agent services to your host
   </Card>
 </CardGroup>

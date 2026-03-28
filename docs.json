@@ -143,6 +143,7 @@
               "smolvm/guides/port-forwarding",
               "smolvm/guides/environment-variables",
               "smolvm/guides/custom-images",
+              "smolvm/guides/browser-sessions",
               "smolvm/guides/ai-agent-integration"
             ]
           },
@@ -171,6 +172,7 @@
             "icon": "book",
             "pages": [
               "smolvm/api/smolvm",
+              "smolvm/api/browser-session",
               "smolvm/api/vmconfig",
               "smolvm/api/commandresult",
               "smolvm/api/vminfo",
