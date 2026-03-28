@@ -1,0 +1,50 @@
+---
+title: "smolvm ssh"
+description: "SSH into a running SmolVM, auto-starting it when needed"
+---
+
+The `ssh` command opens an interactive SSH session to a VM. If the VM exists but is not running, SmolVM automatically starts it before connecting.
+
+## Synopsis
+
+```bash  theme={null}
+smolvm ssh <vm_id> [OPTIONS]
+```
+
+## Arguments
+
+<ParamField path="vm_id" type="string" required>
+  The identifier of the VM to connect to.
+</ParamField>
+
+## Options
+
+<ParamField path="--boot-timeout" type="float" default="90">
+  Seconds to wait for the VM to finish booting (if it needs to start).
+</ParamField>
+
+## Examples
+
+### Connect to a VM
+
+```bash  theme={null}
+smolvm ssh my-vm
+```
+
+### Connect with a longer boot timeout
+
+```bash  theme={null}
+smolvm ssh my-vm --boot-timeout 120
+```
+
+## Exit codes
+
+| Code | Description                                     |
+| ---- | ----------------------------------------------- |
+| `0`  | SSH session ended normally                      |
+| `1`  | Error — VM not found or connection failed       |
+
+## Related commands
+
+* [`smolvm create`](/smolvm/cli/create) — Create a new VM
+* [`smolvm list`](/smolvm/cli/list) — List all VMs

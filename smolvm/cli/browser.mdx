@@ -1,0 +1,278 @@
+---
+title: "smolvm browser"
+description: "Manage disposable browser sessions inside SmolVM micro-VMs"
+---
+
+SmolVM can spin up isolated Chromium browser sessions inside lightweight micro-VMs. Each session gets its own sandboxed environment with a Chrome DevTools Protocol (CDP) endpoint you can connect to from tools like Playwright, Puppeteer, or any CDP-compatible client.
+
+Use `--live` to start a session with a real-time browser view you can watch and interact with in your local browser.
+
+## Subcommands
+
+| Subcommand | Description |
+| --- | --- |
+| `smolvm browser start` | Create and start a browser session |
+| `smolvm browser stop` | Stop and delete a browser session |
+| `smolvm browser list` | List browser sessions |
+| `smolvm browser open` | Open a live session in your default browser |
+| `smolvm browser logs` | Print session logs |
+
+---
+
+## browser start
+
+Create and boot a new browser session.
+
+```bash  theme={null}
+smolvm browser start [OPTIONS]
+```
+
+### Options
+
+<ParamField path="--session-id" type="string">
+  Optional identifier for the session. If omitted, a random ID like `browser-a1b2c3d4` is generated.
+</ParamField>
+
+<ParamField path="--live" type="flag" default="false">
+  Start the session in live mode. This exposes a browser view URL you can open to watch and interact with the session in real time.
+</ParamField>
+
+<ParamField path="--backend" type="string" default="auto">
+  Backend override. Accepted values: `auto`, `firecracker`, `qemu`.
+</ParamField>
+
+<ParamField path="--profile-mode" type="string" default="ephemeral">
+  Profile lifecycle mode. Use `ephemeral` for throwaway sessions or `persistent` to retain browser data across restarts. Accepted values: `ephemeral`, `persistent`.
+</ParamField>
+
+<ParamField path="--profile-id" type="string">
+  Identifier for a persistent profile. Required when `--profile-mode` is `persistent`.
+</ParamField>
+
+<ParamField path="--timeout-minutes" type="integer" default="30">
+  Session time-to-live in minutes.
+</ParamField>
+
+<ParamField path="--viewport-width" type="integer" default="1280">
+  Browser viewport width in pixels.
+</ParamField>
+
+<ParamField path="--viewport-height" type="integer" default="720">
+  Browser viewport height in pixels.
+</ParamField>
+
+<ParamField path="--memory-mib" type="integer" default="2048">
+  Guest VM memory in MiB.
+</ParamField>
+
+<ParamField path="--disk-size-mib" type="integer" default="4096">
+  Root filesystem size in MiB.
+</ParamField>
+
+<ParamField path="--record-video" type="flag" default="false">
+  Record the live session to a video file inside the guest artifact directory.
+</ParamField>
+
+<ParamField path="--no-downloads" type="flag" default="false">
+  Disable writeable browser downloads inside the guest.
+</ParamField>
+
+<ParamField path="--boot-timeout" type="float" default="90">
+  Seconds to wait for the VM to finish booting.
+</ParamField>
+
+<ParamField path="--json" type="flag" default="false">
+  Emit machine-readable JSON output.
+</ParamField>
+
+### Examples
+
+Start a headless browser session:
+
+```bash  theme={null}
+smolvm browser start
+```
+
+**Example output:**
+
+```
+Started browser session 'browser-a1b2c3d4'.
+  VM: browser-a1b2c3d4
+  Mode: headless
+  CDP URL: http://127.0.0.1:54321
+```
+
+Start a live session you can watch in your browser:
+
+```bash  theme={null}
+smolvm browser start --live
+```
+
+**Example output:**
+
+```
+Started browser session 'browser-e5f6g7h8'.
+  VM: browser-e5f6g7h8
+  Mode: live
+  CDP URL: http://127.0.0.1:54322
+  Live URL: http://127.0.0.1:54323
+```
+
+<Tip>
+  Open the **Live URL** in your browser to see and interact with the remote Chromium session in real time.
+</Tip>
+
+Start a session with a persistent profile:
+
+```bash  theme={null}
+smolvm browser start --profile-mode persistent --profile-id my-profile
+```
+
+Start a session with video recording:
+
+```bash  theme={null}
+smolvm browser start --live --record-video
+```
+
+---
+
+## browser stop
+
+Stop and delete a browser session, or stop all sessions at once.
+
+```bash  theme={null}
+smolvm browser stop <session_id>
+smolvm browser stop --all
+```
+
+### Arguments
+
+<ParamField path="session_id" type="string">
+  The session identifier to stop. Mutually exclusive with `--all`.
+</ParamField>
+
+### Options
+
+<ParamField path="--all" type="flag" default="false">
+  Stop and delete all browser sessions. Mutually exclusive with `session_id`.
+</ParamField>
+
+### Examples
+
+Stop a single session:
+
+```bash  theme={null}
+smolvm browser stop browser-a1b2c3d4
+```
+
+Stop all browser sessions:
+
+```bash  theme={null}
+smolvm browser stop --all
+```
+
+---
+
+## browser list
+
+List browser sessions with optional status filtering.
+
+```bash  theme={null}
+smolvm browser list [OPTIONS]
+```
+
+### Options
+
+<ParamField path="--status" type="string">
+  Filter sessions by status. Accepted values: `created`, `starting`, `ready`, `stopping`, `error`.
+</ParamField>
+
+<ParamField path="--json" type="flag" default="false">
+  Emit machine-readable JSON output.
+</ParamField>
+
+### Examples
+
+List all sessions:
+
+```bash  theme={null}
+smolvm browser list
+```
+
+List only ready sessions:
+
+```bash  theme={null}
+smolvm browser list --status ready
+```
+
+---
+
+## browser open
+
+Open a live browser session in your default local browser. The session must have been started with the `--live` flag.
+
+```bash  theme={null}
+smolvm browser open <session_id>
+```
+
+### Arguments
+
+<ParamField path="session_id" type="string" required>
+  The session identifier to open.
+</ParamField>
+
+### Examples
+
+```bash  theme={null}
+smolvm browser open browser-a1b2c3d4
+```
+
+---
+
+## browser logs
+
+Print logs from a browser session.
+
+```bash  theme={null}
+smolvm browser logs <session_id> [OPTIONS]
+```
+
+### Arguments
+
+<ParamField path="session_id" type="string" required>
+  The session identifier to fetch logs from.
+</ParamField>
+
+### Options
+
+<ParamField path="--tail" type="integer" default="100">
+  Number of log lines to tail from each source.
+</ParamField>
+
+### Examples
+
+```bash  theme={null}
+smolvm browser logs browser-a1b2c3d4
+```
+
+Show only the last 20 lines:
+
+```bash  theme={null}
+smolvm browser logs browser-a1b2c3d4 --tail 20
+```
+
+---
+
+## Exit codes
+
+| Code | Description |
+| ---- | --- |
+| `0` | Success |
+| `1` | Error — session not found, failed to start, or another runtime error |
+| `2` | Invalid usage — missing subcommand or arguments |
+
+## Related commands
+
+* [`smolvm create`](/smolvm/cli/create) — Create a general-purpose VM
+* [`smolvm stop`](/smolvm/cli/stop) — Stop a running VM
+* [`smolvm cleanup`](/smolvm/cli/cleanup) — Remove stale VMs and resources

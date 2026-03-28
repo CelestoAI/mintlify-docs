@@ -1,0 +1,91 @@
+---
+title: "smolvm stop"
+description: "Stop a running SmolVM virtual machine"
+---
+
+The `stop` command shuts down a running VM. You provide the VM identifier, and SmolVM gracefully stops the guest before cleaning up resources.
+
+## Synopsis
+
+```bash  theme={null}
+smolvm stop <vm_id> [OPTIONS]
+```
+
+## Arguments
+
+<ParamField path="vm_id" type="string" required>
+  The identifier of the VM to stop.
+</ParamField>
+
+## Options
+
+<ParamField path="--timeout" type="float" default="3.0">
+  Seconds to wait for a graceful shutdown before forcing termination.
+</ParamField>
+
+<ParamField path="--json" type="flag" default="false">
+  Emit machine-readable JSON output instead of the human-friendly table.
+</ParamField>
+
+## Examples
+
+### Stop a VM
+
+```bash  theme={null}
+smolvm stop my-vm
+```
+
+**Example output:**
+
+```
+╭─────────── VM Stopped ───────────╮
+│ Stopped VM 'my-vm'.              │
+╰──────────────────────────────────╯
+┏━━━━━━━━┳━━━━━━━━━┓
+┃ Field  ┃ Value   ┃
+┡━━━━━━━━╇━━━━━━━━━┩
+│ Name   │ my-vm   │
+│ Status │ stopped │
+└────────┴─────────┘
+```
+
+### Stop with a longer timeout
+
+Allow more time for a graceful shutdown:
+
+```bash  theme={null}
+smolvm stop my-vm --timeout 10
+```
+
+### Get JSON output
+
+```bash  theme={null}
+smolvm stop my-vm --json
+```
+
+**Example output:**
+
+```json
+{
+  "command": "stop",
+  "exit_code": 0,
+  "data": {
+    "vm": {
+      "name": "my-vm",
+      "status": "stopped"
+    }
+  }
+}
+```
+
+## Exit codes
+
+| Code | Description                               |
+| ---- | ----------------------------------------- |
+| `0`  | Success — VM stopped cleanly              |
+| `1`  | Error — VM not found or could not be stopped |
+
+## Related commands
+
+* [`smolvm create`](/smolvm/cli/create) — Create a new VM
+* [`smolvm cleanup`](/smolvm/cli/cleanup) — Remove stale VMs and resources

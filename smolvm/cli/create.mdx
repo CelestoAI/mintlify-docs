@@ -1,0 +1,77 @@
+---
+title: "smolvm create"
+description: "Create a named SSH-ready VM and leave it running"
+---
+
+The `create` command provisions a new virtual machine with a given name. Once the VM boots, it stays running so you can SSH in or connect from your application code.
+
+## Synopsis
+
+```bash  theme={null}
+smolvm create --name <vm_id> [OPTIONS]
+```
+
+## Options
+
+<ParamField path="--name" type="string" required>
+  Identifier for the new VM. Must match the pattern `[a-z0-9][a-z0-9_-]{0,62}[a-z0-9]`.
+</ParamField>
+
+<ParamField path="--memory-mib" type="integer" default="512">
+  Guest memory in MiB.
+</ParamField>
+
+<ParamField path="--disk-size-mib" type="integer" default="512">
+  Root filesystem size in MiB.
+</ParamField>
+
+<ParamField path="--backend" type="string" default="auto">
+  Backend override. Accepted values: `auto`, `firecracker`, `qemu`.
+</ParamField>
+
+<ParamField path="--boot-timeout" type="float" default="90">
+  Seconds to wait for the VM to finish booting.
+</ParamField>
+
+<ParamField path="--json" type="flag" default="false">
+  Emit machine-readable JSON output instead of the human-friendly table.
+</ParamField>
+
+## Examples
+
+### Create a VM with default settings
+
+```bash  theme={null}
+smolvm create --name my-vm
+```
+
+### Create a VM with custom resources
+
+```bash  theme={null}
+smolvm create --name agent-sandbox --memory-mib 2048 --disk-size-mib 4096
+```
+
+### Create a VM with a specific backend
+
+```bash  theme={null}
+smolvm create --name dev-env --backend qemu
+```
+
+### Get JSON output
+
+```bash  theme={null}
+smolvm create --name my-vm --json
+```
+
+## Exit codes
+
+| Code | Description                                  |
+| ---- | -------------------------------------------- |
+| `0`  | Success — VM created and running             |
+| `1`  | Error — failed to create or boot the VM      |
+
+## Related commands
+
+* [`smolvm stop`](/smolvm/cli/stop) — Stop a running VM
+* [`smolvm list`](/smolvm/cli/list) — List all VMs
+* [`smolvm ssh`](/smolvm/cli/ssh) — SSH into a running VM

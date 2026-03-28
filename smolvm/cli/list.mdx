@@ -1,0 +1,64 @@
+---
+title: "smolvm list"
+description: "List SmolVMs and their current status"
+---
+
+The `list` command shows all VMs managed by SmolVM. By default it displays only running VMs. Use filters to include other states.
+
+## Synopsis
+
+```bash  theme={null}
+smolvm list [OPTIONS]
+```
+
+## Options
+
+<ParamField path="--all" type="flag" default="false">
+  Include stopped, created, and error VMs in addition to running ones. Mutually exclusive with `--status`.
+</ParamField>
+
+<ParamField path="--status" type="string">
+  Filter VMs by a specific status. Accepted values: `created`, `running`, `stopped`, `error`. Mutually exclusive with `--all`.
+</ParamField>
+
+<ParamField path="--json" type="flag" default="false">
+  Emit machine-readable JSON output instead of the human-friendly table.
+</ParamField>
+
+## Examples
+
+### List running VMs
+
+```bash  theme={null}
+smolvm list
+```
+
+### List all VMs regardless of status
+
+```bash  theme={null}
+smolvm list --all
+```
+
+### Filter by status
+
+```bash  theme={null}
+smolvm list --status stopped
+```
+
+### Get JSON output
+
+```bash  theme={null}
+smolvm list --json
+```
+
+## Exit codes
+
+| Code | Description                    |
+| ---- | ------------------------------ |
+| `0`  | Success                        |
+| `1`  | Error listing VMs              |
+
+## Related commands
+
+* [`smolvm create`](/smolvm/cli/create) — Create a new VM
+* [`smolvm stop`](/smolvm/cli/stop) — Stop a running VM
