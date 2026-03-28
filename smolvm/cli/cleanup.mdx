@@ -31,6 +31,10 @@ The `cleanup` command removes stale or auto-created VMs and their associated res
   Print targets without deleting. Useful for previewing what would be cleaned up.
 </ParamField>
 
+<ParamField path="--json" type="flag" default="false">
+  Emit machine-readable JSON output instead of Rich panels. Useful for scripting, automation, and LLM tool integrations.
+</ParamField>
+
 ## Examples
 
 ### Clean auto-created VMs (default prefix)
@@ -108,7 +112,40 @@ Deleted: production-agent
 Cleanup complete.
 ```
 
-## Cleanup Process
+### JSON output
+
+Get machine-readable cleanup results:
+
+```bash
+smolvm cleanup --json
+```
+
+**Example output:**
+
+```json
+{
+  "ok": true,
+  "command": "cleanup",
+  "exit_code": 0,
+  "data": {
+    "delete_all": false,
+    "prefix": "vm-",
+    "dry_run": false,
+    "reconciled_stale_ids": ["vm-abc123"],
+    "targets": ["vm-abc123", "vm-test-001"],
+    "deleted": ["vm-abc123", "vm-test-001"],
+    "failed": [],
+    "summary": {
+      "target_count": 2,
+      "deleted_count": 2,
+      "failed_count": 0
+    }
+  },
+  "error": null
+}
+```
+
+## Cleanup process
 
 The cleanup command performs the following steps:
 

@@ -1,0 +1,130 @@
+---
+title: "smolvm create"
+description: "Create a named SSH-ready VM and leave it running"
+---
+
+The `create` command spins up a new virtual machine, waits for it to be SSH-ready, and prints connection details. The VM stays running so you can connect to it immediately.
+
+## Synopsis
+
+```bash
+smolvm create --name <vm_id> [OPTIONS]
+```
+
+## Options
+
+<ParamField path="--name" type="string" required>
+  A unique identifier for the VM you want to create.
+</ParamField>
+
+<ParamField path="--memory-mib" type="integer" default="512">
+  Guest memory in MiB.
+</ParamField>
+
+<ParamField path="--disk-size-mib" type="integer" default="512">
+  Root filesystem size in MiB.
+</ParamField>
+
+<ParamField path="--backend" type="string" default="auto">
+  Backend override. Choices: `auto`, `firecracker`, `qemu`.
+</ParamField>
+
+<ParamField path="--boot-timeout" type="float" default="30">
+  Seconds to wait for VM boot and SSH readiness.
+</ParamField>
+
+<ParamField path="--json" type="flag" default="false">
+  Emit machine-readable JSON output instead of Rich panels. Useful for scripting, automation, and LLM tool integrations.
+</ParamField>
+
+## Examples
+
+### Create a VM with default settings
+
+```bash
+smolvm create --name my-agent
+```
+
+**Example output:**
+
+```
+╭─── VM Created ───╮
+│ Created VM 'my-agent'. │
+╰──────────────────╯
+      VM Details
+┌────────────┬────────────┐
+│ Name       │ my-agent   │
+│ Status     │ running    │
+│ Backend    │ firecracker│
+│ IP Address │ 172.16.0.2 │
+│ SSH Port   │ -          │
+└────────────┴────────────┘
+Next: smolvm ssh my-agent
+```
+
+### Custom memory and disk
+
+```bash
+smolvm create --name build-agent --memory-mib 2048 --disk-size-mib 4096
+```
+
+### Choose a specific backend
+
+```bash
+smolvm create --name dev-sandbox --backend qemu
+```
+
+### JSON output
+
+```bash
+smolvm create --name my-agent --json
+```
+
+**Example output:**
+
+```json
+{
+  "ok": true,
+  "command": "create",
+  "exit_code": 0,
+  "data": {
+    "vm": {
+      "name": "my-agent",
+      "status": "running",
+      "backend": "firecracker",
+      "ip_address": "172.16.0.2",
+      "ssh_port": null
+    },
+    "next": {
+      "ssh_command": "smolvm ssh my-agent"
+    }
+  },
+  "error": null
+}
+```
+
+<Tip>
+  The JSON envelope includes a `next.ssh_command` field, making it easy for scripts and AI agents to discover the follow-up action automatically.
+</Tip>
+
+## What happens during create
+
+1. SmolVM resolves the backend (Firecracker or QEMU) based on your platform
+2. A root filesystem and kernel image are prepared
+3. The VM process starts and SmolVM waits for boot
+4. SSH readiness is verified within the `--boot-timeout` window
+5. Connection details are displayed
+
+## Exit codes
+
+| Code | Description                                                |
+| ---- | ---------------------------------------------------------- |
+| `0`  | Success - VM is running and SSH-ready                      |
+| `1`  | Error - VM creation or boot failed                         |
+
+## Related commands
+
+* [`smolvm ssh`](/smolvm/cli/ssh) - Connect to the newly created VM
+* [`smolvm list`](/smolvm/cli/list) - See all running VMs
+* [`smolvm env set`](/smolvm/cli/env) - Set environment variables on the VM
+* [`smolvm cleanup`](/smolvm/cli/cleanup) - Remove VMs when you're done

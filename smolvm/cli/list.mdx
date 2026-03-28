@@ -1,0 +1,116 @@
+---
+title: "smolvm list"
+description: "List SmolVM instances and their current status"
+---
+
+The `list` command shows you all your SmolVM virtual machines and their current state. By default it only shows running VMs, but you can filter by status or show everything at once.
+
+## Synopsis
+
+```bash
+smolvm list [OPTIONS]
+```
+
+## Options
+
+<ParamField path="--all" type="flag" default="false">
+  Include stopped, created, and error VMs in addition to running ones. Mutually exclusive with `--status`.
+</ParamField>
+
+<ParamField path="--status" type="string">
+  Filter VMs by a specific status. Choices: `created`, `running`, `stopped`, `error`. Mutually exclusive with `--all`.
+</ParamField>
+
+<ParamField path="--json" type="flag" default="false">
+  Emit machine-readable JSON output instead of a Rich table. Useful for scripting, automation, and LLM tool integrations.
+</ParamField>
+
+## Examples
+
+### List running VMs
+
+By default, only running VMs are shown:
+
+```bash
+smolvm list
+```
+
+**Example output:**
+
+```
+         SmolVM Instances
+┌──────────────┬─────────┬─────┐
+│ Name         │ Status  │ PID │
+├──────────────┼─────────┼─────┤
+│ my-agent     │ running │ 421 │
+│ web-sandbox  │ running │ 598 │
+└──────────────┴─────────┴─────┘
+Total: 2 VM(s).
+```
+
+### Show all VMs
+
+Include VMs in any state:
+
+```bash
+smolvm list --all
+```
+
+### Filter by status
+
+Show only VMs in a specific state:
+
+```bash
+smolvm list --status stopped
+```
+
+### JSON output
+
+Get machine-readable output for automation or agent tooling:
+
+```bash
+smolvm list --json
+```
+
+**Example output:**
+
+```json
+{
+  "ok": true,
+  "command": "list",
+  "exit_code": 0,
+  "data": {
+    "filters": {
+      "all": false,
+      "status": "running"
+    },
+    "vms": [
+      {
+        "name": "my-agent",
+        "status": "running",
+        "pid": 421,
+        "ip_address": "172.16.0.2",
+        "ssh_port": 2222
+      }
+    ]
+  },
+  "error": null
+}
+```
+
+<Tip>
+  The `--json` flag outputs a consistent envelope with `ok`, `command`, `exit_code`, `data`, and `error` fields. This format is shared across all SmolVM CLI commands that support JSON output.
+</Tip>
+
+## Exit codes
+
+| Code | Description                    |
+| ---- | ------------------------------ |
+| `0`  | Success                        |
+| `1`  | Error listing VMs              |
+
+## Related commands
+
+* [`smolvm create`](/smolvm/cli/create) - Create a new VM
+* [`smolvm ssh`](/smolvm/cli/ssh) - Connect to an existing VM
+* [`smolvm cleanup`](/smolvm/cli/cleanup) - Remove stale VMs
