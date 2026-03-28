@@ -1,0 +1,135 @@
+---
+title: "smolvm browser"
+description: "CLI commands for managing disposable browser sessions inside SmolVM"
+---
+
+The `smolvm browser` commands let you create, monitor, and tear down isolated Chromium browser sessions from the command line.
+
+## smolvm browser start
+
+Start a new browser session.
+
+```bash
+smolvm browser start [OPTIONS]
+```
+
+### Options
+
+| Option | Description |
+|---|---|
+| `--live` | Enable live mode with noVNC visual view |
+| `--headless` | Run in headless mode (default) |
+| `--viewport-width <int>` | Viewport width in pixels (default: 1280) |
+| `--viewport-height <int>` | Viewport height in pixels (default: 720) |
+| `--record` | Record the session as video (requires `--live`) |
+| `--profile-id <id>` | Use a persistent browser profile |
+| `--timeout <minutes>` | Session timeout in minutes (default: 30) |
+| `--backend <name>` | Backend override: `firecracker`, `qemu`, or `auto` |
+| `--json` | Output in agent-friendly JSON envelope |
+
+### Examples
+
+```bash
+# Start a live session and get the URLs
+smolvm browser start --live --json
+
+# Start a headless session with custom viewport
+smolvm browser start --viewport-width 1920 --viewport-height 1080
+
+# Start with video recording
+smolvm browser start --live --record
+
+# Use a persistent profile
+smolvm browser start --profile-id my-profile
+```
+
+### JSON output
+
+When `--json` is used, the output follows the standard SmolVM JSON envelope:
+
+```json
+{
+  "ok": true,
+  "command": "browser_start",
+  "exit_code": 0,
+  "data": {
+    "session_id": "browser-a1b2c3d4",
+    "vm_id": "browser-a1b2c3d4",
+    "status": "ready",
+    "cdp_url": "http://127.0.0.1:54321",
+    "live_url": "http://127.0.0.1:54322/vnc.html?autoconnect=1&resize=scale"
+  }
+}
+```
+
+## smolvm browser list
+
+List active browser sessions.
+
+```bash
+smolvm browser list [OPTIONS]
+```
+
+### Options
+
+| Option | Description |
+|---|---|
+| `--json` | Output in JSON format |
+
+### Example
+
+```bash
+smolvm browser list
+```
+
+## smolvm browser open
+
+Open the live-view URL of a session in your default browser.
+
+```bash
+smolvm browser open <session_id>
+```
+
+<Note>
+  This command only works for sessions started with `--live` mode.
+</Note>
+
+## smolvm browser logs
+
+View combined host and guest logs for a browser session.
+
+```bash
+smolvm browser logs <session_id> [OPTIONS]
+```
+
+### Options
+
+| Option | Description |
+|---|---|
+| `--tail <lines>` | Number of trailing lines to show (default: 100) |
+
+### Example
+
+```bash
+smolvm browser logs browser-a1b2c3d4 --tail 50
+```
+
+## smolvm browser stop
+
+Stop a browser session and remove its persisted state.
+
+```bash
+smolvm browser stop <session_id>
+```
+
+This command:
+1. Stops the guest browser processes
+2. Collects artifacts (logs, downloads, recordings)
+3. Deletes the underlying VM
+4. Removes the session from the state database
+
+### Example
+
+```bash
+smolvm browser stop browser-a1b2c3d4
+```

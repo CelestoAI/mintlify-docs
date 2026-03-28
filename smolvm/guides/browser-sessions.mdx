@@ -1,0 +1,233 @@
+---
+title: "Browser sessions"
+description: "Run isolated Chromium browser sessions inside SmolVM for web automation, testing, and AI agent browsing"
+---
+
+SmolVM can spin up disposable Chromium browser sessions inside isolated microVMs. Each session runs in its own sandbox with a full browser, and you get a CDP (Chrome DevTools Protocol) endpoint for automation and an optional live view for watching what the browser is doing.
+
+This is useful when you need AI agents to browse the web, run end-to-end tests in isolation, or automate browser tasks without installing Chrome on your host.
+
+## How it works
+
+When you create a `BrowserSession`, SmolVM:
+
+1. Boots a microVM with Chromium pre-installed
+2. Starts the browser inside the VM
+3. Exposes a CDP endpoint on your localhost for automation tools like Playwright
+4. Optionally exposes a noVNC live view so you can watch the browser in real time
+
+Each session is fully isolated — the browser runs inside a hardware-virtualized sandbox, so even if a page tries to do something malicious, it can't escape the VM.
+
+## Quick start
+
+```python
+from smolvm import BrowserSession, BrowserSessionConfig
+
+with BrowserSession(
+    BrowserSessionConfig(
+        mode="live",
+        viewport={"width": 1440, "height": 900},
+    )
+) as session:
+    print(f"CDP URL: {session.cdp_url}")
+    print(f"Live URL: {session.live_url}")
+```
+
+The context manager automatically starts the session on entry and tears it down on exit.
+
+## Session modes
+
+### Headless mode
+
+The default mode. The browser runs without a visible display — ideal for automation and AI agents.
+
+```python
+from smolvm import BrowserSession, BrowserSessionConfig
+
+with BrowserSession(BrowserSessionConfig(mode="headless")) as session:
+    print(session.cdp_url)  # Connect Playwright or Puppeteer here
+```
+
+### Live mode
+
+Starts a noVNC server alongside the browser, giving you a real-time view in your web browser. Useful for debugging, demos, or human-in-the-loop workflows.
+
+```python
+from smolvm import BrowserSession, BrowserSessionConfig
+
+with BrowserSession(
+    BrowserSessionConfig(mode="live", record_video=True)
+) as session:
+    print(f"Watch the browser: {session.live_url}")
+    print(f"Automate with CDP: {session.cdp_url}")
+```
+
+<Note>
+  `record_video=True` requires `mode="live"`.
+</Note>
+
+## Connecting with Playwright
+
+If you have Playwright installed (`pip install playwright`), you can connect directly to the browser session over CDP:
+
+```python
+from smolvm import BrowserSession, BrowserSessionConfig
+
+with BrowserSession(BrowserSessionConfig(mode="headless")) as session:
+    browser = session.connect_playwright()
+
+    context = browser.contexts[0] if browser.contexts else browser.new_context()
+    page = context.pages[0] if context.pages else context.new_page()
+
+    page.goto("https://example.com", wait_until="networkidle")
+    print(page.title())
+
+    # Take a screenshot
+    session.screenshot("screenshot.png")
+```
+
+## Persistent browser profiles
+
+By default, each session is ephemeral — the browser state (cookies, local storage, etc.) is discarded when the session ends. For workflows that need to maintain state across sessions, use persistent profiles:
+
+```python
+from smolvm import BrowserSession, BrowserSessionConfig
+
+# First session — log in, set up state
+session = BrowserSession(
+    BrowserSessionConfig(
+        profile_mode="persistent",
+        profile_id="acct-1",
+        mode="headless",
+    )
+)
+session.start()
+print(f"CDP: {session.cdp_url}")
+# ... automate login, store cookies ...
+session.stop()
+
+# Later session — reuses the same browser profile
+session = BrowserSession(
+    BrowserSessionConfig(
+        profile_mode="persistent",
+        profile_id="acct-1",
+        mode="headless",
+    )
+)
+session.start()
+# Cookies and local storage from the first session are still here
+session.stop()
+```
+
+<Warning>
+  `profile_id` is required when using `profile_mode="persistent"`.
+</Warning>
+
+## Configuration options
+
+The `BrowserSessionConfig` class accepts these parameters:
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `session_id` | `str \| None` | Auto-generated | Custom session identifier |
+| `backend` | `"firecracker" \| "qemu" \| "auto"` | `"auto"` | Virtualization backend |
+| `browser` | `"chromium"` | `"chromium"` | Browser engine |
+| `mode` | `"headless" \| "live"` | `"headless"` | Display mode |
+| `profile_mode` | `"ephemeral" \| "persistent"` | `"ephemeral"` | Profile lifecycle |
+| `profile_id` | `str \| None` | `None` | Profile identifier (required for persistent) |
+| `timeout_minutes` | `int` | `30` | Session timeout (1-240 minutes) |
+| `viewport_width` | `int` | `1280` | Viewport width (640-7680) |
+| `viewport_height` | `int` | `720` | Viewport height (480-4320) |
+| `viewport` | `dict \| None` | `None` | Viewport as `{"width": ..., "height": ...}` |
+| `record_video` | `bool` | `False` | Record video (requires live mode) |
+| `allow_downloads` | `bool` | `True` | Allow file downloads |
+| `env_vars` | `dict[str, str]` | `{}` | Environment variables for the guest |
+| `mem_size_mib` | `int` | `2048` | VM memory in MiB (512-16384) |
+| `disk_size_mib` | `int` | `4096` | VM disk in MiB (2048-16384) |
+
+## File transfers
+
+You can upload files to and download files from the browser session's guest VM:
+
+```python
+with BrowserSession(BrowserSessionConfig()) as session:
+    # Upload a file to the guest
+    session.push_file("local-file.txt", "/tmp/uploaded.txt")
+
+    # Download a file from the guest
+    session.pull_file("/tmp/result.json", "local-result.json")
+```
+
+## Collecting artifacts
+
+After a session ends, you can collect logs, downloads, and recordings from the guest:
+
+```python
+session = BrowserSession(
+    BrowserSessionConfig(mode="live", record_video=True)
+)
+session.start()
+
+# ... do browser work ...
+
+# Collect artifacts before stopping
+artifacts_path = session.collect_artifacts()
+print(f"Artifacts saved to: {artifacts_path}")
+
+session.stop()
+```
+
+Artifacts include:
+- Browser logs from `/var/log/smolvm-browser/`
+- Downloaded files
+- Video recordings (if `record_video=True`)
+
+## Viewing logs
+
+Check browser session logs for debugging:
+
+```python
+session = BrowserSession.from_id("browser-abc12345")
+print(session.logs(tail=50))
+```
+
+## CLI usage
+
+You can also manage browser sessions from the command line:
+
+```bash
+# Start a live browser session
+smolvm browser start --live --json
+
+# List active sessions
+smolvm browser list
+
+# Open the live view in your default browser
+smolvm browser open <session_id>
+
+# View logs
+smolvm browser logs <session_id>
+
+# Stop a session
+smolvm browser stop <session_id>
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="AI agent integration" icon="robot" href="/smolvm/guides/ai-agent-integration">
+    Use browser sessions with AI agents for computer use
+  </Card>
+
+  <Card title="Agent framework examples" icon="puzzle-piece" href="/smolvm/guides/agent-framework-examples">
+    Integrate SmolVM with LangChain, OpenAI Agents, and PydanticAI
+  </Card>
+
+  <Card title="BrowserSession API" icon="book" href="/smolvm/api/browsersession">
+    Full API reference for the BrowserSession class
+  </Card>
+
+  <Card title="CLI reference" icon="terminal" href="/smolvm/cli/browser">
+    Browser session CLI commands
+  </Card>
+</CardGroup>

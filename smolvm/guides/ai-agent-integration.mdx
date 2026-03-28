@@ -167,73 +167,54 @@ For agents that need persistent state across multiple interactions:
   </Step>
 </Steps>
 
-## Integration Pattern 3: Web Browsing Agent
+## Integration Pattern 3: Browser sessions
 
-Provide agents with isolated browser environments:
+SmolVM has built-in support for disposable Chromium browser sessions. Instead of manually installing a browser inside a VM, use the `BrowserSession` class to get a ready-to-use browser with CDP and optional live-view:
 
-```python  theme={null}
-from smolvm import SmolVM, VMConfig
-from smolvm.build import ImageBuilder, SSH_BOOT_ARGS
-from smolvm.utils import ensure_ssh_key
+```python
+from smolvm import BrowserSession, BrowserSessionConfig
 
-def create_browser_vm() -> SmolVM:
-    """Create a VM with headless browser for agent use."""
-    private_key, public_key = ensure_ssh_key()
-
-    builder = ImageBuilder()
-    kernel, rootfs = builder.build_debian_ssh_key(
-        ssh_public_key=public_key,
-        rootfs_size_mb=2048,
+with BrowserSession(
+    BrowserSessionConfig(
+        mode="live",
+        viewport={"width": 1440, "height": 900},
     )
+) as session:
+    # Connect Playwright for automation
+    browser = session.connect_playwright()
+    context = browser.contexts[0] if browser.contexts else browser.new_context()
+    page = context.pages[0] if context.pages else context.new_page()
 
-    config = VMConfig(
-        vm_id="browser-agent",
-        vcpu_count=2,
-        mem_size_mib=2048,
-        kernel_path=kernel,
-        rootfs_path=rootfs,
-        boot_args=SSH_BOOT_ARGS,
-    )
+    page.goto("https://example.com", wait_until="networkidle")
+    print(page.title())
 
-    vm = SmolVM(config, ssh_key_path=str(private_key))
-    vm.start()
+    # Watch the browser live
+    print(f"Live view: {session.live_url}")
 
-    # Install headless browser
-    vm.run("apt-get update && apt-get install -y chromium chromium-driver")
-    vm.run("pip3 install selenium")
-
-    return vm
-
-def browse_url(vm: SmolVM, url: str) -> str:
-    """Use agent VM to fetch and return page content."""
-    script = f'''
-import sys
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-
-options = Options()
-options.add_argument("--headless")
-options.add_argument("--no-sandbox")
-options.add_argument("--disable-dev-shm-usage")
-
-driver = webdriver.Chrome(options=options)
-try:
-    driver.get("{url}")
-    print(driver.page_source)
-finally:
-    driver.quit()
-'''
-
-    vm.run(f"cat > /tmp/browse.py << 'EOF'\n{script}\nEOF")
-    result = vm.run("python3 /tmp/browse.py", timeout=60)
-
-    return result.stdout if result.ok else f"Error: {result.stderr}"
-
-# Usage
-with create_browser_vm() as vm:
-    html = browse_url(vm, "https://example.com")
-    print(html)
+    # Take a screenshot
+    session.screenshot("result.png")
 ```
+
+Browser sessions support persistent profiles for workflows that need to maintain cookies and local storage across sessions:
+
+```python
+from smolvm import BrowserSession, BrowserSessionConfig
+
+session = BrowserSession(
+    BrowserSessionConfig(
+        profile_mode="persistent",
+        profile_id="acct-1",
+        mode="headless",
+    )
+)
+session.start()
+# ... automate login, store cookies ...
+session.stop()
+```
+
+<Tip>
+  See the [browser sessions guide](/smolvm/guides/browser-sessions) for full configuration options and the [agent framework examples](/smolvm/guides/agent-framework-examples) for integration with LangChain, OpenAI Agents, and PydanticAI.
+</Tip>
 
 ## Real-world Example: OpenClaw Agent Environment
 
@@ -444,12 +425,12 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
 ## Next Steps
 
 <CardGroup cols={2}>
-  <Card title="Basic Usage" icon="play" href="/smolvm/guides/basic-usage">
-    Learn fundamental SmolVM operations
+  <Card title="Browser sessions" icon="globe" href="/smolvm/guides/browser-sessions">
+    Run isolated Chromium sessions for web automation and computer use
   </Card>
 
-  <Card title="Custom Images" icon="box" href="/smolvm/guides/custom-images">
-    Build specialized images for your agents
+  <Card title="Agent framework examples" icon="puzzle-piece" href="/smolvm/guides/agent-framework-examples">
+    LangChain, OpenAI Agents SDK, and PydanticAI integrations
   </Card>
 
   <Card title="Environment Variables" icon="code" href="/smolvm/guides/environment-variables">

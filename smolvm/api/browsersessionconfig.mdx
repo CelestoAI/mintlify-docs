@@ -1,0 +1,195 @@
+---
+title: "BrowserSessionConfig"
+description: "Configuration model for launching browser sessions inside SmolVM"
+---
+
+## Overview
+
+`BrowserSessionConfig` is a Pydantic model that defines how a browser session is created and configured. It controls the browser engine, display mode, viewport size, profile persistence, and resource allocation.
+
+## Constructor
+
+```python
+BrowserSessionConfig(
+    session_id: str | None = None,
+    backend: Literal["firecracker", "qemu", "auto"] = "auto",
+    browser: Literal["chromium"] = "chromium",
+    mode: Literal["headless", "live"] = "headless",
+    profile_mode: Literal["ephemeral", "persistent"] = "ephemeral",
+    profile_id: str | None = None,
+    timeout_minutes: int = 30,
+    viewport_width: int = 1280,
+    viewport_height: int = 720,
+    viewport: BrowserViewport | dict | None = None,
+    record_video: bool = False,
+    allow_downloads: bool = True,
+    network_policy_id: str | None = None,
+    env_vars: dict[str, str] = {},
+    mem_size_mib: int = 2048,
+    disk_size_mib: int = 4096,
+)
+```
+
+## Parameters
+
+<ParamField path="session_id" type="str | None" default="None">
+  Custom session identifier. Must match the pattern `^[a-z0-9][a-z0-9_-]{0,62}[a-z0-9]$`. If omitted, a unique ID is auto-generated (e.g., `browser-a1b2c3d4`).
+</ParamField>
+
+<ParamField path="backend" type="Literal['firecracker', 'qemu', 'auto']" default="auto">
+  Virtualization backend. `"auto"` selects Firecracker on Linux and QEMU on macOS.
+</ParamField>
+
+<ParamField path="browser" type="Literal['chromium']" default="chromium">
+  Browser engine. Currently only Chromium is supported.
+</ParamField>
+
+<ParamField path="mode" type="Literal['headless', 'live']" default="headless">
+  Display mode:
+  - `"headless"`: Browser runs without a visible display. Only the CDP endpoint is exposed.
+  - `"live"`: A noVNC server provides a real-time visual view alongside the CDP endpoint.
+</ParamField>
+
+<ParamField path="profile_mode" type="Literal['ephemeral', 'persistent']" default="ephemeral">
+  Profile lifecycle:
+  - `"ephemeral"`: Browser state is discarded when the session ends.
+  - `"persistent"`: Browser profile (cookies, local storage) is preserved across sessions with the same `profile_id`.
+</ParamField>
+
+<ParamField path="profile_id" type="str | None" default="None">
+  Profile identifier for persistent sessions. Required when `profile_mode="persistent"`. Must match the identifier pattern.
+</ParamField>
+
+<ParamField path="timeout_minutes" type="int" default="30">
+  Session timeout in minutes. Range: 1-240.
+</ParamField>
+
+<ParamField path="viewport_width" type="int" default="1280">
+  Browser viewport width in pixels. Range: 640-7680.
+</ParamField>
+
+<ParamField path="viewport_height" type="int" default="720">
+  Browser viewport height in pixels. Range: 480-4320.
+</ParamField>
+
+<ParamField path="viewport" type="BrowserViewport | dict | None" default="None">
+  Viewport as a structured object. If provided, `viewport_width` and `viewport_height` must match. Example: `{"width": 1440, "height": 900}`.
+</ParamField>
+
+<ParamField path="record_video" type="bool" default="False">
+  Record the browser session as video. Requires `mode="live"`.
+</ParamField>
+
+<ParamField path="allow_downloads" type="bool" default="True">
+  Allow file downloads inside the browser.
+</ParamField>
+
+<ParamField path="network_policy_id" type="str | None" default="None">
+  Reserved for future host-side network policy enforcement. Not implemented yet.
+</ParamField>
+
+<ParamField path="env_vars" type="dict[str, str]" default="{}">
+  Environment variables to inject into the guest VM after boot.
+</ParamField>
+
+<ParamField path="mem_size_mib" type="int" default="2048">
+  Guest VM memory in MiB. Range: 512-16384.
+</ParamField>
+
+<ParamField path="disk_size_mib" type="int" default="4096">
+  Guest VM disk size in MiB. Range: 2048-16384.
+</ParamField>
+
+## Validation rules
+
+- `profile_id` is required when `profile_mode="persistent"`
+- `record_video` requires `mode="live"`
+- `network_policy_id` cannot be empty if provided
+- `viewport.width` and `viewport.height` must match `viewport_width` and `viewport_height`
+- `env_vars` keys must be valid shell identifiers
+
+## Related types
+
+### BrowserViewport
+
+```python
+class BrowserViewport(BaseModel):
+    width: int = 1280   # 640-7680
+    height: int = 720   # 480-4320
+```
+
+### BrowserSessionInfo
+
+Runtime information about a browser session:
+
+```python
+class BrowserSessionInfo(BaseModel):
+    session_id: str
+    vm_id: str
+    status: BrowserSessionState
+    cdp_url: str | None = None
+    live_url: str | None = None
+    debug_port: int | None = None
+    profile_id: str | None = None
+    expires_at: datetime | None = None
+    artifacts_dir: Path | None = None
+```
+
+### BrowserSessionState
+
+```python
+class BrowserSessionState(str, Enum):
+    CREATED = "created"
+    STARTING = "starting"
+    READY = "ready"
+    STOPPING = "stopping"
+    ERROR = "error"
+```
+
+## Usage examples
+
+### Default headless session
+
+```python
+from smolvm import BrowserSession, BrowserSessionConfig
+
+config = BrowserSessionConfig()
+# mode="headless", viewport=1280x720, ephemeral profile
+```
+
+### Live session with custom viewport
+
+```python
+from smolvm import BrowserSessionConfig
+
+config = BrowserSessionConfig(
+    mode="live",
+    viewport={"width": 1920, "height": 1080},
+    record_video=True,
+)
+```
+
+### Persistent profile session
+
+```python
+from smolvm import BrowserSessionConfig
+
+config = BrowserSessionConfig(
+    profile_mode="persistent",
+    profile_id="user-session-1",
+    mode="headless",
+    timeout_minutes=60,
+)
+```
+
+### Custom resources
+
+```python
+from smolvm import BrowserSessionConfig
+
+config = BrowserSessionConfig(
+    mem_size_mib=4096,
+    disk_size_mib=8192,
+    env_vars={"API_KEY": "sk-..."},
+)
+```
