@@ -151,6 +151,7 @@
             "icon": "terminal",
             "pages": [
               "smolvm/cli/overview",
+              "smolvm/cli/list",
               "smolvm/cli/cleanup",
               "smolvm/cli/doctor",
               "smolvm/cli/env",

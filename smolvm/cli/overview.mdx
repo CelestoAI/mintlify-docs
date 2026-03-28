@@ -27,6 +27,7 @@ The `smolvm` CLI provides the following commands:
 
 | Command          | Description                                   |
 | ---------------- | --------------------------------------------- |
+| `smolvm list`    | List all VMs and their current status         |
 | `smolvm cleanup` | Clean stale SmolVM resources and VMs          |
 | `smolvm doctor`  | Run host diagnostics for the selected backend |
 | `smolvm env`     | Manage environment variables on a running VM  |
@@ -43,6 +44,7 @@ smolvm --help
 Display help for a specific subcommand:
 
 ```bash  theme={null}
+smolvm list --help
 smolvm cleanup --help
 smolvm doctor --help
 smolvm env --help
@@ -58,6 +60,10 @@ The following script aliases are also available:
 ## Next Steps
 
 <CardGroup cols={2}>
+  <Card title="List Command" icon="list" href="/smolvm/cli/list">
+    View all VMs and their status
+  </Card>
+
   <Card title="Cleanup Command" icon="broom" href="/smolvm/cli/cleanup">
     Clean up stale VMs and resources
   </Card>

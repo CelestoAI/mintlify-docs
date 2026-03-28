@@ -1,0 +1,94 @@
+---
+title: "smolvm list"
+description: "List all SmolVMs and their current status"
+---
+
+## Synopsis
+
+```bash  theme={null}
+smolvm list [OPTIONS]
+```
+
+## Description
+
+The `list` command displays all registered VMs along with their current status, IP address, SSH port, and process ID. Use it to get a quick overview of your SmolVM environment.
+
+## Options
+
+<ParamField path="--status" type="string" default="None">
+  Filter VMs by lifecycle status. Valid values: `created`, `running`, `stopped`, `error`. When omitted, all VMs are shown regardless of status.
+</ParamField>
+
+## Examples
+
+### List all VMs
+
+```bash  theme={null}
+smolvm list
+```
+
+**Example output:**
+
+```
+VM ID           STATUS   IP ADDRESS    SSH PORT  PID
+--------------  -------  -----------   --------  ------
+vm-a1b2c3d4     running  172.16.0.2    2200      12345
+my-agent-vm     stopped  172.16.0.3    2201      -
+vm-test-001     created  -             -         -
+
+Total: 3 VM(s).
+```
+
+### Filter by status
+
+Show only running VMs:
+
+```bash  theme={null}
+smolvm list --status running
+```
+
+**Example output:**
+
+```
+VM ID           STATUS   IP ADDRESS    SSH PORT  PID
+--------------  -------  -----------   --------  ------
+vm-a1b2c3d4     running  172.16.0.2    2200      12345
+
+Total: 1 VM(s).
+```
+
+### No VMs found
+
+When no VMs match the filter:
+
+```bash  theme={null}
+smolvm list --status error
+```
+
+**Example output:**
+
+```
+No VMs found with status 'error'.
+```
+
+## Output columns
+
+| Column     | Description                                                        |
+| ---------- | ------------------------------------------------------------------ |
+| VM ID      | Unique identifier for the VM                                       |
+| STATUS     | Current lifecycle state (`created`, `running`, `stopped`, `error`) |
+| IP ADDRESS | Guest IP address (shown as `-` if no network is configured)        |
+| SSH PORT   | Host-side SSH port for localhost forwarding (shown as `-` if none) |
+| PID        | Process ID of the backend process (shown as `-` if not running)    |
+
+## Exit codes
+
+| Code | Description                    |
+| ---- | ------------------------------ |
+| `0`  | Success                        |
+| `1`  | Error reading VM state         |
+
+## Related commands
+
+* [`smolvm cleanup`](/smolvm/cli/cleanup) - Remove stale or unwanted VMs
+* [`smolvm doctor`](/smolvm/cli/doctor) - Diagnose system setup
