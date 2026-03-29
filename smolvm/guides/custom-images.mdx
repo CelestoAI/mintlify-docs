@@ -381,7 +381,11 @@ This init script:
 
 ## Troubleshooting
 
-### Docker Not Found
+When an image build fails, SmolVM automatically diagnoses the root cause and returns a specific error message. You don't need to debug Docker issues manually — the `ImageError` you receive tells you exactly what went wrong and how to fix it.
+
+### Docker not installed
+
+If Docker is not found on your system, you get a clear install prompt:
 
 ```python  theme={null}
 from smolvm.build import ImageBuilder
@@ -400,26 +404,78 @@ except ImageError as e:
 * macOS: Install [Docker Desktop](https://www.docker.com/products/docker-desktop)
 * Linux: `sudo apt-get install docker.io` (Debian/Ubuntu)
 
-### Permission Errors (Linux)
+### Docker daemon not running
 
-If you see permission errors during image builds on Linux:
+If Docker is installed but the daemon is not reachable, SmolVM detects this and tells you to start it:
+
+```
+Docker is installed, but SmolVM could not reach the Docker daemon.
+Start Docker Desktop or the Docker service and try again.
+```
+
+**Solution:**
+
+<Tabs>
+  <Tab title="macOS">
+    Open Docker Desktop from your Applications folder, or run:
+
+    ```bash  theme={null}
+    open -a Docker
+    ```
+  </Tab>
+  <Tab title="Linux">
+    ```bash  theme={null}
+    sudo systemctl start docker
+    ```
+  </Tab>
+</Tabs>
+
+### Permission denied on Docker socket
+
+If your user cannot access the Docker daemon socket, you get a targeted permission error:
+
+```
+Docker is installed, but this user cannot access the Docker daemon socket.
+Make sure Docker Desktop is running or grant access to /var/run/docker.sock.
+```
+
+**Solution:**
 
 ```bash  theme={null}
 # Add your user to the docker group
 sudo usermod -aG docker $USER
 
-# Or run the SmolVM setup script
-sudo ./scripts/system-setup.sh --configure-runtime
+# Log out and back in, or run:
+newgrp docker
 ```
 
-### Image Build Fails
+### Checking Docker availability in code
 
-If Docker build fails:
+You can check Docker availability before attempting a build:
+
+```python  theme={null}
+from smolvm.build import ImageBuilder
+
+builder = ImageBuilder()
+
+if builder.check_docker():
+    kernel, rootfs = builder.build_alpine_ssh()
+else:
+    # Get a detailed diagnostic error
+    error = builder.docker_requirement_error()
+    print(error)  # Specific message based on what's wrong
+```
+
+### General build failures
+
+If the Docker build itself fails (after Docker is confirmed available):
 
 <Steps>
-  <Step title="Check Docker is running">
+  <Step title="Check disk space">
+    Image builds require sufficient disk space:
+
     ```bash  theme={null}
-    docker ps
+    df -h ~/.smolvm/images/
     ```
   </Step>
 
@@ -429,11 +485,9 @@ If Docker build fails:
     ```
   </Step>
 
-  <Step title="Check disk space">
-    Image builds require sufficient disk space:
-
+  <Step title="Check Docker logs">
     ```bash  theme={null}
-    df -h ~/.smolvm/images/
+    docker info
     ```
   </Step>
 </Steps>
