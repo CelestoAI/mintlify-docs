@@ -1,67 +1,84 @@
 ---
-title: "CLI Overview"
-description: "Overview of the SmolVM command-line interface and installation"
+title: "CLI overview"
+description: "Overview of the SmolVM command-line interface for managing VMs and browser sessions"
 ---
 
-## Overview
-
-The SmolVM CLI provides a set of commands for managing VMs, diagnosing system requirements, and running the dashboard UI. The main entrypoint is the `smolvm` command.
+The SmolVM CLI lets you manage sandboxes, start browser sessions, and inspect the runtime from your terminal. Use it when you want to work with SmolVM outside of Python code.
 
 ## Installation
 
 Install SmolVM via pip:
 
-```bash  theme={null}
+```bash
 pip install smolvm
 ```
 
 For dashboard support, install with the `dashboard` extra:
 
-```bash  theme={null}
+```bash
 pip install 'smolvm[dashboard]'
 ```
 
-## Available Commands
+## Available commands
 
-The `smolvm` CLI provides the following commands:
+| Command | Description |
+| --- | --- |
+| `smolvm list` | List VMs and their current status |
+| `smolvm create` | Create a named, SSH-ready VM |
+| `smolvm stop` | Stop an existing VM |
+| `smolvm ssh` | SSH into an existing VM (auto-starts if stopped) |
+| `smolvm browser` | Manage disposable browser sessions |
+| `smolvm cleanup` | Clean stale SmolVM resources and VMs |
+| `smolvm doctor` | Run host diagnostics for the selected backend |
+| `smolvm env` | Manage environment variables on a running VM |
+| `smolvm ui` | Start the SmolVM dashboard UI server |
 
-| Command          | Description                                      |
-| ---------------- | ------------------------------------------------ |
-| `smolvm list`    | List VMs and their current status                |
-| `smolvm create`  | Create a named, SSH-ready VM                     |
-| `smolvm ssh`     | SSH into an existing VM (auto-starts if stopped) |
-| `smolvm cleanup` | Clean stale SmolVM resources and VMs             |
-| `smolvm doctor`  | Run host diagnostics for the selected backend    |
-| `smolvm env`     | Manage environment variables on a running VM     |
-| `smolvm ui`      | Start the SmolVM dashboard UI server             |
+## Browser commands
 
-## Getting Help
+The `smolvm browser` command has its own subcommands for managing disposable browser sessions:
+
+| Command | Description |
+| --- | --- |
+| `smolvm browser start` | Create and start a browser session |
+| `smolvm browser list` | List browser sessions |
+| `smolvm browser stop` | Stop and delete a browser session |
+| `smolvm browser open` | Open a live session in your default browser |
+| `smolvm browser logs` | Print browser session logs |
+
+Start a disposable browser session with live view:
+
+```bash
+smolvm browser start --live --json
+```
+
+The JSON response includes the `session_id` plus local browser URLs. Use the session ID with other browser commands:
+
+```bash
+smolvm browser list
+smolvm browser open <session_id>
+smolvm browser stop <session_id>
+```
+
+## Getting help
 
 Display help for the main command:
 
-```bash  theme={null}
+```bash
 smolvm --help
 ```
 
 Display help for a specific subcommand:
 
-```bash  theme={null}
-smolvm list --help
+```bash
 smolvm create --help
-smolvm ssh --help
-smolvm cleanup --help
-smolvm doctor --help
-smolvm env --help
-smolvm ui --help
+smolvm browser start --help
 ```
 
-## Script Aliases
-
-The following script aliases are also available:
+## Script aliases
 
 * `smolvm-cleanup`: Equivalent to `smolvm cleanup` (standalone cleanup command)
 
-## Next Steps
+## Next steps
 
 <CardGroup cols={2}>
   <Card title="List VMs" icon="list" href="/smolvm/cli/list">

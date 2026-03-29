@@ -1,9 +1,9 @@
 ---
 title: "Quickstart"
-description: "Get started with SmolVM in minutes - from installation to running your first secure sandbox"
+description: "Get started with SmolVM in minutes - from installation to running your first sandbox"
 ---
 
-SmolVM is a lightning-fast, secure microVM runtime for AI agents and tools. This guide will get you up and running with a working sandbox in under 5 minutes.
+SmolVM gives your app or AI agent a clean, disposable sandbox to execute commands and run browser sessions. This guide walks you through setup and your first sandbox in under 5 minutes.
 
 <Steps>
   <Step title="Check Prerequisites">
@@ -46,17 +46,24 @@ SmolVM is a lightning-fast, secure microVM runtime for AI agents and tools. This
   <Step title="Install SmolVM">
     Install the Python package:
 
-    ```bash  theme={null}
+    ```bash
     pip install smolvm
     ```
+  </Step>
 
+  <Step title="Clone the repository">
+    The repository contains one-time setup scripts for your machine:
+
+    ```bash
+    git clone https://github.com/CelestoAI/SmolVM.git
+    cd SmolVM
+    ```
+  </Step>
+
+  <Step title="Run system setup">
     <Tabs>
-      <Tab title="Linux Setup">
-        Run the system setup script to install Firecracker and configure permissions:
-
-        ```bash  theme={null}
-        # Download the setup script from the repository
-        # Then run with sudo:
+      <Tab title="Linux">
+        ```bash
         sudo ./scripts/system-setup.sh --configure-runtime
         ```
 
@@ -65,31 +72,29 @@ SmolVM is a lightning-fast, secure microVM runtime for AI agents and tools. This
         * Install Firecracker and required dependencies
         * Configure KVM permissions
         * Set up networking tools (nftables, iproute2)
-        * Configure sudoers for runtime operations (optional)
+        * Configure sudoers for runtime operations
 
         <Note>
           The `--configure-runtime` flag sets up scoped NOPASSWD sudo for SmolVM operations, avoiding password prompts during VM lifecycle management.
         </Note>
       </Tab>
 
-      <Tab title="macOS Setup">
-        Run the macOS setup script to install QEMU:
-
-        ```bash  theme={null}
+      <Tab title="macOS">
+        ```bash
         ./scripts/system-setup-macos.sh
         ```
 
-        This will install QEMU via Homebrew. The QEMU backend is automatically detected on macOS.
-
-        <Info>
-          You can explicitly set the backend with:
-
-          ```bash  theme={null}
-          export SMOLVM_BACKEND=qemu
-          ```
-        </Info>
+        This installs QEMU via Homebrew. The QEMU backend is automatically detected on macOS.
       </Tab>
     </Tabs>
+  </Step>
+
+  <Step title="Verify the runtime">
+    Check that everything is configured correctly:
+
+    ```bash
+    smolvm doctor
+    ```
   </Step>
 
   <Step title="Run Your First Sandbox">
