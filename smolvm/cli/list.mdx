@@ -1,0 +1,152 @@
+---
+title: "smolvm list"
+description: "List your SmolVM instances and check their current status"
+---
+
+## Synopsis
+
+```bash  theme={null}
+smolvm list [OPTIONS]
+```
+
+## Description
+
+The `list` command shows you which VMs are currently running on your system. By default it displays only running VMs in a formatted table. You can also filter by status or get machine-readable JSON output for use in scripts.
+
+## Options
+
+<ParamField path="--all" type="flag" default="false">
+  Include all VMs regardless of status (running, stopped, created, and error states).
+</ParamField>
+
+<ParamField path="--status" type="string">
+  Filter VMs by a specific status. Choices: `created`, `running`, `stopped`, `error`. Cannot be used together with `--all`.
+</ParamField>
+
+<ParamField path="--json" type="flag" default="false">
+  Print VM data as JSON instead of a formatted table. Useful for scripting and automation.
+</ParamField>
+
+<Note>
+  The `--all` and `--status` flags are mutually exclusive. Use one or the other, not both.
+</Note>
+
+## Examples
+
+### List running VMs
+
+Show all currently running VMs in a table:
+
+```bash  theme={null}
+smolvm list
+```
+
+**Example output:**
+
+```
+        SmolVM Instances
+┌──────────────┬─────────┬───────┐
+│ Name         │ Status  │   PID │
+├──────────────┼─────────┼───────┤
+│ my-agent     │ running │ 12345 │
+│ dev-sandbox  │ running │ 12400 │
+└──────────────┴─────────┴───────┘
+Total: 2 VM(s).
+```
+
+### List all VMs
+
+Include VMs in any state — running, stopped, created, or error:
+
+```bash  theme={null}
+smolvm list --all
+```
+
+**Example output:**
+
+```
+           SmolVM Instances
+┌──────────────┬─────────┬───────┐
+│ Name         │ Status  │   PID │
+├──────────────┼─────────┼───────┤
+│ my-agent     │ running │ 12345 │
+│ dev-sandbox  │ running │ 12400 │
+│ old-vm       │ stopped │     - │
+│ broken-vm    │ error   │     - │
+└──────────────┴─────────┴───────┘
+Total: 4 VM(s).
+```
+
+### Filter by status
+
+Show only stopped VMs:
+
+```bash  theme={null}
+smolvm list --status stopped
+```
+
+### JSON output
+
+Get machine-readable output for scripting:
+
+```bash  theme={null}
+smolvm list --all --json
+```
+
+**Example output:**
+
+```json  theme={null}
+[
+  {
+    "vm_id": "my-agent",
+    "status": "running",
+    "ip_address": "172.16.0.2",
+    "ssh_port": 2222,
+    "pid": 12345
+  },
+  {
+    "vm_id": "dev-sandbox",
+    "status": "running",
+    "ip_address": "172.16.0.3",
+    "ssh_port": 2223,
+    "pid": 12400
+  }
+]
+```
+
+### Use with other tools
+
+Combine JSON output with tools like `jq` for automation:
+
+```bash  theme={null}
+# Get IDs of all running VMs
+smolvm list --json | jq -r '.[].vm_id'
+
+# Count VMs by status
+smolvm list --all --json | jq 'group_by(.status) | map({status: .[0].status, count: length})'
+```
+
+## Table columns
+
+The default table output shows the following columns:
+
+| Column   | Description                                     |
+| -------- | ----------------------------------------------- |
+| Name     | The VM identifier                               |
+| Status   | Current VM state (created, running, stopped, error) |
+| PID      | Process ID of the VM process, or `-` if not running |
+
+The JSON output includes additional fields: `ip_address` (guest IP) and `ssh_port` (SSH host port).
+
+## Exit codes
+
+| Code | Description                  |
+| ---- | ---------------------------- |
+| `0`  | Success                      |
+| `1`  | Error listing VMs            |
+
+## Related commands
+
+* [`smolvm create`](/smolvm/cli/create) - Create a new VM
+* [`smolvm ssh`](/smolvm/cli/ssh) - SSH into an existing VM
+* [`smolvm cleanup`](/smolvm/cli/cleanup) - Clean up stale VMs

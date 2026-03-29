@@ -1,0 +1,95 @@
+---
+title: "smolvm create"
+description: "Create a named, SSH-ready VM and leave it running"
+---
+
+## Synopsis
+
+```bash  theme={null}
+smolvm create --name <name> [OPTIONS]
+```
+
+## Description
+
+The `create` command spins up a new VM with a name you choose, waits for it to be SSH-ready, and leaves it running. This is useful when you need a persistent VM that you can reconnect to later using `smolvm ssh`.
+
+## Options
+
+<ParamField path="--name" type="string" required>
+  A unique identifier for the VM. Use this name to reference the VM in other commands like `smolvm ssh` and `smolvm env`.
+</ParamField>
+
+<ParamField path="--memory-mib" type="integer" default="512">
+  Guest memory in MiB.
+</ParamField>
+
+<ParamField path="--disk-size-mib" type="integer" default="512">
+  Root filesystem size in MiB.
+</ParamField>
+
+<ParamField path="--backend" type="string" default="auto">
+  Backend override. Choices: `auto`, `firecracker`, `qemu`. The `auto` option selects the best backend for your platform.
+</ParamField>
+
+<ParamField path="--boot-timeout" type="float" default="30">
+  Seconds to wait for VM boot and SSH readiness.
+</ParamField>
+
+## Examples
+
+### Create a VM with default settings
+
+```bash  theme={null}
+smolvm create --name my-agent
+```
+
+**Example output:**
+
+```
+Created VM 'my-agent'.
+  Backend: firecracker
+  IP address: 172.16.0.2
+  SSH port: 2222
+  Next: smolvm ssh my-agent
+```
+
+### Create a VM with more resources
+
+```bash  theme={null}
+smolvm create --name heavy-workload --memory-mib 2048 --disk-size-mib 4096
+```
+
+### Specify a backend
+
+```bash  theme={null}
+smolvm create --name dev-env --backend qemu
+```
+
+### Increase boot timeout for slower systems
+
+```bash  theme={null}
+smolvm create --name slow-start --boot-timeout 60
+```
+
+## What happens during create
+
+1. SmolVM configures a new VM with the specified settings (or defaults)
+2. The VM process starts with the selected backend
+3. SmolVM waits for the VM to boot and become SSH-ready
+4. Once ready, the VM stays running in the background
+
+After creation, you can connect with `smolvm ssh <name>` or use the Python SDK with `SmolVM.from_id("<name>")`.
+
+## Exit codes
+
+| Code | Description                                        |
+| ---- | -------------------------------------------------- |
+| `0`  | Success - VM created and SSH-ready                 |
+| `1`  | Error - VM creation or boot failed                 |
+
+## Related commands
+
+* [`smolvm ssh`](/smolvm/cli/ssh) - Connect to the VM after creation
+* [`smolvm list`](/smolvm/cli/list) - See all running VMs
+* [`smolvm env`](/smolvm/cli/env) - Set environment variables on the VM
+* [`smolvm cleanup`](/smolvm/cli/cleanup) - Clean up VMs when done

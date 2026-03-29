@@ -1,0 +1,90 @@
+---
+title: "smolvm ssh"
+description: "SSH into an existing VM, auto-starting it if needed"
+---
+
+## Synopsis
+
+```bash  theme={null}
+smolvm ssh <vm_id> [OPTIONS]
+```
+
+## Description
+
+The `ssh` command opens an interactive SSH session to an existing VM. If the VM is stopped or newly created, SmolVM automatically starts it and waits for SSH readiness before connecting.
+
+## Arguments
+
+<ParamField path="vm_id" type="string" required>
+  The identifier of the VM to connect to. This is the name you provided when creating the VM with `smolvm create`.
+</ParamField>
+
+## Options
+
+<ParamField path="--ssh-key" type="string" default="~/.smolvm/keys/id_ed25519">
+  SSH private key path for authentication.
+</ParamField>
+
+<ParamField path="--ssh-user" type="string" default="root">
+  SSH user to connect as.
+</ParamField>
+
+<ParamField path="--boot-timeout" type="float" default="30">
+  Seconds to wait for VM boot and SSH readiness if the VM needs to be started.
+</ParamField>
+
+## Examples
+
+### Connect to a running VM
+
+```bash  theme={null}
+smolvm ssh my-agent
+```
+
+### Connect with a custom SSH key
+
+```bash  theme={null}
+smolvm ssh my-agent --ssh-key ~/.ssh/custom_key
+```
+
+### Connect as a different user
+
+```bash  theme={null}
+smolvm ssh my-agent --ssh-user ubuntu
+```
+
+### Allow more time for boot
+
+If a VM is stopped and needs to restart, increase the timeout:
+
+```bash  theme={null}
+smolvm ssh my-agent --boot-timeout 60
+```
+
+## Auto-start behavior
+
+The `ssh` command handles VMs in different states:
+
+| VM state  | Behavior                                         |
+| --------- | ------------------------------------------------ |
+| Running   | Connects immediately                             |
+| Created   | Starts the VM, waits for SSH readiness, connects |
+| Stopped   | Starts the VM, waits for SSH readiness, connects |
+| Error     | Prints an error and exits (recreate the VM)      |
+
+## Exit codes
+
+| Code | Description                                              |
+| ---- | -------------------------------------------------------- |
+| `0`  | SSH session ended normally                               |
+| `1`  | Error - connection failed, VM in error state, or SSH binary not found |
+
+<Tip>
+  If you get an "ssh binary not found" error, install the `openssh-client` package on your system.
+</Tip>
+
+## Related commands
+
+* [`smolvm create`](/smolvm/cli/create) - Create a new VM to connect to
+* [`smolvm list`](/smolvm/cli/list) - See available VMs and their status
+* [`smolvm env`](/smolvm/cli/env) - Set environment variables before connecting
