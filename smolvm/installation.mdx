@@ -200,7 +200,32 @@ For building custom images, you may want Docker installed:
   ```
 </CodeGroup>
 
-### Development Installation
+### Optional extras
+
+SmolVM ships several optional dependency groups you can install depending on your use case:
+
+```bash  theme={null}
+# Agent framework examples (PydanticAI, OpenAI Agents, LangChain, Playwright)
+pip install "smolvm[examples]"
+
+# Web dashboard for monitoring VMs
+pip install "smolvm[dashboard]"
+
+# Everything (dashboard + examples)
+pip install "smolvm[all]"
+```
+
+| Extra | What it includes |
+| --- | --- |
+| `examples` | `pydantic-ai`, `openai-agents`, `langchain`, `langchain-openai`, `openai`, `playwright` |
+| `dashboard` | `fastapi`, `uvicorn`, `websockets` |
+| `all` | All of the above |
+
+<Tip>
+  If you only need SmolVM as a sandbox and won't use agent framework integrations, the base `pip install smolvm` is all you need.
+</Tip>
+
+### Development installation
 
 For development with testing and linting tools:
 
