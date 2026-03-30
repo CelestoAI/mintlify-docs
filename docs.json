@@ -100,6 +100,7 @@
               "agentor/api/tools/git",
               "agentor/api/tools/github",
               "agentor/api/tools/gmail",
+              "agentor/api/tools/google-calendar",
               "agentor/api/tools/calculator",
               "agentor/api/tools/shell",
               "agentor/api/mcp/litemcp",

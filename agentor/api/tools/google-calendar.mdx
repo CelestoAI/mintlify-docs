@@ -1,0 +1,369 @@
+---
+title: "CalendarTool"
+description: "Manage Google Calendar events, find free slots, and invite guests"
+---
+
+`CalendarTool` lets your agent read, create, and delete Google Calendar events. It can also find open time slots and add guests to existing events — useful for scheduling assistants and booking workflows.
+
+## Installation
+
+Install the Google dependencies:
+
+```bash  theme={null}
+pip install agentor[google]
+```
+
+This installs `google-api-python-client` and the related auth libraries.
+
+## Authentication
+
+CalendarTool requires a Google OAuth2 `Credentials` object with access to the Google Calendar API. You are responsible for obtaining and refreshing credentials before passing them in.
+
+<Steps>
+  <Step title="Create OAuth credentials">
+    Set up an OAuth 2.0 client in the [Google Cloud Console](https://console.cloud.google.com/). Enable the **Google Calendar API** for your project and download your client credentials.
+  </Step>
+  <Step title="Run the OAuth flow">
+    Use `google-auth-oauthlib` to complete the consent flow and obtain a `Credentials` object. The example below shows one way to do this.
+  </Step>
+  <Step title="Pass credentials to CalendarTool">
+    Provide the resulting `Credentials` object when creating the tool.
+  </Step>
+</Steps>
+
+## Constructor
+
+```python  theme={null}
+from agentor.tools import CalendarTool
+
+tool = CalendarTool(credentials=creds)
+```
+
+<ParamField path="credentials" type="google.oauth2.credentials.Credentials" required>
+  A valid Google OAuth2 credentials object with the `https://www.googleapis.com/auth/calendar` scope. Can be loaded from a stored token using `Credentials.from_authorized_user_info()` or obtained through an OAuth flow.
+</ParamField>
+
+<ParamField path="api_key" type="str">
+  Optional API key for MCP use.
+</ParamField>
+
+## Methods
+
+### list\_events
+
+List calendar events within a time window. Automatically paginates to fetch all matching events.
+
+```python  theme={null}
+@capability
+def list_events(
+    self,
+    start_time: str,
+    end_time: str,
+    calendar_id: str = "primary",
+    limit: int = 20,
+    query: Optional[str] = None,
+) -> str
+```
+
+<ParamField path="start_time" type="str" required>
+  Start of the time window in ISO 8601 format with timezone (e.g., `2025-06-01T09:00:00Z` or `2025-06-01T09:00:00+05:30`).
+</ParamField>
+
+<ParamField path="end_time" type="str" required>
+  End of the time window in ISO 8601 format with timezone.
+</ParamField>
+
+<ParamField path="calendar_id" type="str" default="primary">
+  Google Calendar ID. Use `"primary"` for the user's main calendar.
+</ParamField>
+
+<ParamField path="limit" type="int" default="20">
+  Maximum number of events to return (1–2500).
+</ParamField>
+
+<ParamField path="query" type="str">
+  Free-text search query to filter events by title, description, or location.
+</ParamField>
+
+**Returns:** A JSON string containing an array of event objects.
+
+---
+
+### create\_event
+
+Create a new calendar event.
+
+```python  theme={null}
+@capability
+def create_event(
+    self,
+    title: str,
+    start_time: str,
+    end_time: str,
+    calendar_id: str = "primary",
+    description: Optional[str] = None,
+    location: Optional[str] = None,
+) -> str
+```
+
+<ParamField path="title" type="str" required>
+  Event title (the `summary` field in Google Calendar).
+</ParamField>
+
+<ParamField path="start_time" type="str" required>
+  Event start time in ISO 8601 format with timezone.
+</ParamField>
+
+<ParamField path="end_time" type="str" required>
+  Event end time in ISO 8601 format with timezone.
+</ParamField>
+
+<ParamField path="calendar_id" type="str" default="primary">
+  Google Calendar ID.
+</ParamField>
+
+<ParamField path="description" type="str">
+  Optional event description.
+</ParamField>
+
+<ParamField path="location" type="str">
+  Optional event location.
+</ParamField>
+
+**Returns:** A JSON string containing the created event object.
+
+---
+
+### find\_free\_slots
+
+Find available time slots in a calendar within a given window. This checks existing events and returns gaps that are long enough for the requested meeting duration.
+
+```python  theme={null}
+@capability
+def find_free_slots(
+    self,
+    start_time: str,
+    end_time: str,
+    meeting_minutes: int = 30,
+    calendar_id: str = "primary",
+    limit: int = 10,
+) -> str
+```
+
+<ParamField path="start_time" type="str" required>
+  Start of the search window in ISO 8601 format with timezone.
+</ParamField>
+
+<ParamField path="end_time" type="str" required>
+  End of the search window in ISO 8601 format with timezone.
+</ParamField>
+
+<ParamField path="meeting_minutes" type="int" default="30">
+  Minimum duration for a free slot, in minutes. Must be greater than 0.
+</ParamField>
+
+<ParamField path="calendar_id" type="str" default="primary">
+  Google Calendar ID.
+</ParamField>
+
+<ParamField path="limit" type="int" default="10">
+  Maximum number of free slots to return.
+</ParamField>
+
+**Returns:** A JSON string containing `window_start`, `window_end`, `meeting_minutes`, and a `free_slots` array.
+
+---
+
+### delete\_event
+
+Delete a calendar event by its ID.
+
+```python  theme={null}
+@capability
+def delete_event(
+    self,
+    event_id: str,
+    calendar_id: str = "primary",
+) -> str
+```
+
+<ParamField path="event_id" type="str" required>
+  The Google Calendar event ID to delete.
+</ParamField>
+
+<ParamField path="calendar_id" type="str" default="primary">
+  Google Calendar ID.
+</ParamField>
+
+**Returns:** A JSON string with a success status and message.
+
+---
+
+### add\_guests
+
+Add guests to an existing calendar event. Duplicate emails are automatically skipped.
+
+```python  theme={null}
+@capability
+def add_guests(
+    self,
+    event_id: str,
+    guest_emails: list,
+    calendar_id: str = "primary",
+    send_notifications: bool = True,
+) -> str
+```
+
+<ParamField path="event_id" type="str" required>
+  The Google Calendar event ID.
+</ParamField>
+
+<ParamField path="guest_emails" type="list" required>
+  A list of email addresses to add as attendees.
+</ParamField>
+
+<ParamField path="calendar_id" type="str" default="primary">
+  Google Calendar ID.
+</ParamField>
+
+<ParamField path="send_notifications" type="bool" default="True">
+  Whether to send email invitations to the new guests.
+</ParamField>
+
+**Returns:** A JSON string with the updated event, including the full attendee list and the count of newly added guests.
+
+## Usage
+
+### Basic setup
+
+```python  theme={null}
+from google.oauth2.credentials import Credentials
+from agentor import Agentor
+from agentor.tools import CalendarTool
+
+# Load credentials from a saved token
+creds = Credentials.from_authorized_user_file("credentials.json")
+
+agent = Agentor(
+    name="Calendar Agent",
+    model="gpt-4o-mini",
+    tools=[CalendarTool(credentials=creds)],
+    instructions="Use the calendar tool to help with scheduling.",
+)
+
+result = agent.run("What events do I have tomorrow?")
+print(result.final_output)
+```
+
+### Finding free time
+
+```python  theme={null}
+from agentor.tools import CalendarTool
+
+calendar = CalendarTool(credentials=creds)
+
+# Find 60-minute open slots this week
+slots = calendar.find_free_slots(
+    start_time="2025-06-02T09:00:00Z",
+    end_time="2025-06-06T17:00:00Z",
+    meeting_minutes=60,
+)
+print(slots)
+```
+
+### Creating an event
+
+```python  theme={null}
+result = calendar.create_event(
+    title="Team standup",
+    start_time="2025-06-03T10:00:00-04:00",
+    end_time="2025-06-03T10:30:00-04:00",
+    description="Daily sync",
+    location="Zoom",
+)
+print(result)
+```
+
+## Full OAuth example
+
+The example below shows a complete flow that handles first-time consent and token refresh. It mirrors the pattern from the [Agentor examples folder](https://github.com/celestoai/agentor/blob/main/examples/tools/google_calendar.py).
+
+```python  theme={null}
+import os
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from agentor import Agentor
+from agentor.tools import CalendarTool
+
+SCOPES = ["https://www.googleapis.com/auth/calendar"]
+CREDS_FILE = "credentials.json"
+
+def get_credentials():
+    """Load saved credentials or run the OAuth consent flow."""
+    if os.path.exists(CREDS_FILE):
+        creds = Credentials.from_authorized_user_file(CREDS_FILE)
+        if creds.valid:
+            return creds
+        if creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+            with open(CREDS_FILE, "w") as f:
+                f.write(creds.to_json())
+            return creds
+
+    flow = InstalledAppFlow.from_client_config(
+        {
+            "installed": {
+                "client_id": os.environ["GOOGLE_CLIENT_ID"],
+                "client_secret": os.environ["GOOGLE_CLIENT_SECRET"],
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "redirect_uris": ["http://localhost:8000"],
+            }
+        },
+        scopes=SCOPES,
+    )
+    creds = flow.run_local_server(port=8000, access_type="offline", prompt="consent")
+    with open(CREDS_FILE, "w") as f:
+        f.write(creds.to_json())
+    return creds
+
+creds = get_credentials()
+
+agent = Agentor(
+    name="Calendar Agent",
+    model="gpt-4o-mini",
+    tools=[CalendarTool(credentials=creds)],
+    instructions="Help with scheduling and event management.",
+)
+
+result = agent.run("What events do I have this week?")
+print(result.final_output)
+```
+
+<Warning>
+  Never commit OAuth credentials or token files to version control. Store them securely and add `credentials.json` to your `.gitignore`.
+</Warning>
+
+## Datetime format
+
+All datetime parameters must be in ISO 8601 format **with a timezone offset**. The tool rejects values without a timezone.
+
+| Format | Example |
+|---|---|
+| UTC | `2025-06-01T09:00:00Z` |
+| UTC offset | `2025-06-01T14:30:00+05:30` |
+| Negative offset | `2025-06-01T09:00:00-04:00` |
+
+## Error handling
+
+The tool returns error strings (prefixed with `Error:`) instead of raising exceptions, so your agent can read and react to issues:
+
+- **Missing credentials** — raises `ValueError` at construction time
+- **Missing google-api-python-client** — raises `ImportError` at construction time
+- **Invalid datetime** — returns `Error: Invalid datetime format...`
+- **API errors** — returns `Error:` with the underlying exception message
+
+## Source reference
+
+`src/agentor/tools/google_calendar.py:17`
