@@ -233,6 +233,9 @@
   "integrations": {
     "posthog": {
       "apiKey": "phc_vjIHlkZ5iOYWdZx0LXiifLKGl53QehS8LjudWiuSRND"
+    },
+    "gtm": {
+      "tagId": "G-EYNQCSCZVJ"
     }
   },
   "fonts": {
@@ -262,7 +265,7 @@
     "timestamp": true
   },
   "seo": {
-    "indexing": "all"
+    "indexing": "navigable"
   },
   "background": {
     "decoration": "grid"
