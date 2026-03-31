@@ -1,0 +1,371 @@
+---
+title: Browser use
+description: "Launch isolated browser sessions for scraping, testing, and computer-use agents"
+---
+
+SmolVM can start a real Chromium browser inside a disposable sandbox. You get a CDP endpoint for automation and an optional live view to watch the browser in real time. When you are done, everything is torn down automatically.
+
+Use browser sessions when you need to:
+
+- Scrape or test websites without polluting your host
+- Give an AI agent a browser it can click, type, and navigate
+- Record browser interactions or capture screenshots in an isolated environment
+
+## Quick example
+
+Launch a browser session, connect with Playwright, visit a page, and save a screenshot:
+
+```python
+from smolvm import BrowserSession, BrowserSessionConfig
+
+with BrowserSession(
+    BrowserSessionConfig(mode="live", viewport={"width": 1440, "height": 900})
+) as session:
+    print(f"CDP URL: {session.cdp_url}")
+    print(f"Live URL: {session.live_url}")
+
+    browser = session.connect_playwright()
+    context = browser.contexts[0] if browser.contexts else browser.new_context()
+    page = context.pages[0] if context.pages else context.new_page()
+    page.goto("https://example.com", wait_until="networkidle")
+
+    session.screenshot("screenshot.png")
+```
+
+<Note>
+  Playwright is optional. Install it with `pip install playwright` to use `connect_playwright()`. You can also use the `cdp_url` with any CDP-compatible client.
+</Note>
+
+<Tip>
+  See the full working example in [`examples/browser_session.py`](https://github.com/celestoai/smolvm/blob/main/examples/browser_session.py).
+</Tip>
+
+## Session modes
+
+| Mode | What it does |
+| --- | --- |
+| `headless` | No visual output. Good for automated scraping and testing. |
+| `live` | Exposes a noVNC live-view URL so you can watch the browser in real time. Required for video recording. |
+
+Set the mode when you create the session:
+
+```python
+from smolvm import BrowserSessionConfig
+
+# Headless (default) — no live view
+config = BrowserSessionConfig(mode="headless")
+
+# Live — watch the browser in real time
+config = BrowserSessionConfig(mode="live")
+```
+
+## Configuration options
+
+`BrowserSessionConfig` controls how the browser session is created:
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `mode` | `"headless"` \| `"live"` | `"headless"` | Whether to expose a live-view URL. |
+| `viewport` | `{"width": int, "height": int}` | `1280 x 720` | Browser viewport size. |
+| `record_video` | `bool` | `false` | Record a video of the session. Requires `mode="live"`. |
+| `allow_downloads` | `bool` | `true` | Allow file downloads inside the browser. |
+| `profile_mode` | `"ephemeral"` \| `"persistent"` | `"ephemeral"` | Whether to keep browser data between sessions. |
+| `profile_id` | `str` | `None` | Required when `profile_mode="persistent"`. Identifies the browser profile to reuse. |
+| `timeout_minutes` | `int` | `30` | Session auto-expiry timeout (1–240 minutes). |
+| `mem_size_mib` | `int` | `2048` | Guest memory in MiB (512–16384). |
+| `disk_size_mib` | `int` | `4096` | Guest disk size in MiB (2048–16384). |
+| `env_vars` | `dict` | `{}` | Environment variables to inject into the guest. |
+| `backend` | `"firecracker"` \| `"qemu"` \| `"auto"` | `"auto"` | Runtime backend override. |
+
+### Persistent profiles
+
+By default, each browser session starts fresh. If you want to keep cookies, local storage, and other browser data between sessions, use a persistent profile:
+
+```python
+from smolvm import BrowserSession, BrowserSessionConfig
+
+config = BrowserSessionConfig(
+    profile_mode="persistent",
+    profile_id="my-research-profile",
+)
+
+with BrowserSession(config) as session:
+    browser = session.connect_playwright()
+    # Browser data is preserved between sessions with the same profile_id
+```
+
+## BrowserSession properties
+
+Once the session is started, these properties are available:
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `session_id` | `str` | Unique session identifier. |
+| `vm_id` | `str` | Underlying SmolVM identifier. |
+| `cdp_url` | `str` | Chrome DevTools Protocol endpoint (e.g. `http://127.0.0.1:54321`). |
+| `live_url` | `str \| None` | noVNC live-view URL. Only set when `mode="live"`. |
+| `artifacts_dir` | `Path \| None` | Local directory for collected session artifacts. |
+| `status` | `BrowserSessionState` | Current session state (`CREATED`, `STARTING`, `READY`, `STOPPING`, `ERROR`). |
+
+## Methods
+
+### `connect_playwright()`
+
+Connect [Playwright](https://playwright.dev/python/) to the browser over CDP. Returns a Playwright `Browser` object.
+
+```python
+browser = session.connect_playwright()
+page = browser.contexts[0].pages[0]
+page.goto("https://example.com")
+```
+
+### `screenshot(destination, full_page=True)`
+
+Capture a screenshot and save it to a local file. Uses Playwright under the hood.
+
+```python
+session.screenshot("output/page.png")
+session.screenshot("output/visible-only.png", full_page=False)
+```
+
+### `open_live_view()`
+
+Open the live-view URL in your default browser. Only works when `mode="live"`.
+
+```python
+session.open_live_view()
+```
+
+### `push_file(local_path, guest_path)` / `pull_file(guest_path, local_path)`
+
+Transfer files between your host and the browser guest.
+
+```python
+session.push_file("config.json", "/tmp/config.json")
+session.pull_file("/tmp/results.json", "results.json")
+```
+
+### `collect_artifacts()`
+
+Collect logs, downloads, and recordings from the guest into the local artifacts directory.
+
+```python
+session.collect_artifacts()
+print(session.artifacts_dir)
+```
+
+### `logs(tail=100)`
+
+Return combined host and guest logs for debugging.
+
+```python
+print(session.logs())
+```
+
+## CLI browser commands
+
+You can also manage browser sessions from the terminal:
+
+```bash
+# Start a browser session with live view
+smolvm browser start --live --json
+
+# List active browser sessions
+smolvm browser list
+
+# Open the live view in your default browser
+smolvm browser open <session_id>
+
+# Stop a browser session
+smolvm browser stop <session_id>
+```
+
+The JSON output from `smolvm browser start --json` includes the `session_id`, `cdp_url`, and `live_url`. You can pass the `cdp_url` to any CDP client.
+
+## Computer use with OpenAI
+
+Combine `BrowserSession` with OpenAI's [computer-use API](https://platform.openai.com/docs/guides/tools/computer-use) to let a model drive a browser autonomously. The model sees the browser through screenshots and sends back click, type, and scroll instructions.
+
+You provide a task and an optional starting URL. SmolVM launches a browser in an isolated sandbox, and the model drives it step by step until the task is complete.
+
+```python
+from openai import OpenAI
+from smolvm import BrowserSession, BrowserSessionConfig
+
+client = OpenAI()
+
+with BrowserSession(
+    BrowserSessionConfig(mode="live", viewport={"width": 1440, "height": 900})
+) as session:
+    browser = session.connect_playwright()
+    context = browser.contexts[0] if browser.contexts else browser.new_context()
+    page = context.pages[0] if context.pages else context.new_page()
+    page.goto("https://example.com", wait_until="domcontentloaded")
+
+    # Send the initial task to the model with the computer tool
+    response = client.responses.create(
+        model="gpt-5.4",
+        tools=[{"type": "computer"}],
+        input="Find the main heading on the page.",
+    )
+
+    # Process computer-use actions in a loop
+    for item in response.output:
+        if item.type == "computer_call":
+            # Execute browser actions based on the model's instructions
+            # (click, type, scroll, screenshot, etc.)
+            pass
+```
+
+The full example includes domain allowlisting so the model can only visit URLs you approve, automatic retries for failed actions, and a configurable step limit to keep costs under control.
+
+<Tip>
+  See the full working example in [`examples/agent_tools/computer_use_browser.py`](https://github.com/celestoai/smolvm/blob/main/examples/agent_tools/computer_use_browser.py) for a complete computer-use loop with action handling, safety checks, and domain allowlisting. Install with `pip install smolvm openai playwright`.
+</Tip>
+
+## PydanticAI with agent-browser
+
+You can let a [PydanticAI](https://ai.pydantic.dev/) agent drive a SmolVM browser session through the [`agent-browser`](https://github.com/anthropics/agent-browser) CLI instead of using Playwright directly. The agent runs host-side shell commands — starting the browser, taking snapshots, clicking elements, and capturing screenshots — all through a single `run_host_bash` tool.
+
+This approach is useful when you want the LLM to decide **what** to do in the browser step by step, without writing Playwright code yourself.
+
+**Prerequisites:**
+
+```bash
+pip install smolvm pydantic-ai
+brew install agent-browser   # or: npm install -g agent-browser
+agent-browser install
+export OPENAI_API_KEY=...
+smolvm doctor
+```
+
+**How it works:**
+
+1. The agent calls `smolvm browser start --live --json` to launch an isolated browser session.
+2. SmolVM returns a JSON payload with a `session_id`, a `cdp_url` (including the localhost port), and a `live_url`.
+3. The agent reads `agent-browser --help`, then uses `agent-browser --cdp <cdp_port>` commands to take snapshots, click elements, and navigate pages.
+4. When finished, the agent calls `smolvm browser stop <session_id>` to tear down the session.
+
+```python
+from __future__ import annotations
+
+import json
+import subprocess
+from dataclasses import dataclass
+from typing import Any
+from urllib.parse import urlparse
+
+from pydantic_ai import Agent, RunContext
+
+@dataclass
+class BrowserCliDeps:
+    """Tracks the active browser session for cleanup."""
+    session: dict[str, Any] | None = None
+
+def run_host_bash(
+    ctx: RunContext[BrowserCliDeps], command: str, timeout: int = 60
+) -> str:
+    """Run a shell command on the host machine.
+
+    Args:
+        command: Shell command to execute on the host.
+        timeout: Maximum seconds to wait.
+    """
+    result = subprocess.run(
+        ["bash", "-lc", command],
+        capture_output=True, text=True, timeout=timeout, check=False,
+    )
+
+    # Capture session info when the browser starts
+    parsed_session = None
+    if (
+        result.returncode == 0
+        and "browser start" in command
+        and "--json" in command
+    ):
+        try:
+            data = json.loads(result.stdout).get("data", {})
+            cdp_url = data["cdp_url"]
+            cdp_port = urlparse(cdp_url).port
+            parsed_session = {
+                "session_id": data["session_id"],
+                "cdp_url": cdp_url,
+                "cdp_port": cdp_port,
+                "live_url": data.get("live_url"),
+            }
+            ctx.deps.session = parsed_session
+        except (json.JSONDecodeError, KeyError, ValueError):
+            pass
+
+    lines = [
+        f"exit_code: {result.returncode}",
+        "stdout:",
+        result.stdout.strip() or "<empty>",
+        "stderr:",
+        result.stderr.strip() or "<empty>",
+    ]
+    if parsed_session is not None:
+        lines.extend([
+            "parsed_browser_session:",
+            f"session_id: {parsed_session['session_id']}",
+            f"cdp_port: {parsed_session['cdp_port']}",
+            f"live_url: {parsed_session.get('live_url') or '<none>'}",
+        ])
+    return "\n".join(lines)
+
+agent = Agent(
+    "openai:gpt-5.4",
+    deps_type=BrowserCliDeps,
+    instructions=(
+        "You automate one SmolVM browser session from the host.\n"
+        "1. Run `smolvm browser start --live --json`.\n"
+        "2. Read `cdp_port` from the parsed_browser_session output.\n"
+        "3. Use `agent-browser --cdp <cdp_port>` on every browser command.\n"
+        "4. Stop the browser with `smolvm browser stop <session_id>` when done."
+    ),
+)
+agent.tool(docstring_format="google", require_parameter_descriptions=True)(
+    run_host_bash
+)
+
+deps = BrowserCliDeps()
+try:
+    result = agent.run_sync(
+        "Open https://example.com, take a snapshot, then stop the session.",
+        deps=deps,
+    )
+    print(result.output)
+finally:
+    # Safety net: stop the session if the agent didn't
+    if deps.session:
+        subprocess.run(
+            ["smolvm", "browser", "stop", deps.session["session_id"]],
+            capture_output=True, timeout=60, check=False,
+        )
+```
+
+The key difference from the Playwright-based approach is that the LLM decides its own browsing strategy. It reads `agent-browser --help` to learn the available commands, plans its steps, takes snapshots to understand page structure, and picks elements by reference ID.
+
+<Tip>
+  See the full working example in [`examples/agent_tools/pydanticai_agent_browser.py`](https://github.com/celestoai/smolvm/blob/main/examples/agent_tools/pydanticai_agent_browser.py) for CDP port parsing, error handling, and a multi-step demo.
+</Tip>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="AI agent integration" icon="robot" href="/smolvm/guides/ai-agent-integration">
+    Give your agents a shell tool with PydanticAI, OpenAI Agents, or LangChain.
+  </Card>
+
+  <Card title="Port forwarding" icon="network-wired" href="/smolvm/guides/port-forwarding">
+    Expose guest services to your host machine.
+  </Card>
+
+  <Card title="Environment variables" icon="code" href="/smolvm/guides/environment-variables">
+    Inject secrets and configuration into the guest.
+  </Card>
+
+  <Card title="API reference" icon="book" href="/smolvm/api/smolvm">
+    Explore the complete SmolVM API documentation.
+  </Card>
+</CardGroup>

@@ -140,6 +140,7 @@
             "icon": "map",
             "pages": [
               "smolvm/guides/basic-usage",
+              "smolvm/guides/browser-use",
               "smolvm/guides/vm-lifecycle",
               "smolvm/guides/port-forwarding",
               "smolvm/guides/environment-variables",

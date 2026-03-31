@@ -1,11 +1,11 @@
 ---
-title: "AI agent integration"
+title: AI agent integration
 description: "Use SmolVM as a secure sandbox tool for PydanticAI, OpenAI Agents, LangChain, and other AI frameworks"
 ---
 
-SmolVM gives your AI agents a safe place to run code. Instead of executing LLM-generated commands directly on your machine, SmolVM spins up an isolated microVM in milliseconds, runs the code inside it, and tears it down when finished.
+SmolVM gives your AI agents a safe place to run code. Instead of executing LLM-generated commands directly on your machine, SmolVM spins up an isolated sandbox, runs the code inside it, and tears it down when finished.
 
-This guide shows you how to plug SmolVM into popular agent frameworks as a tool.
+This guide shows you how to plug SmolVM into popular agent frameworks as a shell tool. For browser-based agent workflows (scraping, computer use, agent-browser), see the dedicated [browser use](/smolvm/guides/browser-use) guide.
 
 <Info>
   Install the agent framework extras before following these examples:
@@ -21,10 +21,10 @@ This guide shows you how to plug SmolVM into popular agent frameworks as a tool.
 
 When AI agents generate and execute code, you need strong isolation to prevent:
 
-* **Host compromise** - Malicious code escaping to your system
-* **Data exfiltration** - Unauthorized access to sensitive files
-* **Resource abuse** - Uncontrolled CPU/memory/network usage
-* **Persistent side effects** - State pollution across tasks
+* **Host compromise** — malicious code escaping to your system
+* **Data exfiltration** — unauthorized access to sensitive files
+* **Resource abuse** — uncontrolled CPU/memory/network usage
+* **Persistent side effects** — state pollution across tasks
 
 SmolVM uses hardware virtualization (KVM-backed microVMs) rather than containers, providing a significantly smaller attack surface.
 
@@ -255,223 +255,13 @@ print(result)
   See the full working example in [`examples/agent_tools/langchain_tool.py`](https://github.com/celestoai/smolvm/blob/main/examples/agent_tools/langchain_tool.py). Install with `pip install smolvm langchain langchain-openai`.
 </Tip>
 
-## Browser sessions
+## Browser-based agents
 
-SmolVM includes a built-in `BrowserSession` class that launches a Chromium browser inside a microVM. You can use it for web scraping, testing, and computer-use agents that need to interact with real web pages in an isolated environment.
+SmolVM also supports browser sessions for scraping, testing, and computer-use agents. These workflows have their own dedicated guide:
 
-```python
-from smolvm import BrowserSession, BrowserSessionConfig, SmolVMError
-
-with BrowserSession(
-    BrowserSessionConfig(
-        mode="live",
-        record_video=True,
-        viewport={"width": 1440, "height": 900},
-    )
-) as session:
-    print(f"Session: {session.session_id}")
-    print(f"CDP URL: {session.cdp_url}")
-    print(f"Live URL: {session.live_url}")
-
-    # Connect with Playwright (requires: pip install playwright)
-    browser = session.connect_playwright()
-    context = browser.contexts[0] if browser.contexts else browser.new_context()
-    page = context.pages[0] if context.pages else context.new_page()
-    page.goto("https://example.com", wait_until="networkidle")
-
-    # Take a screenshot
-    session.screenshot("screenshot.png")
-```
-
-<Tip>
-  See the full working example in [`examples/browser_session.py`](https://github.com/celestoai/smolvm/blob/main/examples/browser_session.py).
-</Tip>
-
-### Browser session modes
-
-| Mode | Description |
-| --- | --- |
-| `headless` | No visual output. Good for automated scraping and testing. |
-| `live` | Exposes a noVNC live-view URL so you can watch the browser in real time. |
-
-### Computer-use with OpenAI
-
-Combine `BrowserSession` with OpenAI's [computer-use API](https://platform.openai.com/docs/guides/tools/computer-use) for autonomous web browsing agents. The model sees the browser through screenshots and sends back click, type, and scroll instructions.
-
-You provide a task and an optional starting URL. SmolVM launches a browser in an isolated sandbox, and the model drives it step by step until the task is complete.
-
-```python
-from openai import OpenAI
-from smolvm import BrowserSession, BrowserSessionConfig
-
-client = OpenAI()
-
-with BrowserSession(
-    BrowserSessionConfig(mode="live", viewport={"width": 1440, "height": 900})
-) as session:
-    browser = session.connect_playwright()
-    context = browser.contexts[0] if browser.contexts else browser.new_context()
-    page = context.pages[0] if context.pages else context.new_page()
-    page.goto("https://example.com", wait_until="domcontentloaded")
-
-    # Send the initial task to the model with the computer tool
-    response = client.responses.create(
-        model="gpt-5.4",
-        tools=[{"type": "computer"}],
-        input="Find the main heading on the page.",
-    )
-
-    # Process computer-use actions in a loop
-    for item in response.output:
-        if item.type == "computer_call":
-            # Execute browser actions based on the model's instructions
-            # (click, type, scroll, screenshot, etc.)
-            pass
-```
-
-The full example includes domain allowlisting so the model can only visit URLs you approve, automatic retries for failed actions, and a configurable step limit to keep costs under control.
-
-<Tip>
-  See the full working example in [`examples/agent_tools/computer_use_browser.py`](https://github.com/celestoai/smolvm/blob/main/examples/agent_tools/computer_use_browser.py) for a complete computer-use loop with action handling, safety checks, and domain allowlisting.
-</Tip>
-
-### PydanticAI with agent-browser
-
-You can let a PydanticAI agent drive a SmolVM browser session through the [`agent-browser`](https://github.com/anthropics/agent-browser) CLI instead of using Playwright directly. The agent runs host-side shell commands — starting the browser, taking snapshots, clicking elements, and capturing screenshots — all through a single `run_host_bash` tool.
-
-This approach is useful when you want the LLM to decide **what** to do in the browser step by step, without writing Playwright code yourself.
-
-**Prerequisites:**
-
-```bash
-pip install smolvm pydantic-ai
-brew install agent-browser   # or: npm install -g agent-browser
-agent-browser install
-export OPENAI_API_KEY=...
-smolvm doctor
-```
-
-**How it works:**
-
-1. The agent calls `smolvm browser start --live --json` to launch an isolated browser session.
-2. SmolVM returns a JSON payload with a `session_id`, a `cdp_url` (including the localhost port), and a `live_url`.
-3. The agent reads `agent-browser --help`, then uses `agent-browser --cdp <cdp_port>` commands to take snapshots, click elements, and navigate pages.
-4. The agent can save screenshots and collect artifacts along the way.
-5. When finished, the agent calls `smolvm browser stop <session_id>` to tear down the session.
-
-```python
-from __future__ import annotations
-
-import json
-import subprocess
-from dataclasses import dataclass
-from typing import Any
-from urllib.parse import urlparse
-
-from pydantic_ai import Agent, RunContext
-
-@dataclass
-class BrowserCliDeps:
-    """Tracks the active browser session for cleanup."""
-    session: dict[str, Any] | None = None
-
-def run_host_bash(
-    ctx: RunContext[BrowserCliDeps], command: str, timeout: int = 60
-) -> str:
-    """Run a shell command on the host machine.
-
-    Args:
-        command: Shell command to execute on the host.
-        timeout: Maximum seconds to wait.
-    """
-    result = subprocess.run(
-        ["bash", "-lc", command],
-        capture_output=True, text=True, timeout=timeout, check=False,
-    )
-
-    # Capture session info when the browser starts
-    parsed_session = None
-    if (
-        result.returncode == 0
-        and "browser start" in command
-        and "--json" in command
-    ):
-        try:
-            data = json.loads(result.stdout).get("data", {})
-            cdp_url = data["cdp_url"]
-            cdp_port = urlparse(cdp_url).port
-            parsed_session = {
-                "session_id": data["session_id"],
-                "cdp_url": cdp_url,
-                "cdp_port": cdp_port,
-                "live_url": data.get("live_url"),
-            }
-            ctx.deps.session = parsed_session
-        except (json.JSONDecodeError, KeyError, ValueError):
-            pass
-
-    lines = [
-        f"exit_code: {result.returncode}",
-        "stdout:",
-        result.stdout.strip() or "<empty>",
-        "stderr:",
-        result.stderr.strip() or "<empty>",
-    ]
-    if parsed_session is not None:
-        lines.extend([
-            "parsed_browser_session:",
-            f"session_id: {parsed_session['session_id']}",
-            f"cdp_port: {parsed_session['cdp_port']}",
-            f"live_url: {parsed_session.get('live_url') or '<none>'}",
-        ])
-    return "\n".join(lines)
-
-agent = Agent(
-    "openai:gpt-5.4",
-    deps_type=BrowserCliDeps,
-    instructions=(
-        "You are an agent who has access to control browser using some tools and CLIs.\n"
-        "You must reason and plan before act.\n"
-        "You automate one SmolVM browser session from the host.\n"
-        "First read `agent-browser --help`.\n"
-        "Decide on the exact commands before you run them.\n"
-        "Follow this workflow exactly:\n"
-        "1. First run `smolvm browser start --live --json`.\n"
-        "2. Read `cdp_port` from the `parsed_browser_session` section in the tool output.\n"
-        "3. Use `agent-browser --cdp <cdp_port>` on every browser command.\n"
-        "4. Use `agent-browser --cdp <cdp_port> snapshot -i --json` before choosing refs.\n"
-        "5. Save the final screenshot.\n"
-        "6. Stop the browser with `smolvm browser stop <session_id>` when done.\n"
-        "7. Return only these four lines: title, url, screenshot_path, session_id.\n"
-        "Only use the `run_host_bash` tool, and keep each command simple.\n"
-        "Your final output must contain a human readable summary."
-    ),
-)
-agent.tool(docstring_format="google", require_parameter_descriptions=True)(
-    run_host_bash
-)
-
-deps = BrowserCliDeps()
-try:
-    result = agent.run_sync(
-        "Open https://example.com, take a snapshot, then stop the session.",
-        deps=deps,
-    )
-    print(result.output)
-finally:
-    # Safety net: stop the session if the agent didn't
-    if deps.session:
-        subprocess.run(
-            ["smolvm", "browser", "stop", deps.session["session_id"]],
-            capture_output=True, timeout=60, check=False,
-        )
-```
-
-The key difference from the Playwright-based approach is that the LLM decides its own browsing strategy. It reads `agent-browser --help` to learn the available commands, plans its steps, takes snapshots (with `--json` output) to understand page structure, and picks elements by reference ID.
-
-<Tip>
-  See the full working example in [`examples/agent_tools/pydanticai_agent_browser.py`](https://github.com/celestoai/smolvm/blob/main/examples/agent_tools/pydanticai_agent_browser.py) for CDP port parsing, error handling, and a multi-step demo that navigates between pages and saves screenshots.
-</Tip>
+<Card title="Browser use" icon="globe" href="/smolvm/guides/browser-use">
+  Launch isolated browser sessions, automate with Playwright, build computer-use agents with OpenAI, or let PydanticAI drive a browser via the agent-browser CLI.
+</Card>
 
 ## Generic tool pattern
 
@@ -618,19 +408,19 @@ def safe_execute(code: str) -> dict:
 ## Next steps
 
 <CardGroup cols={2}>
-  <Card title="Basic usage" icon="play" href="/smolvm/guides/basic-usage">
-    Learn fundamental SmolVM operations
+  <Card title="Browser use" icon="globe" href="/smolvm/guides/browser-use">
+    Launch browser sessions for scraping, testing, and computer-use agents.
   </Card>
 
   <Card title="Custom images" icon="box" href="/smolvm/guides/custom-images">
-    Build specialized images for your agents
+    Build specialized images for your agents.
   </Card>
 
   <Card title="Environment variables" icon="code" href="/smolvm/guides/environment-variables">
-    Configure agent environments dynamically
+    Configure agent environments dynamically.
   </Card>
 
   <Card title="Port forwarding" icon="network-wired" href="/smolvm/guides/port-forwarding">
-    Expose agent services to your host
+    Expose agent services to your host.
   </Card>
 </CardGroup>

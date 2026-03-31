@@ -1,9 +1,9 @@
 ---
-title: "Quickstart"
+title: Quickstart
 description: "Get started with SmolVM in minutes - from installation to running your first sandbox"
 ---
 
-SmolVM gives your app or AI agent a clean, disposable sandbox to execute commands and run browser sessions. This guide walks you through setup and your first sandbox in under 5 minutes.
+This guide takes you from zero to running your first command in a sandbox. You will install SmolVM, run a one-time system setup, and execute a Python script that creates, uses, and tears down a sandbox automatically.
 
 <Steps>
   <Step title="Check Prerequisites">
@@ -169,25 +169,25 @@ SmolVM gives your app or AI agent a clean, disposable sandbox to execute command
   </Step>
 </Steps>
 
-## Next Steps
+## Next steps
 
 Now that you have SmolVM running, explore these topics:
 
 <CardGroup cols={2}>
-  <Card title="Port Forwarding" icon="network-wired" href="/smolvm/guides/port-forwarding">
-    Learn about port forwarding and local exposure
+  <Card title="Browser use" icon="globe" href="/smolvm/guides/browser-use">
+    Launch isolated browser sessions for scraping, testing, and agents.
   </Card>
 
-  <Card title="API Reference" icon="book" href="/smolvm/api/smolvm">
-    Explore the complete SmolVM API
+  <Card title="AI agent integration" icon="robot" href="/smolvm/guides/ai-agent-integration">
+    Give your agents a secure sandbox with PydanticAI, OpenAI Agents, or LangChain.
   </Card>
 
-  <Card title="AI Agent Integration" icon="robot" href="/smolvm/guides/ai-agent-integration">
-    Integrate SmolVM with AI agents and tool calling
+  <Card title="Port forwarding" icon="network-wired" href="/smolvm/guides/port-forwarding">
+    Expose guest services to your host machine.
   </Card>
 
-  <Card title="Custom Images" icon="box" href="/smolvm/guides/custom-images">
-    Build specialized VM images with your own tools
+  <Card title="Custom images" icon="box" href="/smolvm/guides/custom-images">
+    Build specialized VM images with your own tools.
   </Card>
 </CardGroup>
 
@@ -397,15 +397,15 @@ SmolVM is optimized for speed. Typical timings on modern hardware:
   First boot takes longer (30-60s) as it downloads and builds the Alpine base image. Subsequent boots use the cached image.
 </Note>
 
-## What's Next?
+## What's next?
 
-You've successfully set up SmolVM! Here are some recommended next steps:
+You have SmolVM running. Here are some recommended next steps:
 
-1. **Learn the API** - Explore port forwarding, environment variables, and VM persistence
-2. **Build Custom Images** - Create specialized images with pre-installed tools
-3. **Integrate with AI Agents** - Use SmolVM as a secure execution environment for LLM-generated code
-4. **Optimize Performance** - Learn about disk modes, memory sizing, and network configuration
+1. **Start a browser session** — Launch an isolated Chromium browser you can automate or watch live. See [browser use](/smolvm/guides/browser-use).
+2. **Integrate with AI agents** — Use SmolVM as a secure execution environment for LLM-generated code. See [AI agent integration](/smolvm/guides/ai-agent-integration).
+3. **Build custom images** — Create specialized images with pre-installed tools. See [custom images](/smolvm/guides/custom-images).
+4. **Explore the API** — Port forwarding, environment variables, VM persistence, and more. See the [API reference](/smolvm/api/smolvm).
 
 <Tip>
-  Join our [Slack community](https://join.slack.com/t/celestoai/shared_invite/zt-3qc7h8gno-Nb5_PElEWHDNnGqdVzC~4Q) to get help and share your use cases!
+  Join the [Slack community](https://join.slack.com/t/celestoai/shared_invite/zt-3qc7h8gno-Nb5_PElEWHDNnGqdVzC~4Q) to get help and share your use cases.
 </Tip>
