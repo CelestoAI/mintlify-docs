@@ -10,7 +10,7 @@ This guide shows you how to plug SmolVM into popular agent frameworks as a tool.
 <Info>
   Install the agent framework extras before following these examples:
 
-  ```bash  theme={null}
+  ```bash
   pip install "smolvm[examples]"
   ```
 
@@ -50,7 +50,9 @@ SmolVM uses hardware virtualization (KVM-backed microVMs) rather than containers
 
 Register SmolVM as a [PydanticAI](https://ai.pydantic.dev/) tool so the agent can run shell commands inside an ephemeral sandbox.
 
-```python  theme={null}
+Each call spins up a fresh VM, runs the command, and tears it down automatically.
+
+```python
 from smolvm import SmolVM
 from pydantic_ai import Agent
 
@@ -85,11 +87,15 @@ result = agent.run_sync("Run `uname -a && python3 --version` in the sandbox.")
 print(result.output)
 ```
 
+<Tip>
+  See the full working example in [`examples/agent_tools/pydanticai_tool.py`](https://github.com/celestoai/smolvm/blob/main/examples/agent_tools/pydanticai_tool.py).
+</Tip>
+
 ### Reusable sandbox across turns
 
-If your agent needs to maintain state between tool calls (for example, writing a file in one turn and reading it in the next), keep the VM alive across invocations:
+If your agent needs to maintain state between tool calls (for example, writing a file in one turn and reading it in the next), keep the VM alive across invocations. The helper functions below create the sandbox on first use and reconnect on subsequent calls:
 
-```python  theme={null}
+```python
 from dataclasses import dataclass
 from pydantic_ai import Agent, RunContext
 from smolvm import SmolVM
@@ -97,6 +103,25 @@ from smolvm import SmolVM
 @dataclass
 class SandboxDeps:
     vm_id: str | None = None
+
+def _connect_vm(deps: SandboxDeps) -> SmolVM:
+    """Return the active sandbox, creating it on first use."""
+    if deps.vm_id is None:
+        vm = SmolVM()
+        vm.start()
+        deps.vm_id = vm.vm_id
+        return vm
+    return SmolVM.from_id(deps.vm_id)
+
+def _cleanup_vm(vm_id: str | None) -> None:
+    """Delete the reusable sandbox if one was created."""
+    if vm_id is None:
+        return
+    vm = SmolVM.from_id(vm_id)
+    try:
+        vm.delete()
+    finally:
+        vm.close()
 
 def run_in_reusable_smolvm(
     ctx: RunContext[SandboxDeps], command: str, timeout: int = 30
@@ -107,16 +132,14 @@ def run_in_reusable_smolvm(
         command: Shell command to execute inside the sandbox guest.
         timeout: Maximum number of seconds to wait for the command.
     """
-    if ctx.deps.vm_id is None:
-        vm = SmolVM()
-        vm.start()
-        ctx.deps.vm_id = vm.vm_id
-    else:
-        vm = SmolVM.from_id(ctx.deps.vm_id)
-
+    vm = _connect_vm(ctx.deps)
     try:
         result = vm.run(command, timeout=timeout)
-        return f"exit_code: {result.exit_code}\nstdout:\n{result.stdout.strip()}"
+        return (
+            f"exit_code: {result.exit_code}\n"
+            f"stdout:\n{result.stdout.strip() or '<empty>'}\n"
+            f"stderr:\n{result.stderr.strip() or '<empty>'}"
+        )
     finally:
         vm.close()
 
@@ -134,17 +157,18 @@ try:
     agent.run_sync("Write 'hello' to /tmp/note.txt", deps=deps)
     agent.run_sync("Read /tmp/note.txt and confirm the contents", deps=deps)
 finally:
-    if deps.vm_id:
-        vm = SmolVM.from_id(deps.vm_id)
-        vm.delete()
-        vm.close()
+    _cleanup_vm(deps.vm_id)
 ```
+
+<Tip>
+  See the full working example in [`examples/agent_tools/pydanticai_reusable_tool.py`](https://github.com/celestoai/smolvm/blob/main/examples/agent_tools/pydanticai_reusable_tool.py).
+</Tip>
 
 ## OpenAI Agents SDK
 
 Use SmolVM as a [function tool](https://openai.github.io/openai-agents-python/) in the OpenAI Agents SDK:
 
-```python  theme={null}
+```python
 import asyncio
 from agents import Agent, Runner, function_tool
 from smolvm import SmolVM
@@ -184,11 +208,15 @@ async def main():
 asyncio.run(main())
 ```
 
+<Tip>
+  See the full working example in [`examples/agent_tools/openai_agents_tool.py`](https://github.com/celestoai/smolvm/blob/main/examples/agent_tools/openai_agents_tool.py). Install with `pip install smolvm openai-agents`.
+</Tip>
+
 ## LangChain
 
 Wrap SmolVM as a [LangChain tool](https://python.langchain.com/docs/concepts/tools/):
 
-```python  theme={null}
+```python
 from langchain.agents import create_agent
 from langchain.tools import tool
 from smolvm import SmolVM
@@ -223,12 +251,16 @@ result = agent.invoke({
 print(result)
 ```
 
+<Tip>
+  See the full working example in [`examples/agent_tools/langchain_tool.py`](https://github.com/celestoai/smolvm/blob/main/examples/agent_tools/langchain_tool.py). Install with `pip install smolvm langchain langchain-openai`.
+</Tip>
+
 ## Browser sessions
 
-SmolVM includes a built-in `BrowserSession` class that launches a Chromium browser inside a microVM. This is useful for web scraping, testing, and computer-use agents that need to interact with real web pages in an isolated environment.
+SmolVM includes a built-in `BrowserSession` class that launches a Chromium browser inside a microVM. You can use it for web scraping, testing, and computer-use agents that need to interact with real web pages in an isolated environment.
 
-```python  theme={null}
-from smolvm import BrowserSession, BrowserSessionConfig
+```python
+from smolvm import BrowserSession, BrowserSessionConfig, SmolVMError
 
 with BrowserSession(
     BrowserSessionConfig(
@@ -237,6 +269,7 @@ with BrowserSession(
         viewport={"width": 1440, "height": 900},
     )
 ) as session:
+    print(f"Session: {session.session_id}")
     print(f"CDP URL: {session.cdp_url}")
     print(f"Live URL: {session.live_url}")
 
@@ -250,6 +283,10 @@ with BrowserSession(
     session.screenshot("screenshot.png")
 ```
 
+<Tip>
+  See the full working example in [`examples/browser_session.py`](https://github.com/celestoai/smolvm/blob/main/examples/browser_session.py).
+</Tip>
+
 ### Browser session modes
 
 | Mode | Description |
@@ -259,9 +296,9 @@ with BrowserSession(
 
 ### Computer-use with OpenAI
 
-Combine `BrowserSession` with OpenAI's computer-use API for autonomous web browsing agents:
+Combine `BrowserSession` with OpenAI's computer-use API for autonomous web browsing agents. The model sees the browser through screenshots and sends back click, type, and scroll instructions:
 
-```python  theme={null}
+```python
 from openai import OpenAI
 from smolvm import BrowserSession, BrowserSessionConfig
 
@@ -291,12 +328,12 @@ with BrowserSession(
 ```
 
 <Tip>
-  See the full working example in [`examples/agent_tools/computer_use_browser.py`](https://github.com/celestoai/smolvm/blob/main/examples/agent_tools/computer_use_browser.py) for a complete computer-use loop with action handling and safety checks.
+  See the full working example in [`examples/agent_tools/computer_use_browser.py`](https://github.com/celestoai/smolvm/blob/main/examples/agent_tools/computer_use_browser.py) for a complete computer-use loop with action handling, safety checks, and domain allowlisting.
 </Tip>
 
 ### PydanticAI with agent-browser
 
-You can also let a PydanticAI agent drive a SmolVM browser session through the [`agent-browser`](https://github.com/anthropics/agent-browser) CLI instead of using Playwright directly. The agent runs host-side shell commands — starting the browser, taking snapshots, clicking elements, and capturing screenshots — all through a single `run_host_bash` tool.
+You can let a PydanticAI agent drive a SmolVM browser session through the [`agent-browser`](https://github.com/anthropics/agent-browser) CLI instead of using Playwright directly. The agent runs host-side shell commands — starting the browser, taking snapshots, clicking elements, and capturing screenshots — all through a single `run_host_bash` tool.
 
 This approach is useful when you want the LLM to decide **what** to do in the browser step by step, without writing Playwright code yourself.
 
@@ -313,22 +350,29 @@ smolvm doctor
 **How it works:**
 
 1. The agent calls `smolvm browser start --live --json` to launch an isolated browser session.
-2. SmolVM returns a CDP port and a live-view URL.
-3. The agent uses `agent-browser --cdp <port>` commands to take snapshots, click elements, and navigate pages.
+2. SmolVM returns a JSON payload with a `session_id`, a `cdp_url` (including the localhost port), and a `live_url`.
+3. The agent uses `agent-browser --cdp <cdp_port>` commands to take snapshots, click elements, and navigate pages.
 4. When finished, the agent calls `smolvm browser stop <session_id>` to tear down the session.
 
 ```python
+from __future__ import annotations
+
+import json
+import subprocess
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import urlparse
+
 from pydantic_ai import Agent, RunContext
-import subprocess, json
 
 @dataclass
 class BrowserCliDeps:
     """Tracks the active browser session for cleanup."""
     session: dict[str, Any] | None = None
 
-def run_host_bash(ctx: RunContext[BrowserCliDeps], command: str, timeout: int = 60) -> str:
+def run_host_bash(
+    ctx: RunContext[BrowserCliDeps], command: str, timeout: int = 60
+) -> str:
     """Run a shell command on the host machine.
 
     Args:
@@ -341,21 +385,41 @@ def run_host_bash(ctx: RunContext[BrowserCliDeps], command: str, timeout: int = 
     )
 
     # Capture session info when the browser starts
-    if result.returncode == 0 and "browser start" in command and "--json" in command:
+    parsed_session = None
+    if (
+        result.returncode == 0
+        and "browser start" in command
+        and "--json" in command
+    ):
         try:
             data = json.loads(result.stdout).get("data", {})
-            ctx.deps.session = {
+            cdp_url = data["cdp_url"]
+            cdp_port = urlparse(cdp_url).port
+            parsed_session = {
                 "session_id": data["session_id"],
-                "cdp_url": data["cdp_url"],
+                "cdp_url": cdp_url,
+                "cdp_port": cdp_port,
+                "live_url": data.get("live_url"),
             }
-        except (json.JSONDecodeError, KeyError):
+            ctx.deps.session = parsed_session
+        except (json.JSONDecodeError, KeyError, ValueError):
             pass
 
-    return (
-        f"exit_code: {result.returncode}\n"
-        f"stdout:\n{result.stdout.strip() or '<empty>'}\n"
-        f"stderr:\n{result.stderr.strip() or '<empty>'}"
-    )
+    lines = [
+        f"exit_code: {result.returncode}",
+        "stdout:",
+        result.stdout.strip() or "<empty>",
+        "stderr:",
+        result.stderr.strip() or "<empty>",
+    ]
+    if parsed_session is not None:
+        lines.extend([
+            "parsed_browser_session:",
+            f"session_id: {parsed_session['session_id']}",
+            f"cdp_port: {parsed_session['cdp_port']}",
+            f"live_url: {parsed_session.get('live_url') or '<none>'}",
+        ])
+    return "\n".join(lines)
 
 agent = Agent(
     "openai:gpt-4.1",
@@ -363,12 +427,14 @@ agent = Agent(
     instructions=(
         "You automate a SmolVM browser session from the host.\n"
         "1. Run `smolvm browser start --live --json`.\n"
-        "2. Read the `cdp_port` from the output.\n"
-        "3. Use `agent-browser --cdp <port>` for all browser commands.\n"
+        "2. Read the `cdp_port` from the `parsed_browser_session` in the output.\n"
+        "3. Use `agent-browser --cdp <cdp_port>` for all browser commands.\n"
         "4. Stop the browser with `smolvm browser stop <session_id>` when done."
     ),
 )
-agent.tool(docstring_format="google", require_parameter_descriptions=True)(run_host_bash)
+agent.tool(docstring_format="google", require_parameter_descriptions=True)(
+    run_host_bash
+)
 
 deps = BrowserCliDeps()
 try:
@@ -387,14 +453,14 @@ finally:
 ```
 
 <Tip>
-  See the full working example in [`examples/agent_tools/pydanticai_agent_browser.py`](https://github.com/celestoai/smolvm/blob/main/examples/agent_tools/pydanticai_agent_browser.py) for session parsing, error handling, and a multi-step demo that navigates between pages and saves screenshots.
+  See the full working example in [`examples/agent_tools/pydanticai_agent_browser.py`](https://github.com/celestoai/smolvm/blob/main/examples/agent_tools/pydanticai_agent_browser.py) for CDP port parsing, error handling, and a multi-step demo that navigates between pages and saves screenshots.
 </Tip>
 
 ## Generic tool pattern
 
 If you use a framework not listed above, the core pattern is the same. Define a function that creates a `SmolVM`, runs a command, and returns the output:
 
-```python  theme={null}
+```python
 from smolvm import SmolVM
 
 def run_in_smolvm(command: str, timeout: int = 30) -> str:
@@ -414,15 +480,15 @@ For agents that need to maintain state across multiple interactions without usin
 
 <Steps>
   <Step title="Create a persistent VM">
-    ```python  theme={null}
+    ```python
     from smolvm import SmolVM, VMConfig
     from smolvm.build import ImageBuilder, SSH_BOOT_ARGS
     from smolvm.utils import ensure_ssh_key
 
     private_key, public_key = ensure_ssh_key()
     builder = ImageBuilder()
-    kernel, rootfs = builder.build_debian_ssh_key(
-        ssh_public_key=public_key,
+    kernel, rootfs = builder.build_alpine_ssh_key(
+        public_key,
         rootfs_size_mb=4096,
     )
 
@@ -439,14 +505,14 @@ For agents that need to maintain state across multiple interactions without usin
     vm.start()
 
     # Install dependencies once
-    vm.run("apt-get update && apt-get install -y python3-pip git")
+    vm.run("apk add python3 py3-pip git")
     print(f"Workspace ready: {vm.vm_id}")
     vm.close()  # Release handle, keep VM running
     ```
   </Step>
 
   <Step title="Reconnect for each task">
-    ```python  theme={null}
+    ```python
     vm = SmolVM.from_id("agent-workspace")
     result = vm.run("git clone https://github.com/user/repo", timeout=120)
     result = vm.run("cd repo && python3 analyze.py", timeout=120)
@@ -455,7 +521,7 @@ For agents that need to maintain state across multiple interactions without usin
   </Step>
 
   <Step title="Clean up when done">
-    ```python  theme={null}
+    ```python
     vm = SmolVM.from_id("agent-workspace")
     vm.delete()
     vm.close()
@@ -467,7 +533,7 @@ For agents that need to maintain state across multiple interactions without usin
 
 ### Use ephemeral VMs for untrusted code
 
-```python  theme={null}
+```python
 # Fresh VM for each execution - automatically deleted after use
 def execute_untrusted_code(code: str) -> str:
     with SmolVM() as vm:
@@ -477,14 +543,14 @@ def execute_untrusted_code(code: str) -> str:
 
 ### Always set timeouts
 
-```python  theme={null}
+```python
 # Prevent hanging from infinite loops or stalled commands
 result = vm.run("potentially-slow-command", timeout=30)
 ```
 
 ### Inject secrets via environment variables
 
-```python  theme={null}
+```python
 # Pass secrets through env_vars, not command-line arguments
 config = VMConfig(
     env_vars={"API_KEY": os.getenv("API_KEY")},
@@ -494,7 +560,7 @@ config = VMConfig(
 
 ### Set resource limits
 
-```python  theme={null}
+```python
 # Limit resources to prevent abuse
 config = VMConfig(
     vcpu_count=1,
@@ -505,7 +571,7 @@ config = VMConfig(
 
 ## Error handling
 
-```python  theme={null}
+```python
 from smolvm import SmolVM
 from smolvm.exceptions import (
     SmolVMError,
