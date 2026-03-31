@@ -97,82 +97,68 @@ SmolVM gives your app or AI agent a clean, disposable sandbox to execute command
     ```
   </Step>
 
-  <Step title="Run Your First Sandbox">
-    Create a simple Python script to test SmolVM:
+  <Step title="Run your first sandbox">
+    Create a file called `quickstart.py`:
 
-    ```python  theme={null}
+    ```python quickstart.py
     from smolvm import SmolVM
 
-    # Start a sandboxed runtime (auto-configured)
-    vm = SmolVM()
-    vm.start()
-
-    # Run a command in the isolated environment
-    result = vm.run("echo 'Hello from the sandbox!'")
-    print(result.output)
-
-    # Clean up
-    vm.stop()
+    with SmolVM() as vm:
+        result = vm.run("echo 'Hello from the sandbox'")
+        print(result.stdout.strip())
     ```
 
-    Run the script:
+    Run it:
 
-    ```bash  theme={null}
+    ```bash
     python quickstart.py
     ```
 
     You should see:
 
     ```
-    Hello from the sandbox!
+    Hello from the sandbox
     ```
 
+    The context manager handles the full lifecycle — it creates the VM on entry and stops and deletes it on exit.
+
     <Tip>
-      The VM boots in under 1 second on most systems! SmolVM is optimized for AI agent workflows.
+      You can also run the bundled example directly from the repository: `python examples/quickstart_sandbox.py`
     </Tip>
   </Step>
 
-  <Step title="Try the Context Manager Pattern">
-    For automatic cleanup, use SmolVM as a context manager:
+  <Step title="Run multiple commands">
+    Inside the sandbox you can run as many commands as you need. The VM stays alive until the `with` block exits:
 
-    ```python  theme={null}
+    ```python
     from smolvm import SmolVM
 
-    # VM auto-starts and auto-deletes after use
     with SmolVM() as vm:
-        # Check VM info
         print(f"VM ID: {vm.vm_id}")
         print(f"VM IP: {vm.get_ip()}")
-        
-        # Run multiple commands
-        vm.run("apt-get update")
-        vm.run("apt-get install -y curl")
+
+        # Run a series of commands
+        vm.run("apk add curl")
         result = vm.run("curl -s https://httpbin.org/ip")
-        print(result.output)
+        print(result.stdout.strip())
 
     # VM is automatically stopped and deleted here
     ```
-
-    <Info>
-      The context manager automatically handles VM lifecycle - it starts on entry and stops/deletes on exit.
-    </Info>
   </Step>
 
-  <Step title="Customize VM Resources">
+  <Step title="Customize VM resources">
     Configure memory and disk size for your workload:
 
-    ```python  theme={null}
+    ```python
     from smolvm import SmolVM
 
-    # Custom VM with 2GB RAM and 4GB disk
+    # Custom VM with 2 GB RAM and 4 GB disk
     with SmolVM(mem_size_mib=2048, disk_size_mib=4096) as vm:
-        # Check available memory
         result = vm.run("free -m")
-        print(result.output)
-        
-        # Check disk space
+        print(result.stdout)
+
         result = vm.run("df -h")
-        print(result.output)
+        print(result.stdout)
     ```
 
     **Default values:**
