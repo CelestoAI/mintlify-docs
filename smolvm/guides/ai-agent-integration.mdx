@@ -46,6 +46,51 @@ SmolVM uses hardware virtualization (KVM-backed microVMs) rather than containers
   </Card>
 </CardGroup>
 
+## Agentor
+
+[Agentor](/agentor/introduction) is Celesto's own agent framework. It has built-in SmolVM support through `SmolVMRuntime`, so your agent's shell commands run inside a sandbox automatically — no glue code needed.
+
+Pass `SmolVMRuntime` as the executor for `ShellTool` and Agentor routes every command through a dedicated microVM:
+
+```python
+from agentor import Agentor
+from agentor.runtime import SmolVMRuntime
+from agentor.tools import ShellTool
+
+
+def main() -> None:
+    runtime = SmolVMRuntime(mem_size_mib=1024, disk_size_mib=2048)
+
+    try:
+        agent = Agentor(
+            name="SmolVM Shell Agent",
+            model="gpt-5",
+            tools=[ShellTool(executor=runtime)],
+            instructions="Use shell commands to inspect files inside the SmolVM sandbox.",
+        )
+
+        result = agent.run(
+            "Install uv and use the Python interpreter to print 'Hello, World!'. Return both outputs."
+        )
+        print(result)
+    finally:
+        runtime.close()
+
+
+if __name__ == "__main__":
+    main()
+```
+
+`SmolVMRuntime` manages the VM lifecycle for you. When the agent calls the shell tool, the command runs inside the microVM instead of on your host. Call `runtime.close()` when you are done to tear down the sandbox.
+
+<Tip>
+  See the full working example in [`main.py`](https://github.com/celestoai/smolvm/blob/main/main.py). Install with `pip install agentor smolvm`.
+</Tip>
+
+### When to use Agentor vs. other frameworks
+
+Use Agentor when you want the simplest path to a sandboxed agent — one import for the runtime, one for the tool, and you are done. If you already use PydanticAI, OpenAI Agents, or LangChain, keep reading for framework-specific patterns below.
+
 ## PydanticAI
 
 Register SmolVM as a [PydanticAI](https://ai.pydantic.dev/) tool so the agent can run shell commands inside an ephemeral sandbox.
@@ -340,6 +385,33 @@ The full example includes domain allowlisting so the model can only visit URLs y
 You can let a PydanticAI agent drive a SmolVM browser session through the [`agent-browser`](https://github.com/anthropics/agent-browser) CLI instead of using Playwright directly. The agent runs host-side shell commands — starting the browser, taking snapshots, clicking elements, and capturing screenshots — all through a single `run_host_bash` tool.
 
 This approach is useful when you want the LLM to decide **what** to do in the browser step by step, without writing Playwright code yourself.
+
+Here is how the pieces fit together:
+
+```mermaid
+flowchart TD
+    A[User runs script with prompt] --> B[PydanticAI Agent initialized]
+    B --> C[Agent plans browser automation steps]
+
+    C --> D[Start SmolVM browser session]
+    D --> E{Browser ready?}
+    E -->|Yes| F[Get CDP port for remote control]
+    E -->|No| X[Error handling]
+
+    F --> G[Navigate to target URL]
+    G --> H[Take page snapshots]
+    H --> I[Interact with page elements]
+    I --> J[Scroll / click / extract data]
+
+    J --> K[Capture final screenshot]
+    K --> L[Get page title & URL]
+    L --> M[Stop browser session]
+
+    M --> N[Return summary to user]
+    N --> O((Done))
+
+    X --> M
+```
 
 **Prerequisites:**
 
