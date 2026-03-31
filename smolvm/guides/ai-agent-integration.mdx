@@ -296,7 +296,9 @@ with BrowserSession(
 
 ### Computer-use with OpenAI
 
-Combine `BrowserSession` with OpenAI's computer-use API for autonomous web browsing agents. The model sees the browser through screenshots and sends back click, type, and scroll instructions:
+Combine `BrowserSession` with OpenAI's [computer-use API](https://platform.openai.com/docs/guides/tools/computer-use) for autonomous web browsing agents. The model sees the browser through screenshots and sends back click, type, and scroll instructions.
+
+You provide a task and an optional starting URL. SmolVM launches a browser in an isolated sandbox, and the model drives it step by step until the task is complete.
 
 ```python
 from openai import OpenAI
@@ -327,6 +329,8 @@ with BrowserSession(
             pass
 ```
 
+The full example includes domain allowlisting so the model can only visit URLs you approve, automatic retries for failed actions, and a configurable step limit to keep costs under control.
+
 <Tip>
   See the full working example in [`examples/agent_tools/computer_use_browser.py`](https://github.com/celestoai/smolvm/blob/main/examples/agent_tools/computer_use_browser.py) for a complete computer-use loop with action handling, safety checks, and domain allowlisting.
 </Tip>
@@ -351,8 +355,9 @@ smolvm doctor
 
 1. The agent calls `smolvm browser start --live --json` to launch an isolated browser session.
 2. SmolVM returns a JSON payload with a `session_id`, a `cdp_url` (including the localhost port), and a `live_url`.
-3. The agent uses `agent-browser --cdp <cdp_port>` commands to take snapshots, click elements, and navigate pages.
-4. When finished, the agent calls `smolvm browser stop <session_id>` to tear down the session.
+3. The agent reads `agent-browser --help`, then uses `agent-browser --cdp <cdp_port>` commands to take snapshots, click elements, and navigate pages.
+4. The agent can save screenshots and collect artifacts along the way.
+5. When finished, the agent calls `smolvm browser stop <session_id>` to tear down the session.
 
 ```python
 from __future__ import annotations
@@ -422,14 +427,24 @@ def run_host_bash(
     return "\n".join(lines)
 
 agent = Agent(
-    "openai:gpt-4.1",
+    "openai:gpt-5.4",
     deps_type=BrowserCliDeps,
     instructions=(
-        "You automate a SmolVM browser session from the host.\n"
-        "1. Run `smolvm browser start --live --json`.\n"
-        "2. Read the `cdp_port` from the `parsed_browser_session` in the output.\n"
-        "3. Use `agent-browser --cdp <cdp_port>` for all browser commands.\n"
-        "4. Stop the browser with `smolvm browser stop <session_id>` when done."
+        "You are an agent who has access to control browser using some tools and CLIs.\n"
+        "You must reason and plan before act.\n"
+        "You automate one SmolVM browser session from the host.\n"
+        "First read `agent-browser --help`.\n"
+        "Decide on the exact commands before you run them.\n"
+        "Follow this workflow exactly:\n"
+        "1. First run `smolvm browser start --live --json`.\n"
+        "2. Read `cdp_port` from the `parsed_browser_session` section in the tool output.\n"
+        "3. Use `agent-browser --cdp <cdp_port>` on every browser command.\n"
+        "4. Use `agent-browser --cdp <cdp_port> snapshot -i --json` before choosing refs.\n"
+        "5. Save the final screenshot.\n"
+        "6. Stop the browser with `smolvm browser stop <session_id>` when done.\n"
+        "7. Return only these four lines: title, url, screenshot_path, session_id.\n"
+        "Only use the `run_host_bash` tool, and keep each command simple.\n"
+        "Your final output must contain a human readable summary."
     ),
 )
 agent.tool(docstring_format="google", require_parameter_descriptions=True)(
@@ -451,6 +466,8 @@ finally:
             capture_output=True, timeout=60, check=False,
         )
 ```
+
+The key difference from the Playwright-based approach is that the LLM decides its own browsing strategy. It reads `agent-browser --help` to learn the available commands, plans its steps, takes snapshots (with `--json` output) to understand page structure, and picks elements by reference ID.
 
 <Tip>
   See the full working example in [`examples/agent_tools/pydanticai_agent_browser.py`](https://github.com/celestoai/smolvm/blob/main/examples/agent_tools/pydanticai_agent_browser.py) for CDP port parsing, error handling, and a multi-step demo that navigates between pages and saves screenshots.

@@ -55,11 +55,44 @@ Unlike containers that share the host kernel, microVMs provide hardware-level is
 | Keep one sandbox across turns | [Reusable sandbox](/smolvm/guides/ai-agent-integration#reusable-sandbox-across-turns) |
 | Pass env vars into the guest | [Environment variables](/smolvm/guides/environment-variables) |
 
+## Start a browser from the CLI
+
+You can also launch an isolated browser session directly from the terminal. This is useful for quick testing, scripting, or handing the CDP endpoint to an external tool.
+
+```bash
+smolvm browser start --live --json
+```
+
+The JSON response includes the `session_id` plus local browser URLs. Use the session ID to manage the session:
+
+```bash
+smolvm browser list
+smolvm browser stop <session_id>
+```
+
+The `cdp_url` in the response can be passed to any CDP client. For example, the [PydanticAI agent-browser integration](/smolvm/guides/ai-agent-integration#pydanticai-with-agent-browser) extracts the localhost port from that URL and hands it to `agent-browser --cdp`.
+
+To open the live browser view in your default browser:
+
+```bash
+smolvm browser open <session_id>
+```
+
 ## SDK or CLI?
 
 Use the **SDK** when SmolVM is part of your app or agent loop and you want to create sandboxes from Python code.
 
-Use the **CLI** when you want to inspect the runtime manually, start a browser from the terminal, or script local workflows with commands like `smolvm doctor`, `smolvm browser`, `smolvm create`, and `smolvm list`.
+Use the **CLI** when you want to inspect the runtime manually, start a browser from the terminal, or script local workflows. Common commands:
+
+```bash
+smolvm create --name my-sandbox
+smolvm ssh my-sandbox
+smolvm env list <vm_id>
+smolvm list
+smolvm stop my-sandbox
+```
+
+See the [CLI reference](/smolvm/cli/overview) for the full command list.
 
 ## Performance
 
