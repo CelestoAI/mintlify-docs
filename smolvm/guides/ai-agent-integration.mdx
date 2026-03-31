@@ -294,6 +294,102 @@ with BrowserSession(
   See the full working example in [`examples/agent_tools/computer_use_browser.py`](https://github.com/celestoai/smolvm/blob/main/examples/agent_tools/computer_use_browser.py) for a complete computer-use loop with action handling and safety checks.
 </Tip>
 
+### PydanticAI with agent-browser
+
+You can also let a PydanticAI agent drive a SmolVM browser session through the [`agent-browser`](https://github.com/anthropics/agent-browser) CLI instead of using Playwright directly. The agent runs host-side shell commands — starting the browser, taking snapshots, clicking elements, and capturing screenshots — all through a single `run_host_bash` tool.
+
+This approach is useful when you want the LLM to decide **what** to do in the browser step by step, without writing Playwright code yourself.
+
+**Prerequisites:**
+
+```bash
+pip install smolvm pydantic-ai
+brew install agent-browser   # or: npm install -g agent-browser
+agent-browser install
+export OPENAI_API_KEY=...
+smolvm doctor
+```
+
+**How it works:**
+
+1. The agent calls `smolvm browser start --live --json` to launch an isolated browser session.
+2. SmolVM returns a CDP port and a live-view URL.
+3. The agent uses `agent-browser --cdp <port>` commands to take snapshots, click elements, and navigate pages.
+4. When finished, the agent calls `smolvm browser stop <session_id>` to tear down the session.
+
+```python
+from dataclasses import dataclass
+from typing import Any
+from pydantic_ai import Agent, RunContext
+import subprocess, json
+
+@dataclass
+class BrowserCliDeps:
+    """Tracks the active browser session for cleanup."""
+    session: dict[str, Any] | None = None
+
+def run_host_bash(ctx: RunContext[BrowserCliDeps], command: str, timeout: int = 60) -> str:
+    """Run a shell command on the host machine.
+
+    Args:
+        command: Shell command to execute on the host.
+        timeout: Maximum seconds to wait.
+    """
+    result = subprocess.run(
+        ["bash", "-lc", command],
+        capture_output=True, text=True, timeout=timeout, check=False,
+    )
+
+    # Capture session info when the browser starts
+    if result.returncode == 0 and "browser start" in command and "--json" in command:
+        try:
+            data = json.loads(result.stdout).get("data", {})
+            ctx.deps.session = {
+                "session_id": data["session_id"],
+                "cdp_url": data["cdp_url"],
+            }
+        except (json.JSONDecodeError, KeyError):
+            pass
+
+    return (
+        f"exit_code: {result.returncode}\n"
+        f"stdout:\n{result.stdout.strip() or '<empty>'}\n"
+        f"stderr:\n{result.stderr.strip() or '<empty>'}"
+    )
+
+agent = Agent(
+    "openai:gpt-4.1",
+    deps_type=BrowserCliDeps,
+    instructions=(
+        "You automate a SmolVM browser session from the host.\n"
+        "1. Run `smolvm browser start --live --json`.\n"
+        "2. Read the `cdp_port` from the output.\n"
+        "3. Use `agent-browser --cdp <port>` for all browser commands.\n"
+        "4. Stop the browser with `smolvm browser stop <session_id>` when done."
+    ),
+)
+agent.tool(docstring_format="google", require_parameter_descriptions=True)(run_host_bash)
+
+deps = BrowserCliDeps()
+try:
+    result = agent.run_sync(
+        "Open https://example.com, take a snapshot, then stop the session.",
+        deps=deps,
+    )
+    print(result.output)
+finally:
+    # Safety net: stop the session if the agent didn't
+    if deps.session:
+        subprocess.run(
+            ["smolvm", "browser", "stop", deps.session["session_id"]],
+            capture_output=True, timeout=60, check=False,
+        )
+```
+
+<Tip>
+  See the full working example in [`examples/agent_tools/pydanticai_agent_browser.py`](https://github.com/celestoai/smolvm/blob/main/examples/agent_tools/pydanticai_agent_browser.py) for session parsing, error handling, and a multi-step demo that navigates between pages and saves screenshots.
+</Tip>
+
 ## Generic tool pattern
 
 If you use a framework not listed above, the core pattern is the same. Define a function that creates a `SmolVM`, runs a command, and returns the output:
