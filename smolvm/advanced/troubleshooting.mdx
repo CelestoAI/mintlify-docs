@@ -197,11 +197,10 @@ The `smolvm doctor` command validates:
     ```python  theme={null}
     from smolvm import SmolVM
 
-    manager = SmolVM()
-    vm_info = manager.get("vm-xxxxx")
-    print(f"Status: {vm_info.status}")
-    print(f"IP: {vm_info.network.guest_ip}")
-    print(f"SSH Port: {vm_info.network.ssh_host_port}")
+    vm = SmolVM.from_id("vm-xxxxx")
+    print(f"Status: {vm.status}")
+    print(f"IP: {vm.get_ip()}")
+    vm.close()
     ```
 
     2. Test network connectivity:
@@ -229,10 +228,11 @@ The `smolvm doctor` command validates:
     5. Increase SSH timeout:
 
     ```python  theme={null}
-    from smolvm import SmolVM, VMConfig
+    from smolvm import SmolVM
 
-    config = VMConfig(ssh_timeout=60.0)  # Increase from default 30s
-    vm = SmolVM(config)
+    vm = SmolVM()
+    vm.start(boot_timeout=60.0)
+    vm.wait_for_ssh(timeout=60.0)
     ```
   </Accordion>
 
@@ -250,14 +250,10 @@ The `smolvm doctor` command validates:
     ps aux | grep qemu-system
     ```
 
-    3. Reconcile VM state:
+    3. Clean up stale VMs:
 
-    ```python  theme={null}
-    from smolvm import SmolVM
-
-    manager = SmolVM()
-    stale_vms = manager.reconcile()
-    print(f"Cleaned up {len(stale_vms)} stale VMs")
+    ```bash  theme={null}
+    smolvm cleanup --all
     ```
 
     4. If persistent, manually remove the lock:
@@ -276,25 +272,17 @@ The `smolvm doctor` command validates:
 
     1. List all VMs:
 
-    ```python  theme={null}
-    from smolvm import SmolVM
-
-    manager = SmolVM()
-    vms = manager.list_vms()
-    print(f"Total VMs: {len(vms)}")
+    ```bash  theme={null}
+    smolvm list
     ```
 
     2. Clean up stopped VMs:
 
-    ```python  theme={null}
-    from smolvm.types import VMState
-
-    stopped_vms = manager.list_vms(status=VMState.STOPPED)
-    for vm in stopped_vms:
-        manager.delete(vm.vm_id)
+    ```bash  theme={null}
+    smolvm cleanup --all
     ```
 
-    3. Use the CLI cleanup command:
+    3. Or use the CLI cleanup command directly:
 
     ```bash  theme={null}
     smolvm cleanup --all
@@ -335,18 +323,15 @@ The `smolvm doctor` command validates:
     cat ~/.local/state/smolvm/vm-xxxxx.log
     ```
 
-    5. Ensure kernel and rootfs are compatible:
+    5. Rebuild the image to ensure kernel and rootfs are compatible:
 
     ```python  theme={null}
-    from smolvm import VMConfig
-    from smolvm.build import download_assets
+    from smolvm import SmolVM
 
-    # Download matching kernel and rootfs
-    assets = download_assets()
-    config = VMConfig(
-        kernel_path=assets["kernel"],
-        rootfs_path=assets["rootfs"]
-    )
+    # Auto-config mode builds a matching kernel and rootfs
+    with SmolVM() as vm:
+        result = vm.run("uname -r")
+        print(result.stdout.strip())
     ```
   </Accordion>
 
@@ -360,10 +345,10 @@ The `smolvm doctor` command validates:
     ```python  theme={null}
     from smolvm import SmolVM
 
-    manager = SmolVM()
-    vm_info = manager.get("vm-xxxxx")
-    print(f"Status: {vm_info.status}")
-    print(f"PID: {vm_info.pid}")
+    vm = SmolVM.from_id("vm-xxxxx")
+    print(f"Status: {vm.status}")
+    print(f"Info: {vm.info}")
+    vm.close()
     ```
 
     2. Examine logs:
@@ -375,17 +360,23 @@ The `smolvm doctor` command validates:
     3. Delete and recreate:
 
     ```python  theme={null}
-    manager.delete("vm-xxxxx")
+    from smolvm import SmolVM
 
-    # Create fresh VM
-    new_vm = manager.create(config)
-    manager.start(new_vm.vm_id)
+    # Delete the broken VM
+    vm = SmolVM.from_id("vm-xxxxx")
+    vm.delete()
+    vm.close()
+
+    # Create a fresh VM
+    with SmolVM() as new_vm:
+        result = new_vm.run("echo 'recovered'")
+        print(result.stdout.strip())
     ```
 
-    4. Run reconciliation to clean up stale state:
+    4. Or clean up all stale VMs via CLI:
 
-    ```python  theme={null}
-    stale_vms = manager.reconcile()
+    ```bash  theme={null}
+    smolvm cleanup --all
     ```
   </Accordion>
 
@@ -408,14 +399,14 @@ The `smolvm doctor` command validates:
     chmod 755 ~/.local/state/smolvm
     ```
 
-    3. Set explicit data directory:
+    3. Set an explicit data directory:
 
     ```python  theme={null}
     from pathlib import Path
     from smolvm import SmolVM
 
     data_dir = Path("/tmp/smolvm-data")
-    manager = SmolVM(data_dir=data_dir)
+    vm = SmolVM(data_dir=data_dir)
     ```
 
     4. Use environment variable:
@@ -440,8 +431,9 @@ logging.basicConfig(
 
 from smolvm import SmolVM
 
-manager = SmolVM()
 # Now you'll see detailed debug output
+with SmolVM() as vm:
+    vm.run("echo 'debug test'")
 ```
 
 ### Inspect Firecracker Socket

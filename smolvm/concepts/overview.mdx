@@ -38,7 +38,7 @@ The core orchestrator that manages:
 * Firecracker process management
 * Network configuration
 
-### User Facade (`smolvm.facade.VM`)
+### User Facade (`smolvm.facade.SmolVM`)
 
 The high-level, user-facing class that provides:
 
@@ -95,7 +95,7 @@ vm.start()
 
 # 3. Execute commands via SSH
 result = vm.run("echo 'Hello from SmolVM'")
-print(result.output)
+print(result.stdout.strip())
 
 # 4. Stop and cleanup
 vm.stop()
@@ -110,7 +110,7 @@ from smolvm import SmolVM
 
 with SmolVM(mem_size_mib=2048) as vm:
     result = vm.run("free -m")
-    print(result.output)
+    print(result.stdout)
 # VM automatically stopped and cleaned up
 ```
 
@@ -136,11 +136,14 @@ SmolVM is optimized for low-latency agent workflows. Latest lifecycle timings (p
 
 Each VM can be configured with:
 
-* **vCPUs**: 1-32 virtual CPUs (default: 2)
+* **vCPUs**: 1-32 virtual CPUs (default: 1 in auto-config, 2 in `VMConfig`)
 * **Memory**: 128-16384 MiB (default: 512 MiB)
 
 ```python  theme={null}
-vm = SmolVM(vcpu_count=4, mem_size_mib=2048)
+# Auto-config mode: customize memory and disk
+with SmolVM(mem_size_mib=2048) as vm:
+    result = vm.run("free -m")
+    print(result.stdout)
 ```
 
 ### Disk Isolation
@@ -150,11 +153,13 @@ SmolVM defaults to **isolated per-VM disks** (`disk_mode="isolated"`), so each V
 ```python  theme={null}
 from smolvm import VMConfig
 
-# Isolated disk (default)
-config = VMConfig(disk_mode="isolated")
-
-# Shared disk across VMs
-config = VMConfig(disk_mode="shared")
+# When building a VMConfig manually, set disk_mode:
+config = VMConfig(
+    vm_id="my-vm",
+    kernel_path=kernel,
+    rootfs_path=rootfs,
+    disk_mode="isolated",  # default: each VM gets its own rootfs clone
+)
 ```
 
 ### Networking
@@ -195,29 +200,32 @@ Wrap SmolVM as a tool for your AI agent:
 ```python  theme={null}
 def execute_code_in_sandbox(code: str) -> str:
     """Tool for the agent to run shell code safely."""
-    from smolvm import VM
-    with VM() as vm:
+    from smolvm import SmolVM
+    with SmolVM() as vm:
         result = vm.run(code)
         return result.stdout if result.exit_code == 0 else result.stderr
 ```
 
-### Long-running Agent Environments
+### Long-running agent environments
 
 For agents that need to maintain state across multiple turns:
 
 ```python  theme={null}
-from smolvm import VM
+from smolvm import SmolVM
 
-# Create VM with specific ID
-vm = VM(vm_id="agent-workspace")
+# Create and start a VM
+vm = SmolVM()
 vm.start()
 
 # Perform actions across multiple agent turns
 vm.run("pip install numpy")
 vm.run("python analyze_data.py")
 
+# Release the handle (VM keeps running)
+vm.close()
+
 # Reconnect later
-vm = VM.from_id("agent-workspace")
+vm = SmolVM.from_id(vm.vm_id)
 ```
 
 ## Next Steps

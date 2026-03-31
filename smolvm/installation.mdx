@@ -288,7 +288,7 @@ from smolvm import SmolVM
 
 with SmolVM() as vm:
     result = vm.run("echo 'SmolVM is working!'")
-    print(result.output)
+    print(result.stdout.strip())
     print(f"VM IP: {vm.get_ip()}")
     print(f"Status: {vm.status}")
 ```

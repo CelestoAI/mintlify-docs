@@ -100,19 +100,12 @@ SmolVM gives your app or AI agent a clean, disposable sandbox to execute command
   <Step title="Run Your First Sandbox">
     Create a simple Python script to test SmolVM:
 
-    ```python  theme={null}
+    ```python quickstart.py  theme={null}
     from smolvm import SmolVM
 
-    # Start a sandboxed runtime (auto-configured)
-    vm = SmolVM()
-    vm.start()
-
-    # Run a command in the isolated environment
-    result = vm.run("echo 'Hello from the sandbox!'")
-    print(result.output)
-
-    # Clean up
-    vm.stop()
+    with SmolVM() as vm:
+        result = vm.run("echo 'Hello from the sandbox!'")
+        print(result.stdout.strip())
     ```
 
     Run the script:
@@ -128,7 +121,7 @@ SmolVM gives your app or AI agent a clean, disposable sandbox to execute command
     ```
 
     <Tip>
-      The VM boots in under 1 second on most systems! SmolVM is optimized for AI agent workflows.
+      The context manager starts the VM on entry and stops and deletes it on exit. No manual cleanup needed.
     </Tip>
   </Step>
 
@@ -148,7 +141,7 @@ SmolVM gives your app or AI agent a clean, disposable sandbox to execute command
         vm.run("apt-get update")
         vm.run("apt-get install -y curl")
         result = vm.run("curl -s https://httpbin.org/ip")
-        print(result.output)
+        print(result.stdout.strip())
 
     # VM is automatically stopped and deleted here
     ```
@@ -168,11 +161,11 @@ SmolVM gives your app or AI agent a clean, disposable sandbox to execute command
     with SmolVM(mem_size_mib=2048, disk_size_mib=4096) as vm:
         # Check available memory
         result = vm.run("free -m")
-        print(result.output)
+        print(result.stdout)
         
         # Check disk space
         result = vm.run("df -h")
-        print(result.output)
+        print(result.stdout)
     ```
 
     **Default values:**

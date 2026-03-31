@@ -75,9 +75,11 @@ from smolvm import SmolVM
 with SmolVM() as vm:
     # Basic command execution
     result = vm.run("ls -la /")
-    print(result.stdout)  # Command output
-    print(result.exit_code)  # Exit status (0 = success)
-    print(result.ok)  # True if exit_code == 0
+    print(result.stdout)      # Standard output
+    print(result.stderr)      # Standard error
+    print(result.exit_code)   # Exit status (0 = success)
+    print(result.ok)          # True if exit_code == 0
+    print(result.output)      # Shorthand for stdout.strip()
 
     # Commands with custom timeout
     result = vm.run("sleep 10", timeout=60)

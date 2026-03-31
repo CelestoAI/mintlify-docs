@@ -189,8 +189,9 @@ asyncio.run(main())
 Wrap SmolVM as a [LangChain tool](https://python.langchain.com/docs/concepts/tools/):
 
 ```python  theme={null}
-from langchain.agents import create_agent
-from langchain.tools import tool
+from langchain_core.tools import tool
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import HumanMessage
 from smolvm import SmolVM
 
 @tool
@@ -209,19 +210,18 @@ def run_in_smolvm(command: str, timeout: int = 30) -> str:
             f"stderr:\n{result.stderr.strip() or '<empty>'}"
         )
 
-agent = create_agent(
-    model="openai:gpt-4.1",
-    tools=[run_in_smolvm],
-    system_prompt=(
-        "You are a coding assistant with access to a secure SmolVM sandbox."
-    ),
-)
+llm = ChatOpenAI(model="gpt-4.1")
+llm_with_tools = llm.bind_tools([run_in_smolvm])
 
-result = agent.invoke({
-    "messages": [{"role": "user", "content": "Run uname -a in the sandbox"}]
-})
+result = llm_with_tools.invoke(
+    [HumanMessage(content="Run uname -a in the sandbox")]
+)
 print(result)
 ```
+
+<Note>
+  Install the required packages: `pip install langchain langchain-openai`
+</Note>
 
 ## Browser sessions
 
@@ -472,7 +472,7 @@ For agents that need to maintain state across multiple interactions without usin
 def execute_untrusted_code(code: str) -> str:
     with SmolVM() as vm:
         result = vm.run(code)
-        return result.output
+        return result.stdout
 ```
 
 ### Always set timeouts
@@ -485,22 +485,21 @@ result = vm.run("potentially-slow-command", timeout=30)
 ### Inject secrets via environment variables
 
 ```python  theme={null}
-# Pass secrets through env_vars, not command-line arguments
-config = VMConfig(
-    env_vars={"API_KEY": os.getenv("API_KEY")},
-    # ... other config ...
-)
+import os
+from smolvm import SmolVM
+
+# Pass secrets through env vars at runtime, not command-line arguments
+with SmolVM() as vm:
+    vm.set_env_vars({"API_KEY": os.getenv("API_KEY")})
+    vm.run("echo $API_KEY")
 ```
 
 ### Set resource limits
 
 ```python  theme={null}
 # Limit resources to prevent abuse
-config = VMConfig(
-    vcpu_count=1,
-    mem_size_mib=512,
-    # ... other config ...
-)
+with SmolVM(mem_size_mib=512) as vm:
+    vm.run("echo 'limited resources'")
 ```
 
 ## Error handling
