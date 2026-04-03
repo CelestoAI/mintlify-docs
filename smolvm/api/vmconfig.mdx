@@ -18,9 +18,9 @@ All VMConfig instances are immutable (frozen) after creation.
 ## Fields
 
 <ParamField path="vm_id" type="str" default="auto-generated">
-  Unique identifier for the VM. Must be lowercase alphanumeric with hyphens, matching the pattern `^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$` or `^[a-z0-9]$`.
+  Unique identifier for the VM. Must be lowercase alphanumeric with hyphens or underscores, matching the pattern `^[a-z0-9][a-z0-9_-]{0,62}[a-z0-9]$` or a single character `^[a-z0-9]$`.
 
-  If omitted or explicitly set to `None`, SmolVM auto-generates an ID in the format `vm-<8-char-hex>`.
+  If omitted or explicitly set to `None`, SmolVM auto-generates an ID in the format `vm-<8-char-hex>` (for example, `vm-a1b2c3d4`).
 </ParamField>
 
 <ParamField path="vcpu_count" type="int" default="2">
@@ -70,6 +70,27 @@ All VMConfig instances are immutable (frozen) after creation.
   Variables are persisted in `/etc/profile.d/smolvm_env.sh` and affect new SSH sessions/login shells.
 
   Requires an SSH-capable image (boot args must contain `init=/init`).
+</ParamField>
+
+<ParamField path="network_rate_limit_mbps" type="int | None" default="None">
+  Optional network bandwidth limit in megabits per second. When set, SmolVM caps the guest's outbound traffic to this rate. Must be at least 1.
+</ParamField>
+
+<ParamField path="port_forwards" type="list[PortForwardConfig]" default="[]">
+  Host-to-guest TCP port forwards configured at VM launch. Each entry maps a `host_port` to a `guest_port`. Host and guest ports must be unique within the list.
+
+  ```python  theme={null}
+  from smolvm.types import PortForwardConfig
+
+  port_forwards=[
+      PortForwardConfig(host_port=8080, guest_port=80),
+      PortForwardConfig(host_port=3000, guest_port=3000),
+  ]
+  ```
+</ParamField>
+
+<ParamField path="extra_drives" type="list[Path]" default="[]">
+  Additional block-device image paths to attach at boot. Each path must exist and point to a valid file.
 </ParamField>
 
 ## Validation Rules
@@ -284,15 +305,18 @@ with SmolVM(config) as vm:
 
 ## Field Summary
 
-| Field                   | Type             | Default                                    | Range/Validation                     |
-| ----------------------- | ---------------- | ------------------------------------------ | ------------------------------------ |
-| `vm_id`                 | `str`            | Auto-generated                             | `^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$`  |
-| `vcpu_count`            | `int`            | `2`                                        | 1-32                                 |
-| `mem_size_mib`          | `int`            | `512`                                      | 128-16384                            |
-| `kernel_path`           | `Path`           | Required                                   | Must exist as file                   |
-| `rootfs_path`           | `Path`           | Required                                   | Must exist as file                   |
-| `boot_args`             | `str`            | `"console=ttyS0 reboot=k panic=1 pci=off"` | Any string                           |
-| `backend`               | `str \| None`    | `None`                                     | `"firecracker"`, `"qemu"`, `None`    |
-| `disk_mode`             | `Literal`        | `"isolated"`                               | `"isolated"`, `"shared"`             |
-| `retain_disk_on_delete` | `bool`           | `False`                                    | `True`, `False`                      |
-| `env_vars`              | `dict[str, str]` | `{}`                                       | Keys must be valid shell identifiers |
+| Field                      | Type                    | Default                                    | Range/Validation                     |
+| -------------------------- | ----------------------- | ------------------------------------------ | ------------------------------------ |
+| `vm_id`                    | `str`                   | Auto-generated                             | `^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$`  |
+| `vcpu_count`               | `int`                   | `2`                                        | 1-32                                 |
+| `mem_size_mib`             | `int`                   | `512`                                      | 128-16384                            |
+| `kernel_path`              | `Path`                  | Required                                   | Must exist as file                   |
+| `rootfs_path`              | `Path`                  | Required                                   | Must exist as file                   |
+| `extra_drives`             | `list[Path]`            | `[]`                                       | Each must exist as file              |
+| `boot_args`                | `str`                   | `"console=ttyS0 reboot=k panic=1 pci=off"` | Any string                           |
+| `backend`                  | `str \| None`           | `None`                                     | `"firecracker"`, `"qemu"`, `None`    |
+| `disk_mode`                | `Literal`               | `"isolated"`                               | `"isolated"`, `"shared"`             |
+| `retain_disk_on_delete`    | `bool`                  | `False`                                    | `True`, `False`                      |
+| `env_vars`                 | `dict[str, str]`        | `{}`                                       | Keys must be valid shell identifiers |
+| `network_rate_limit_mbps`  | `int \| None`           | `None`                                     | >= 1 when set                        |
+| `port_forwards`            | `list[PortForwardConfig]` | `[]`                                     | No duplicate host or guest ports     |

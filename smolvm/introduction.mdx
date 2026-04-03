@@ -86,7 +86,8 @@ Use the **SDK** when SmolVM is part of your app or agent loop and you want to cr
 Use the **CLI** when you want to inspect the runtime manually, start a browser from the terminal, or script local workflows. Common commands:
 
 ```bash
-smolvm create --name my-sandbox
+smolvm create                    # auto-generates a name
+smolvm create --name my-sandbox  # or pick your own
 smolvm ssh my-sandbox
 smolvm env list <vm_id>
 smolvm list
