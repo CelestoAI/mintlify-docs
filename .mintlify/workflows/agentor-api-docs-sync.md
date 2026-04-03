@@ -1,9 +1,7 @@
 ---
 name: "API docs sync"
 on:
-  push:
-    - repo: "celestoai/agentor"
-    - repo: "celestoai/SmolVM"
+  cron: "0 0 * * 1"
 automerge: true
 ---
 
