@@ -9,7 +9,9 @@ A SmolVM instance progresses through these states:
 
 * `CREATED` - VM configured but not started
 * `RUNNING` - VM is booted and operational
+* `PAUSED` - VM execution is suspended (Firecracker only)
 * `STOPPED` - VM has been gracefully shut down
+* `ERROR` - VM encountered a fatal error
 
 ## Creating a VM
 
@@ -103,6 +105,27 @@ def stop(self, timeout: float = 3.0) -> SmolVM:
         self for method chaining.
     """
 ```
+
+## Pausing and resuming a VM
+
+On the Firecracker backend, you can pause a running VM and resume it later. This suspends execution without stopping the VM process, so the guest resumes exactly where it left off.
+
+```python  theme={null}
+vm.pause()
+print(f"Status: {vm.status}")  # VMState.PAUSED
+
+# Later, resume execution
+vm.resume()
+print(f"Status: {vm.status}")  # VMState.RUNNING
+```
+
+<Note>
+  Pausing cleans up port forwarding rules and closes SSH connections. After resuming, the next `run()` call re-establishes SSH automatically.
+</Note>
+
+<Note>
+  If you call `start()` on a paused VM, it automatically calls `resume()` instead.
+</Note>
 
 ## Deleting a VM
 

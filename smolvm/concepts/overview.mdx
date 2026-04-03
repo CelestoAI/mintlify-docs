@@ -38,7 +38,7 @@ The core orchestrator that manages:
 * Firecracker process management
 * Network configuration
 
-### User Facade (`smolvm.facade.VM`)
+### User Facade (`smolvm.facade.SmolVM`)
 
 The high-level, user-facing class that provides:
 
@@ -136,11 +136,12 @@ SmolVM is optimized for low-latency agent workflows. Latest lifecycle timings (p
 
 Each VM can be configured with:
 
-* **vCPUs**: 1-32 virtual CPUs (default: 2)
+* **vCPUs**: 1-32 virtual CPUs (default: 1 in auto-config mode, 2 in VMConfig)
 * **Memory**: 128-16384 MiB (default: 512 MiB)
 
 ```python  theme={null}
-vm = SmolVM(vcpu_count=4, mem_size_mib=2048)
+# Custom memory and disk via auto-config
+vm = SmolVM(mem_size_mib=2048, disk_size_mib=4096)
 ```
 
 ### Disk Isolation
@@ -195,8 +196,8 @@ Wrap SmolVM as a tool for your AI agent:
 ```python  theme={null}
 def execute_code_in_sandbox(code: str) -> str:
     """Tool for the agent to run shell code safely."""
-    from smolvm import VM
-    with VM() as vm:
+    from smolvm import SmolVM
+    with SmolVM() as vm:
         result = vm.run(code)
         return result.stdout if result.exit_code == 0 else result.stderr
 ```
@@ -206,18 +207,18 @@ def execute_code_in_sandbox(code: str) -> str:
 For agents that need to maintain state across multiple turns:
 
 ```python  theme={null}
-from smolvm import VM
+from smolvm import SmolVM
 
 # Create VM with specific ID
-vm = VM(vm_id="agent-workspace")
+vm = SmolVM()
 vm.start()
 
 # Perform actions across multiple agent turns
-vm.run("pip install numpy")
-vm.run("python analyze_data.py")
+vm.run("apk add python3")
+vm.run("python3 analyze_data.py")
 
 # Reconnect later
-vm = VM.from_id("agent-workspace")
+vm = SmolVM.from_id(vm.vm_id)
 ```
 
 ## Next Steps
