@@ -1,0 +1,100 @@
+---
+title: "SnapshotInfo"
+description: "Metadata for a saved VM snapshot, including file paths and restore status"
+---
+
+## Overview
+
+The `SnapshotInfo` model holds all metadata about a saved VM snapshot. It is returned when you create a snapshot and can be retrieved from the snapshot list.
+
+## Fields
+
+<ResponseField name="snapshot_id" type="string" required>
+  Unique identifier for the snapshot. Must contain only lowercase letters, numbers, and hyphens. If not provided during creation, SmolVM generates one automatically.
+</ResponseField>
+
+<ResponseField name="vm_id" type="string" required>
+  The identifier of the source VM that was snapshotted.
+</ResponseField>
+
+<ResponseField name="snapshot_path" type="Path" required>
+  Path to the saved VM state file (`vmstate.bin`).
+</ResponseField>
+
+<ResponseField name="mem_file_path" type="Path" required>
+  Path to the saved memory dump (`mem.bin`).
+</ResponseField>
+
+<ResponseField name="disk_path" type="Path" required>
+  Path to the saved root filesystem copy (`disk.ext4`).
+</ResponseField>
+
+<ResponseField name="vm_config" type="VMConfig" required>
+  The full VM configuration at the time of the snapshot. Used during restore to recreate the VM with the same settings.
+</ResponseField>
+
+<ResponseField name="network_config" type="NetworkConfig" required>
+  The network configuration at the time of the snapshot. Used during restore to reattach the VM to its original network identity.
+</ResponseField>
+
+<ResponseField name="created_at" type="datetime" required>
+  UTC timestamp of when the snapshot was created.
+</ResponseField>
+
+<ResponseField name="restored" type="bool" default="false">
+  Whether this snapshot has been restored at least once.
+</ResponseField>
+
+<ResponseField name="restored_vm_id" type="string | None" default="None">
+  The VM ID of the most recently restored instance, if any.
+</ResponseField>
+
+## Usage
+
+### Creating a snapshot
+
+```python  theme={null}
+from smolvm import SmolVM
+
+vm = SmolVM()
+vm.start()
+
+snapshot = vm.snapshot(snapshot_id="my-checkpoint")
+print(f"ID: {snapshot.snapshot_id}")
+print(f"Source VM: {snapshot.vm_id}")
+print(f"Created: {snapshot.created_at}")
+print(f"Disk path: {snapshot.disk_path}")
+
+vm.close()
+```
+
+### Listing snapshots
+
+```python  theme={null}
+from smolvm import SmolVMManager
+
+with SmolVMManager() as sdk:
+    snapshots = sdk.list_snapshots()
+    for snap in snapshots:
+        status = "restored" if snap.restored else "available"
+        print(f"{snap.snapshot_id} ({status}) — from {snap.vm_id}")
+```
+
+### Restoring from a snapshot
+
+```python  theme={null}
+from smolvm import SmolVM
+
+vm = SmolVM.from_snapshot("my-checkpoint", resume_vm=True)
+print(f"Restored into: {vm.vm_id}")
+print(f"Status: {vm.status}")
+
+vm.close()
+```
+
+## Related
+
+* [`SmolVM.snapshot()`](/smolvm/api/smolvm) — Create a snapshot from a running VM
+* [`SmolVM.from_snapshot()`](/smolvm/api/smolvm) — Restore a VM from a snapshot
+* [Snapshots guide](/smolvm/guides/snapshots) — Step-by-step guide to using snapshots
+* [Exceptions](/smolvm/api/exceptions) — `SnapshotAlreadyExistsError` and `SnapshotNotFoundError`

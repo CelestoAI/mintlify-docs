@@ -321,9 +321,27 @@ vm.refresh()
 print(vm.status)  # Fresh value from database
 ```
 
-## Next Steps
+## Snapshots
+
+You can save the full state of a running VM and restore it later using snapshots. This is useful for checkpointing before risky operations or reusing a configured environment.
+
+```python  theme={null}
+# Create a snapshot
+snapshot = vm.snapshot(snapshot_id="my-checkpoint")
+
+# Later, restore it
+restored_vm = SmolVM.from_snapshot("my-checkpoint", resume_vm=True)
+```
+
+See the [Snapshots guide](/smolvm/guides/snapshots) for full details.
+
+## Next steps
 
 <CardGroup cols={2}>
+  <Card title="Snapshots" icon="camera" href="/smolvm/guides/snapshots">
+    Save and restore sandbox state
+  </Card>
+
   <Card title="Port Forwarding" icon="network-wired" href="/smolvm/guides/port-forwarding">
     Expose services running inside VMs to your host
   </Card>

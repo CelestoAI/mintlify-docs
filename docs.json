@@ -143,6 +143,7 @@
               "smolvm/guides/vm-lifecycle",
               "smolvm/guides/port-forwarding",
               "smolvm/guides/environment-variables",
+              "smolvm/guides/snapshots",
               "smolvm/guides/custom-images",
               "smolvm/guides/ai-agent-integration"
             ]
@@ -157,6 +158,7 @@
               "smolvm/cli/ssh",
               "smolvm/cli/cleanup",
               "smolvm/cli/doctor",
+              "smolvm/cli/snapshot",
               "smolvm/cli/env",
               "smolvm/cli/ui"
             ]
@@ -183,6 +185,7 @@
               "smolvm/api/imagesource",
               "smolvm/api/hostmanager",
               "smolvm/api/networkconfig",
+              "smolvm/api/snapshotinfo",
               "smolvm/api/sshclient",
               "smolvm/api/exceptions"
             ]

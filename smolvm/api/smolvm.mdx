@@ -87,6 +87,45 @@ Reconnect to an existing VM by ID.
   VM identifier to reconnect to.
 </ParamField>
 
+<ResponseField name="return" type="SmolVM">
+  A SmolVM instance bound to the existing VM.
+</ResponseField>
+
+#### Raises
+
+* `VMNotFoundError`: If no VM with this ID exists.
+
+### from\_snapshot
+
+```python  theme={null}
+@classmethod
+SmolVM.from_snapshot(
+    snapshot_id: str,
+    *,
+    data_dir: Path | None = None,
+    socket_dir: Path | None = None,
+    backend: str | None = None,
+    resume_vm: bool = False,
+    force: bool = False,
+    ssh_user: str = "root",
+    ssh_key_path: str | None = None,
+) -> SmolVM
+```
+
+Restore a snapshot and attach a facade to the restored VM.
+
+<ParamField path="snapshot_id" type="str" required>
+  The identifier of the snapshot to restore.
+</ParamField>
+
+<ParamField path="resume_vm" type="bool" default="False">
+  Resume the restored VM immediately. When False, the VM is restored in a paused state.
+</ParamField>
+
+<ParamField path="force" type="bool" default="False">
+  Allow restoring a snapshot that was already restored before. By default, each snapshot can only be restored once.
+</ParamField>
+
 <ParamField path="data_dir" type="Path | None" default="None">
   Override the default data directory.
 </ParamField>
@@ -108,12 +147,13 @@ Reconnect to an existing VM by ID.
 </ParamField>
 
 <ResponseField name="return" type="SmolVM">
-  A SmolVM instance bound to the existing VM.
+  A SmolVM instance bound to the restored VM.
 </ResponseField>
 
 #### Raises
 
-* `VMNotFoundError`: If no VM with this ID exists.
+* `SnapshotNotFoundError`: If no snapshot with this ID exists.
+* `SmolVMError`: If the snapshot was already restored (use `force=True` to override).
 
 ## Lifecycle Methods
 
@@ -160,6 +200,36 @@ def delete(self) -> None
 ```
 
 Delete the VM and release all resources.
+
+### snapshot
+
+```python  theme={null}
+def snapshot(
+    self,
+    snapshot_id: str | None = None,
+    *,
+    resume_source: bool = False,
+) -> SnapshotInfo
+```
+
+Create a full snapshot of the VM. The VM must be running or paused. If running, SmolVM pauses it during snapshot creation.
+
+<ParamField path="snapshot_id" type="str | None" default="None">
+  Custom snapshot identifier. If omitted, SmolVM generates one automatically (for example, `snap-my-vm-1717012345`). Must contain only lowercase letters, numbers, and hyphens.
+</ParamField>
+
+<ParamField path="resume_source" type="bool" default="False">
+  Resume the source VM after snapshot creation. When False, the VM stays paused.
+</ParamField>
+
+<ResponseField name="return" type="SnapshotInfo">
+  Metadata about the created snapshot, including file paths and timestamps.
+</ResponseField>
+
+#### Raises
+
+* `SnapshotAlreadyExistsError`: If a snapshot with this ID already exists.
+* `SmolVMError`: If the VM is not in a snapshotable state, or if the backend is not Firecracker.
 
 ## Command Execution Methods
 
