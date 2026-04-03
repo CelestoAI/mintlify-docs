@@ -339,6 +339,38 @@ with BrowserSession(
 | `headless` | No visual output. Good for automated scraping and testing. |
 | `live` | Exposes a noVNC live-view URL so you can watch the browser in real time. |
 
+### Browser session configuration
+
+`BrowserSessionConfig` accepts these options:
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `mode` | `"headless"` \| `"live"` | `"headless"` | Display mode. `live` enables noVNC. |
+| `viewport` | `{"width": int, "height": int}` | 1280 x 720 | Browser viewport size. |
+| `record_video` | `bool` | `False` | Record a video (requires `mode="live"`). |
+| `profile_mode` | `"ephemeral"` \| `"persistent"` | `"ephemeral"` | Whether to reuse browser state across sessions. |
+| `profile_id` | `str` | — | Required when `profile_mode="persistent"`. |
+| `timeout_minutes` | `int` | 30 | Auto-shutdown timer (1-240 minutes). |
+| `allow_downloads` | `bool` | `True` | Allow file downloads in the browser. |
+| `env_vars` | `dict[str, str]` | `{}` | Environment variables injected into the guest. |
+| `mem_size_mib` | `int` | 2048 | Guest memory in MiB (512-16384). |
+| `disk_size_mib` | `int` | 4096 | Root filesystem size in MiB (2048-16384). |
+
+```python
+from smolvm import BrowserSession, BrowserSessionConfig
+
+with BrowserSession(
+    BrowserSessionConfig(
+        mode="live",
+        viewport={"width": 1920, "height": 1080},
+        timeout_minutes=60,
+        mem_size_mib=4096,
+        env_vars={"MY_API_KEY": "sk-..."},
+    )
+) as session:
+    print(session.cdp_url)
+```
+
 ### Computer-use with OpenAI
 
 Combine `BrowserSession` with OpenAI's [computer-use API](https://platform.openai.com/docs/guides/tools/computer-use) for autonomous web browsing agents. The model sees the browser through screenshots and sends back click, type, and scroll instructions.
