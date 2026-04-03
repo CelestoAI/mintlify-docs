@@ -1,22 +1,22 @@
 ---
 title: "smolvm create"
-description: "Create a named, SSH-ready VM and leave it running"
+description: "Create an SSH-ready VM and leave it running"
 ---
 
 ## Synopsis
 
 ```bash  theme={null}
-smolvm create --name <name> [OPTIONS]
+smolvm create [--name <name>] [OPTIONS]
 ```
 
 ## Description
 
-The `create` command spins up a new VM with a name you choose, waits for it to be SSH-ready, and leaves it running. This is useful when you need a persistent VM that you can reconnect to later using `smolvm ssh`.
+The `create` command spins up a new VM, waits for it to be SSH-ready, and leaves it running. You can give it a name or let SmolVM generate one automatically. Use `smolvm ssh` to connect to the VM afterwards.
 
 ## Options
 
-<ParamField path="--name" type="string" required>
-  A unique identifier for the VM. Use this name to reference the VM in other commands like `smolvm ssh` and `smolvm env`.
+<ParamField path="--name" type="string">
+  A unique identifier for the VM. If you skip this flag, SmolVM auto-generates a name like `vm-a1b2c3d4`. Use this name to reference the VM in other commands like `smolvm ssh` and `smolvm env`.
 </ParamField>
 
 <ParamField path="--memory-mib" type="integer" default="512">
@@ -37,7 +37,25 @@ The `create` command spins up a new VM with a name you choose, waits for it to b
 
 ## Examples
 
-### Create a VM with default settings
+### Create a VM with an auto-generated name
+
+```bash  theme={null}
+smolvm create
+```
+
+SmolVM picks a unique name for you (for example, `vm-a1b2c3d4`) and prints it after the VM is ready. You can then use that name with `smolvm ssh` and other commands.
+
+**Example output:**
+
+```
+Created VM 'vm-a1b2c3d4'.
+  Backend: firecracker
+  IP address: 172.16.0.2
+  SSH port: -
+  Next: smolvm ssh vm-a1b2c3d4
+```
+
+### Create a VM with a custom name
 
 ```bash  theme={null}
 smolvm create --name my-agent
@@ -68,15 +86,16 @@ smolvm create --name dev-env --backend qemu
 ### Increase boot timeout for slower systems
 
 ```bash  theme={null}
-smolvm create --name slow-start --boot-timeout 60
+smolvm create --boot-timeout 60
 ```
 
 ## What happens during create
 
 1. SmolVM configures a new VM with the specified settings (or defaults)
-2. The VM process starts with the selected backend
-3. SmolVM waits for the VM to boot and become SSH-ready
-4. Once ready, the VM stays running in the background
+2. If you did not provide `--name`, SmolVM generates a unique identifier
+3. The VM process starts with the selected backend
+4. SmolVM waits for the VM to boot and become SSH-ready
+5. Once ready, the VM stays running in the background
 
 After creation, you can connect with `smolvm ssh <name>` or use the Python SDK with `SmolVM.from_id("<name>")`.
 
