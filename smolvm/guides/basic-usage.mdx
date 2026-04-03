@@ -1,11 +1,11 @@
 ---
-title: "Basic Usage"
-description: "Learn the fundamentals of creating and interacting with SmolVM instances"
+title: "Basic usage"
+description: "Learn the fundamentals of creating and interacting with SmolVM sandboxes"
 ---
 
-## Quick Start
+## Quick start
 
-The simplest way to get started with SmolVM is using auto-configuration mode:
+The simplest way to use SmolVM is the auto-configuration mode:
 
 ```python  theme={null}
 from smolvm import SmolVM
@@ -22,7 +22,7 @@ When you create a `SmolVM()` with no arguments, it automatically:
 * Creates a VM with sensible defaults (512MB RAM, 1 vCPU)
 * Starts the VM when entering the context manager
 
-## Creating a VM
+## Creating a sandbox
 
 <Tabs>
   <Tab title="Auto-config (Recommended)">
@@ -65,7 +65,7 @@ When you create a `SmolVM()` with no arguments, it automatically:
   </Tab>
 </Tabs>
 
-## Running Commands
+## Running commands
 
 The `run()` method executes commands via SSH and returns a `CommandResult` object:
 
@@ -88,7 +88,7 @@ with SmolVM() as vm:
         print(f"Command failed: {result.stderr}")
 ```
 
-### Shell Modes
+### Shell modes
 
 SmolVM supports two command execution modes:
 
@@ -100,7 +100,7 @@ result = vm.run("echo $HOME", shell="login")
 result = vm.run("/bin/ls", shell="raw")
 ```
 
-## VM Properties
+## VM properties
 
 Access VM information through properties:
 
@@ -117,7 +117,7 @@ with SmolVM() as vm:
     print(vm.info.status)
 ```
 
-## Checking SSH Capability
+## Checking SSH capability
 
 Not all VM images support command execution. Check before attempting to run commands:
 
@@ -134,7 +134,7 @@ with SmolVM() as vm:
   Command execution requires the VM to be booted with `init=/init` in the boot arguments. All auto-configured VMs and images built with `ImageBuilder` include this by default.
 </Note>
 
-## Getting SSH Connection Details
+## Getting SSH connection details
 
 Retrieve SSH commands for manual connection:
 
@@ -145,7 +145,7 @@ with SmolVM() as vm:
     print(ssh_cmds["localhost"])  # SSH via localhost (if forwarded)
 ```
 
-## Error Handling
+## Error handling
 
 SmolVM raises specific exceptions for different failure scenarios:
 
@@ -169,22 +169,22 @@ except SmolVMError as e:
     print(f"SmolVM error: {e}")
 ```
 
-## Next Steps
+## Next steps
 
 <CardGroup cols={2}>
-  <Card title="VM Lifecycle" icon="circle-play" href="/smolvm/guides/vm-lifecycle">
+  <Card title="VM lifecycle" icon="circle-play" href="/smolvm/guides/vm-lifecycle">
     Learn about starting, stopping, and managing VM lifecycles
   </Card>
 
-  <Card title="Port Forwarding" icon="network-wired" href="/smolvm/guides/port-forwarding">
+  <Card title="Port forwarding" icon="network-wired" href="/smolvm/guides/port-forwarding">
     Expose guest services to your host machine
   </Card>
 
-  <Card title="Environment Variables" icon="code" href="/smolvm/guides/environment-variables">
+  <Card title="Environment variables" icon="code" href="/smolvm/guides/environment-variables">
     Inject configuration into your VMs
   </Card>
 
-  <Card title="Custom Images" icon="box" href="/smolvm/guides/custom-images">
+  <Card title="Custom images" icon="box" href="/smolvm/guides/custom-images">
     Build custom rootfs images for your use case
   </Card>
 </CardGroup>

@@ -8,11 +8,11 @@ SmolVM supports two backends depending on your operating system:
 * **Linux**: Firecracker (KVM-based microVMs)
 * **macOS**: QEMU (hardware virtualization)
 
-The backend is automatically detected based on your platform, but can be overridden via the `SMOLVM_BACKEND` environment variable.
+The backend is automatically detected based on your platform, but you can override it with the `SMOLVM_BACKEND` environment variable.
 
 ## Requirements
 
-### System Requirements
+### System requirements
 
 <Tabs>
   <Tab title="Linux">
@@ -31,7 +31,7 @@ The backend is automatically detected based on your platform, but can be overrid
   </Tab>
 </Tabs>
 
-### Python Dependencies
+### Python dependencies
 
 SmolVM requires the following Python packages (installed automatically via pip):
 
@@ -40,7 +40,7 @@ SmolVM requires the following Python packages (installed automatically via pip):
 * `requests>=2.28` - HTTP client for API interactions
 * `requests-unixsocket>=0.3` - Unix socket support for Firecracker API
 
-## Installation Steps
+## Installation steps
 
 <Tabs>
   <Tab title="Linux (Firecracker)">
@@ -160,9 +160,9 @@ SmolVM requires the following Python packages (installed automatically via pip):
   </Tab>
 </Tabs>
 
-## Advanced Installation Options
+## Advanced installation options
 
-### Custom Backend Selection
+### Custom backend selection
 
 You can override the automatic backend detection:
 
@@ -186,7 +186,7 @@ from smolvm import SmolVM
 vm = SmolVM(backend="qemu")
 ```
 
-### Installing with Docker Support
+### Installing with Docker support
 
 For building custom images, you may want Docker installed:
 
@@ -202,7 +202,7 @@ For building custom images, you may want Docker installed:
 
 ### Optional extras
 
-SmolVM ships several optional dependency groups you can install depending on your use case:
+SmolVM includes optional dependency groups you can install depending on your use case:
 
 ```bash  theme={null}
 # Agent framework examples (PydanticAI, OpenAI Agents, LangChain, Playwright)
@@ -225,7 +225,7 @@ pip install "smolvm[all]"
   If you only need SmolVM as a sandbox and won't use agent framework integrations, the base `pip install smolvm` is all you need.
 </Tip>
 
-### Development installation
+### Development install
 
 For development with testing and linting tools:
 
@@ -247,7 +247,7 @@ ruff check .
 mypy src
 ```
 
-### Skip Dependency Installation
+### Skip dependency installation
 
 If you've already installed dependencies manually, skip the package manager step:
 
@@ -261,9 +261,9 @@ If you've already installed dependencies manually, skip the package manager step
   ```
 </CodeGroup>
 
-## Verifying Installation
+## Verifying your installation
 
-### System Diagnostics
+### System diagnostics
 
 SmolVM includes a diagnostic tool to verify your setup:
 
@@ -279,7 +279,7 @@ smolvm doctor --backend qemu
 smolvm doctor --json --strict
 ```
 
-### Test Your First VM
+### Test your first VM
 
 Run a simple test to ensure everything works:
 
@@ -389,13 +389,13 @@ If this runs without errors, your installation is complete!
 
 ## Uninstallation
 
-### Remove SmolVM Python package
+### Remove the SmolVM Python package
 
 ```bash  theme={null}
 pip uninstall smolvm
 ```
 
-### Remove system components
+### Remove system components (optional)
 
 <Tabs>
   <Tab title="Linux">
@@ -428,22 +428,22 @@ pip uninstall smolvm
   </Tab>
 </Tabs>
 
-## Next Steps
+## Next steps
 
 <CardGroup cols={2}>
   <Card title="Quickstart" icon="rocket" href="/smolvm/quickstart">
-    Start using SmolVM with simple examples
+    Run your first sandbox in minutes
   </Card>
 
-  <Card title="Configuration" icon="gear" href="/smolvm/guides/basic-usage">
+  <Card title="Basic usage" icon="gear" href="/smolvm/guides/basic-usage">
     Learn about VM configuration options
   </Card>
 
-  <Card title="Custom Images" icon="box" href="/smolvm/guides/custom-images">
+  <Card title="Custom images" icon="box" href="/smolvm/guides/custom-images">
     Build your own VM images with custom tools
   </Card>
 
-  <Card title="API Reference" icon="book" href="/smolvm/api/smolvm">
+  <Card title="API reference" icon="book" href="/smolvm/api/smolvm">
     Explore the complete API
   </Card>
 </CardGroup>

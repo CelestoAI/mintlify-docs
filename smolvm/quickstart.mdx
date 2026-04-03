@@ -3,10 +3,10 @@ title: "Quickstart"
 description: "Get started with SmolVM in minutes - from installation to running your first sandbox"
 ---
 
-SmolVM gives your app or AI agent a clean, disposable sandbox to execute commands and run browser sessions. This guide walks you through setup and your first sandbox in under 5 minutes.
+SmolVM gives your app or AI agent a clean, disposable sandbox to execute commands and run browser sessions. This guide walks you through setup and your first sandbox in under five minutes.
 
 <Steps>
-  <Step title="Check Prerequisites">
+  <Step title="Check prerequisites">
     SmolVM uses hardware virtualization for strong isolation. Requirements vary by platform:
 
     <Tabs>
@@ -19,7 +19,7 @@ SmolVM gives your app or AI agent a clean, disposable sandbox to execute command
 
         **Verify KVM:**
 
-        ```bash  theme={null}
+        ```bash
         # Should show /dev/kvm
         ls -l /dev/kvm
         ```
@@ -36,7 +36,7 @@ SmolVM gives your app or AI agent a clean, disposable sandbox to execute command
 
         **Install Homebrew** (if not already installed):
 
-        ```bash  theme={null}
+        ```bash
         /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
         ```
       </Tab>
@@ -95,6 +95,8 @@ SmolVM gives your app or AI agent a clean, disposable sandbox to execute command
     ```bash
     smolvm doctor
     ```
+
+    This verifies backend detection, KVM availability (Linux only), required system tools, and network configuration.
   </Step>
 
   <Step title="Run your first sandbox">
@@ -169,25 +171,25 @@ SmolVM gives your app or AI agent a clean, disposable sandbox to execute command
   </Step>
 </Steps>
 
-## Next Steps
+## Next steps
 
 Now that you have SmolVM running, explore these topics:
 
 <CardGroup cols={2}>
-  <Card title="Port Forwarding" icon="network-wired" href="/smolvm/guides/port-forwarding">
-    Learn about port forwarding and local exposure
+  <Card title="AI agent integration" icon="robot" href="/smolvm/guides/ai-agent-integration">
+    Plug SmolVM into PydanticAI, OpenAI Agents, LangChain, and more
   </Card>
 
-  <Card title="API Reference" icon="book" href="/smolvm/api/smolvm">
-    Explore the complete SmolVM API
+  <Card title="Port forwarding" icon="network-wired" href="/smolvm/guides/port-forwarding">
+    Expose guest services to your host machine
   </Card>
 
-  <Card title="AI Agent Integration" icon="robot" href="/smolvm/guides/ai-agent-integration">
-    Integrate SmolVM with AI agents and tool calling
-  </Card>
-
-  <Card title="Custom Images" icon="box" href="/smolvm/guides/custom-images">
+  <Card title="Custom images" icon="box" href="/smolvm/guides/custom-images">
     Build specialized VM images with your own tools
+  </Card>
+
+  <Card title="API reference" icon="book" href="/smolvm/api/smolvm">
+    Explore the complete SmolVM API
   </Card>
 </CardGroup>
 
@@ -195,10 +197,10 @@ Now that you have SmolVM running, explore these topics:
 
 <AccordionGroup>
   <Accordion title="KVM device not found (/dev/kvm)">
-    **Linux only** - If you see "KVM device missing":
+    **Linux only** — if you see "KVM device missing":
 
     1. **Check virtualization support:**
-       ```bash  theme={null}
+       ```bash
        # Intel CPUs
        grep -E 'vmx' /proc/cpuinfo
 
@@ -208,31 +210,31 @@ Now that you have SmolVM running, explore these topics:
        If nothing appears, enable virtualization in BIOS/UEFI.
 
     2. **Load KVM modules:**
-       ```bash  theme={null}
+       ```bash
        sudo modprobe kvm
        sudo modprobe kvm_intel  # or kvm_amd for AMD
        ```
 
     3. **Check permissions:**
-       ```bash  theme={null}
+       ```bash
        ls -l /dev/kvm
        # Should show crw-rw---- with group kvm
        ```
 
-    4. **Add your user to kvm group:**
-       ```bash  theme={null}
+    4. **Add your user to the kvm group:**
+       ```bash
        sudo usermod -aG kvm $USER
        newgrp kvm  # or log out/in
        ```
   </Accordion>
 
   <Accordion title="SSH connection timeout">
-    If VM starts but SSH times out:
+    If the VM starts but SSH times out:
 
-    1. **Wait longer** - First boot downloads and builds the Alpine image (30-60s)
+    1. **Wait longer** — first boot downloads and builds the Alpine image (30–60 seconds)
 
     2. **Check VM status:**
-       ```python  theme={null}
+       ```python
        vm = SmolVM()
        vm.start()
        print(f"Status: {vm.status}")
@@ -240,14 +242,14 @@ Now that you have SmolVM running, explore these topics:
        ```
 
     3. **Increase timeout:**
-       ```python  theme={null}
+       ```python
        vm = SmolVM()
        vm.start(boot_timeout=60.0)
        vm.wait_for_ssh(timeout=60.0)
        ```
 
     4. **Check networking:**
-       ```bash  theme={null}
+       ```bash
        # Verify TAP device exists
        ip link show | grep tap
 
@@ -260,23 +262,23 @@ Now that you have SmolVM running, explore these topics:
     If you see permission errors:
 
     1. **Re-run system setup:**
-       ```bash  theme={null}
+       ```bash
        sudo ./scripts/system-setup.sh --configure-runtime
        ```
 
     2. **Check group membership:**
-       ```bash  theme={null}
+       ```bash
        groups
        # Should include 'kvm' on Linux
        ```
 
     3. **Refresh groups without logout:**
-       ```bash  theme={null}
+       ```bash
        newgrp kvm
        ```
 
     4. **Verify sudoers configuration:**
-       ```bash  theme={null}
+       ```bash
        sudo visudo -c  # Check for syntax errors
        ```
   </Accordion>
@@ -285,24 +287,24 @@ Now that you have SmolVM running, explore these topics:
     If the VM starts but `vm.run()` fails:
 
     1. **Verify SSH-capable image:**
-       ```python  theme={null}
+       ```python
        print(vm.can_run_commands())  # Should be True
        ```
 
     2. **Check boot args:**
-       ```python  theme={null}
+       ```python
        print(vm.info.config.boot_args)
        # Should contain 'init=/init'
        ```
 
     3. **Auto-config mode** uses SSH by default:
-       ```python  theme={null}
+       ```python
        # This creates an SSH-ready VM
        vm = SmolVM()
        ```
 
     4. **Manual config** requires SSH boot args:
-       ```python  theme={null}
+       ```python
        from smolvm import VMConfig
        from smolvm.build import SSH_BOOT_ARGS
 
@@ -318,19 +320,19 @@ Now that you have SmolVM running, explore these topics:
     If QEMU isn't detected:
 
     1. **Install via Homebrew:**
-       ```bash  theme={null}
+       ```bash
        brew install qemu
        ```
 
     2. **Verify installation:**
-       ```bash  theme={null}
+       ```bash
        # Check for qemu binaries
        which qemu-system-aarch64  # Apple Silicon
        which qemu-system-x86_64   # Intel
        ```
 
     3. **Run setup script:**
-       ```bash  theme={null}
+       ```bash
        ./scripts/system-setup-macos.sh --check-only
        ```
   </Accordion>
@@ -339,12 +341,12 @@ Now that you have SmolVM running, explore these topics:
     If Firecracker installation fails:
 
     1. **Check internet connectivity:**
-       ```bash  theme={null}
+       ```bash
        curl -I https://github.com
        ```
 
     2. **Manual download** (Linux):
-       ```bash  theme={null}
+       ```bash
        # Download from GitHub releases
        wget https://github.com/firecracker-microvm/firecracker/releases/latest/download/firecracker-v1.x.x-x86_64.tgz
 
@@ -354,57 +356,15 @@ Now that you have SmolVM running, explore these topics:
        ```
 
     3. **Skip deps if already installed:**
-       ```bash  theme={null}
+       ```bash
        sudo ./scripts/system-setup.sh --skip-deps --configure-runtime
        ```
   </Accordion>
 </AccordionGroup>
 
-## Verify Installation
-
-Run the diagnostic command to check everything is configured correctly:
-
-```bash  theme={null}
-smolvm doctor
-```
-
-This will verify:
-
-* Backend detection (Firecracker on Linux, QEMU on macOS)
-* KVM availability (Linux only)
-* Required system tools
-* Network configuration
-
-For CI/CD environments, use:
-
-```bash  theme={null}
-smolvm doctor --json --strict
-```
-
-## Performance Expectations
-
-SmolVM is optimized for speed. Typical timings on modern hardware:
-
-| Operation          | Time (p50) |
-| ------------------ | ---------- |
-| VM Create + Start  | \~572ms    |
-| SSH Ready          | \~2.1s     |
-| Command Execution  | **\~43ms** |
-| Stop + Delete      | \~751ms    |
-| **Full Lifecycle** | **\~3.5s** |
-
 <Note>
-  First boot takes longer (30-60s) as it downloads and builds the Alpine base image. Subsequent boots use the cached image.
+  First boot takes longer (30–60 seconds) as SmolVM downloads and builds the Alpine base image. Subsequent boots use the cached image.
 </Note>
-
-## What's Next?
-
-You've successfully set up SmolVM! Here are some recommended next steps:
-
-1. **Learn the API** - Explore port forwarding, environment variables, and VM persistence
-2. **Build Custom Images** - Create specialized images with pre-installed tools
-3. **Integrate with AI Agents** - Use SmolVM as a secure execution environment for LLM-generated code
-4. **Optimize Performance** - Learn about disk modes, memory sizing, and network configuration
 
 <Tip>
   Join our [Slack community](https://join.slack.com/t/celestoai/shared_invite/zt-3qc7h8gno-Nb5_PElEWHDNnGqdVzC~4Q) to get help and share your use cases!
