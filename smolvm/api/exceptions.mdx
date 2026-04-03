@@ -12,6 +12,8 @@ SmolVMError (base)
 ├── ValidationError
 ├── VMAlreadyExistsError
 ├── VMNotFoundError
+├── SnapshotAlreadyExistsError
+├── SnapshotNotFoundError
 ├── NetworkError
 ├── HostError
 ├── ImageError
@@ -98,6 +100,59 @@ except VMNotFoundError as e:
     print(f"VM {e.vm_id} not found")
     # Create a new VM instead
     vm = SmolVM(vm_id=e.vm_id)
+```
+
+## Snapshot Exceptions
+
+### SnapshotAlreadyExistsError
+
+Raised when attempting to create a snapshot with an ID that already exists.
+
+**Attributes:**
+
+* `snapshot_id` (str): The conflicting snapshot ID
+* `message` (str): Error message
+* `details` (dict): Contains `snapshot_id`
+
+**When raised:**
+
+* Creating a snapshot when one with the same ID already exists
+
+**Example:**
+
+```python  theme={null}
+from smolvm import SmolVM, SnapshotAlreadyExistsError
+
+try:
+    snapshot = vm.snapshot(snapshot_id="my-checkpoint")
+except SnapshotAlreadyExistsError as e:
+    print(f"Snapshot {e.snapshot_id} already exists")
+```
+
+### SnapshotNotFoundError
+
+Raised when attempting to access a snapshot that doesn't exist.
+
+**Attributes:**
+
+* `snapshot_id` (str): The snapshot ID that was not found
+* `message` (str): Error message
+* `details` (dict): Contains `snapshot_id`
+
+**When raised:**
+
+* Calling `SmolVM.from_snapshot()` with a non-existent snapshot ID
+* Attempting to delete or restore a missing snapshot
+
+**Example:**
+
+```python  theme={null}
+from smolvm import SmolVM, SnapshotNotFoundError
+
+try:
+    vm = SmolVM.from_snapshot("missing-snapshot")
+except SnapshotNotFoundError as e:
+    print(f"Snapshot {e.snapshot_id} not found")
 ```
 
 ## Validation Exceptions

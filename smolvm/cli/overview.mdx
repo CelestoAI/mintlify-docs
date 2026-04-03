@@ -28,10 +28,29 @@ pip install 'smolvm[dashboard]'
 | `smolvm stop` | Stop an existing VM |
 | `smolvm ssh` | SSH into an existing VM (auto-starts if stopped) |
 | `smolvm browser` | Manage disposable browser sessions |
+| `smolvm snapshot` | Create, restore, list, and delete VM snapshots |
 | `smolvm cleanup` | Clean stale SmolVM resources and VMs |
 | `smolvm doctor` | Run host diagnostics for the selected backend |
 | `smolvm env` | Manage environment variables on a running VM |
 | `smolvm ui` | Start the SmolVM dashboard UI server |
+
+## Snapshot commands
+
+The `smolvm snapshot` command has its own subcommands for managing Firecracker VM snapshots:
+
+| Command | Description |
+| --- | --- |
+| `smolvm snapshot create` | Create a full snapshot from a running or paused VM |
+| `smolvm snapshot restore` | Restore a snapshot back into its original VM |
+| `smolvm snapshot list` | List all snapshots |
+| `smolvm snapshot delete` | Delete a snapshot and its files |
+
+Create a snapshot and restore it later:
+
+```bash
+smolvm snapshot create my-vm --snapshot-id my-checkpoint
+smolvm snapshot restore my-checkpoint --resume
+```
 
 ## Browser commands
 
@@ -103,6 +122,10 @@ smolvm browser start --help
 
   <Card title="Environment" icon="gear" href="/smolvm/cli/env">
     Manage VM environment variables
+  </Card>
+
+  <Card title="Snapshots" icon="camera" href="/smolvm/cli/snapshot">
+    Save and restore VM state
   </Card>
 
   <Card title="Dashboard UI" icon="window" href="/smolvm/cli/ui">
