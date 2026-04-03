@@ -7,9 +7,9 @@ description: "Run code, start a browser, and give AI agents an isolated workspac
 
 # SmolVM
 
-**Run code, start a browser, and give AI agents an isolated workspace**
+**Run code, start a browser, and give AI agents an isolated workspace.**
 
-SmolVM is a Python SDK and CLI for running code and browser tasks inside disposable sandboxes. Use it when your app or agent needs a clean place to execute commands, open websites, or keep risky work away from your machine.
+SmolVM is a Python SDK and CLI that lets you spin up a disposable sandbox in under a second. Use it whenever your app or AI agent needs a safe place to run shell commands, open a browser, or execute untrusted code — without touching your host machine.
 
 ## What you can do
 
@@ -19,11 +19,11 @@ SmolVM is a Python SDK and CLI for running code and browser tasks inside disposa
   </Card>
 
   <Card title="Start a browser" icon="globe">
-    Launch a real browser session that you can automate or watch live
+    Launch a real browser session you can automate or watch live
   </Card>
 
   <Card title="Power your agents" icon="robot">
-    Plug SmolVM into agent tools for shell use, browser use, and computer-use workflows
+    Plug SmolVM into agent frameworks for shell, browser, and computer-use workflows
   </Card>
 </CardGroup>
 
@@ -37,11 +37,7 @@ with SmolVM() as vm:
     print(result.stdout.strip())
 ```
 
-## Why isolation matters
-
-SmolVM keeps risky work off your host by running it inside a separate guest system. On Linux it uses [Firecracker microVMs](https://firecracker-microvm.github.io/), which are very small virtual machines backed by KVM. On macOS it uses QEMU. You get a simple Python SDK and CLI, but the work happens in its own environment instead of sharing your main machine.
-
-Unlike containers that share the host kernel, microVMs provide hardware-level isolation. An escape would require a hypervisor exploit, not just a kernel vulnerability.
+The `with` block handles the full lifecycle — it creates the sandbox on entry and tears it down on exit.
 
 ## Use cases
 
@@ -56,9 +52,25 @@ Unlike containers that share the host kernel, microVMs provide hardware-level is
 | Keep one sandbox across turns | [Reusable sandbox](/smolvm/guides/ai-agent-integration#reusable-sandbox-across-turns) |
 | Pass env vars into the guest | [Environment variables](/smolvm/guides/environment-variables) |
 
-## Start a browser from the CLI
+## SDK or CLI?
 
-You can also launch an isolated browser session directly from the terminal. This is useful for quick testing, scripting, or handing the CDP endpoint to an external tool.
+Use the **SDK** when SmolVM is part of your application or agent loop and you want to create sandboxes from Python code.
+
+Use the **CLI** when you want to inspect the runtime, start a browser from the terminal, or script local workflows:
+
+```bash
+smolvm create                    # auto-generates a name
+smolvm create --name my-sandbox  # or pick your own
+smolvm ssh my-sandbox
+smolvm list
+smolvm stop my-sandbox
+```
+
+See the [CLI reference](/smolvm/cli/overview) for the full command list.
+
+### Start a browser from the CLI
+
+You can launch an isolated browser session directly from the terminal. This is useful for quick testing, scripting, or handing the CDP endpoint to an external tool.
 
 ```bash
 smolvm browser start --live --json
@@ -79,22 +91,11 @@ To open the live browser view in your default browser:
 smolvm browser open <session_id>
 ```
 
-## SDK or CLI?
+## How isolation works
 
-Use the **SDK** when SmolVM is part of your app or agent loop and you want to create sandboxes from Python code.
+SmolVM runs your work inside a separate guest system instead of on your host. On Linux it uses [Firecracker microVMs](https://firecracker-microvm.github.io/) — very small virtual machines backed by KVM. On macOS it uses QEMU. You get a simple Python API and CLI, but every command executes in its own environment.
 
-Use the **CLI** when you want to inspect the runtime manually, start a browser from the terminal, or script local workflows. Common commands:
-
-```bash
-smolvm create                    # auto-generates a name
-smolvm create --name my-sandbox  # or pick your own
-smolvm ssh my-sandbox
-smolvm env list <vm_id>
-smolvm list
-smolvm stop my-sandbox
-```
-
-See the [CLI reference](/smolvm/cli/overview) for the full command list.
+Unlike containers that share the host kernel, microVMs provide hardware-level isolation. An escape would require a hypervisor exploit, not just a kernel vulnerability.
 
 ## Performance
 
@@ -116,7 +117,7 @@ Typical lifecycle timings (p50) on a standard Linux host:
 
 <CardGroup cols={2}>
   <Card title="Quickstart" icon="rocket" href="/smolvm/quickstart">
-    Get up and running with SmolVM in minutes
+    Set up SmolVM and run your first sandbox in minutes
   </Card>
 
   <Card title="Installation" icon="download" href="/smolvm/installation">
