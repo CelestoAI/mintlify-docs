@@ -262,8 +262,9 @@ asyncio.run(main())
 Wrap SmolVM as a [LangChain tool](https://python.langchain.com/docs/concepts/tools/):
 
 ```python
-from langchain.agents import create_agent
-from langchain.tools import tool
+from langchain_core.tools import tool
+from langchain_openai import ChatOpenAI
+from langgraph.prebuilt import create_react_agent
 from smolvm import SmolVM
 
 @tool
@@ -282,22 +283,17 @@ def run_in_smolvm(command: str, timeout: int = 30) -> str:
             f"stderr:\n{result.stderr.strip() or '<empty>'}"
         )
 
-agent = create_agent(
-    model="openai:gpt-4.1",
-    tools=[run_in_smolvm],
-    system_prompt=(
-        "You are a coding assistant with access to a secure SmolVM sandbox."
-    ),
-)
+llm = ChatOpenAI(model="gpt-4.1")
+agent = create_react_agent(llm, [run_in_smolvm])
 
 result = agent.invoke({
     "messages": [{"role": "user", "content": "Run uname -a in the sandbox"}]
 })
-print(result)
+print(result["messages"][-1].content)
 ```
 
 <Tip>
-  See the full working example in [`examples/agent_tools/langchain_tool.py`](https://github.com/celestoai/smolvm/blob/main/examples/agent_tools/langchain_tool.py). Install with `pip install smolvm langchain langchain-openai`.
+  See the full working example in [`examples/agent_tools/langchain_tool.py`](https://github.com/celestoai/smolvm/blob/main/examples/agent_tools/langchain_tool.py). Install with `pip install smolvm langchain-openai langgraph`.
 </Tip>
 
 ## Browser sessions

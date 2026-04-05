@@ -277,7 +277,8 @@ with SmolVM(config) as vm:
 Use `ImageBuilder` to create kernel and rootfs images:
 
 ```python  theme={null}
-from smolvm import ImageBuilder, VMConfig, SmolVM
+from smolvm import VMConfig, SmolVM
+from smolvm.build import ImageBuilder
 from pathlib import Path
 
 # Build an SSH-capable Alpine Linux image
@@ -285,7 +286,7 @@ builder = ImageBuilder()
 public_key = Path("~/.ssh/id_rsa.pub").expanduser().read_text()
 
 kernel, rootfs = builder.build_alpine_ssh_key(
-    public_key=public_key,
+    ssh_public_key=public_key,
     name="my-alpine",
     rootfs_size_mb=512,
 )

@@ -60,6 +60,7 @@ All VMInfo instances are immutable (frozen) after creation.
 class VMState(str, Enum):
     CREATED = "created"
     RUNNING = "running"
+    PAUSED = "paused"
     STOPPED = "stopped"
     ERROR = "error"
 ```

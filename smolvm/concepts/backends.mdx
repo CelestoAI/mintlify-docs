@@ -1,5 +1,5 @@
 ---
-title: "Firecracker vs QEMU Backends"
+title: "Firecracker vs QEMU backends"
 description: "Choose the right microVM backend for your platform and understand their trade-offs"
 ---
 
@@ -215,28 +215,28 @@ python my_agent.py
 
 ## Comparison Matrix
 
-| Feature              | Firecracker      | QEMU            |   |   |
-| -------------------- | ---------------- | --------------- | - | - |
-| **Platform Support** |                  |                 |   |   |
-| Linux                | ✅ Native         | ✅ Supported     |   |   |
-| macOS                | ❌ Not supported  | ✅ Native        |   |   |
-| Windows              | ❌ Not supported  | ✅ Supported     |   |   |
-| **Performance**      |                  |                 |   |   |
-| Boot time            | \~572ms          | Slower (\~2-3s) |   |   |
-| Command execution    | \~43ms           | Similar         |   |   |
-| Memory overhead      | Minimal          | Higher          |   |   |
-| **Features**         |                  |                 |   |   |
-| KVM acceleration     | Required         | Optional        |   |   |
-| Snapshot/restore     | ✅ Available      | ✅ Available     |   |   |
-| Device emulation     | Minimal          | Extensive       |   |   |
-| Architecture support | x86\_64, aarch64 | Many            |   |   |
-| **Use Cases**        |                  |                 |   |   |
-| Production Linux     | ✅ Recommended    | ⚠️ Fallback     |   |   |
-| macOS development    | ❌ Not available  | ✅ Recommended   |   |   |
-| CI/CD (Linux)        | ✅ Recommended    | ⚠️ Testing only |   |   |
-| CI/CD (macOS)        | ❌ Not available  | ✅ Only option   |   |   |
+| Feature              | Firecracker      | QEMU            |
+| -------------------- | ---------------- | --------------- |
+| **Platform support** |                  |                 |
+| Linux                | ✅ Native         | ✅ Supported     |
+| macOS                | ❌ Not supported  | ✅ Native        |
+| Windows              | ❌ Not supported  | ✅ Supported     |
+| **Performance**      |                  |                 |
+| Boot time            | \~572ms          | Slower (\~2-3s) |
+| Command execution    | \~43ms           | Similar         |
+| Memory overhead      | Minimal          | Higher          |
+| **Features**         |                  |                 |
+| KVM acceleration     | Required         | Optional        |
+| Snapshot/restore     | ✅ Available      | ✅ Available     |
+| Device emulation     | Minimal          | Extensive       |
+| Architecture support | x86\_64, aarch64 | Many            |
+| **Use cases**        |                  |                 |
+| Production Linux     | ✅ Recommended    | ⚠️ Fallback     |
+| macOS development    | ❌ Not available  | ✅ Recommended   |
+| CI/CD (Linux)        | ✅ Recommended    | ⚠️ Testing only |
+| CI/CD (macOS)        | ❌ Not available  | ✅ Only option   |
 
-## Backend Diagnostics
+## Backend diagnostics
 
 SmolVM provides a diagnostic tool to check backend availability:
 

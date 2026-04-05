@@ -1,5 +1,5 @@
 ---
-title: "Custom Images"
+title: "Custom images"
 description: "Build custom rootfs and kernel images for SmolVM"
 ---
 
@@ -291,8 +291,8 @@ print(QEMU_KERNEL_URLS)
 From `examples/openclaw.py` - building a 4GB Debian image for OpenClaw:
 
 ```python  theme={null}
-from smolvm import SmolVM, VMConfig, SSH_BOOT_ARGS
-from smolvm.build import ImageBuilder
+from smolvm import SmolVM, VMConfig
+from smolvm.build import ImageBuilder, SSH_BOOT_ARGS
 from smolvm.utils import ensure_ssh_key
 
 private_key, public_key = ensure_ssh_key()

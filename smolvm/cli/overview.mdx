@@ -1,6 +1,6 @@
 ---
-title: "CLI Overview"
-description: "Overview of the SmolVM command-line interface for managing sandboxes and browser use agents"
+title: "CLI overview"
+description: "Overview of the SmolVM command-line interface for managing sandboxes and browser sessions"
 ---
 
 The SmolVM CLI lets you manage sandboxes, start browser sessions, and inspect the runtime from your terminal. Use it when you want to work with SmolVM outside of Python code.
@@ -23,9 +23,10 @@ pip install 'smolvm[dashboard]'
 
 | Command | Description |
 | --- | --- |
-| `smolvm list` | List VMs and their current status |
+| `smolvm setup` | One-time host setup (installs runtime dependencies) |
 | `smolvm create` | Create an SSH-ready VM (name is optional) |
-| `smolvm stop` | Stop an existing VM |
+| `smolvm list` | List VMs and their current status |
+| `smolvm stop` | Stop a running VM and release its resources |
 | `smolvm ssh` | SSH into an existing VM (auto-starts if stopped) |
 | `smolvm browser` | Manage disposable browser sessions |
 | `smolvm snapshot` | Create, restore, list, and delete VM snapshots |
