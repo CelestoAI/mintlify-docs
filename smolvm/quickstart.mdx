@@ -51,42 +51,16 @@ SmolVM gives your app or AI agent a clean, disposable sandbox to execute command
     ```
   </Step>
 
-  <Step title="Clone the repository">
-    The repository contains one-time setup scripts for your machine:
+  <Step title="Run one-time setup">
+    Set up the runtime dependencies for your machine:
 
     ```bash
-    git clone https://github.com/CelestoAI/SmolVM.git
-    cd SmolVM
+    smolvm setup
     ```
-  </Step>
 
-  <Step title="Run system setup">
-    <Tabs>
-      <Tab title="Linux">
-        ```bash
-        sudo ./scripts/system-setup.sh --configure-runtime
-        ```
+    On Linux this installs Firecracker, configures KVM permissions, and sets up networking tools. Linux may prompt for `sudo` during setup.
 
-        This script will:
-
-        * Install Firecracker and required dependencies
-        * Configure KVM permissions
-        * Set up networking tools (nftables, iproute2)
-        * Configure sudoers for runtime operations
-
-        <Note>
-          The `--configure-runtime` flag sets up scoped NOPASSWD sudo for SmolVM operations, avoiding password prompts during VM lifecycle management.
-        </Note>
-      </Tab>
-
-      <Tab title="macOS">
-        ```bash
-        ./scripts/system-setup-macos.sh
-        ```
-
-        This installs QEMU via Homebrew. The QEMU backend is automatically detected on macOS.
-      </Tab>
-    </Tabs>
+    On macOS this installs QEMU via Homebrew. The QEMU backend is automatically detected.
   </Step>
 
   <Step title="Verify the runtime">

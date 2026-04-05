@@ -6,7 +6,7 @@ description: "Create an SSH-ready VM and leave it running"
 ## Synopsis
 
 ```bash  theme={null}
-smolvm create [--name <name>] [OPTIONS]
+smolvm create [-n <name>] [--os <os>] [OPTIONS]
 ```
 
 ## Description
@@ -15,8 +15,12 @@ The `create` command spins up a new VM, waits for it to be SSH-ready, and leaves
 
 ## Options
 
-<ParamField path="--name" type="string">
-  A unique identifier for the VM. If you skip this flag, SmolVM auto-generates a name like `vm-a1b2c3d4`. Use this name to reference the VM in other commands like `smolvm ssh` and `smolvm env`.
+<ParamField path="--name, -n" type="string">
+  A unique identifier for the VM. If you skip this flag, SmolVM auto-generates a name like `vm-a1b2c3d4`. Use this name to reference the VM in other commands like `smolvm ssh` and `smolvm stop`.
+</ParamField>
+
+<ParamField path="--os" type="string" default="alpine">
+  Guest operating system. Choices: `alpine`, `ubuntu`. Alpine is smaller and boots faster. Ubuntu provides a more complete Linux environment with `apt`.
 </ParamField>
 
 <ParamField path="--memory-mib" type="integer" default="512">
@@ -58,7 +62,7 @@ Created VM 'vm-a1b2c3d4'.
 ### Create a VM with a custom name
 
 ```bash  theme={null}
-smolvm create --name my-agent
+smolvm create -n my-agent
 ```
 
 **Example output:**
@@ -77,10 +81,18 @@ Created VM 'my-agent'.
 smolvm create --name heavy-workload --memory-mib 2048 --disk-size-mib 4096
 ```
 
+### Create an Ubuntu VM
+
+```bash  theme={null}
+smolvm create -n dev-env --os ubuntu
+```
+
+Ubuntu VMs give you `apt` and a more familiar Linux environment. They take slightly longer to boot than Alpine.
+
 ### Specify a backend
 
 ```bash  theme={null}
-smolvm create --name dev-env --backend qemu
+smolvm create -n dev-env --backend qemu
 ```
 
 ### Increase boot timeout for slower systems

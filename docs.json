@@ -155,6 +155,7 @@
               "smolvm/cli/overview",
               "smolvm/cli/list",
               "smolvm/cli/create",
+              "smolvm/cli/stop",
               "smolvm/cli/ssh",
               "smolvm/cli/cleanup",
               "smolvm/cli/doctor",

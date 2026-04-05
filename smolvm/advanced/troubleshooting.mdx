@@ -1,5 +1,5 @@
 ---
-title: "Troubleshooting Guide"
+title: "Troubleshooting guide"
 description: "Common issues, error messages, and solutions for SmolVM"
 ---
 
@@ -29,7 +29,7 @@ The `smolvm doctor` command validates:
 * Network configuration (nftables, iproute2)
 * System permissions
 
-## Common Issues
+## Common issues
 
 <AccordionGroup>
   <Accordion title="Docker image build fails with daemon errors">
@@ -197,11 +197,13 @@ The `smolvm doctor` command validates:
     ```python  theme={null}
     from smolvm import SmolVM
 
-    manager = SmolVM()
-    vm_info = manager.get("vm-xxxxx")
-    print(f"Status: {vm_info.status}")
-    print(f"IP: {vm_info.network.guest_ip}")
-    print(f"SSH Port: {vm_info.network.ssh_host_port}")
+    vm = SmolVM.from_id("vm-xxxxx")
+    info = vm.info
+    print(f"Status: {info.status}")
+    if info.network:
+        print(f"IP: {info.network.guest_ip}")
+        print(f"SSH Port: {info.network.ssh_host_port}")
+    vm.close()
     ```
 
     2. Test network connectivity:
@@ -250,14 +252,10 @@ The `smolvm doctor` command validates:
     ps aux | grep qemu-system
     ```
 
-    3. Reconcile VM state:
+    3. Clean up stale resources using the CLI:
 
-    ```python  theme={null}
-    from smolvm import SmolVM
-
-    manager = SmolVM()
-    stale_vms = manager.reconcile()
-    print(f"Cleaned up {len(stale_vms)} stale VMs")
+    ```bash  theme={null}
+    smolvm cleanup --all
     ```
 
     4. If persistent, manually remove the lock:
@@ -276,31 +274,17 @@ The `smolvm doctor` command validates:
 
     1. List all VMs:
 
-    ```python  theme={null}
-    from smolvm import SmolVM
-
-    manager = SmolVM()
-    vms = manager.list_vms()
-    print(f"Total VMs: {len(vms)}")
+    ```bash  theme={null}
+    smolvm list
     ```
 
-    2. Clean up stopped VMs:
-
-    ```python  theme={null}
-    from smolvm.types import VMState
-
-    stopped_vms = manager.list_vms(status=VMState.STOPPED)
-    for vm in stopped_vms:
-        manager.delete(vm.vm_id)
-    ```
-
-    3. Use the CLI cleanup command:
+    2. Clean up stopped or stale VMs:
 
     ```bash  theme={null}
     smolvm cleanup --all
     ```
 
-    4. The IP pool supports 253 concurrent VMs. If you need more, consider implementing a custom IP allocator.
+    3. The IP pool supports 253 concurrent VMs (`172.16.0.2` through `172.16.0.254`). If you need more, consider implementing a custom IP allocator.
   </Accordion>
 
   <Accordion title="QEMU exited early while booting (macOS)">
@@ -335,18 +319,15 @@ The `smolvm doctor` command validates:
     cat ~/.local/state/smolvm/vm-xxxxx.log
     ```
 
-    5. Ensure kernel and rootfs are compatible:
+    5. Use auto-config mode to let SmolVM pick a compatible kernel and rootfs:
 
     ```python  theme={null}
-    from smolvm import VMConfig
-    from smolvm.build import download_assets
+    from smolvm import SmolVM
 
-    # Download matching kernel and rootfs
-    assets = download_assets()
-    config = VMConfig(
-        kernel_path=assets["kernel"],
-        rootfs_path=assets["rootfs"]
-    )
+    # Auto-config handles kernel/rootfs selection
+    with SmolVM() as vm:
+        result = vm.run("echo works")
+        print(result.stdout)
     ```
   </Accordion>
 
@@ -360,10 +341,11 @@ The `smolvm doctor` command validates:
     ```python  theme={null}
     from smolvm import SmolVM
 
-    manager = SmolVM()
-    vm_info = manager.get("vm-xxxxx")
-    print(f"Status: {vm_info.status}")
-    print(f"PID: {vm_info.pid}")
+    vm = SmolVM.from_id("vm-xxxxx")
+    info = vm.info
+    print(f"Status: {info.status}")
+    print(f"PID: {info.pid}")
+    vm.close()
     ```
 
     2. Examine logs:
@@ -372,20 +354,24 @@ The `smolvm doctor` command validates:
     cat ~/.local/state/smolvm/vm-xxxxx.log
     ```
 
-    3. Delete and recreate:
+    3. Delete the failed VM and create a fresh one:
 
     ```python  theme={null}
-    manager.delete("vm-xxxxx")
+    # Delete the failed VM
+    vm = SmolVM.from_id("vm-xxxxx")
+    vm.delete()
+    vm.close()
 
-    # Create fresh VM
-    new_vm = manager.create(config)
-    manager.start(new_vm.vm_id)
+    # Create a fresh VM
+    with SmolVM() as new_vm:
+        result = new_vm.run("echo 'back in business'")
+        print(result.stdout)
     ```
 
-    4. Run reconciliation to clean up stale state:
+    4. Run cleanup to remove all stale resources:
 
-    ```python  theme={null}
-    stale_vms = manager.reconcile()
+    ```bash  theme={null}
+    smolvm cleanup --all
     ```
   </Accordion>
 
@@ -426,9 +412,9 @@ The `smolvm doctor` command validates:
   </Accordion>
 </AccordionGroup>
 
-## Debugging Tips
+## Debugging tips
 
-### Enable Debug Logging
+### Enable debug logging
 
 ```python  theme={null}
 import logging
@@ -440,11 +426,12 @@ logging.basicConfig(
 
 from smolvm import SmolVM
 
-manager = SmolVM()
 # Now you'll see detailed debug output
+with SmolVM() as vm:
+    vm.run("echo hello")
 ```
 
-### Inspect Firecracker Socket
+### Inspect Firecracker socket
 
 Manually query the Firecracker API:
 
@@ -459,7 +446,7 @@ print(info)
 client.close()
 ```
 
-### Check Network Rules
+### Check network rules
 
 ```bash  theme={null}
 # List all nftables rules
@@ -475,7 +462,7 @@ ip link show | grep tap
 ip route show | grep 172.16.0
 ```
 
-### Monitor VM Processes
+### Monitor VM processes
 
 ```bash  theme={null}
 # List all Firecracker processes
@@ -488,7 +475,7 @@ ps aux | grep qemu-system
 top -p $(pgrep -d',' firecracker)
 ```
 
-## Getting Help
+## Getting help
 
 If you're still experiencing issues:
 
@@ -497,7 +484,7 @@ If you're still experiencing issues:
 3. Include relevant logs from `~/.local/state/smolvm/*.log`
 4. Join the [Celesto AI Slack](https://join.slack.com/t/celestoai/shared_invite/zt-3qc7h8gno-Nb5_PElEWHDNnGqdVzC~4Q) community
 
-## Known Limitations
+## Known limitations
 
 * **IP Pool**: Maximum 253 concurrent VMs (172.16.0.2-254)
 * **SSH Port Pool**: Maximum 800 concurrent VMs (ports 2200-2999)

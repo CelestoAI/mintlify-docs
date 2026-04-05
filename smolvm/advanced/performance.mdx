@@ -1,11 +1,11 @@
 ---
-title: "Performance Benchmarks"
+title: "Performance benchmarks"
 description: "Performance characteristics, optimization tips, and benchmark results for SmolVM"
 ---
 
 SmolVM is optimized for low-latency agent workflows, providing sub-second boot times and minimal overhead for command execution.
 
-## Benchmark Results
+## Benchmark results
 
 Latest lifecycle timings (p50) on a standard Linux host:
 
@@ -21,7 +21,7 @@ Latest lifecycle timings (p50) on a standard Linux host:
   Benchmarks measured on AMD Ryzen 7 7800X3D (8C/16T), Ubuntu Linux, KVM/Firecracker backend.
 </Note>
 
-## Running Your Own Benchmarks
+## Running your own benchmarks
 
 You can benchmark SmolVM on your hardware using the included benchmark script:
 
@@ -31,29 +31,29 @@ python scripts/benchmarks/bench_subprocess.py --vms 10 -v
 
 This will create, start, run commands in, and teardown 10 VMs sequentially, reporting detailed timing metrics.
 
-## Performance Characteristics
+## Performance characteristics
 
-### Boot Performance
+### Boot performance
 
 * **MicroVM Creation**: SmolVM allocates IP addresses, TAP devices, and network rules in \~572ms
 * **SSH Ready Time**: The VM boots and becomes accessible via SSH in \~2.1s total
 * **Hardware Virtualization**: Uses KVM on Linux and Hypervisor.framework on macOS for near-native performance
 
-### Runtime Performance
+### Runtime performance
 
 * **Command Execution**: \~43ms average latency for running commands via SSH
 * **Memory Overhead**: Minimal host overhead beyond configured VM memory (default 512MB)
 * **CPU Efficiency**: Hardware virtualization provides near-native CPU performance
 
-### Teardown Performance
+### Teardown performance
 
 * **Graceful Shutdown**: Firecracker VMs can be stopped in \~751ms
 * **Resource Cleanup**: Network rules, TAP devices, and disk images are cleaned up automatically
 * **Fast Path for Ephemeral VMs**: SIGKILL-based teardown for sandbox VMs that don't need state preservation
 
-## Optimization Tips
+## Optimization tips
 
-### 1. Reuse VMs for Multiple Commands
+### 1. Reuse VMs for multiple commands
 
 Instead of creating a new VM for each command, reuse the same VM:
 
@@ -61,17 +61,15 @@ Instead of creating a new VM for each command, reuse the same VM:
 from smolvm import SmolVM
 
 with SmolVM() as vm:
-    vm.start()
-    
-    # Run multiple commands on the same VM
-    result1 = vm.run("pip install requests")
-    result2 = vm.run("python script.py")
+    # The context manager starts the VM automatically
+    result1 = vm.run("apk add py3-requests")
+    result2 = vm.run("python3 script.py")
     result3 = vm.run("cat output.txt")
 ```
 
 This amortizes the \~2.1s boot time across multiple operations.
 
-### 2. Use Appropriate Resource Allocation
+### 2. Use appropriate resource allocation
 
 Configure CPU and memory based on your workload:
 
@@ -97,26 +95,35 @@ config = VMConfig(
   Over-allocating resources can lead to host memory pressure and slower performance.
 </Warning>
 
-### 3. Pre-built Custom Images
+### 3. Pre-built custom images
 
-For workloads requiring specific dependencies, build a custom rootfs image with pre-installed packages:
+For workloads requiring specific dependencies, build a custom rootfs image with pre-installed packages using `ImageBuilder`:
 
 ```python  theme={null}
-from smolvm.build import RootfsBuilder
+from smolvm.build import ImageBuilder
+from smolvm import SmolVM, VMConfig
+from smolvm.utils import ensure_ssh_key
 
-builder = RootfsBuilder()
-builder.add_package("python3-requests")
-builder.add_package("python3-numpy")
-rootfs_path = builder.build()
+private_key, public_key = ensure_ssh_key()
+builder = ImageBuilder()
+kernel, rootfs = builder.build_alpine_ssh_key(
+    public_key,
+    rootfs_size_mb=2048,
+)
 
-# Use the custom image
-config = VMConfig(rootfs_path=rootfs_path)
-vm = SmolVM(config)
+config = VMConfig(
+    kernel_path=kernel,
+    rootfs_path=rootfs,
+    boot_args="console=ttyS0 reboot=k panic=1 init=/init",
+)
+
+with SmolVM(config, ssh_key_path=str(private_key)) as vm:
+    vm.run("apk add python3 py3-requests py3-numpy")
 ```
 
 This eliminates the need to install packages at runtime.
 
-### 4. Shared vs Isolated Disk Mode
+### 4. Shared vs isolated disk mode
 
 Choose the appropriate disk mode for your use case:
 
@@ -138,7 +145,7 @@ Choose the appropriate disk mode for your use case:
 config = VMConfig(disk_mode="shared")  # For read-only workloads
 ```
 
-### 5. Backend Selection
+### 5. Backend selection
 
 SmolVM supports multiple backends with different performance characteristics:
 
@@ -153,47 +160,49 @@ vm = SmolVM(backend="firecracker")  # Linux only
 vm = SmolVM(backend="qemu")         # macOS/Linux
 ```
 
-## Performance Monitoring
+## Performance monitoring
 
-### Check VM Status
+### Check VM status
+
+Use the CLI to list all running VMs and their status:
+
+```bash  theme={null}
+smolvm list
+```
+
+Or check a specific VM from Python:
 
 ```python  theme={null}
 from smolvm import SmolVM
 
-manager = SmolVM()
-vms = manager.list_vms()
-
-for vm in vms:
-    print(f"VM {vm.vm_id}: {vm.status}")
-    print(f"  PID: {vm.pid}")
-    print(f"  IP: {vm.network.guest_ip if vm.network else 'N/A'}")
+vm = SmolVM.from_id("my-vm")
+info = vm.info
+print(f"VM {vm.vm_id}: {info.status}")
+print(f"  PID: {info.pid}")
+if info.network:
+    print(f"  IP: {info.network.guest_ip}")
+vm.close()
 ```
 
-### Reconcile Stale VMs
+### Clean up stale VMs
 
-Detect and clean up VMs marked as RUNNING but with dead processes:
+Remove VMs marked as running but whose processes have died:
 
-```python  theme={null}
-manager = SmolVM()
-stale_vms = manager.reconcile()
-
-if stale_vms:
-    print(f"Found {len(stale_vms)} stale VMs")
-    for vm_id in stale_vms:
-        manager.delete(vm_id)
+```bash  theme={null}
+smolvm cleanup --all
 ```
 
-## Scalability Considerations
+## Scalability considerations
 
-### IP Address Pool
+### IP address pool
 
 By default, SmolVM allocates IPs from `172.16.0.2` to `172.16.0.254`, supporting **253 concurrent VMs**.
 
-### SSH Port Pool
+### SSH port pool
 
 Host-side SSH forwarding uses ports `2200-2999`, supporting **800 concurrent VMs**.
 
-### System Limits
+### System limits
 
 Check your system's ulimit for open files and processes:
 
@@ -209,53 +218,43 @@ ulimit -u
 * hard nofile 65536
 ```
 
-## Profiling Tips
+## Profiling tips
 
-### Measure Individual Phases
+### Measure individual phases
 
 ```python  theme={null}
 import time
-from smolvm import SmolVM, VMConfig
+from smolvm import SmolVM
 
-config = VMConfig()
-
-# Create phase
+# Create + start phase
 start = time.time()
-manager = SmolVM()
-vm_info = manager.create(config)
-print(f"Create: {time.time() - start:.3f}s")
-
-# Start phase
-start = time.time()
-manager.start(vm_info.vm_id)
-print(f"Start: {time.time() - start:.3f}s")
+vm = SmolVM()
+vm.start()
+print(f"Create + Start: {time.time() - start:.3f}s")
 
 # Command execution
-from smolvm import VM
-vm = VM.from_id(vm_info.vm_id)
-
 start = time.time()
 vm.run("echo hello")
 print(f"Command: {time.time() - start:.3f}s")
 
-# Cleanup
+# Teardown
 start = time.time()
-manager.stop(vm_info.vm_id)
-manager.delete(vm_info.vm_id)
+vm.delete()
+vm.close()
 print(f"Teardown: {time.time() - start:.3f}s")
 ```
 
-### Network Latency
+### Network latency
 
 Measure network roundtrip time:
 
 ```python  theme={null}
+import time
 from smolvm import SmolVM
 
 with SmolVM() as vm:
-    vm.start()
-    
-    # Ping test from host to guest
+    start = time.time()
     result = vm.run("echo pong")
-    print(f"SSH roundtrip: {result.duration_ms:.1f}ms")
+    elapsed = (time.time() - start) * 1000
+    print(f"SSH roundtrip: {elapsed:.1f}ms")
 ```

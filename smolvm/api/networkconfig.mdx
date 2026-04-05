@@ -90,7 +90,7 @@ with SmolVM() as vm:
     print(f"VM IP: {ip}")
     
     # Access the full network config
-    info = vm.get_info()
+    info = vm.info
     if info.network:
         print(f"Gateway: {info.network.gateway_ip}")
         print(f"MAC address: {info.network.guest_mac}")

@@ -51,15 +51,17 @@ SmolVM requires the following Python packages (installed automatically via pip):
         ```
       </Step>
 
-      <Step title="Run system setup script">
-        The system setup script installs Firecracker and configures your system:
+      <Step title="Run one-time setup">
+        Run the built-in setup command to install Firecracker and configure your system:
 
         ```bash  theme={null}
-        sudo ./scripts/system-setup.sh --configure-runtime
+        smolvm setup
         ```
 
-        <Accordion title="What does this script do?">
-          The setup script performs the following operations:
+        Linux may prompt for `sudo` during setup so it can install host dependencies and configure runtime permissions.
+
+        <Accordion title="What does setup do?">
+          The setup command performs the following operations:
 
           1. **Checks KVM support**: Verifies `/dev/kvm` exists
           2. **Installs system dependencies**: `curl`, `wget`, `jq`, `nftables`, `iproute2`, `e2fsprogs`, `openssh-client`, `tar`
@@ -68,9 +70,9 @@ SmolVM requires the following Python packages (installed automatically via pip):
           5. **Configures runtime sudoers**: Sets up passwordless sudo for specific SmolVM commands (`ip`, `nft`)
         </Accordion>
 
-        <Note>
-          The `--configure-runtime` flag configures passwordless sudo for networking commands. This is optional but recommended for seamless operation.
-        </Note>
+        <Tip>
+          You can also run the setup script directly from the cloned repository: `sudo ./scripts/system-setup.sh --configure-runtime`
+        </Tip>
       </Step>
 
       <Step title="Activate KVM group membership">
@@ -116,29 +118,18 @@ SmolVM requires the following Python packages (installed automatically via pip):
         ```
       </Step>
 
-      <Step title="Run macOS setup script">
-        The macOS setup script installs QEMU via Homebrew:
+      <Step title="Run one-time setup">
+        Run the built-in setup command to install QEMU:
 
         ```bash  theme={null}
-        ./scripts/system-setup-macos.sh
+        smolvm setup
         ```
 
-        <Accordion title="What does this script do?">
-          The macOS setup script:
+        This installs QEMU via Homebrew. The QEMU backend is automatically detected on macOS.
 
-          1. **Verifies Homebrew**: Checks that `brew` is available
-          2. **Installs QEMU**: Installs `qemu-system-aarch64` and `qemu-system-x86_64` via Homebrew
-          3. **Verifies SSH**: Ensures the SSH client is available (pre-installed on macOS)
-          4. **Optional Docker**: With `--with-docker`, installs Docker Desktop
-        </Accordion>
-
-        <Note>
-          On macOS, the QEMU backend is automatically selected. You can verify this:
-
-          ```bash  theme={null}
-          smolvm doctor --backend qemu
-          ```
-        </Note>
+        <Tip>
+          You can also run the setup script directly from the cloned repository: `./scripts/system-setup-macos.sh`
+        </Tip>
       </Step>
 
       <Step title="Verify installation">
