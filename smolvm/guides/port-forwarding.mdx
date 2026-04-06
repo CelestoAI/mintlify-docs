@@ -1,13 +1,11 @@
 ---
 title: "Port forwarding"
-description: "Expose guest services to your host machine using SmolVM's port forwarding features"
+description: "Access web servers, databases, and other services running inside a sandbox from your host"
 ---
 
-## Overview
+Sometimes you need to reach a service running inside a sandbox — a web server, a database, or an API — from your host machine. SmolVM's `expose_local()` method forwards a TCP port from the sandbox to `localhost` on your host so you can connect to it directly.
 
-SmolVM provides `expose_local()` to forward TCP ports from the guest VM to localhost on your host machine. This allows you to access services running inside the VM (like web servers, databases, or APIs) from your host.
-
-## Basic Port Forwarding
+## Basic port forwarding
 
 Expose a guest port to localhost:
 
@@ -28,7 +26,7 @@ with SmolVM() as vm:
     print(response.text)
 ```
 
-## Automatic Port Allocation
+## Automatic port allocation
 
 Omit `host_port` to let SmolVM choose an available port:
 
@@ -45,7 +43,7 @@ with SmolVM() as vm:
   Automatic port allocation is useful when the desired port might already be in use, or when running multiple VMs simultaneously.
 </Tip>
 
-## Method Signature
+## Method signature
 
 ```python  theme={null}
 def expose_local(self, guest_port: int, host_port: int | None = None) -> int:
@@ -63,7 +61,7 @@ def expose_local(self, guest_port: int, host_port: int | None = None) -> int:
     """
 ```
 
-## Transport Methods
+## Transport methods
 
 SmolVM automatically selects the best transport method:
 
@@ -105,7 +103,7 @@ SmolVM automatically selects the best transport method:
   You don't need to choose the transport method manually. SmolVM tries nftables first and falls back to SSH tunnels automatically.
 </Note>
 
-## Multiple Port Forwards
+## Multiple port forwards
 
 Expose multiple services from the same VM:
 
@@ -123,7 +121,7 @@ with SmolVM() as vm:
     print(f"Service 2: http://127.0.0.1:{port2}/")
 ```
 
-## Removing Port Forwards
+## Removing port forwards
 
 Manually remove a port forward before VM shutdown:
 
@@ -141,7 +139,7 @@ with SmolVM() as vm:
     print("Port forward removed")
 ```
 
-### Method Signature
+### Method signature
 
 ```python  theme={null}
 def unexpose_local(self, host_port: int, guest_port: int) -> SmolVM:
@@ -152,7 +150,7 @@ def unexpose_local(self, host_port: int, guest_port: int) -> SmolVM:
   Port forwards are automatically cleaned up when the VM stops or the context manager exits. Manual cleanup is only needed for long-running VMs.
 </Note>
 
-## Real-world Example: OpenClaw Dashboard
+## Real-world example: OpenClaw dashboard
 
 From the OpenClaw integration example:
 
@@ -191,9 +189,9 @@ with SmolVM(config) as vm:
     input("Press Enter to stop...")
 ```
 
-## Security Considerations
+## Security considerations
 
-### Localhost-only Binding
+### Localhost-only binding
 
 <Warning>
   `expose_local()` only binds to `127.0.0.1` (localhost), NOT to `0.0.0.0`. Services are NOT exposed to your network.
@@ -207,7 +205,7 @@ host_port = vm.expose_local(guest_port=8080)
 
 If you need to expose to your network, you must set up additional forwarding outside of SmolVM.
 
-### Port Conflicts
+### Port conflicts
 
 `expose_local()` handles port conflicts gracefully:
 
@@ -220,7 +218,7 @@ if host_port != 8080:
 
 ## Troubleshooting
 
-### Port Forward Not Reachable
+### Port forward not reachable
 
 If `expose_local()` succeeds but the port is not reachable:
 
@@ -253,7 +251,7 @@ If `expose_local()` succeeds but the port is not reachable:
   </Step>
 </Steps>
 
-### Permission Errors (nftables)
+### Permission errors (nftables)
 
 If you see permission errors related to nftables:
 
@@ -268,7 +266,7 @@ SmolVM will automatically fall back to SSH tunnels. To enable nftables:
 sudo ./scripts/system-setup.sh --configure-runtime
 ```
 
-## Next Steps
+## Next steps
 
 <CardGroup cols={2}>
   <Card title="Environment Variables" icon="code" href="/smolvm/guides/environment-variables">

@@ -1,11 +1,13 @@
 ---
 title: "VM lifecycle management"
-description: "Create, start, stop, and manage SmolVM instances throughout their lifecycle"
+description: "Create, start, stop, pause, and reconnect to SmolVM sandboxes"
 ---
 
-## VM Lifecycle States
+Every SmolVM sandbox follows a simple lifecycle: you create it, start it, run your work, and tear it down. Most of the time the context manager (`with SmolVM() as vm`) handles all of this for you. This guide covers the full lifecycle for cases where you need more control.
 
-A SmolVM instance progresses through these states:
+## Lifecycle states
+
+A sandbox progresses through these states:
 
 * `CREATED` - VM configured but not started
 * `RUNNING` - VM is booted and operational
@@ -13,7 +15,7 @@ A SmolVM instance progresses through these states:
 * `STOPPED` - VM has been gracefully shut down
 * `ERROR` - VM encountered a fatal error
 
-## Creating a VM
+## Creating a sandbox
 
 <Steps>
   <Step title="Import SmolVM">
@@ -36,9 +38,9 @@ A SmolVM instance progresses through these states:
   </Step>
 </Steps>
 
-## Starting a VM
+## Starting a sandbox
 
-Start the VM to boot the guest operating system:
+Start the sandbox to boot the guest operating system:
 
 ```python  theme={null}
 from smolvm import SmolVM
@@ -49,7 +51,7 @@ print(f"VM started: {vm.status}")  # VMState.RUNNING
 print(f"IP address: {vm.get_ip()}")
 ```
 
-### Boot Process
+### Boot process
 
 When you call `start()`, SmolVM:
 
@@ -58,7 +60,7 @@ When you call `start()`, SmolVM:
 3. Waits for the VM to become responsive
 4. Injects environment variables if configured (see `env_vars` in VMConfig)
 
-### Method Signature
+### Method signature
 
 ```python  theme={null}
 def start(self, boot_timeout: float = 30.0) -> SmolVM:
@@ -73,12 +75,12 @@ def start(self, boot_timeout: float = 30.0) -> SmolVM:
 ```
 
 <Note>
-  If a VM is already running, calling `start()` is a no-op and returns immediately.
+  If a sandbox is already running, calling `start()` is a no-op and returns immediately.
 </Note>
 
-## Stopping a VM
+## Stopping a sandbox
 
-Gracefully shut down a running VM:
+Gracefully shut down a running sandbox:
 
 ```python  theme={null}
 vm.stop(timeout=3.0)
@@ -92,7 +94,7 @@ The `stop()` method:
 * Cleans up port forwarding rules
 * Closes SSH connections
 
-### Method Signature
+### Method signature
 
 ```python  theme={null}
 def stop(self, timeout: float = 3.0) -> SmolVM:
@@ -127,9 +129,9 @@ print(f"Status: {vm.status}")  # VMState.RUNNING
   If you call `start()` on a paused VM, it automatically calls `resume()` instead.
 </Note>
 
-## Deleting a VM
+## Deleting a sandbox
 
-Permanently delete a VM and release all resources:
+Permanently delete a sandbox and release all resources:
 
 ```python  theme={null}
 vm.delete()
@@ -141,9 +143,9 @@ vm.delete()
   Deletion is permanent. The VM cannot be recovered after deletion.
 </Warning>
 
-## Context Manager Pattern
+## Context manager pattern
 
-The recommended way to manage VM lifecycle is using Python's context manager:
+The recommended way to manage the lifecycle is with Python's `with` statement:
 
 ```python  theme={null}
 from smolvm import SmolVM
@@ -156,7 +158,7 @@ with SmolVM() as vm:
     # VM automatically stops and deletes on context exit
 ```
 
-### Context Manager Behavior
+### Context manager behavior
 
 <Tabs>
   <Tab title="New VMs (owns_vm=True)">
@@ -188,9 +190,9 @@ with SmolVM() as vm:
   </Tab>
 </Tabs>
 
-## Reconnecting to Existing VMs
+## Reconnecting to existing sandboxes
 
-Reconnect to a VM that was created earlier:
+Reconnect to a sandbox that was created earlier:
 
 ```python  theme={null}
 from smolvm import SmolVM
@@ -211,7 +213,7 @@ result = vm2.run("uptime")
 print(result.output)
 ```
 
-### Class Method Signature
+### Class method signature
 
 ```python  theme={null}
 @classmethod
@@ -228,7 +230,7 @@ def from_id(
     """Reconnect to an existing VM by ID."""
 ```
 
-## Manual Lifecycle Management
+## Manual lifecycle management
 
 For advanced use cases where you need explicit control:
 
@@ -258,9 +260,9 @@ finally:
     print("VM deleted")
 ```
 
-## Long-running VMs
+## Long-running sandboxes
 
-For persistent VMs that survive across Python sessions:
+For persistent sandboxes that survive across Python sessions:
 
 <Steps>
   <Step title="Create a VM with a stable ID">
@@ -313,7 +315,7 @@ For persistent VMs that survive across Python sessions:
 
 ## Waiting for SSH
 
-Explicitly wait for SSH to become available:
+You can explicitly wait for SSH to become available:
 
 ```python  theme={null}
 vm = SmolVM()
@@ -332,9 +334,9 @@ print(result.output)
   You typically don't need to call `wait_for_ssh()` explicitly. The `run()` method automatically waits for SSH on first use.
 </Note>
 
-## Refreshing VM State
+## Refreshing state
 
-VM properties like `status` and `info` are cached. Refresh them from the state store:
+Properties like `status` and `info` are cached. Refresh them from the state store:
 
 ```python  theme={null}
 vm = SmolVM.from_id("my-vm")
