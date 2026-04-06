@@ -1,19 +1,13 @@
 ---
 title: "Environment variables"
-description: "Inject and manage environment variables in SmolVM guests"
+description: "Pass configuration and secrets into SmolVM sandboxes"
 ---
 
-## Overview
+You can pass configuration values, API keys, and other settings into a sandbox using environment variables. SmolVM supports two approaches: setting variables when you create the sandbox, or adding them at runtime while the sandbox is running.
 
-SmolVM provides multiple ways to inject environment variables into guest VMs:
+Variables are written to `/etc/profile.d/smolvm_env.sh` inside the guest and automatically available in new login shells.
 
-1. **At VM creation** - via `VMConfig.env_vars` (injected during boot)
-2. **At runtime** - via `set_env_vars()` method (dynamic injection)
-3. **Manual management** - read, update, and remove variables on running VMs
-
-Variables are persisted to `/etc/profile.d/smolvm_env.sh` inside the guest and automatically sourced by new login shells.
-
-## Injecting Variables at Boot
+## Setting variables at boot
 
 Set environment variables when creating a VM:
 
@@ -44,7 +38,7 @@ with SmolVM(config) as vm:
     print(result.output)  # "production"
 ```
 
-### How It Works
+### How it works
 
 When `env_vars` is set in `VMConfig`:
 
@@ -57,9 +51,9 @@ When `env_vars` is set in `VMConfig`:
   Environment variable injection requires an SSH-capable image. Use `ImageBuilder` or auto-config mode to ensure your image supports this feature.
 </Note>
 
-## Runtime Variable Management
+## Setting variables at runtime
 
-Dynamically set, update, and remove variables on a running VM:
+You can also add, update, and remove variables while a sandbox is running:
 
 ```python  theme={null}
 from smolvm import SmolVM
@@ -85,7 +79,7 @@ with SmolVM() as vm:
     print(result.output)  # "DEBUG="
 ```
 
-## Method Reference
+## Method reference
 
 ### set\_env\_vars()
 
@@ -157,7 +151,7 @@ removed = vm.unset_env_vars(["VAR1", "VAR2"])
 print(f"Removed: {removed}")
 ```
 
-## Complete Example
+## Complete example
 
 From `examples/env_injection.py`:
 
@@ -188,9 +182,9 @@ if __name__ == "__main__":
     raise SystemExit(main())
 ```
 
-## Advanced: Injecting Host Environment
+## Passing host environment into the sandbox
 
-Pass environment variables from your host into the VM:
+You can forward environment variables from your host machine into the sandbox. This is useful for sharing API keys without hardcoding them:
 
 ```python  theme={null}
 import os
@@ -229,7 +223,7 @@ with SmolVM(config) as vm:
 
 This pattern is used in `examples/openclaw.py` to inject `OPENROUTER_API_KEY` and `OPENAI_API_KEY` from the host.
 
-## Variable Validation
+## Variable validation
 
 SmolVM validates environment variable keys:
 
@@ -249,9 +243,9 @@ validate_env_key("MY-VAR")      # ValueError: only [A-Za-z0-9_] allowed
 
 Keys must match the pattern: `[A-Za-z_][A-Za-z0-9_]*`
 
-## Persistence Details
+## Persistence details
 
-### File Location
+### File location
 
 Variables are stored in `/etc/profile.d/smolvm_env.sh` inside the guest:
 
@@ -265,11 +259,11 @@ export APP_MODE='production'
 export DATABASE_URL='postgres://localhost:5432/mydb'
 ```
 
-### Atomic Updates
+### Atomic updates
 
 All writes are atomic (write to temp file → `mv` into place) to prevent partial updates on failure.
 
-### Quoting and Escaping
+### Quoting and escaping
 
 SmolVM uses `shlex.quote()` to safely handle special characters:
 
@@ -283,9 +277,9 @@ vm.set_env_vars({
 # All values are safely quoted in the generated shell script
 ```
 
-## Use Cases
+## Use cases
 
-### 1. Configuration Management
+### Configuration management
 
 ```python  theme={null}
 config = VMConfig(
@@ -299,7 +293,7 @@ config = VMConfig(
 )
 ```
 
-### 2. Secret Injection
+### Secret injection
 
 ```python  theme={null}
 import os
@@ -314,7 +308,7 @@ with SmolVM() as vm:
     vm.run("my-application")
 ```
 
-### 3. Dynamic Configuration Updates
+### Dynamic configuration updates
 
 ```python  theme={null}
 with SmolVM() as vm:
@@ -329,7 +323,7 @@ with SmolVM() as vm:
 
 ## Troubleshooting
 
-### Variables Not Available
+### Variables not available
 
 If variables don't appear in your commands:
 
@@ -361,7 +355,7 @@ If variables don't appear in your commands:
   </Step>
 </Steps>
 
-## Next Steps
+## Next steps
 
 <CardGroup cols={2}>
   <Card title="Custom Images" icon="box" href="/smolvm/guides/custom-images">
