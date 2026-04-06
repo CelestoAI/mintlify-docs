@@ -1,0 +1,150 @@
+---
+title: "BrowserSessionConfig"
+description: "Configure browser session settings including viewport, recording, and resources"
+---
+
+## Overview
+
+`BrowserSessionConfig` controls how a browser session is created. Use it to set the viewport size, choose a backend, enable video recording, or allocate more memory and disk for browser-heavy workloads.
+
+If you create a `BrowserSession` without a config, SmolVM uses sensible defaults that work for most use cases.
+
+## Import
+
+```python
+from smolvm import BrowserSessionConfig
+```
+
+## Fields
+
+<ParamField path="backend" type="str | None" default="None">
+  Runtime backend. Options: `"firecracker"`, `"qemu"`, or `None` (auto-detect). Firecracker is used on Linux with KVM, QEMU elsewhere.
+</ParamField>
+
+<ParamField path="browser" type="str" default="chromium">
+  Browser engine to use. Currently `"chromium"` is the only supported value.
+</ParamField>
+
+<ParamField path="mode" type="str" default="headless">
+  Browser launch mode. Options: `"headless"` or `"headed"`. Headed mode enables the noVNC live-view.
+</ParamField>
+
+<ParamField path="profile" type="str | None" default="None">
+  Persistent browser profile name. When set, browser state (cookies, localStorage) persists across sessions that share the same profile name.
+</ParamField>
+
+<ParamField path="viewport" type="BrowserViewport | None" default="None">
+  Browser window dimensions. Defaults to 1280x720 if omitted.
+</ParamField>
+
+<ParamField path="enable_video_recording" type="bool" default="False">
+  Record a video of the browser session. Recordings can be retrieved with `collect_artifacts()`.
+</ParamField>
+
+<ParamField path="enable_downloads" type="bool" default="True">
+  Allow file downloads inside the browser.
+</ParamField>
+
+<ParamField path="mem_size_mib" type="int" default="1024">
+  Guest memory in MiB. Browser sessions default to 1024 MiB, which is higher than a basic sandbox.
+</ParamField>
+
+<ParamField path="disk_size_mib" type="int" default="512">
+  Root filesystem size in MiB.
+</ParamField>
+
+## BrowserViewport
+
+Controls the browser window dimensions.
+
+```python
+from smolvm import BrowserViewport
+```
+
+<ParamField path="width" type="int" default="1280">
+  Viewport width in pixels.
+</ParamField>
+
+<ParamField path="height" type="int" default="720">
+  Viewport height in pixels.
+</ParamField>
+
+## Examples
+
+### Default configuration
+
+```python
+from smolvm import BrowserSession
+
+# Uses sensible defaults: 1280x720, headless, 1024 MiB RAM
+with BrowserSession() as session:
+    browser = session.connect_playwright()
+    # ...
+```
+
+### High-resolution viewport
+
+```python
+from smolvm import BrowserSession, BrowserSessionConfig, BrowserViewport
+
+config = BrowserSessionConfig(
+    viewport=BrowserViewport(width=1920, height=1080),
+    mem_size_mib=2048,
+)
+
+with BrowserSession(config=config) as session:
+    browser = session.connect_playwright()
+    page = browser.new_page()
+    page.goto("https://example.com")
+```
+
+### Video recording
+
+```python
+from smolvm import BrowserSession, BrowserSessionConfig
+
+config = BrowserSessionConfig(
+    enable_video_recording=True,
+    mode="headed",
+)
+
+with BrowserSession(config=config) as session:
+    browser = session.connect_playwright()
+    page = browser.new_page()
+    page.goto("https://example.com")
+    page.click("text=More information")
+    browser.close()
+
+    # Retrieve the recording
+    artifacts = session.collect_artifacts()
+    print(f"Artifacts saved to {artifacts}")
+```
+
+### Persistent browser profile
+
+```python
+from smolvm import BrowserSession, BrowserSessionConfig
+
+config = BrowserSessionConfig(profile="my-profile")
+
+# First session: log in to a website
+with BrowserSession(config=config) as session:
+    browser = session.connect_playwright()
+    page = browser.new_page()
+    page.goto("https://example.com/login")
+    # ... log in
+    browser.close()
+
+# Second session with same profile: still logged in
+with BrowserSession(config=config) as session:
+    browser = session.connect_playwright()
+    page = browser.new_page()
+    page.goto("https://example.com/dashboard")
+    # Cookies and localStorage persist from the previous session
+    browser.close()
+```
+
+## Related
+
+* [BrowserSession](/smolvm/api/browsersession) - Launch and control browser sessions
+* [BrowserSessionInfo](/smolvm/api/browsersessioninfo) - Runtime information for a browser session

@@ -178,7 +178,11 @@
             "icon": "book",
             "pages": [
               "smolvm/api/smolvm",
+              "smolvm/api/browsersession",
+              "smolvm/api/browsersessionconfig",
+              "smolvm/api/browsersessioninfo",
               "smolvm/api/vmconfig",
+              "smolvm/api/internetsettings",
               "smolvm/api/commandresult",
               "smolvm/api/vminfo",
               "smolvm/api/imagebuilder",

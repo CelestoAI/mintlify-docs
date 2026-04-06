@@ -1,0 +1,68 @@
+---
+title: "InternetSettings"
+description: "Control which domains a sandbox can access"
+---
+
+## Overview
+
+`InternetSettings` lets you restrict outbound network access from a sandbox to a specific list of domains. This is useful when you want to give an agent internet access but limit it to trusted services only.
+
+When you set `InternetSettings` on a `VMConfig`, the sandbox can only connect to the domains you allow. All other outbound connections are blocked.
+
+## Import
+
+```python
+from smolvm import InternetSettings
+```
+
+## Fields
+
+<ParamField path="allowed_domains" type="list[str]" required>
+  List of domain names the sandbox is allowed to connect to. SmolVM automatically normalizes entries by stripping protocols and trailing slashes, so `"https://api.example.com/"` and `"api.example.com"` are treated the same.
+</ParamField>
+
+## Examples
+
+### Allow specific domains
+
+```python
+from smolvm import SmolVM, VMConfig, InternetSettings
+
+config = VMConfig(
+    internet=InternetSettings(
+        allowed_domains=["api.openai.com", "api.anthropic.com"]
+    )
+)
+
+with SmolVM(config=config) as vm:
+    # This works:
+    vm.run("curl -s https://api.openai.com/v1/models")
+
+    # This is blocked:
+    vm.run("curl -s https://malicious-site.example.com")
+```
+
+### Agent with restricted internet
+
+```python
+from smolvm import SmolVM, InternetSettings, VMConfig
+
+config = VMConfig(
+    internet=InternetSettings(
+        allowed_domains=[
+            "api.github.com",
+            "pypi.org",
+            "files.pythonhosted.org",
+        ]
+    )
+)
+
+with SmolVM(config=config) as vm:
+    vm.run("pip install requests")  # allowed (pypi.org)
+```
+
+## Related
+
+* [VMConfig](/smolvm/api/vmconfig) - Full VM configuration reference
+* [Networking](/smolvm/concepts/networking) - How SmolVM networking works
+* [Security](/smolvm/concepts/security) - Isolation and security model
