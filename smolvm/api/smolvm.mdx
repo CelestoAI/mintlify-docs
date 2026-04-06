@@ -201,6 +201,38 @@ def delete(self) -> None
 
 Delete the VM and release all resources.
 
+### pause
+
+```python  theme={null}
+def pause(self) -> SmolVM
+```
+
+Pause a running VM. The VM's memory and CPU state are frozen in place. Use `resume()` to continue execution.
+
+<ResponseField name="return" type="SmolVM">
+  Returns `self` for method chaining.
+</ResponseField>
+
+#### Raises
+
+* `SmolVMError`: If the VM is not in a pausable state (must be running).
+
+### resume
+
+```python  theme={null}
+def resume(self) -> SmolVM
+```
+
+Resume a paused VM. Execution continues from the exact point where it was paused.
+
+<ResponseField name="return" type="SmolVM">
+  Returns `self` for method chaining.
+</ResponseField>
+
+#### Raises
+
+* `SmolVMError`: If the VM is not paused.
+
 ### snapshot
 
 ```python  theme={null}
@@ -454,7 +486,7 @@ Current VM runtime information (cached). Call `refresh()` to update from the sta
 def status(self) -> VMState
 ```
 
-Current VM lifecycle state (cached). Values: `CREATED`, `RUNNING`, `STOPPED`, `ERROR`.
+Current VM lifecycle state (cached). Values: `CREATED`, `RUNNING`, `PAUSED`, `STOPPED`, `ERROR`.
 
 ### data\_dir
 
@@ -515,7 +547,114 @@ def close(self) -> None
 
 Release underlying SDK resources for this facade instance.
 
-## Context Manager
+## Async methods
+
+SmolVM provides async versions of lifecycle and command methods for use in async applications.
+
+### async\_start
+
+```python  theme={null}
+async def async_start(self, boot_timeout: float = 30.0) -> SmolVM
+```
+
+Async version of `start()`. Starts the VM without blocking the event loop.
+
+### async\_stop
+
+```python  theme={null}
+async def async_stop(self, timeout: float = 3.0) -> SmolVM
+```
+
+Async version of `stop()`.
+
+### async\_run
+
+```python  theme={null}
+async def async_run(
+    self,
+    command: str,
+    timeout: int = 30,
+    shell: Literal["login", "raw"] = "login",
+) -> CommandResult
+```
+
+Async version of `run()`. Executes a command on the guest without blocking.
+
+### async\_wait\_for\_ssh
+
+```python  theme={null}
+async def async_wait_for_ssh(self, timeout: float = 60.0) -> SmolVM
+```
+
+Async version of `wait_for_ssh()`.
+
+### async\_create\_many
+
+```python  theme={null}
+@classmethod
+async def async_create_many(
+    cls,
+    count: int,
+    *,
+    mem_size_mib: int | None = None,
+    disk_size_mib: int | None = None,
+    backend: str | None = None,
+) -> list[SmolVM]
+```
+
+Create multiple sandboxes concurrently. Each sandbox is auto-configured and started.
+
+<ParamField path="count" type="int" required>
+  Number of sandboxes to create.
+</ParamField>
+
+<ParamField path="mem_size_mib" type="int | None" default="None">
+  Memory for each sandbox in MiB.
+</ParamField>
+
+<ParamField path="disk_size_mib" type="int | None" default="None">
+  Disk size for each sandbox in MiB.
+</ParamField>
+
+<ResponseField name="return" type="list[SmolVM]">
+  List of started SmolVM instances.
+</ResponseField>
+
+**Example:**
+
+```python
+import asyncio
+from smolvm import SmolVM
+
+async def main():
+    vms = await SmolVM.async_create_many(3)
+    for vm in vms:
+        result = await vm.async_run("hostname")
+        print(result.stdout.strip())
+    for vm in vms:
+        await vm.async_stop()
+        vm.delete()
+
+asyncio.run(main())
+```
+
+## Async context manager
+
+SmolVM also works as an async context manager:
+
+```python
+import asyncio
+from smolvm import SmolVM
+
+async def main():
+    async with SmolVM() as vm:
+        result = await vm.async_run("echo 'Hello from async'")
+        print(result.stdout.strip())
+
+asyncio.run(main())
+```
+
+## Context manager
 
 SmolVM implements the context manager protocol for automatic lifecycle management:
 
@@ -620,6 +759,30 @@ with SmolVM() as vm:
     
     # Clean up port forward
     vm.unexpose_local(host_port=host_port, guest_port=8000)
+```
+
+### Pause and Resume
+
+```python  theme={null}
+from smolvm import SmolVM
+
+vm = SmolVM()
+vm.start()
+
+# Run some setup
+vm.run("echo 'setup complete'")
+
+# Pause the VM to save resources
+vm.pause()
+
+# Resume when you need it again
+vm.resume()
+result = vm.run("echo 'back online'")
+print(result.stdout.strip())
+
+vm.stop()
+vm.delete()
+vm.close()
 ```
 
 ### Environment Variables

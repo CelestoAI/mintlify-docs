@@ -1,0 +1,304 @@
+---
+title: "BrowserSession"
+description: "Launch and control an isolated browser inside a sandbox"
+---
+
+## Overview
+
+`BrowserSession` gives you a real Chromium browser running inside a SmolVM sandbox. You can automate it with Playwright, take screenshots, transfer files, or watch the session live through noVNC — all without installing a browser on your host.
+
+Use browser sessions when your agent or script needs to interact with websites, fill out forms, capture screenshots, or perform computer-use tasks.
+
+## Import
+
+```python
+from smolvm import BrowserSession
+```
+
+## Constructor
+
+```python  theme={null}
+BrowserSession(
+    config: BrowserSessionConfig | None = None,
+    *,
+    session_id: str | None = None,
+)
+```
+
+<ParamField path="config" type="BrowserSessionConfig | None" default="None">
+  Configuration for a new browser session. Mutually exclusive with `session_id`. If omitted (and `session_id` is omitted), SmolVM creates a session with sensible defaults.
+</ParamField>
+
+<ParamField path="session_id" type="str | None" default="None">
+  ID of an existing session to reconnect to. Mutually exclusive with `config`.
+</ParamField>
+
+### Raises
+
+* `ValueError`: If both `config` and `session_id` are provided.
+
+## Class methods
+
+### from\_id
+
+Reconnect to an existing browser session by its ID.
+
+```python  theme={null}
+@classmethod
+BrowserSession.from_id(session_id: str) -> BrowserSession
+```
+
+<ParamField path="session_id" type="str" required>
+  The session identifier returned when the session was first created.
+</ParamField>
+
+<ResponseField name="return" type="BrowserSession">
+  A BrowserSession instance connected to the existing session.
+</ResponseField>
+
+## Lifecycle methods
+
+### start
+
+Boot the sandbox, launch the browser, and expose the Chrome DevTools Protocol (CDP) endpoint on localhost.
+
+```python  theme={null}
+def start(self) -> BrowserSession
+```
+
+<ResponseField name="return" type="BrowserSession">
+  Returns `self` for method chaining.
+</ResponseField>
+
+After `start()` completes you can access the CDP URL from the session's `info` property and connect Playwright or any other CDP client.
+
+### stop
+
+Stop the browser and shut down the underlying sandbox. The session can be restarted later.
+
+```python  theme={null}
+def stop(self) -> BrowserSession
+```
+
+<ResponseField name="return" type="BrowserSession">
+  Returns `self` for method chaining.
+</ResponseField>
+
+### delete
+
+Permanently remove the session and its sandbox.
+
+```python  theme={null}
+def delete(self) -> None
+```
+
+## Browser automation
+
+### connect\_playwright
+
+Connect a Playwright `Browser` instance to the running browser session over CDP.
+
+```python  theme={null}
+def connect_playwright(self) -> Browser
+```
+
+<ResponseField name="return" type="Browser">
+  A Playwright `Browser` object you can use to create pages, navigate, click, and extract content.
+</ResponseField>
+
+<Note>
+  You need `playwright` installed locally. Install it with `pip install playwright`.
+</Note>
+
+**Example:**
+
+```python
+from smolvm import BrowserSession
+
+with BrowserSession() as session:
+    browser = session.connect_playwright()
+    page = browser.new_page()
+    page.goto("https://example.com")
+    print(page.title())
+    browser.close()
+```
+
+### screenshot
+
+Capture a screenshot of the current browser viewport and save it to a local file.
+
+```python  theme={null}
+def screenshot(self, destination: str | Path) -> Path
+```
+
+<ParamField path="destination" type="str | Path" required>
+  Local file path where the screenshot will be saved (PNG format).
+</ParamField>
+
+<ResponseField name="return" type="Path">
+  The path to the saved screenshot.
+</ResponseField>
+
+### open\_live\_view
+
+Open the noVNC live-view URL in your default web browser. This lets you watch the browser session in real time.
+
+```python  theme={null}
+def open_live_view(self) -> None
+```
+
+<Tip>
+  Live view is useful for debugging agent workflows. You can watch what the agent sees and does inside the browser.
+</Tip>
+
+## File transfer
+
+### push\_file
+
+Copy a local file into the browser session's sandbox.
+
+```python  theme={null}
+def push_file(self, local_path: str | Path, remote_path: str) -> None
+```
+
+<ParamField path="local_path" type="str | Path" required>
+  Path to the file on your host machine.
+</ParamField>
+
+<ParamField path="remote_path" type="str" required>
+  Destination path inside the sandbox.
+</ParamField>
+
+### pull\_file
+
+Copy a file from the sandbox to your host machine.
+
+```python  theme={null}
+def pull_file(self, remote_path: str, local_path: str | Path) -> None
+```
+
+<ParamField path="remote_path" type="str" required>
+  Path to the file inside the sandbox.
+</ParamField>
+
+<ParamField path="local_path" type="str | Path" required>
+  Destination path on your host machine.
+</ParamField>
+
+## Diagnostics
+
+### collect\_artifacts
+
+Package guest logs, downloads, and recordings into a tar archive.
+
+```python  theme={null}
+def collect_artifacts(self) -> Path
+```
+
+<ResponseField name="return" type="Path">
+  Path to the tar archive on your host.
+</ResponseField>
+
+### logs
+
+Retrieve combined host and guest logs for the session.
+
+```python  theme={null}
+def logs(self, tail: int | None = None) -> str
+```
+
+<ParamField path="tail" type="int | None" default="None">
+  Return only the last N lines. If omitted, returns all available logs.
+</ParamField>
+
+<ResponseField name="return" type="str">
+  Combined log output.
+</ResponseField>
+
+## Context manager
+
+BrowserSession supports the `with` statement for automatic lifecycle management:
+
+```python  theme={null}
+with BrowserSession() as session:
+    browser = session.connect_playwright()
+    page = browser.new_page()
+    page.goto("https://example.com")
+    # session automatically stops and deletes on exit
+```
+
+On entry (`__enter__`): starts the session if it was newly created.
+
+On exit (`__exit__`): stops and deletes the session, releasing all resources.
+
+## Usage examples
+
+### Basic browser session
+
+```python
+from smolvm import BrowserSession
+
+with BrowserSession() as session:
+    browser = session.connect_playwright()
+    page = browser.new_page()
+    page.goto("https://news.ycombinator.com")
+    titles = page.query_selector_all(".titleline > a")
+    for t in titles[:5]:
+        print(t.text_content())
+    browser.close()
+```
+
+### Take a screenshot
+
+```python
+from smolvm import BrowserSession
+
+with BrowserSession() as session:
+    browser = session.connect_playwright()
+    page = browser.new_page()
+    page.goto("https://example.com")
+    session.screenshot("example.png")
+    browser.close()
+```
+
+### Custom browser configuration
+
+```python
+from smolvm import BrowserSession, BrowserSessionConfig, BrowserViewport
+
+config = BrowserSessionConfig(
+    viewport=BrowserViewport(width=1920, height=1080),
+    mem_size_mib=2048,
+    enable_video_recording=True,
+)
+
+with BrowserSession(config=config) as session:
+    browser = session.connect_playwright()
+    page = browser.new_page()
+    page.goto("https://example.com")
+    browser.close()
+```
+
+### Reconnect to an existing session
+
+```python
+from smolvm import BrowserSession
+
+# First, create and keep a session running
+session = BrowserSession()
+session.start()
+session_id = session.info.session_id
+
+# Later, reconnect from another script
+restored = BrowserSession.from_id(session_id)
+browser = restored.connect_playwright()
+# ...
+restored.stop()
+restored.delete()
+```
+
+## Related
+
+* [BrowserSessionConfig](/smolvm/api/browsersessionconfig) - Configure browser session options
+* [SmolVM](/smolvm/api/smolvm) - General sandbox management
+* [AI agent integration](/smolvm/guides/ai-agent-integration) - Use browser sessions with agent frameworks
