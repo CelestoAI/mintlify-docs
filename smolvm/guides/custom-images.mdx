@@ -1,15 +1,13 @@
 ---
 title: "Custom images"
-description: "Build custom rootfs and kernel images for SmolVM"
+description: "Build custom VM images with your own tools and dependencies pre-installed"
 ---
 
-## Overview
+By default, SmolVM boots a minimal Alpine Linux image with SSH. If you need specific packages, libraries, or a different base OS, you can build a custom image using the `ImageBuilder` class. Custom images are built with Docker and cached locally so you only build once.
 
-SmolVM's `ImageBuilder` class provides tools to build custom VM images with SSH pre-configured. Images are built using Docker and cached for reuse.
+## Quick start
 
-## Quick Start
-
-```python  theme={null}
+```python
 from smolvm import SmolVM, VMConfig
 from smolvm.build import ImageBuilder, SSH_BOOT_ARGS
 
@@ -30,41 +28,19 @@ with SmolVM(config) as vm:
     print(result.output)
 ```
 
-## ImageBuilder Class
-
-### Initialization
-
-```python  theme={null}
-from smolvm.build import ImageBuilder
-from pathlib import Path
-
-# Use default cache directory (~/.smolvm/images/)
-builder = ImageBuilder()
-
-# Use custom cache directory
-builder = ImageBuilder(cache_dir=Path("/custom/cache/path"))
-```
-
-### Check Docker Availability
-
-```python  theme={null}
-if builder.check_docker():
-    print("Docker is available")
-else:
-    print("Docker is required but not found")
-```
-
 <Note>
-  ImageBuilder requires Docker to be installed and running. On macOS, use Docker Desktop. On Linux, install `docker.io`.
+  `ImageBuilder` requires Docker to be installed and running. On macOS, use Docker Desktop. On Linux, install `docker.io`.
 </Note>
 
-## Build Methods
+## Build methods
 
-### 1. Alpine Linux with SSH Password
+SmolVM provides three image build methods. Each creates a Linux filesystem with SSH pre-configured and returns a `(kernel_path, rootfs_path)` tuple.
 
-Build a minimal Alpine Linux image with password authentication:
+### Alpine with SSH password
 
-```python  theme={null}
+The simplest option — builds a minimal Alpine Linux image with root password authentication:
+
+```python
 kernel, rootfs = builder.build_alpine_ssh(
     name="my-alpine",           # Cache name (default: "alpine-ssh")
     ssh_password="mypassword",  # Root password (default: "smolvm")
@@ -72,42 +48,16 @@ kernel, rootfs = builder.build_alpine_ssh(
 )
 ```
 
-**Features:**
+### Alpine with SSH key (recommended)
 
-* Alpine Linux 3.19 base
-* OpenSSH server pre-configured
-* Root password authentication enabled
-* Custom `/init` script for network setup
-* DNS resolution configured (8.8.8.8, 8.8.4.4)
+More secure — uses public key authentication instead of a password:
 
-**Method Signature:**
-
-```python  theme={null}
-def build_alpine_ssh(
-    self,
-    name: str = "alpine-ssh",
-    ssh_password: str = "smolvm",
-    rootfs_size_mb: int = 512,
-    kernel_url: str | None = None,
-) -> tuple[Path, Path]:
-    """Build Alpine Linux image with SSH server.
-
-    Returns:
-        Tuple of (kernel_path, rootfs_path).
-    """
-```
-
-### 2. Alpine Linux with SSH Key (Recommended)
-
-Build Alpine with public key authentication (more secure):
-
-```python  theme={null}
+```python
 from smolvm.utils import ensure_ssh_key
 
 # Generate or load SSH keys
 private_key, public_key = ensure_ssh_key()
 
-# Build image with key-only auth
 kernel, rootfs = builder.build_alpine_ssh_key(
     ssh_public_key=public_key,
     name="alpine-key",
@@ -128,34 +78,11 @@ with SmolVM(config, ssh_key_path=str(private_key)) as vm:
     print(result.output)  # "root"
 ```
 
-**Method Signature:**
+### Debian with SSH key
 
-```python  theme={null}
-def build_alpine_ssh_key(
-    self,
-    ssh_public_key: str | Path,
-    name: str = "alpine-ssh-key",
-    rootfs_size_mb: int = 512,
-    kernel_url: str | None = None,
-) -> tuple[Path, Path]:
-    """Build Alpine Linux image with key-only SSH access.
+For workloads that need `apt`, glibc, or broader package compatibility. Debian images are larger but more compatible:
 
-    Args:
-        ssh_public_key: Public key content or path to a public key file.
-        name: Image name for caching.
-        rootfs_size_mb: Size of rootfs in MB.
-        kernel_url: Optional kernel URL override.
-
-    Returns:
-        Tuple of (kernel_path, rootfs_path).
-    """
-```
-
-### 3. Debian Linux with SSH Key
-
-Build a Debian-based image (larger but more compatible):
-
-```python  theme={null}
+```python
 from smolvm.utils import ensure_ssh_key
 
 private_key, public_key = ensure_ssh_key()
@@ -181,25 +108,11 @@ with SmolVM(config, ssh_key_path=str(private_key)) as vm:
     print(result.output)
 ```
 
-**Method Signature:**
+## Boot arguments
 
-```python  theme={null}
-def build_debian_ssh_key(
-    self,
-    ssh_public_key: str | Path,
-    name: str = "debian-ssh-key",
-    rootfs_size_mb: int = 2048,
-    base_image: str = "debian:bookworm-slim",
-    kernel_url: str | None = None,
-) -> tuple[Path, Path]:
-    """Build Debian Linux image with key-only SSH access."""
-```
+Use the `SSH_BOOT_ARGS` constant for any SSH-capable image:
 
-## Boot Arguments
-
-Use the `SSH_BOOT_ARGS` constant for SSH-capable images:
-
-```python  theme={null}
+```python
 from smolvm.build import SSH_BOOT_ARGS
 
 print(SSH_BOOT_ARGS)
@@ -207,106 +120,89 @@ print(SSH_BOOT_ARGS)
 ```
 
 <Warning>
-  The `init=/init` parameter is **required** for SmolVM's SSH functionality. Without it, the custom init script won't run and SSH won't start.
+  The `init=/init` parameter is required for SmolVM's SSH functionality. Without it, the custom init script will not run and SSH will not start.
 </Warning>
 
-## Caching Behavior
+## Image caching
 
-ImageBuilder caches built images to avoid rebuilding:
+`ImageBuilder` caches built images to avoid rebuilding. The first build downloads base images and runs Docker. Subsequent calls with the same name return cached paths instantly:
 
-```python  theme={null}
+```python
 builder = ImageBuilder()
 
-# First build downloads and builds everything
+# First build — downloads and builds everything
 kernel1, rootfs1 = builder.build_alpine_ssh(name="my-image")
-# Building Alpine SSH image 'my-image'...
 
-# Second call with same name returns cached paths instantly
+# Second call — returns cached paths immediately
 kernel2, rootfs2 = builder.build_alpine_ssh(name="my-image")
-# Image 'my-image' already exists at /home/user/.smolvm/images/my-image
-
-assert kernel1 == kernel2
-assert rootfs1 == rootfs2
 ```
 
-### Cache Invalidation
+For key-based images, the cache is automatically invalidated if the SSH key is newer than the cached image.
 
-For key-based images, the cache is invalidated if the SSH key is newer than the cached image:
+### Custom cache directory
 
-```python  theme={null}
-# First build
-kernel, rootfs = builder.build_alpine_ssh_key(
-    ssh_public_key=Path("/path/to/key.pub"),
-    name="key-image",
-)
-
-# If you update the key file, next build will detect staleness
-# and rebuild automatically
-```
-
-## Custom Cache Directory
-
-```python  theme={null}
+```python
 from pathlib import Path
 
-custom_cache = Path("/mnt/fast-ssd/vm-images")
-builder = ImageBuilder(cache_dir=custom_cache)
+builder = ImageBuilder(cache_dir=Path("/mnt/fast-ssd/vm-images"))
 
 kernel, rootfs = builder.build_alpine_ssh()
 print(kernel)  # /mnt/fast-ssd/vm-images/alpine-ssh/vmlinux.bin
 print(rootfs)  # /mnt/fast-ssd/vm-images/alpine-ssh/rootfs.ext4
 ```
 
-## Advanced: Kernel URLs
+## Custom kernel URLs
 
-Override the default kernel URL:
+Override the default kernel URL if you need a specific kernel version:
 
-```python  theme={null}
-# Use a custom kernel
+```python
 kernel, rootfs = builder.build_alpine_ssh(
     kernel_url="https://example.com/my-custom-kernel"
 )
 ```
 
-**Default Kernel URLs:**
+SmolVM ships default kernel URLs for both Firecracker and QEMU backends, targeting x86_64 and aarch64 architectures. You can inspect them:
 
-```python  theme={null}
+```python
 from smolvm.build import FIRECRACKER_KERNEL_URLS, QEMU_KERNEL_URLS
-
 print(FIRECRACKER_KERNEL_URLS)
-# {
-#     "x86_64": "https://s3.amazonaws.com/.../vmlinux-5.10.198",
-#     "aarch64": "https://s3.amazonaws.com/.../vmlinux-5.10.198",
-# }
-
 print(QEMU_KERNEL_URLS)
-# {
-#     "x86_64": "https://cloud-images.ubuntu.com/.../vmlinuz-generic",
-#     "aarch64": "https://cloud-images.ubuntu.com/.../vmlinuz-generic",
-# }
 ```
 
-## Real-world Example: OpenClaw Installation
+## How the init script works
 
-From `examples/openclaw.py` - building a 4GB Debian image for OpenClaw:
+All SSH-capable images include a custom `/init` script that runs as PID 1 inside the sandbox. This script:
 
-```python  theme={null}
+* Mounts essential filesystems (`/proc`, `/sys`, `/dev`, `/tmp`)
+* Configures networking from kernel boot arguments
+* Sets up DNS resolution (8.8.8.8)
+* Generates SSH host keys if missing
+* Starts the SSH daemon
+* Stays alive as PID 1 to keep the sandbox running
+
+You do not need to modify this script for most use cases. It is included automatically when you use any `ImageBuilder` method.
+
+## Real-world example: OpenClaw
+
+This example from `examples/openclaw.py` builds a 4 GB Debian image for the OpenClaw application:
+
+```python
+import os
 from smolvm import SmolVM, VMConfig
 from smolvm.build import ImageBuilder, SSH_BOOT_ARGS
 from smolvm.utils import ensure_ssh_key
 
 private_key, public_key = ensure_ssh_key()
 
-# Build large Debian image for OpenClaw
 kernel, rootfs = ImageBuilder().build_debian_ssh_key(
     ssh_public_key=public_key,
     name="debian-ssh-key-openclaw-4g",
-    rootfs_size_mb=4096,  # 4GB for Node.js + npm packages
+    rootfs_size_mb=4096,
 )
 
 config = VMConfig(
     vcpu_count=1,
-    mem_size_mib=2048,  # OpenClaw npm install is memory-intensive
+    mem_size_mib=2048,
     kernel_path=kernel,
     rootfs_path=rootfs,
     boot_args=SSH_BOOT_ARGS,
@@ -316,194 +212,78 @@ config = VMConfig(
 )
 
 with SmolVM(config, ssh_key_path=str(private_key)) as vm:
-    # Install Node.js, npm, and OpenClaw
     vm.run("apt-get update && apt-get install -y nodejs npm")
     vm.run("npm install -g openclaw")
 ```
 
-## The Init Script
-
-All SSH-capable images include a custom `/init` script that runs as PID 1:
-
-```bash  theme={null}
-#!/bin/sh
-# SmolVM custom init - runs as PID 1 inside Firecracker VM
-
-# Mount essential filesystems
-mount -t proc proc /proc
-mount -t sysfs sys /sys
-mount -t devtmpfs dev /dev
-mount -t devpts devpts /dev/pts
-mount -t tmpfs tmpfs /run
-mount -t tmpfs tmpfs /tmp
-
-# Remount root read-write
-mount -o remount,rw /
-
-# Configure networking from kernel command line
-IP_CONFIG=$(cat /proc/cmdline | tr ' ' '\n' | grep '^ip=' | head -1)
-GUEST_IP=$(echo "$IP_CONFIG" | cut -d= -f2 | cut -d: -f1)
-GATEWAY=$(echo "$IP_CONFIG" | cut -d= -f2 | cut -d: -f3)
-
-ip link set lo up
-ip link set eth0 up
-ip addr add "${GUEST_IP}/24" dev eth0
-ip route add default via "${GATEWAY}" dev eth0
-
-# Configure DNS
-echo "nameserver 8.8.8.8" > /etc/resolv.conf
-
-# Generate SSH host keys if missing
-if ! ls /etc/ssh/ssh_host_*_key >/dev/null 2>&1; then
-    ssh-keygen -A
-fi
-
-# Start SSH server
-/usr/sbin/sshd -e
-
-echo "SmolVM init complete: IP=${GUEST_IP}, SSH listening on port 22"
-
-# Keep PID 1 alive
-while true; do
-    sleep 3600 &
-    wait $!
-done
-```
-
-This init script:
-
-* Mounts essential filesystems
-* Configures networking from kernel boot args
-* Sets up DNS resolution
-* Generates SSH host keys
-* Starts the SSH daemon
-* Stays alive as PID 1
-
 ## Troubleshooting
 
-When an image build fails, SmolVM automatically diagnoses the root cause and returns a specific error message. You don't need to debug Docker issues manually — the `ImageError` you receive tells you exactly what went wrong and how to fix it.
+When an image build fails, SmolVM diagnoses the root cause and returns a specific error message. You do not need to debug Docker issues manually.
 
-### Docker not installed
+<AccordionGroup>
+  <Accordion title="Docker not installed">
+    SmolVM raises an `ImageError` with install instructions:
 
-If Docker is not found on your system, you get a clear install prompt:
+    * **macOS**: Install [Docker Desktop](https://www.docker.com/products/docker-desktop)
+    * **Linux**: `sudo apt-get install docker.io` (Debian/Ubuntu)
 
-```python  theme={null}
-from smolvm.build import ImageBuilder
-from smolvm.exceptions import ImageError
+    You can check Docker availability before building:
 
-try:
+    ```python
     builder = ImageBuilder()
-    builder.build_alpine_ssh()
-except ImageError as e:
-    print(e)
-    # "Docker is required to build images. Install Docker Desktop (macOS) or docker.io (Linux)."
-```
-
-**Solution:**
-
-* macOS: Install [Docker Desktop](https://www.docker.com/products/docker-desktop)
-* Linux: `sudo apt-get install docker.io` (Debian/Ubuntu)
-
-### Docker daemon not running
-
-If Docker is installed but the daemon is not reachable, SmolVM detects this and tells you to start it:
-
-```
-Docker is installed, but SmolVM could not reach the Docker daemon.
-Start Docker Desktop or the Docker service and try again.
-```
-
-**Solution:**
-
-<Tabs>
-  <Tab title="macOS">
-    Open Docker Desktop from your Applications folder, or run:
-
-    ```bash  theme={null}
-    open -a Docker
+    if not builder.check_docker():
+        print(builder.docker_requirement_error())
     ```
-  </Tab>
-  <Tab title="Linux">
-    ```bash  theme={null}
-    sudo systemctl start docker
+  </Accordion>
+
+  <Accordion title="Docker daemon not running">
+    Start the Docker service:
+
+    <Tabs>
+      <Tab title="macOS">
+        ```bash
+        open -a Docker
+        ```
+      </Tab>
+      <Tab title="Linux">
+        ```bash
+        sudo systemctl start docker
+        ```
+      </Tab>
+    </Tabs>
+  </Accordion>
+
+  <Accordion title="Permission denied on Docker socket">
+    Add your user to the `docker` group:
+
+    ```bash
+    sudo usermod -aG docker $USER
+    newgrp docker  # or log out and back in
     ```
-  </Tab>
-</Tabs>
+  </Accordion>
 
-### Permission denied on Docker socket
+  <Accordion title="Build fails with disk space errors">
+    Image builds require sufficient disk space. Check available space and clean the Docker cache if needed:
 
-If your user cannot access the Docker daemon socket, you get a targeted permission error:
-
-```
-Docker is installed, but this user cannot access the Docker daemon socket.
-Make sure Docker Desktop is running or grant access to /var/run/docker.sock.
-```
-
-**Solution:**
-
-```bash  theme={null}
-# Add your user to the docker group
-sudo usermod -aG docker $USER
-
-# Log out and back in, or run:
-newgrp docker
-```
-
-### Checking Docker availability in code
-
-You can check Docker availability before attempting a build:
-
-```python  theme={null}
-from smolvm.build import ImageBuilder
-
-builder = ImageBuilder()
-
-if builder.check_docker():
-    kernel, rootfs = builder.build_alpine_ssh()
-else:
-    # Get a detailed diagnostic error
-    error = builder.docker_requirement_error()
-    print(error)  # Specific message based on what's wrong
-```
-
-### General build failures
-
-If the Docker build itself fails (after Docker is confirmed available):
-
-<Steps>
-  <Step title="Check disk space">
-    Image builds require sufficient disk space:
-
-    ```bash  theme={null}
+    ```bash
     df -h ~/.smolvm/images/
-    ```
-  </Step>
-
-  <Step title="Clean Docker cache">
-    ```bash  theme={null}
     docker system prune -a
     ```
-  </Step>
+  </Accordion>
+</AccordionGroup>
 
-  <Step title="Check Docker logs">
-    ```bash  theme={null}
-    docker info
-    ```
-  </Step>
-</Steps>
-
-## Next Steps
+## Next steps
 
 <CardGroup cols={2}>
-  <Card title="Environment Variables" icon="code" href="/smolvm/guides/environment-variables">
+  <Card title="Environment variables" icon="code" href="/smolvm/guides/environment-variables">
     Inject configuration into custom images
   </Card>
 
-  <Card title="AI Agent Integration" icon="robot" href="/smolvm/guides/ai-agent-integration">
+  <Card title="AI agent integration" icon="robot" href="/smolvm/guides/ai-agent-integration">
     Build specialized images for AI agent sandboxes
   </Card>
 
-  <Card title="VM Lifecycle" icon="circle-play" href="/smolvm/guides/vm-lifecycle">
-    Manage VMs built with custom images
+  <Card title="VM lifecycle" icon="circle-play" href="/smolvm/guides/vm-lifecycle">
+    Manage sandboxes built with custom images
   </Card>
 </CardGroup>

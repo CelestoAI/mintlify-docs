@@ -7,23 +7,23 @@ description: "Run code, start a browser, and give AI agents an isolated workspac
 
 # SmolVM
 
-**Run code, start a browser, and give AI agents an isolated workspace.**
+SmolVM gives your app or AI agent a private sandbox to run code safely. You can execute shell commands, start a real browser, or let a language model drive a full desktop — all inside an isolated environment that never touches your host machine.
 
-SmolVM is a Python SDK and CLI that lets you spin up a disposable sandbox in under a second. Use it whenever your app or AI agent needs a safe place to run shell commands, open a browser, or execute untrusted code — without touching your host machine.
+SmolVM is available as a Python SDK and a CLI. Sandboxes spin up in under a second and clean themselves up when you are done.
 
 ## What you can do
 
 <CardGroup cols={3}>
   <Card title="Run code safely" icon="code">
-    Execute untrusted code in a clean sandbox instead of on your host machine
+    Execute shell commands or scripts in a clean sandbox instead of on your host machine
   </Card>
 
   <Card title="Start a browser" icon="globe">
-    Launch a real browser session you can automate or watch live
+    Launch a real Chromium session you can automate with Playwright or watch live through noVNC
   </Card>
 
   <Card title="Power your agents" icon="robot">
-    Plug SmolVM into agent frameworks for shell, browser, and computer-use workflows
+    Plug SmolVM into any agent framework — Agentor, PydanticAI, OpenAI Agents, LangChain, and more
   </Card>
 </CardGroup>
 
@@ -37,33 +37,30 @@ with SmolVM() as vm:
     print(result.stdout.strip())
 ```
 
-The `with` block handles the full lifecycle — it creates the sandbox on entry and tears it down on exit.
+The `with` block handles the full lifecycle: it creates the sandbox when you enter and tears it down when you exit.
 
-## Use cases
+## Where to start
 
-| What you want to do | Where to start |
+| What you want to do | Where to go |
 | --- | --- |
-| Run code in a clean sandbox | [Quickstart](/smolvm/quickstart) |
-| Build an agent with a sandboxed shell (Agentor) | [Agentor integration](/smolvm/guides/ai-agent-integration#agentor) |
+| Run your first sandbox | [Quickstart](/smolvm/quickstart) |
+| Build an agent with a sandboxed shell | [AI agent integration](/smolvm/guides/ai-agent-integration) |
 | Start a disposable browser session | [Browser sessions](/smolvm/guides/ai-agent-integration#browser-sessions) |
 | Let a model click and type on websites | [Computer-use with OpenAI](/smolvm/guides/ai-agent-integration#computer-use-with-openai) |
-| Let an agent drive a browser via CLI | [PydanticAI with agent-browser](/smolvm/guides/ai-agent-integration#pydanticai-with-agent-browser) |
-| Give an agent a shell tool | [AI agent integration](/smolvm/guides/ai-agent-integration) |
-| Keep one sandbox across turns | [Reusable sandbox](/smolvm/guides/ai-agent-integration#reusable-sandbox-across-turns) |
-| Pass env vars into the guest | [Environment variables](/smolvm/guides/environment-variables) |
+| Pass configuration into a sandbox | [Environment variables](/smolvm/guides/environment-variables) |
+| Save and restore sandbox state | [Snapshots](/smolvm/guides/snapshots) |
 
 ## SDK or CLI?
 
-Use the **SDK** when SmolVM is part of your application or agent loop and you want to create sandboxes from Python code.
+Use the **SDK** when SmolVM is part of your application or agent loop and you need to create sandboxes from Python code.
 
-Use the **CLI** when you want to inspect the runtime, start a browser from the terminal, or script local workflows:
+Use the **CLI** when you want to manage sandboxes from the terminal, start a browser session, or script local workflows:
 
 ```bash
-smolvm create                    # auto-generates a name
-smolvm create --name my-sandbox  # or pick your own
-smolvm ssh my-sandbox
-smolvm list
-smolvm stop my-sandbox
+smolvm create                    # spin up a sandbox
+smolvm ssh my-sandbox            # open a shell inside it
+smolvm list                      # see all running sandboxes
+smolvm stop my-sandbox           # tear it down
 ```
 
 See the [CLI reference](/smolvm/cli/overview) for the full command list.
@@ -76,14 +73,14 @@ You can launch an isolated browser session directly from the terminal. This is u
 smolvm browser start --live --json
 ```
 
-The JSON response includes the `session_id` plus local browser URLs. Use the session ID to manage the session:
+The JSON response includes a `session_id` and local browser URLs. Use the session ID to manage the session:
 
 ```bash
 smolvm browser list
 smolvm browser stop <session_id>
 ```
 
-The `cdp_url` in the response can be passed to any CDP client. For example, the [PydanticAI agent-browser integration](/smolvm/guides/ai-agent-integration#pydanticai-with-agent-browser) extracts the localhost port from that URL and hands it to `agent-browser --cdp`.
+The `cdp_url` in the response can be passed to any Chrome DevTools Protocol client. For example, the [PydanticAI agent-browser integration](/smolvm/guides/ai-agent-integration#pydanticai-with-agent-browser) extracts the localhost port from that URL and hands it to `agent-browser --cdp`.
 
 To open the live browser view in your default browser:
 
@@ -93,9 +90,9 @@ smolvm browser open <session_id>
 
 ## How isolation works
 
-SmolVM runs your work inside a separate guest system instead of on your host. On Linux it uses [Firecracker microVMs](https://firecracker-microvm.github.io/) — very small virtual machines backed by KVM. On macOS it uses QEMU. You get a simple Python API and CLI, but every command executes in its own environment.
+Each sandbox runs inside its own virtual machine, completely separated from your host. On Linux, SmolVM uses [Firecracker](https://firecracker-microvm.github.io/) — lightweight microVMs backed by KVM hardware virtualization. On macOS it uses QEMU.
 
-Unlike containers that share the host kernel, microVMs provide hardware-level isolation. An escape would require a hypervisor exploit, not just a kernel vulnerability.
+Unlike containers, which share the host kernel, microVMs give every sandbox its own kernel. An escape would require a hypervisor exploit, not just a kernel vulnerability. You get the convenience of a simple Python API, but every command runs in its own isolated environment.
 
 ## Performance
 
