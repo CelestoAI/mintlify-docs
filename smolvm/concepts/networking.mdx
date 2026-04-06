@@ -1,19 +1,19 @@
 ---
 title: "Network configuration"
-description: "Understand TAP devices, NAT, port forwarding, and VM network isolation in SmolVM"
+description: "How SmolVM connects sandboxes to the internet while keeping them isolated from each other"
 ---
 
-SmolVM provides automatic networking setup with TAP devices, NAT, and port forwarding. This page explains how VM networking works and how to configure it.
+Every SmolVM sandbox gets its own private network connection. The sandbox can reach the internet, but it cannot talk to other sandboxes or access host network interfaces directly. This page explains how the networking works and what you can configure.
 
-## Networking Architecture
+## How it works
 
-Each SmolVM instance gets its own isolated network configuration:
+When SmolVM creates a sandbox, it sets up a dedicated virtual network interface (called a TAP device) for that sandbox. The sandbox receives a private IP address and uses NAT to reach the internet through your host's network connection.
 
 ```mermaid
 flowchart TB
-  subgraph Host["Host System"]
-    VM1["VM 1<br/>172.16.0.2"]
-    VM2["VM 2<br/>172.16.0.3"]
+  subgraph Host["Host system"]
+    VM1["Sandbox 1<br/>172.16.0.2"]
+    VM2["Sandbox 2<br/>172.16.0.3"]
     TAP0["tap0<br/>172.16.0.1"]
     TAP1["tap1<br/>172.16.0.1"]
     NAT["NAT<br/>(nftables)"]
@@ -29,708 +29,197 @@ flowchart TB
   ETH0 --> Internet["Internet"]
 ```
 
-## Network Configuration
+Each sandbox receives:
 
-The `NetworkConfig` model defines VM network settings:
+* **Guest IP**: an address in the `172.16.0.2` – `172.16.0.255` range
+* **Gateway**: `172.16.0.1` (the host side of the TAP device)
+* **Netmask**: `255.255.255.0` (`/24`)
 
-```python  theme={null}
-# From types.py:108-128
-class NetworkConfig(BaseModel):
-    """Network configuration for a VM.
+SmolVM assigns these automatically. You do not need to configure networking for most use cases.
 
-    Attributes:
-        guest_ip: IP address assigned to the guest.
-        gateway_ip: Gateway IP (host side of TAP).
-        netmask: Network mask.
-        tap_device: Name of the TAP device.
-        guest_mac: MAC address for the guest interface.
-        ssh_host_port: Optional host TCP port forwarded to guest SSH (22).
-    """
+## Sandbox isolation
 
-    guest_ip: str
-    gateway_ip: str = "172.16.0.1"
-    netmask: str = "255.255.255.0"
-    tap_device: str
-    guest_mac: str
-    ssh_host_port: int | None = None
+Sandboxes are isolated from each other by default. SmolVM adds a firewall rule that drops all traffic between TAP devices, so one sandbox cannot reach another:
+
+```bash
+# This rule is added automatically
+nft add rule inet smolvm_filter forward iifname "tap*" oifname "tap*" counter drop
 ```
 
-### Default Network Range
+Each sandbox can:
 
-```python  theme={null}
-# From network.py:33-35
-DEFAULT_HOST_IP = "172.16.0.1"
-DEFAULT_NETMASK = "24"
-```
-
-Each VM receives:
-
-* **Guest IP**: `172.16.0.2` through `172.16.0.255`
-* **Gateway**: `172.16.0.1` (host side of TAP)
-* **Netmask**: `255.255.255.0` (or `/24`)
-
-## TAP Devices
-
-### What is a TAP Device?
-
-A TAP (Network Tap) device is a virtual network interface that:
-
-* Operates at Layer 2 (Ethernet)
-* Allows user-space programs to read/write raw Ethernet frames
-* Acts as a bridge between the VM and host networking
-
-### TAP Device Lifecycle
-
-#### 1. Creation
-
-```python  theme={null}
-# From network.py:87-103
-def create_tap(self, tap_name: str, user: str | None = None) -> None:
-    """Create TAP device if missing."""
-    if user is None:
-        user = os.environ.get("USER", "root")
-
-    logger.info("Creating TAP device: %s (user: %s)", tap_name, user)
-
-    try:
-        run_command(["ip", "tuntap", "add", tap_name, "mode", "tap", "user", user])
-    except SmolVMError as e:
-        if "File exists" in str(e) or "EEXIST" in str(e):
-            logger.debug("TAP device %s already exists", tap_name)
-        else:
-            raise
-```
-
-Creates a TAP device with `iproute2`:
-
-```bash  theme={null}
-sudo ip tuntap add tap0 mode tap user $USER
-```
-
-#### 2. Configuration
-
-```python  theme={null}
-# From network.py:105-134
-def configure_tap(
-    self,
-    tap_name: str,
-    host_ip: str | None = None,
-    netmask: str = DEFAULT_NETMASK,
-) -> None:
-    """Assign host IP and bring TAP link up."""
-    logger.info("Configuring TAP %s with IP %s/%s", tap_name, host_ip, netmask)
-
-    batch = [
-        f"addr flush dev {tap_name}",
-        f"addr add {host_ip}/{netmask} dev {tap_name}",
-        f"link set {tap_name} up",
-    ]
-
-    self._run_ip_batch(batch)
-
-    # Allow localhost DNAT to guest addresses.
-    self._write_sysctl(f"net/ipv4/conf/{tap_name}/route_localnet", "1")
-```
-
-Configures the TAP device:
-
-```bash  theme={null}
-# Assign IP and bring up
-sudo ip addr add 172.16.0.1/24 dev tap0
-sudo ip link set tap0 up
-
-# Enable route_localnet for port forwarding
-sudo sysctl -w net.ipv4.conf.tap0.route_localnet=1
-```
-
-#### 3. Routing
-
-```python  theme={null}
-# From network.py:136-148
-def add_route(self, ip_address: str, device: str) -> None:
-    """Add host route for one guest IP through a TAP device."""
-    logger.info("Adding route: %s via %s", ip_address, device)
-    try:
-        run_command(["ip", "route", "add", f"{ip_address}/32", "dev", device])
-    except SmolVMError as e:
-        if "File exists" not in str(e):
-            raise
-```
-
-Adds a host route to the guest:
-
-```bash  theme={null}
-sudo ip route add 172.16.0.2/32 dev tap0
-```
-
-#### 4. Cleanup
-
-```python  theme={null}
-# From network.py:150-160
-def cleanup_tap(self, tap_name: str) -> None:
-    """Delete TAP device (best effort)."""
-    logger.info("Cleaning up TAP device: %s", tap_name)
-    try:
-        run_command(["ip", "link", "delete", tap_name])
-    except SmolVMError as e:
-        if "Cannot find device" not in str(e):
-            logger.warning("Failed to delete TAP %s: %s", tap_name, e)
-```
-
-Removes the TAP device:
-
-```bash  theme={null}
-sudo ip link delete tap0
-```
-
-### MAC Address Generation
-
-```python  theme={null}
-# From network.py:672-676
-def generate_mac(self, vm_number: int) -> str:
-    """Generate deterministic VM MAC address for vm_number in [0,255]."""
-    if vm_number < 0 or vm_number > 255:
-        raise ValueError("vm_number must be between 0 and 255")
-    return f"AA:FC:00:00:00:{vm_number:02X}"
-```
-
-Generates deterministic MAC addresses:
-
-* VM 0: `AA:FC:00:00:00:00`
-* VM 1: `AA:FC:00:00:00:01`
-* VM 255: `AA:FC:00:00:00:FF`
-
-## NAT and Firewalling
-
-SmolVM uses `nftables` for NAT and firewall rules.
-
-### nftables Tables and Chains
-
-```python  theme={null}
-# From network.py:37-41
-_NFT_NAT_FAMILY = "ip"
-_NFT_NAT_TABLE = "smolvm_nat"
-_NFT_FILTER_FAMILY = "inet"
-_NFT_FILTER_TABLE = "smolvm_filter"
-```
-
-Creates two tables:
-
-* `ip smolvm_nat`: NAT rules (DNAT, SNAT, masquerade)
-* `inet smolvm_filter`: Firewall rules (forward, drop)
-
-### NAT Setup
-
-```python  theme={null}
-# From network.py:425-474
-def setup_nat(self, tap_name: str) -> None:
-    """Configure outbound NAT and forwarding for a TAP device."""
-    logger.info("Setting up NAT for TAP: %s", tap_name)
-
-    self.enable_ip_forwarding()
-    self._ensure_nftables_base()
-
-    iface = self.outbound_interface
-
-    self._add_nft_rules_if_missing(
-        [
-            # Masquerade outbound traffic
-            (
-                _NFT_NAT_FAMILY,
-                _NFT_NAT_TABLE,
-                "postrouting",
-                f"oifname {self._quote(iface)} counter masquerade",
-                f"smolvm:global:nat:masquerade:{iface}",
-            ),
-            # Allow established connections back
-            (
-                _NFT_FILTER_FAMILY,
-                _NFT_FILTER_TABLE,
-                "forward",
-                "ct state related,established counter accept",
-                "smolvm:global:forward:established",
-            ),
-            # Forward TAP to internet
-            (
-                _NFT_FILTER_FAMILY,
-                _NFT_FILTER_TABLE,
-                "forward",
-                f"iifname {self._quote(tap_name)} oifname {self._quote(iface)} counter accept",
-                f"smolvm:nat:tap:{tap_name}:to:{iface}",
-            ),
-            # Isolate VMs from each other
-            (
-                _NFT_FILTER_FAMILY,
-                _NFT_FILTER_TABLE,
-                "forward",
-                f"iifname {self._quote('tap*')} oifname {self._quote('tap*')} counter drop",
-                "smolvm:global:forward:tap-isolation",
-            ),
-        ]
-    )
-```
-
-This creates nftables rules equivalent to:
-
-```bash  theme={null}
-# Masquerade outbound traffic
-nft add rule ip smolvm_nat postrouting oifname eth0 counter masquerade
-
-# Allow established connections
-nft add rule inet smolvm_filter forward ct state related,established counter accept
-
-# Forward TAP to internet
-nft add rule inet smolvm_filter forward iifname tap0 oifname eth0 counter accept
-
-# Isolate VMs from each other
-nft add rule inet smolvm_filter forward iifname tap* oifname tap* counter drop
-```
-
-### IP Forwarding
-
-```python  theme={null}
-# From network.py:166-172
-def enable_ip_forwarding(self) -> None:
-    """Enable IPv4 forwarding once per manager instance."""
-    if self._ip_forwarding_enabled:
-        return
-
-    if self._write_sysctl("net/ipv4/ip_forward", "1"):
-        self._ip_forwarding_enabled = True
-```
-
-Enables kernel packet forwarding:
-
-```bash  theme={null}
-sudo sysctl -w net.ipv4.ip_forward=1
-```
-
-## VM Isolation
-
-VMs are isolated from each other by default:
-
-```python  theme={null}
-# From network.py:467-472 (in setup_nat)
-(
-    _NFT_FILTER_FAMILY,
-    _NFT_FILTER_TABLE,
-    "forward",
-    f"iifname {self._quote('tap*')} oifname {self._quote('tap*')} counter drop",
-    "smolvm:global:forward:tap-isolation",
-),
-```
-
-This nftables rule **drops all VM-to-VM traffic**:
-
-```bash  theme={null}
-nft add rule inet smolvm_filter forward iifname tap* oifname tap* counter drop
-```
+* Access the internet via NAT
+* Be reached from the host via [port forwarding](/smolvm/guides/port-forwarding)
+* **Not** communicate directly with other sandboxes
 
 <Note>
-  VMs can access the internet via NAT, but cannot directly communicate with each other.
+  Sandboxes can access the internet by default. If you need to restrict outbound traffic, add firewall rules on your host. See [security model](/smolvm/concepts/security) for details.
 </Note>
 
-## Port Forwarding
+## TAP devices
 
-SmolVM provides two types of port forwarding:
+A TAP device is a virtual network interface that connects a sandbox to the host networking stack. SmolVM creates one TAP device per sandbox and removes it when the sandbox is deleted.
 
-### 1. SSH Port Forwarding
+The lifecycle of a TAP device:
 
-Exposes guest SSH (port 22) to a host port:
+1. **Create** — SmolVM runs `ip tuntap add` to create a virtual interface
+2. **Configure** — assigns the host-side IP and brings the link up
+3. **Route** — adds a host route so packets reach the sandbox
+4. **Cleanup** — deletes the TAP device when the sandbox stops
 
-```python  theme={null}
-# From network.py:476-540
-def setup_ssh_port_forward(
-    self,
-    vm_id: str,
-    guest_ip: str,
-    host_port: int,
-    guest_port: int = 22,
-) -> None:
-    """Expose host TCP port to guest SSH port via nftables."""
-    self.enable_ip_forwarding()
-    self._ensure_nftables_base()
+All of this is handled automatically. You only need to interact with TAP devices if you are debugging networking issues.
 
-    iface = self.outbound_interface
-    target = f"{guest_ip}:{guest_port}"
-    comment = f"smolvm:{vm_id}:ssh"
+## NAT and firewall rules
 
-    self._add_nft_rules_if_missing(
-        [
-            # DNAT from external interface
-            (
-                _NFT_NAT_FAMILY,
-                _NFT_NAT_TABLE,
-                "prerouting",
-                f"iifname {self._quote(iface)} tcp dport {host_port} counter dnat to {target}",
-                comment,
-            ),
-            # DNAT from localhost
-            (
-                _NFT_NAT_FAMILY,
-                _NFT_NAT_TABLE,
-                "output",
-                f"ip daddr 127.0.0.1/32 tcp dport {host_port} counter dnat to {target}",
-                comment,
-            ),
-            # SNAT localhost traffic
-            (
-                _NFT_NAT_FAMILY,
-                _NFT_NAT_TABLE,
-                "postrouting",
-                f"ip saddr 127.0.0.0/8 ip daddr {guest_ip}/32 tcp dport {guest_port} counter snat to {self.host_ip}",
-                comment,
-            ),
-            # Allow forwarding
-            (
-                _NFT_FILTER_FAMILY,
-                _NFT_FILTER_TABLE,
-                "forward",
-                f"ip daddr {guest_ip}/32 tcp dport {guest_port} ct state new,related,established counter accept",
-                comment,
-            ),
-        ]
-    )
+SmolVM uses [nftables](https://wiki.nftables.org/) to manage NAT and firewall rules. It creates two tables:
+
+* `ip smolvm_nat` — handles NAT (masquerade for outbound traffic, DNAT for port forwarding)
+* `inet smolvm_filter` — handles forwarding rules and sandbox isolation
+
+When a sandbox starts, SmolVM:
+
+1. Enables IP forwarding on the host (`net.ipv4.ip_forward=1`)
+2. Adds a masquerade rule so outbound traffic appears to come from the host
+3. Adds a forwarding rule to allow traffic from the sandbox's TAP device to the internet
+4. Adds an isolation rule to block sandbox-to-sandbox traffic
+
+You can inspect the active rules at any time:
+
+```bash
+sudo nft list table ip smolvm_nat
+sudo nft list table inet smolvm_filter
 ```
 
-Usage:
+## Port forwarding
 
-```python  theme={null}
-from smolvm import SmolVM
+SmolVM supports two types of port forwarding to reach services running inside a sandbox.
 
-vm = SmolVM()
-vm.start()
+### SSH port forwarding
 
-# SSH forwarded automatically during start
-# Connect via: ssh -p <host_port> root@localhost
+SSH access is set up automatically when a sandbox starts. SmolVM forwards a host port to port 22 inside the guest using nftables DNAT rules. You can connect manually:
+
+```bash
+ssh -p <host_port> root@localhost
 ```
 
-### 2. Local Port Forwarding
+Or use the SDK, which handles SSH connections for you through `vm.run()`.
 
-Exposes guest application ports to localhost:
+### Application port forwarding
 
-```python  theme={null}
-# From network.py:564-617
-def setup_local_port_forward(
-    self,
-    vm_id: str,
-    guest_ip: str,
-    host_port: int,
-    guest_port: int,
-) -> None:
-    """Expose localhost:host_port to guest_ip:guest_port."""
-    self.enable_ip_forwarding()
-    self._ensure_nftables_base()
+To access a web server, database, or other service running inside a sandbox, use `expose_local()`:
 
-    comment = f"smolvm:{vm_id}:local:{host_port}:{guest_port}"
-    target = f"{guest_ip}:{guest_port}"
-
-    self._add_nft_rules_if_missing(
-        [
-            # DNAT from localhost
-            (
-                _NFT_NAT_FAMILY,
-                _NFT_NAT_TABLE,
-                "output",
-                f"ip daddr 127.0.0.1/32 tcp dport {host_port} counter dnat to {target}",
-                comment,
-            ),
-            # SNAT localhost traffic
-            (
-                _NFT_NAT_FAMILY,
-                _NFT_NAT_TABLE,
-                "postrouting",
-                f"ip saddr 127.0.0.0/8 ip daddr {guest_ip}/32 tcp dport {guest_port} counter snat to {self.host_ip}",
-                comment,
-            ),
-            # Allow forwarding
-            (
-                _NFT_FILTER_FAMILY,
-                _NFT_FILTER_TABLE,
-                "forward",
-                f"ip daddr {guest_ip}/32 tcp dport {guest_port} ct state new,related,established counter accept",
-                comment,
-            ),
-        ]
-    )
-```
-
-Usage:
-
-```python  theme={null}
+```python
 from smolvm import SmolVM
 
 with SmolVM() as vm:
-    # App in VM listening on port 8080
-    vm.run("python -m http.server 8080")
-    
-    # Expose to host port 18080
+    vm.run("python3 -m http.server 8080 &")
     host_port = vm.expose_local(guest_port=8080, host_port=18080)
-    
-    # Access from host
-    print(f"App available at http://localhost:{host_port}")
+    print(f"Service available at http://localhost:{host_port}")
 ```
-
-### Port Forwarding Flow
 
 ```mermaid
 flowchart TB
   subgraph Host["Host"]
     Browser["Browser<br/>http://localhost:18080"]
-    DNAT["nftables DNAT<br/>127.0.0.1:18080 -> 172.16.0.2:8080"]
+    DNAT["nftables DNAT<br/>127.0.0.1:18080 → 172.16.0.2:8080"]
     TAP["TAP<br/>172.16.0.1"]
 
     Browser --> DNAT --> TAP
   end
 
-  TAP --> VM["VM<br/>172.16.0.2:8080"]
+  TAP --> VM["Sandbox<br/>172.16.0.2:8080"]
 ```
 
-## Network Prerequisites
+<Warning>
+  `expose_local()` only binds to `127.0.0.1` (localhost). Services are not exposed to your network. If you need external access, set up additional forwarding outside of SmolVM.
+</Warning>
 
-Check required networking tools:
+See the [port forwarding guide](/smolvm/guides/port-forwarding) for more examples including automatic port allocation, multiple forwards, and troubleshooting.
 
-```python  theme={null}
-# From network.py:679-701
-def check_network_prerequisites() -> list[str]:
-    """Validate required host networking binaries and sudo access."""
-    errors: list[str] = []
+## Network prerequisites
 
-    for binary in ["ip", "nft"]:
-        try:
-            run_command(["which", binary], use_sudo=False)
-        except SmolVMError:
-            errors.append(f"'{binary}' command not found")
+SmolVM needs the following tools installed on your host (Linux only):
 
-    if os.geteuid() != 0:
-        checks = [
-            (["ip", "link", "show"], "sudo ip"),
-            (["nft", "list", "tables"], "sudo nft"),
-            (["sysctl", "net.ipv4.ip_forward"], "sudo sysctl"),
-        ]
-        for cmd, label in checks:
-            try:
-                run_command(cmd, use_sudo=True)
-            except SmolVMError:
-                errors.append(f"{label} missing (run setup script)")
-
-    return errors
-```
-
-Required tools:
-
-* `ip` (iproute2) - TAP device management
-* `nft` (nftables) - NAT and firewall rules
+* `ip` (from iproute2) — manages TAP devices and routes
+* `nft` (from nftables) — manages NAT and firewall rules
 * `sudo` access for networking commands
 
-## Networking Examples
+The `smolvm setup` command installs these automatically. You can verify your setup with:
 
-### Basic VM with Internet Access
-
-```python  theme={null}
-from smolvm import SmolVM
-
-with SmolVM() as vm:
-    # VM has automatic internet access via NAT
-    result = vm.run("curl -s https://httpbin.org/ip")
-    print(f"VM public IP: {result.output}")
-```
-
-### Expose Web Server
-
-```python  theme={null}
-from smolvm import SmolVM
-
-with SmolVM() as vm:
-    # Start web server in VM
-    vm.run("python3 -m http.server 8000 &")
-    
-    # Expose to host
-    host_port = vm.expose_local(guest_port=8000, host_port=18000)
-    print(f"Access server at http://localhost:{host_port}")
-```
-
-### Multiple Port Forwards
-
-```python  theme={null}
-from smolvm import SmolVM
-
-with SmolVM() as vm:
-    # Web server
-    vm.run("python3 -m http.server 8000 &")
-    web_port = vm.expose_local(guest_port=8000, host_port=18000)
-    
-    # API server
-    vm.run("python3 api_server.py &")  # Runs on :8080
-    api_port = vm.expose_local(guest_port=8080, host_port=18080)
-    
-    print(f"Web: http://localhost:{web_port}")
-    print(f"API: http://localhost:{api_port}")
-```
-
-### Custom Network Configuration
-
-```python  theme={null}
-from smolvm import VMConfig, NetworkConfig
-
-config = VMConfig(
-    vcpu_count=2,
-    mem_size_mib=1024,
-    # ... other config ...
-)
-
-network = NetworkConfig(
-    guest_ip="172.16.0.10",
-    gateway_ip="172.16.0.1",
-    netmask="255.255.255.0",
-    tap_device="tap5",
-    guest_mac="AA:FC:00:00:00:0A"
-)
-
-# Use with SmolVM
-# (Note: NetworkConfig is typically managed internally)
+```bash
+smolvm doctor
 ```
 
 ## Troubleshooting
 
-### "ip: command not found"
+<AccordionGroup>
+  <Accordion title="Sandbox has no internet access">
+    Check that IP forwarding is enabled and NAT rules are in place:
 
-**Problem**: iproute2 not installed
+    ```bash
+    # Should return 1
+    cat /proc/sys/net/ipv4/ip_forward
 
-**Solution**:
+    # Enable manually if needed
+    sudo sysctl -w net.ipv4.ip_forward=1
 
-```bash  theme={null}
-# Ubuntu/Debian
-sudo apt install iproute2
+    # Check NAT rules exist
+    sudo nft list table ip smolvm_nat
+    ```
+  </Accordion>
 
-# Fedora/RHEL
-sudo dnf install iproute
-```
+  <Accordion title="'ip' or 'nft' command not found">
+    Install the missing package:
 
-### "nft: command not found"
+    ```bash
+    # Ubuntu/Debian
+    sudo apt install iproute2 nftables
 
-**Problem**: nftables not installed
+    # Fedora/RHEL
+    sudo dnf install iproute nftables
+    ```
+  </Accordion>
 
-**Solution**:
+  <Accordion title="Permission denied on TAP creation">
+    Run the SmolVM system setup to configure sudo permissions:
 
-```bash  theme={null}
-# Ubuntu/Debian
-sudo apt install nftables
+    ```bash
+    sudo ./scripts/system-setup.sh --configure-runtime
+    ```
+  </Accordion>
 
-# Fedora/RHEL
-sudo dnf install nftables
-```
+  <Accordion title="Port forwarding not working">
+    Check that `route_localnet` is enabled for the TAP device and forwarding rules exist:
 
-### "Permission denied" on TAP creation
+    ```bash
+    # Should return 1
+    cat /proc/sys/net/ipv4/conf/tap0/route_localnet
 
-**Problem**: Missing sudo permissions
+    # Check forwarding rules
+    sudo nft list chain inet smolvm_filter forward
+    ```
 
-**Solution**:
+    Also verify that the service inside the sandbox is binding to `0.0.0.0`, not `127.0.0.1`.
+  </Accordion>
 
-```bash  theme={null}
-# Run system setup to configure sudo
-sudo ./scripts/system-setup.sh --configure-runtime
-```
+  <Accordion title="TAP device persists after sandbox deletion">
+    If cleanup failed, remove the device manually:
 
-### VM has no internet access
+    ```bash
+    # List TAP devices
+    ip link show | grep tap
 
-**Problem**: IP forwarding disabled or NAT not configured
+    # Delete manually
+    sudo ip link delete tap0
 
-**Solution**:
+    # Or clean up all SmolVM resources
+    smolvm cleanup --all
+    ```
+  </Accordion>
+</AccordionGroup>
 
-```bash  theme={null}
-# Check IP forwarding
-cat /proc/sys/net/ipv4/ip_forward  # Should be 1
+## Next steps
 
-# Enable manually
-sudo sysctl -w net.ipv4.ip_forward=1
-
-# Check nftables rules
-sudo nft list table ip smolvm_nat
-sudo nft list table inet smolvm_filter
-```
-
-### Port forwarding not working
-
-**Problem**: Firewall rules or route\_localnet not enabled
-
-**Solution**:
-
-```bash  theme={null}
-# Check route_localnet
-cat /proc/sys/net/ipv4/conf/tap0/route_localnet  # Should be 1
-
-# Enable manually
-sudo sysctl -w net.ipv4.conf.tap0.route_localnet=1
-
-# Check forwarding rules
-sudo nft list chain inet smolvm_filter forward
-```
-
-### TAP device persists after VM deletion
-
-**Problem**: Cleanup failed or manual cleanup needed
-
-**Solution**:
-
-```bash  theme={null}
-# List TAP devices
-ip link show | grep tap
-
-# Delete manually
-sudo ip link delete tap0
-
-# Or use SmolVM cleanup
-smolvm cleanup --all
-```
-
-## Security Considerations
-
-<Warning>
-  Understand these networking security implications:
-</Warning>
-
-### Outbound Access
-
-By default, VMs have **unrestricted internet access** via NAT:
-
-```python  theme={null}
-# VM can access any internet service
-result = vm.run("curl https://example.com")
-```
-
-**Mitigation**: Use firewall rules to restrict outbound access.
-
-### VM Isolation
-
-VMs **cannot** communicate with each other:
-
-```python  theme={null}
-# This traffic is DROPPED by nftables
-vm1 = SmolVM()  # Gets 172.16.0.2
-vm2 = SmolVM()  # Gets 172.16.0.3
-
-# vm1 cannot ping vm2
-vm1.run("ping -c 1 172.16.0.3")  # Fails
-```
-
-### Port Exposure
-
-`expose_local()` creates **localhost-only** forwarding:
-
-```python  theme={null}
-# Only accessible from host
-vm.expose_local(guest_port=8080, host_port=18080)
-# Access: http://localhost:18080 ✅
-# Access: http://<host-ip>:18080 ❌
-```
-
-<Note>
-  See [Security Model](/smolvm/concepts/security) for more details on network isolation and trust boundaries.
-</Note>
-
-## Next Steps
-
-* Review [Security Model](/smolvm/concepts/security)
-* Choose your [Backend](/smolvm/concepts/backends)
-* Read [Architecture Overview](/smolvm/concepts/overview)
+* Review the [security model](/smolvm/concepts/security)
+* Choose your [backend](/smolvm/concepts/backends) (Firecracker vs. QEMU)
+* Read the [architecture overview](/smolvm/concepts/overview)

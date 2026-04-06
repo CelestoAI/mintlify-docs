@@ -1,76 +1,56 @@
 ---
 title: "Quickstart"
-description: "Get started with SmolVM in minutes - from installation to running your first sandbox"
+description: "Set up SmolVM and run your first sandbox in under five minutes"
 ---
 
-SmolVM gives your app or AI agent a clean, disposable sandbox to execute commands and run browser sessions. This guide walks you through setup and your first sandbox in under five minutes.
+This guide walks you from zero to a running sandbox. By the end, you will have SmolVM installed and a working example that creates an isolated environment, runs a command inside it, and cleans up automatically.
 
 <Steps>
   <Step title="Check prerequisites">
-    SmolVM uses hardware virtualization for strong isolation. Requirements vary by platform:
+    SmolVM uses hardware virtualization. The requirements depend on your platform:
 
     <Tabs>
       <Tab title="Linux (Firecracker)">
-        **Requirements:**
-
-        * KVM support (check with `ls /dev/kvm`)
+        * KVM support — check with `ls /dev/kvm`
         * Ubuntu, Debian, or Fedora recommended
         * Root access for initial setup
 
-        **Verify KVM:**
-
-        ```bash
-        # Should show /dev/kvm
-        ls -l /dev/kvm
-        ```
-
-        If `/dev/kvm` doesn't exist, enable virtualization in your BIOS/UEFI or enable nested virtualization if running in a VM.
+        If `/dev/kvm` does not exist, enable virtualization in your BIOS/UEFI settings. For cloud VMs, enable nested virtualization in your hypervisor.
       </Tab>
 
       <Tab title="macOS (QEMU)">
-        **Requirements:**
-
-        * macOS (Intel or Apple Silicon)
-        * Homebrew package manager
-        * QEMU for virtualization
-
-        **Install Homebrew** (if not already installed):
-
-        ```bash
-        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-        ```
+        * macOS on Intel or Apple Silicon
+        * [Homebrew](https://brew.sh) package manager
       </Tab>
     </Tabs>
   </Step>
 
   <Step title="Install SmolVM">
-    Install the Python package:
-
     ```bash
     pip install smolvm
     ```
   </Step>
 
   <Step title="Run one-time setup">
-    Set up the runtime dependencies for your machine:
+    This configures the virtualization backend for your machine:
 
     ```bash
     smolvm setup
     ```
 
-    On Linux this installs Firecracker, configures KVM permissions, and sets up networking tools. Linux may prompt for `sudo` during setup.
+    On Linux, this installs Firecracker, configures KVM permissions, and sets up networking tools. You may be prompted for `sudo`.
 
-    On macOS this installs QEMU via Homebrew. The QEMU backend is automatically detected.
+    On macOS, this installs QEMU via Homebrew.
   </Step>
 
   <Step title="Verify the runtime">
-    Check that everything is configured correctly:
+    Confirm everything is ready:
 
     ```bash
     smolvm doctor
     ```
 
-    This verifies backend detection, KVM availability (Linux only), required system tools, and network configuration.
+    You should see green checkmarks for your backend, KVM (Linux), and networking tools.
   </Step>
 
   <Step title="Run your first sandbox">
@@ -96,58 +76,52 @@ SmolVM gives your app or AI agent a clean, disposable sandbox to execute command
     Hello from the sandbox
     ```
 
-    The context manager handles the full lifecycle — it creates the VM on entry and stops and deletes it on exit.
+    The `with` block handles the full lifecycle — it creates the sandbox on entry and tears it down on exit.
 
-    <Tip>
-      You can also run the bundled example directly from the repository: `python examples/quickstart_sandbox.py`
-    </Tip>
-  </Step>
-
-  <Step title="Run multiple commands">
-    Inside the sandbox you can run as many commands as you need. The VM stays alive until the `with` block exits:
-
-    ```python
-    from smolvm import SmolVM
-
-    with SmolVM() as vm:
-        print(f"VM ID: {vm.vm_id}")
-        print(f"VM IP: {vm.get_ip()}")
-
-        # Run a series of commands
-        vm.run("apk add curl")
-        result = vm.run("curl -s https://httpbin.org/ip")
-        print(result.stdout.strip())
-
-    # VM is automatically stopped and deleted here
-    ```
-  </Step>
-
-  <Step title="Customize VM resources">
-    Configure memory and disk size for your workload:
-
-    ```python
-    from smolvm import SmolVM
-
-    # Custom VM with 2 GB RAM and 4 GB disk
-    with SmolVM(mem_size_mib=2048, disk_size_mib=4096) as vm:
-        result = vm.run("free -m")
-        print(result.stdout)
-
-        result = vm.run("df -h")
-        print(result.stdout)
-    ```
-
-    **Default values:**
-
-    * Memory: 512 MiB
-    * Disk: 512 MiB
-    * Minimum disk size: 64 MiB
+    <Note>
+      The first run takes longer (30–60 seconds) because SmolVM downloads and builds the Alpine Linux base image. Subsequent runs use the cached image and boot in under a second.
+    </Note>
   </Step>
 </Steps>
 
-## Next steps
+## Try more commands
 
-Now that you have SmolVM running, explore these topics:
+Inside the sandbox you can run as many commands as you need. The sandbox stays alive until the `with` block exits:
+
+```python
+from smolvm import SmolVM
+
+with SmolVM() as vm:
+    print(f"VM ID: {vm.vm_id}")
+    print(f"VM IP: {vm.get_ip()}")
+
+    # Install a package and use it
+    vm.run("apk add curl")
+    result = vm.run("curl -s https://httpbin.org/ip")
+    print(result.stdout.strip())
+
+# Sandbox is automatically stopped and deleted here
+```
+
+## Customize resources
+
+Configure memory and disk size for heavier workloads:
+
+```python
+from smolvm import SmolVM
+
+with SmolVM(mem_size_mib=2048, disk_size_mib=4096) as vm:
+    result = vm.run("free -m")
+    print(result.stdout)
+```
+
+**Default values:**
+
+* Memory: 512 MiB
+* Disk: 512 MiB
+* Minimum disk size: 64 MiB
+
+## Next steps
 
 <CardGroup cols={2}>
   <Card title="AI agent integration" icon="robot" href="/smolvm/guides/ai-agent-integration">
@@ -155,11 +129,11 @@ Now that you have SmolVM running, explore these topics:
   </Card>
 
   <Card title="Port forwarding" icon="network-wired" href="/smolvm/guides/port-forwarding">
-    Expose guest services to your host machine
+    Expose services running inside a sandbox to your host machine
   </Card>
 
   <Card title="Custom images" icon="box" href="/smolvm/guides/custom-images">
-    Build specialized VM images with your own tools
+    Build specialized images with your own tools pre-installed
   </Card>
 
   <Card title="API reference" icon="book" href="/smolvm/api/smolvm">
@@ -173,7 +147,7 @@ Now that you have SmolVM running, explore these topics:
   <Accordion title="KVM device not found (/dev/kvm)">
     **Linux only** — if you see "KVM device missing":
 
-    1. **Check virtualization support:**
+    1. Check virtualization support:
        ```bash
        # Intel CPUs
        grep -E 'vmx' /proc/cpuinfo
@@ -183,163 +157,49 @@ Now that you have SmolVM running, explore these topics:
        ```
        If nothing appears, enable virtualization in BIOS/UEFI.
 
-    2. **Load KVM modules:**
+    2. Load KVM modules:
        ```bash
        sudo modprobe kvm
        sudo modprobe kvm_intel  # or kvm_amd for AMD
        ```
 
-    3. **Check permissions:**
-       ```bash
-       ls -l /dev/kvm
-       # Should show crw-rw---- with group kvm
-       ```
-
-    4. **Add your user to the kvm group:**
+    3. Add your user to the kvm group:
        ```bash
        sudo usermod -aG kvm $USER
-       newgrp kvm  # or log out/in
+       newgrp kvm  # or log out and back in
        ```
   </Accordion>
 
   <Accordion title="SSH connection timeout">
-    If the VM starts but SSH times out:
+    If the sandbox starts but SSH times out:
 
-    1. **Wait longer** — first boot downloads and builds the Alpine image (30–60 seconds)
-
-    2. **Check VM status:**
-       ```python
-       vm = SmolVM()
-       vm.start()
-       print(f"Status: {vm.status}")
-       print(f"IP: {vm.get_ip()}")
-       ```
-
-    3. **Increase timeout:**
+    1. **Wait longer** — the first boot downloads and builds the Alpine image (30–60 seconds).
+    2. **Increase timeout:**
        ```python
        vm = SmolVM()
        vm.start(boot_timeout=60.0)
        vm.wait_for_ssh(timeout=60.0)
        ```
-
-    4. **Check networking:**
+    3. **Check networking:**
        ```bash
-       # Verify TAP device exists
        ip link show | grep tap
-
-       # Check nftables rules
        sudo nft list ruleset
        ```
   </Accordion>
 
-  <Accordion title="Permission denied errors">
-    If you see permission errors:
-
-    1. **Re-run system setup:**
-       ```bash
-       sudo ./scripts/system-setup.sh --configure-runtime
-       ```
-
-    2. **Check group membership:**
-       ```bash
-       groups
-       # Should include 'kvm' on Linux
-       ```
-
-    3. **Refresh groups without logout:**
-       ```bash
-       newgrp kvm
-       ```
-
-    4. **Verify sudoers configuration:**
-       ```bash
-       sudo visudo -c  # Check for syntax errors
-       ```
-  </Accordion>
-
-  <Accordion title="VM boots but commands fail">
-    If the VM starts but `vm.run()` fails:
-
-    1. **Verify SSH-capable image:**
-       ```python
-       print(vm.can_run_commands())  # Should be True
-       ```
-
-    2. **Check boot args:**
-       ```python
-       print(vm.info.config.boot_args)
-       # Should contain 'init=/init'
-       ```
-
-    3. **Auto-config mode** uses SSH by default:
-       ```python
-       # This creates an SSH-ready VM
-       vm = SmolVM()
-       ```
-
-    4. **Manual config** requires SSH boot args:
-       ```python
-       from smolvm import VMConfig
-       from smolvm.build import SSH_BOOT_ARGS
-
-       config = VMConfig(
-           vm_id="my-vm",
-           boot_args=SSH_BOOT_ARGS,
-           # ... other config
-       )
-       ```
-  </Accordion>
-
   <Accordion title="macOS: QEMU not found">
-    If QEMU isn't detected:
+    ```bash
+    brew install qemu
+    ```
 
-    1. **Install via Homebrew:**
-       ```bash
-       brew install qemu
-       ```
-
-    2. **Verify installation:**
-       ```bash
-       # Check for qemu binaries
-       which qemu-system-aarch64  # Apple Silicon
-       which qemu-system-x86_64   # Intel
-       ```
-
-    3. **Run setup script:**
-       ```bash
-       ./scripts/system-setup-macos.sh --check-only
-       ```
-  </Accordion>
-
-  <Accordion title="Firecracker download fails">
-    If Firecracker installation fails:
-
-    1. **Check internet connectivity:**
-       ```bash
-       curl -I https://github.com
-       ```
-
-    2. **Manual download** (Linux):
-       ```bash
-       # Download from GitHub releases
-       wget https://github.com/firecracker-microvm/firecracker/releases/latest/download/firecracker-v1.x.x-x86_64.tgz
-
-       # Extract to /usr/local/bin
-       tar -xzf firecracker-*.tgz
-       sudo mv release-*/firecracker-* /usr/local/bin/
-       ```
-
-    3. **Skip deps if already installed:**
-       ```bash
-       sudo ./scripts/system-setup.sh --skip-deps --configure-runtime
-       ```
+    Then verify:
+    ```bash
+    which qemu-system-aarch64  # Apple Silicon
+    which qemu-system-x86_64   # Intel
+    ```
   </Accordion>
 </AccordionGroup>
 
-<Note>
-  First boot takes longer (30–60 seconds) as SmolVM downloads and builds the Alpine base image. Subsequent boots use the cached image.
-</Note>
-
 <Tip>
-  Join our [Slack community](https://join.slack.com/t/celestoai/shared_invite/zt-3qc7h8gno-Nb5_PElEWHDNnGqdVzC~4Q) to get help and share your use cases!
+  Join the [Slack community](https://join.slack.com/t/celestoai/shared_invite/zt-3qc7h8gno-Nb5_PElEWHDNnGqdVzC~4Q) to get help and share your use cases.
 </Tip>
