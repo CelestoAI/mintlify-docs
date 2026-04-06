@@ -2,7 +2,6 @@
 name: "API docs sync"
 on:
   cron: "0 0 * * 1"
-automerge: true
 ---
 
 Update the docs for either Agentor or SmolVM based on which repository changed.
@@ -27,7 +26,6 @@ Update the docs for either Agentor or SmolVM based on which repository changed.
 - Use examples that show the real user outcome, not internal mechanics.
 
 ## Product framing
-- Reflect the current product vision, not legacy positioning.
 - For top-level docs, make sure a new reader can quickly understand:
   1. what the product is,
   2. what they can do with it,
