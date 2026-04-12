@@ -1,113 +1,214 @@
 ---
-title: 'Celesto SDK Overview'
-description: 'The CelestoSDK is the Python client for interacting with the Celesto AI platform programatically.'
+title: Celesto SDK
+description: "Python client and CLI for creating sandboxed computers, running commands, and managing deployments on the Celesto platform."
 ---
 
+The Celesto SDK lets you create sandboxed computers, run commands inside them, and manage the full lifecycle from your Python code or the command line. You can use it to spin up isolated environments for AI agents, run untrusted code safely, or automate development workflows.
 
-## Authentication and Initialization
+## Installation
 
-The SDK uses cookie-based authentication with Bearer token format. The API key is passed as a cookie named `access_token` with value `Bearer {api_key}`.
+```bash
+pip install celesto
+```
+
+## Authentication
+
+Set your API key as an environment variable or pass it directly:
+
+```python
+import os
+os.environ["CELESTO_API_KEY"] = "your-api-key"
+```
+
+You can also pass the key when you create the client:
 
 ```python
 from celesto.sdk import CelestoSDK
 
-# Using explicit API key
-client = CelestoSDK(api_key="sk-your-api-key-here")
+client = CelestoSDK(api_key="your-api-key")
 ```
 
+<Tip>
+  Get your API key from [celesto.ai](https://celesto.ai) under **Settings > Security**.
+</Tip>
 
-## ToolHub
-
-### `list_tools`
-Retrieves the catalog of available managed tools.
-
-```python
-tools = client.toolhub.list_tools()
-# Returns: {"tools": [{"name": "get_weather", "description": "...", ...}, ...]}
-```
-
-### `run_weather_tool`
-
-Executes the weather tool to retrieve current weather data for a specified city.
+## Quick example
 
 ```python
-weather = client.toolhub.run_weather_tool("London")
-# Returns: {"error": None, "data": {...weather data...}}
-```
-
-### `list_google_emails`
-
-Lists all emails from the user's Gmail account.
-
-```python
-emails = client.toolhub.run_list_google_emails(limit=5)
-```
-
-
-## Deployment
-
-```python
-from pathlib import Path
 from celesto.sdk import CelestoSDK
 
-# Initialize SDK
-client = CelestoSDK(api_key="sk-your-api-key")
+with CelestoSDK() as client:
+    computer = client.computers.create(cpus=2, memory=2048)
+    print(f"Computer ready: {computer['name']}")
 
-# === ToolHub Operations ===
+    result = client.computers.exec(computer["id"], "uname -a")
+    print(result["stdout"])
 
-# List available tools
-tools = client.toolhub.list_tools()
-print(f"Available tools: {len(tools['tools'])}")
-
-# Execute weather tool
-weather = client.toolhub.run_weather_tool("San Francisco")
-print(f"Weather: {weather}")
-
-# Execute Gmail tools (requires Google OAuth setup)
-emails = client.toolhub.run_list_google_emails(limit=3)
-print(f"Recent emails: {len(emails)}")
-
-client.toolhub.run_send_google_email(
-    to="user@example.com",
-    subject="Hello from Agentor",
-    body="This email was sent via CelestoSDK"
-)
-
-# === Deployment Operations ===
-
-# Deploy an agent
-deployment = client.deployment.deploy(
-    folder=Path("./my-weather-agent"),
-    name="weather-agent-prod",
-    description="Production weather assistant",
-    envs={
-        "OPENAI_API_KEY": "sk-...",
-        "LOG_LEVEL": "INFO"
-    }
-)
-
-print(f"Deployment ID: {deployment['id']}")
-print(f"Status: {deployment['status']}")
-
-# List all deployments
-all_deployments = client.deployment.list()
-for dep in all_deployments:
-    print(f"{dep['name']}: {dep['status']} (created: {dep['created_at']})")
+    client.computers.delete(computer["id"])
 ```
 
-### `deploy`
-The `Deployment` client manages the agent deployment lifecycle, including packaging, uploading, and listing deployed applications.
+## Computers API
 
+The Computers API lets you create, manage, and interact with sandboxed virtual machines.
 
-Signature: `deploy(folder: Path, name: str, description: Optional[str] = None, envs: Optional[dict[str, str]] = None) -> dict`
+### Create a computer
 
-**Parameters:**
+```python
+computer = client.computers.create(cpus=2, memory=2048)
+print(computer["name"])   # e.g., "einstein"
+print(computer["id"])     # e.g., "cmp_abc123"
+print(computer["status"]) # "creating" or "running"
+```
 
-- `folder (Path)`: Path to directory containing agent code
-- `name (str)`: Deployment name (must be unique)
-- `description (str, optional)`: Human-readable deployment description
-- `envs (dict[str, str], optional)`: Environment variables as key-value pairs
+<ParamField body="cpus" type="integer" default="1">
+  Number of virtual CPUs. Range: 1-16.
+</ParamField>
 
+<ParamField body="memory" type="integer" default="1024">
+  Memory in MB. Range: 512-32768.
+</ParamField>
+
+<ParamField body="image" type="string" default="ubuntu-desktop-24.04">
+  OS image to use for the computer.
+</ParamField>
+
+The response includes these fields:
+
+<ResponseField name="id" type="string" required>
+  Unique identifier for the computer (e.g., `cmp_abc123`).
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Auto-generated display name for the computer (e.g., `einstein`).
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  Current status. One of: `creating`, `running`, `stopping`, `stopped`, `starting`, `deleting`, `deleted`, `error`.
+</ResponseField>
+
+<ResponseField name="vcpus" type="integer" required>
+  Number of virtual CPUs allocated.
+</ResponseField>
+
+<ResponseField name="ram_mb" type="integer" required>
+  Memory allocated in MB.
+</ResponseField>
+
+<ResponseField name="image" type="string" required>
+  OS image used.
+</ResponseField>
+
+<ResponseField name="created_at" type="string" required>
+  ISO 8601 timestamp of when the computer was created.
+</ResponseField>
+
+### Execute commands
+
+Run a shell command on a running computer:
+
+```python
+result = client.computers.exec(computer["id"], "ls -la /home")
+print(result["stdout"])
+print(result["exit_code"])
+```
+
+<ParamField body="computer_id" type="string" required>
+  Computer ID or name.
+</ParamField>
+
+<ParamField body="command" type="string" required>
+  Shell command to execute.
+</ParamField>
+
+<ParamField body="timeout" type="integer" default="30">
+  Timeout in seconds. Range: 1-300.
+</ParamField>
+
+The response includes:
+
+<ResponseField name="exit_code" type="integer" required>
+  Exit code of the command. `0` means success.
+</ResponseField>
+
+<ResponseField name="stdout" type="string" required>
+  Standard output from the command.
+</ResponseField>
+
+<ResponseField name="stderr" type="string" required>
+  Standard error output from the command.
+</ResponseField>
+
+### Get a computer
+
+Retrieve details of a specific computer:
+
+```python
+info = client.computers.get(computer["id"])
+print(f"{info['name']}: {info['status']}")
+```
+
+### List computers
+
+```python
+result = client.computers.list()
+for vm in result["computers"]:
+    print(f"{vm['name']}: {vm['status']}")
+```
+
+### Lifecycle
+
+Stop, start, and delete computers as needed:
+
+```python
+client.computers.stop(computer_id)
+client.computers.start(computer_id)
+client.computers.delete(computer_id)
+```
+
+## CLI reference
+
+The `celesto` CLI focuses on computer management. All commands live under `celesto computer`.
+
+| Command | Description |
+|---|---|
+| `celesto computer create [--cpus N] [--memory MB]` | Create a computer |
+| `celesto computer list` | List all computers |
+| `celesto computer run <name> "command"` | Execute a command |
+| `celesto computer ssh <name>` | Interactive shell |
+| `celesto computer stop <name>` | Stop a computer |
+| `celesto computer start <name>` | Start a stopped computer |
+| `celesto computer delete <name> [--force]` | Delete a computer |
+
+You can use either the computer name or ID for any command that takes a computer identifier.
+
+### JSON output
+
+All commands support `--json` for machine-readable output:
+
+```bash
+celesto computer list --json
+celesto computer create --cpus 2 --memory 2048 --json
+celesto computer run einstein "uname -a" --json
+```
+
+### Examples
+
+Create a computer and run a command:
+
+```bash
+export CELESTO_API_KEY="your-api-key"
+
+celesto computer create --cpus 2 --memory 2048
+celesto computer run einstein "ls -la"
+celesto computer ssh einstein
+celesto computer delete einstein
+```
+
+## Deployment API
+
+The Deployment API lets you package and deploy AI agents to Celesto's managed infrastructure.
+
+### Deploy an agent
 
 ```python
 from pathlib import Path
@@ -123,19 +224,68 @@ print(f"Deployment ID: {result['id']}")
 print(f"Status: {result['status']}")
 ```
 
-**Returns:** Dictionary with deployment metadata including:
+<ParamField body="folder" type="Path" required>
+  Path to the directory containing your agent code.
+</ParamField>
 
-- `id`: Unique deployment identifier
-- `status`: Deployment status ("BUILDING", "READY", "FAILED")
-- `url`: Endpoint URL (when status is "READY")
+<ParamField body="name" type="string" required>
+  Unique name for the deployment.
+</ParamField>
 
+<ParamField body="description" type="string">
+  Human-readable description of the deployment.
+</ParamField>
+
+<ParamField body="envs" type="object">
+  Environment variables as key-value pairs.
+</ParamField>
+
+<ParamField body="project_name" type="string">
+  Project name to scope the deployment. Defaults to your first project.
+</ParamField>
+
+The response includes:
+
+<ResponseField name="id" type="string" required>
+  Unique deployment identifier.
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  Deployment status: `BUILDING`, `READY`, or `FAILED`.
+</ResponseField>
+
+<ResponseField name="url" type="string">
+  Endpoint URL, available when status is `READY`.
+</ResponseField>
 
 ### List deployments
-Retrieves all deployments associated with the authenticated account.
 
 ```python
 deployments = client.deployment.list()
-
 for dep in deployments:
     print(f"{dep['name']}: {dep['status']}")
 ```
+
+## Error handling
+
+The SDK raises specific exceptions so you can handle different error types:
+
+```python
+from celesto.sdk.exceptions import (
+    CelestoAuthenticationError,
+    CelestoValidationError,
+    CelestoNotFoundError,
+    CelestoRateLimitError,
+    CelestoServerError,
+    CelestoNetworkError,
+)
+```
+
+| Exception | When it occurs |
+|---|---|
+| `CelestoAuthenticationError` | Invalid or missing API key (401/403) |
+| `CelestoValidationError` | Invalid parameters (400/422) |
+| `CelestoNotFoundError` | Resource not found (404) |
+| `CelestoRateLimitError` | Too many requests (429) |
+| `CelestoServerError` | Server-side error (5xx) |
+| `CelestoNetworkError` | Connection failures or timeouts |
