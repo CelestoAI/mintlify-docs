@@ -102,6 +102,28 @@ The response includes these fields:
   ISO 8601 timestamp of when the computer was created.
 </ResponseField>
 
+<ResponseField name="stopped_at" type="string">
+  ISO 8601 timestamp of when the computer was stopped. Only present if the computer has been stopped.
+</ResponseField>
+
+<ResponseField name="last_error" type="string">
+  Description of the most recent error, if the computer is in `error` status.
+</ResponseField>
+
+<ResponseField name="connection" type="object">
+  Connection details for accessing a running computer.
+
+  <Expandable title="Connection properties">
+    <ResponseField name="ssh" type="string">
+      SSH connection string for terminal access.
+    </ResponseField>
+
+    <ResponseField name="access_url" type="string">
+      URL for browser-based access to the computer.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
 ### Execute commands
 
 Run a shell command on a running computer:
@@ -153,7 +175,18 @@ print(f"{info['name']}: {info['status']}")
 result = client.computers.list()
 for vm in result["computers"]:
     print(f"{vm['name']}: {vm['status']}")
+print(f"Total: {result['count']}")
 ```
+
+The response includes:
+
+<ResponseField name="computers" type="array" required>
+  List of computer objects, each with the same fields as the create response.
+</ResponseField>
+
+<ResponseField name="count" type="integer" required>
+  Total number of computers in the list.
+</ResponseField>
 
 ### Lifecycle
 
@@ -258,6 +291,10 @@ The response includes:
   Endpoint URL, available when status is `READY`.
 </ResponseField>
 
+<ResponseField name="message" type="string">
+  Additional information about the deployment result.
+</ResponseField>
+
 ### List deployments
 
 ```python
@@ -265,6 +302,32 @@ deployments = client.deployment.list()
 for dep in deployments:
     print(f"{dep['name']}: {dep['status']}")
 ```
+
+Each deployment object in the list includes:
+
+<ResponseField name="id" type="string" required>
+  Unique deployment identifier.
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Deployment name.
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Human-readable description, if provided during deploy.
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  Deployment status: `READY`, `BUILDING`, `FAILED`, or `STOPPED`.
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  ISO 8601 timestamp of when the deployment was created.
+</ResponseField>
+
+<ResponseField name="updated_at" type="string">
+  ISO 8601 timestamp of the most recent update.
+</ResponseField>
 
 ## Error handling
 
