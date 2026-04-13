@@ -415,6 +415,46 @@ listDriveFiles(params: {
   If access rules are active, a page may contain fewer than `page_size` results after filtering. Use `next_page_token` to continue.
 </Note>
 
+### `get_access_rules`
+
+Signature:
+
+<CodeGroup>
+
+```python Python
+get_access_rules(connection_id: str) -> dict
+```
+
+```ts JavaScript
+getAccessRules(connectionId: string): Promise<GatekeeperAccessRules>
+```
+
+</CodeGroup>
+
+**Parameters**
+
+<ParamField body="connection_id" type="string" required>
+  Delegated connection ID
+</ParamField>
+
+**Response**
+
+<ResponseField name="version" type="integer" required>
+  Version number of the access rules configuration.
+</ResponseField>
+
+<ResponseField name="allowed_folders" type="string[]" required>
+  List of Google Drive folder IDs with recursive access.
+</ResponseField>
+
+<ResponseField name="allowed_files" type="string[]" required>
+  List of individual Google Drive file IDs.
+</ResponseField>
+
+<ResponseField name="unrestricted" type="boolean" required>
+  When `true`, the subject has full access to all files with no folder or file restrictions.
+</ResponseField>
+
 ### `update_access_rules`
 
 Signature:
