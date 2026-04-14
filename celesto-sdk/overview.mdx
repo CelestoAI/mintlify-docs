@@ -126,7 +126,7 @@ The response includes these fields:
 
 ### Execute commands
 
-Run a shell command on a running computer:
+Run a shell command on a computer:
 
 ```python
 result = client.computers.exec(computer["id"], "ls -la /home")
@@ -206,17 +206,29 @@ The `celesto` CLI focuses on computer management. All commands live under `celes
 |---|---|
 | `celesto computer create [--cpus N] [--memory MB]` | Create a computer |
 | `celesto computer list` | List all computers |
-| `celesto computer run <name> "command"` | Execute a command |
-| `celesto computer ssh <name>` | Interactive shell |
+| `celesto computer run <name> "command"` | Execute a command (auto-resumes stopped computers) |
+| `celesto computer ssh <name>` | Interactive terminal (auto-resumes stopped computers) |
 | `celesto computer stop <name>` | Stop a computer |
 | `celesto computer start <name>` | Start a stopped computer |
 | `celesto computer delete <name> [--force]` | Delete a computer |
 
 You can use either the computer name or ID for any command that takes a computer identifier.
 
+### Auto-resume
+
+The `run` and `ssh` commands automatically resume a stopped computer before executing. If you run a command or open a terminal session on a stopped computer, the CLI starts it, waits for it to become available, and then proceeds. You do not need to call `start` manually first.
+
+```bash
+# This works even if "einstein" is stopped
+celesto computer run einstein "uname -a"
+
+# Opens a terminal, resuming the computer if needed
+celesto computer ssh einstein
+```
+
 ### JSON output
 
-All commands support `--json` for machine-readable output:
+All commands support `--json` (`-j`) for machine-readable output, which is useful for scripting and AI agent integrations:
 
 ```bash
 celesto computer list --json
