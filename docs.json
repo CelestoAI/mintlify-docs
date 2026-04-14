@@ -262,7 +262,7 @@
   "appearance": {
     "default": "dark"
   },
-  "description": "Deploy long-running agents and MCP servers, with built-in security and observability.",
+  "description": "Celesto provides secure, isolated computers that AI agents can use to browse, code, and get real work done.",
   "interaction": {
     "drilldown": true
   },
