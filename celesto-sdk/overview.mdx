@@ -1,32 +1,58 @@
 ---
 title: Celesto SDK
-description: "Python client and CLI for creating sandboxed computers, running commands, and managing deployments on the Celesto platform."
+description: "Python and JavaScript client for creating sandboxed computers, running commands, and managing deployments on the Celesto platform."
 ---
 
-The Celesto SDK lets you create sandboxed computers, run commands inside them, and manage the full lifecycle from your Python code or the command line. You can use it to spin up isolated environments for AI agents, run untrusted code safely, or automate development workflows.
+The Celesto SDK lets you create sandboxed computers, run commands inside them, and manage the full lifecycle from your code or the command line. You can use it to spin up isolated environments for AI agents, run untrusted code safely, or automate development workflows. The SDK is available for both Python and JavaScript/TypeScript.
 
 ## Installation
 
-```bash
+<CodeGroup>
+
+```bash Python
 pip install celesto
 ```
+
+```bash JavaScript
+npm install @celestoai/sdk
+```
+
+</CodeGroup>
 
 ## Authentication
 
 Set your API key as an environment variable or pass it directly:
 
-```python
+<CodeGroup>
+
+```python Python
 import os
 os.environ["CELESTO_API_KEY"] = "your-api-key"
 ```
 
+```bash JavaScript
+export CELESTO_API_KEY="your-api-key"
+```
+
+</CodeGroup>
+
 You can also pass the key when you create the client:
 
-```python
-from celesto.sdk import CelestoSDK
+<CodeGroup>
 
-client = CelestoSDK(api_key="your-api-key")
+```python Python
+from celesto import Celesto
+
+client = Celesto(api_key="your-api-key")
 ```
+
+```ts JavaScript
+import { Celesto } from "@celestoai/sdk";
+
+const client = new Celesto({ token: "your-api-key" });
+```
+
+</CodeGroup>
 
 <Tip>
   Get your API key from [celesto.ai](https://celesto.ai) under **Settings > Security**.
@@ -34,10 +60,12 @@ client = CelestoSDK(api_key="your-api-key")
 
 ## Quick example
 
-```python
-from celesto.sdk import CelestoSDK
+<CodeGroup>
 
-with CelestoSDK() as client:
+```python Python
+from celesto import Celesto
+
+with Celesto() as client:
     computer = client.computers.create(cpus=2, memory=2048)
     print(f"Computer ready: {computer['name']}")
 
@@ -46,6 +74,22 @@ with CelestoSDK() as client:
 
     client.computers.delete(computer["id"])
 ```
+
+```ts JavaScript
+import { Celesto } from "@celestoai/sdk";
+
+const client = new Celesto({ token: process.env.CELESTO_API_KEY });
+
+const computer = await client.computers.create({ cpus: 2, memory: 2048 });
+console.log(`Computer ready: ${computer.name}`);
+
+const result = await client.computers.exec(computer.id, "uname -a");
+console.log(result.stdout);
+
+await client.computers.delete(computer.id);
+```
+
+</CodeGroup>
 
 ## Computers API
 
@@ -343,24 +387,39 @@ Each deployment object in the list includes:
 
 ## Error handling
 
-The SDK raises specific exceptions so you can handle different error types:
+Both SDKs provide typed errors so you can handle different failure modes.
 
-```python
-from celesto.sdk.exceptions import (
-    CelestoAuthenticationError,
-    CelestoValidationError,
-    CelestoNotFoundError,
-    CelestoRateLimitError,
-    CelestoServerError,
-    CelestoNetworkError,
-)
-```
+<Tabs>
+  <Tab title="Python">
+    ```python
+    from celesto.sdk.exceptions import (
+        CelestoAuthenticationError,
+        CelestoValidationError,
+        CelestoNotFoundError,
+        CelestoRateLimitError,
+        CelestoServerError,
+        CelestoNetworkError,
+    )
+    ```
 
-| Exception | When it occurs |
-|---|---|
-| `CelestoAuthenticationError` | Invalid or missing API key (401/403) |
-| `CelestoValidationError` | Invalid parameters (400/422) |
-| `CelestoNotFoundError` | Resource not found (404) |
-| `CelestoRateLimitError` | Too many requests (429) |
-| `CelestoServerError` | Server-side error (5xx) |
-| `CelestoNetworkError` | Connection failures or timeouts |
+    | Exception | When it occurs |
+    |---|---|
+    | `CelestoAuthenticationError` | Invalid or missing API key (401/403) |
+    | `CelestoValidationError` | Invalid parameters (400/422) |
+    | `CelestoNotFoundError` | Resource not found (404) |
+    | `CelestoRateLimitError` | Too many requests (429) |
+    | `CelestoServerError` | Server-side error (5xx) |
+    | `CelestoNetworkError` | Connection failures or timeouts |
+  </Tab>
+  <Tab title="JavaScript">
+    ```ts
+    import { CelestoError, CelestoApiError, CelestoNetworkError } from "@celestoai/sdk";
+    ```
+
+    | Error class | When it occurs |
+    |---|---|
+    | `CelestoApiError` | Any non-2xx HTTP response (check `.status` for the code) |
+    | `CelestoNetworkError` | DNS failures, timeouts, or connection errors |
+    | `CelestoError` | Base class — catch this for all SDK errors |
+  </Tab>
+</Tabs>
