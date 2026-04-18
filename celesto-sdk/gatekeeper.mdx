@@ -1,6 +1,6 @@
 ---
 title: "Celesto Gatekeeper"
-description: "Connect your end users to third-party tools like Google Drive using CelestoSDK."
+description: "Connect your end users to third-party tools like Google Drive using the Celesto SDK."
 ---
 
 Delegated Access lets you connect your end users (subjects) to third-party providers such as Google Drive while keeping access scoped to your project.
@@ -38,13 +38,13 @@ Use this complete script to start a connection, list active connections, and lis
 
 ```python gatekeeper.py
 import os
-from celesto.sdk import CelestoSDK
+from celesto import Celesto
 
 
 project_name = "Default"
 subject = "user:acme:alice"  # Unique identifier for your end user
 
-client = CelestoSDK()
+client = Celesto()
 
 # ====================================================================
 
