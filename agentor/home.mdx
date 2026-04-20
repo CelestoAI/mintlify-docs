@@ -3,11 +3,36 @@ title: "Agentor"
 description: "Build, deploy, and operate production-ready AI agents with tool use, MCP support, and agent-to-agent communication."
 ---
 
-Build production-ready AI agents with tool use, MCP support, and agent-to-agent communication.
+Agentor is an open-source Python framework for building and deploying long-running AI agents — with tool use, MCP support, A2A protocol, and durable execution built in.
 
 <Info>
-  Agentor is open source. [View source on GitHub](https://github.com/CelestoAI/agentor) and [start with Quickstart](/agentor/quickstart).
+  [View source on GitHub](https://github.com/CelestoAI/agentor) · [Start with Quickstart](/agentor/quickstart)
 </Info>
+
+## Quick example
+
+Build an agent, connect tools, and serve it over the A2A protocol in a few lines:
+
+```python
+from agentor import Agentor
+from agentor.tools import GetWeatherTool
+
+agent = Agentor(
+    name="Weather Agent",
+    model="gpt-5-mini",
+    tools=[GetWeatherTool()]
+)
+
+result = agent.run("What is the weather in London?")
+print(result)
+
+# Serve the agent with A2A enabled
+agent.serve()
+```
+
+<Tip>
+  `agent.serve()` automatically enables the A2A protocol, making your agent discoverable and interoperable with other agents.
+</Tip>
 
 ## Start in 5 minutes
 
