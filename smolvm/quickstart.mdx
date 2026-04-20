@@ -20,9 +20,10 @@ Go from zero to a running sandbox in three steps.
     ```python quickstart.py
     from smolvm import SmolVM
 
-    with SmolVM() as vm:
-        result = vm.run("echo 'Hello from the sandbox'")
-        print(result.stdout.strip())
+    vm = SmolVM()
+    result = vm.run("echo 'Hello from the sandbox!'")
+    print(result)
+    vm.stop()
     ```
 
     Run it:
@@ -30,8 +31,6 @@ Go from zero to a running sandbox in three steps.
     ```bash
     python quickstart.py
     ```
-
-    The `with` block creates the sandbox on entry and tears it down on exit.
 
     <Note>
       The first run takes 30–60 seconds while SmolVM downloads the Alpine base image. Subsequent runs boot in under a second.
