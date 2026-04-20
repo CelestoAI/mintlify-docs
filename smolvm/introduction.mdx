@@ -3,13 +3,9 @@ title: "Introduction"
 description: "Run code, start a browser, and give AI agents an isolated workspace with SmolVM"
 ---
 
-<img src="https://ik.imagekit.io/gradsflow/celestoai/logo/smolvm_Es-VK398Q.png?updatedAt=1775222245588" width="100" />
-
 # SmolVM
 
-SmolVM gives your app or AI agent a private sandbox to run code safely. You can execute shell commands, start a real browser, or let a language model drive a full desktop — all inside an isolated environment that never touches your host machine.
-
-SmolVM is available as a Python SDK and a CLI. Sandboxes spin up in under a second and clean themselves up when you are done.
+SmolVM gives AI agents their own disposable computer. Each microVM boots in milliseconds, runs any code or software you throw at it, keeps state when you need it, and vanishes when you don't — nothing touches your host.
 
 ## What you can do
 
@@ -23,7 +19,7 @@ SmolVM is available as a Python SDK and a CLI. Sandboxes spin up in under a seco
   </Card>
 
   <Card title="Power your agents" icon="robot">
-    Plug SmolVM into any agent framework — Agentor, PydanticAI, OpenAI Agents, LangChain, and more
+    Plug SmolVM into any agent framework — Claude, PydanticAI, OpenAI Agents, LangChain, and more
   </Card>
 </CardGroup>
 
@@ -32,12 +28,11 @@ SmolVM is available as a Python SDK and a CLI. Sandboxes spin up in under a seco
 ```python
 from smolvm import SmolVM
 
-with SmolVM() as vm:
-    result = vm.run("echo 'Hello from the sandbox'")
-    print(result.stdout.strip())
+vm = SmolVM()
+result = vm.run("echo 'Hello from the sandbox'")
+print(result.stdout.strip())
+vm.stop()
 ```
-
-The `with` block handles the full lifecycle: it creates the sandbox when you enter and tears it down when you exit.
 
 ## Where to start
 
@@ -65,7 +60,7 @@ smolvm stop my-sandbox           # tear it down
 
 See the [CLI reference](/smolvm/cli/overview) for the full command list.
 
-### Start a browser from the CLI
+### Start a sandboxed browser from the CLI
 
 You can launch an isolated browser session directly from the terminal. This is useful for quick testing, scripting, or handing the CDP endpoint to an external tool.
 
@@ -100,11 +95,11 @@ Typical lifecycle timings (p50) on a standard Linux host:
 
 | Phase | Time |
 | --- | --- |
-| Create + Start | \~572ms |
-| SSH ready | \~2.1s |
-| Command execution | **\~43ms** |
-| Stop + Delete | \~751ms |
-| **Full lifecycle (boot, run, teardown)** | **\~3.5s** |
+| Create \+ Start | ~572ms |
+| SSH ready | ~2.1s |
+| Command execution | **~43ms** |
+| Stop \+ Delete | ~751ms |
+| **Full lifecycle (boot, run, teardown)** | **~3.5s** |
 
 <Note>
   Measured on AMD Ryzen 7 7800X3D (8C/16T), Ubuntu Linux, KVM/Firecracker backend.
@@ -132,5 +127,5 @@ Typical lifecycle timings (p50) on a standard Linux host:
 
 ## Community
 
-* [Slack](https://join.slack.com/t/celestoai/shared_invite/zt-3qc7h8gno-Nb5_PElEWHDNnGqdVzC~4Q)
-* [GitHub](https://github.com/CelestoAI/SmolVM)
+- [Slack](https://join.slack.com/t/celestoai/shared_invite/zt-3qc7h8gno-Nb5_PElEWHDNnGqdVzC~4Q)
+- [GitHub](https://github.com/CelestoAI/SmolVM)
