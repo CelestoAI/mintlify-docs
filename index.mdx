@@ -1,24 +1,38 @@
 ---
-title: "Welcome to Celesto AI"
+title: "Celesto AI"
 sidebarTitle: "Introduction"
-description: "Documentation and API references covering open-source projects and the Celesto AI platform."
+description: "Secure, isolated computers that AI agents can use to browse, code, and get real work done."
 ---
 
+Celesto gives AI agents their own computer. Spin up a sandbox in seconds, let your agent run untrusted code, browse the web, or use a terminal — all isolated from your infrastructure. Run it yourself with the open-source stack, or use the managed platform.
+
+## AI Sandboxes
+
 <CardGroup cols={2}>
-  <Card icon="robot" href="/agentor/home" title="Agentor">
-    Build production-ready AI agents with tool use, MCP server support, A2A communication, and deployment workflows.
+  <Card icon="box" href="/smolvm/introduction" title="SmolVM">
+    Open-source microVM sandbox for running untrusted agent-generated code with fast startup and strong isolation.
   </Card>
-  <Card icon="box" href="/smolvm/introduction" title="SmolVM (AI sandbox)">
-    Run untrusted agent-generated code safely in microVM sandboxes with fast startup and strong isolation.
-  </Card>
-  <Card icon="lock" href="/superauth/google-oauth-setup" title="SuperAuth">
-    Add OAuth-based access and secure identity flows for agent tools and integrations like Gmail and Calendar.
-  </Card>
-  <Card icon="table-cells" href="/celesto-sdk/overview" title="Celesto Platform">
-    Use the Celesto SDK and platform APIs to connect managed tools, orchestrate workloads, and operate agents reliably.
+  <Card icon="cloud" href="/celesto-sdk/overview" title="Celesto Platform">
+    Managed sandboxes on demand. Use the Celesto SDK to launch, orchestrate, and operate agent computers at scale.
   </Card>
 </CardGroup>
 
-<Card icon="slack" href="https://join.slack.com/t/celestoai/shared_invite/zt-3qc7h8gno-Nb5_PElEWHDNnGqdVzC~4Q" title="Need Help?">
-  Join our Slack community to get help, share ideas, and connect with other builders.
-</Card>
+## Agent tooling
+
+<CardGroup cols={2}>
+  <Card icon="robot" href="/agentor/home" title="Agentor">
+    Build production-ready AI agents with tool use, MCP server support, and A2A communication.
+  </Card>
+  <Card icon="lock" href="/superauth/google-oauth-setup" title="SuperAuth">
+    OAuth-based access and secure identity flows for agent tools like Gmail and Calendar.
+  </Card>
+</CardGroup>
+
+<CardGroup cols={2}>
+  <Card icon="rocket" href="/smolvm/quickstart" title="Quickstart">
+    Launch your first sandbox in under a minute.
+  </Card>
+  <Card icon="slack" href="https://join.slack.com/t/celestoai/shared_invite/zt-3qc7h8gno-Nb5_PElEWHDNnGqdVzC~4Q" title="Join the community">
+    Get help, share ideas, and connect with other builders on Slack.
+  </Card>
+</CardGroup>
