@@ -3,7 +3,7 @@ title: "Quickstart"
 description: "Set up SmolVM and run your first sandbox in under five minutes"
 ---
 
-Go from zero to a running sandbox in three steps.
+By the end of this guide you'll have an isolated Linux sandbox running on your machine, ready to execute commands safely.
 
 <Steps>
   <Step title="Install SmolVM">
@@ -22,7 +22,7 @@ Go from zero to a running sandbox in three steps.
 
     vm = SmolVM()
     result = vm.run("echo 'Hello from the sandbox!'")
-    print(result)
+    print(result.stdout.strip())
     vm.stop()
     ```
 
@@ -32,19 +32,27 @@ Go from zero to a running sandbox in three steps.
     python quickstart.py
     ```
 
+    You should see:
+
+    ```
+    Hello from the sandbox!
+    ```
+
     <Note>
       The first run takes 30–60 seconds while SmolVM downloads the Alpine base image. Subsequent runs boot in under a second.
     </Note>
   </Step>
-
-  <Step title="Or use the CLI">
-    ```bash
-    smolvm create --name my-sandbox
-    smolvm ssh my-sandbox
-    smolvm stop my-sandbox
-    ```
-  </Step>
 </Steps>
+
+## Prefer the command line?
+
+You can do the same thing without writing any Python:
+
+```bash
+smolvm create --name my-sandbox
+smolvm ssh my-sandbox       # opens a shell inside the sandbox — type `exit` to leave
+smolvm stop my-sandbox
+```
 
 ## Customize resources
 
@@ -53,9 +61,10 @@ Configure memory and disk for heavier workloads (defaults: 512 MiB memory, 512 M
 ```python
 from smolvm import SmolVM
 
-with SmolVM(mem_size_mib=2048, disk_size_mib=4096) as vm:
-    result = vm.run("free -m")
-    print(result.stdout)
+vm = SmolVM(mem_size_mib=2048, disk_size_mib=4096)
+result = vm.run("free -m")
+print(result.stdout)
+vm.stop()
 ```
 
 ## Next steps
