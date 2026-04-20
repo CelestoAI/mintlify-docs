@@ -1,423 +1,110 @@
 ---
 title: "Installation"
-description: "Detailed installation instructions for SmolVM on Linux and macOS"
+description: "Install SmolVM on Linux or macOS"
 ---
 
-SmolVM supports two backends depending on your operating system:
+## Quick install
 
-* **Linux**: Firecracker (KVM-based microVMs)
-* **macOS**: QEMU (hardware virtualization)
+Install SmolVM with a single command:
 
-The backend is automatically detected based on your platform, but you can override it with the `SMOLVM_BACKEND` environment variable.
+```bash
+curl -sSL https://celesto.ai/install.sh | bash
+```
+
+This installs everything you need (including Python), configures your machine, and verifies the setup.
+
+## Manual install
+
+If you prefer to install step by step:
+
+```bash
+pip install smolvm
+smolvm setup
+smolvm doctor
+```
+
+On supported Linux and macOS systems, `pip install smolvm` pulls in the matching `smolvm-core` wheel automatically — most users do not need Rust installed.
+
+<Note>
+  Linux may prompt for `sudo` during `smolvm setup` to install host dependencies (Firecracker, `nftables`, `iproute2`) and configure runtime permissions. On macOS, setup installs QEMU via Homebrew.
+</Note>
+
+After setup on Linux, activate your new KVM group membership with `newgrp kvm`, or log out and back in.
 
 ## Requirements
 
-### System requirements
-
 <Tabs>
   <Tab title="Linux">
-    * **OS**: Ubuntu, Debian, Fedora, or any Linux distribution with KVM support
-    * **Python**: 3.10 or later
-    * **KVM**: `/dev/kvm` must be accessible
-    * **Architecture**: x86\_64 (amd64)
-    * **Dependencies**: `ip`, `nft`, `ssh`, `wget`, `tar`
+    * Linux distribution with KVM support (`/dev/kvm` accessible)
+    * x86\_64 architecture
+    * Python 3.10+
   </Tab>
 
   <Tab title="macOS">
-    * **OS**: macOS (Apple Silicon and Intel)
-    * **Python**: 3.10 or later
-    * **Homebrew**: Required for QEMU installation
-    * **Architecture**: ARM64 (Apple Silicon) or x86\_64 (Intel)
+    * macOS on Apple Silicon or Intel
+    * [Homebrew](https://brew.sh)
+    * Python 3.10+
   </Tab>
 </Tabs>
 
-### Python dependencies
+The backend is selected automatically based on your platform (Firecracker on Linux, QEMU on macOS). Override with `SMOLVM_BACKEND=firecracker|qemu|auto`.
 
-SmolVM requires the following Python packages (installed automatically via pip):
+## Optional extras
 
-* `paramiko>=3.0` - SSH client for guest command execution
-* `pydantic>=2.0` - Data validation and settings management
-* `requests>=2.28` - HTTP client for API interactions
-* `requests-unixsocket>=0.3` - Unix socket support for Firecracker API
+Install extras for agent framework examples or the web dashboard:
 
-## Installation steps
-
-<Tabs>
-  <Tab title="Linux (Firecracker)">
-    <Steps>
-      <Step title="Install Python package">
-        ```bash  theme={null}
-        pip install smolvm
-        ```
-      </Step>
-
-      <Step title="Run one-time setup">
-        Run the built-in setup command to install Firecracker and configure your system:
-
-        ```bash  theme={null}
-        smolvm setup
-        ```
-
-        Linux may prompt for `sudo` during setup so it can install host dependencies and configure runtime permissions.
-
-        <Accordion title="What does setup do?">
-          The setup command performs the following operations:
-
-          1. **Checks KVM support**: Verifies `/dev/kvm` exists
-          2. **Installs system dependencies**: `curl`, `wget`, `jq`, `nftables`, `iproute2`, `e2fsprogs`, `openssh-client`, `tar`
-          3. **Downloads and installs Firecracker**: Fetches the latest Firecracker binary and installs to `/usr/local/bin`
-          4. **Adds user to KVM group**: Grants access to `/dev/kvm`
-          5. **Configures runtime sudoers**: Sets up passwordless sudo for specific SmolVM commands (`ip`, `nft`)
-        </Accordion>
-
-        <Tip>
-          You can also run the setup script directly from the cloned repository: `sudo ./scripts/system-setup.sh --configure-runtime`
-        </Tip>
-      </Step>
-
-      <Step title="Activate KVM group membership">
-        After setup, activate the KVM group:
-
-        ```bash  theme={null}
-        newgrp kvm
-        ```
-
-        Or log out and log back in for the group changes to take effect permanently.
-      </Step>
-
-      <Step title="Verify installation">
-        Check that everything is installed correctly:
-
-        ```bash  theme={null}
-        # Check Firecracker
-        firecracker --version
-
-        # Check SmolVM
-        python -c "from smolvm import SmolVM; print('SmolVM installed successfully')"
-
-        # Run system diagnostics
-        smolvm doctor
-        ```
-      </Step>
-    </Steps>
-  </Tab>
-
-  <Tab title="macOS (QEMU)">
-    <Steps>
-      <Step title="Install Homebrew (if not already installed)">
-        If you don't have Homebrew, install it from [brew.sh](https://brew.sh):
-
-        ```bash  theme={null}
-        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-        ```
-      </Step>
-
-      <Step title="Install Python package">
-        ```bash  theme={null}
-        pip install smolvm
-        ```
-      </Step>
-
-      <Step title="Run one-time setup">
-        Run the built-in setup command to install QEMU:
-
-        ```bash  theme={null}
-        smolvm setup
-        ```
-
-        This installs QEMU via Homebrew. The QEMU backend is automatically detected on macOS.
-
-        <Tip>
-          You can also run the setup script directly from the cloned repository: `./scripts/system-setup-macos.sh`
-        </Tip>
-      </Step>
-
-      <Step title="Verify installation">
-        Check that everything is installed correctly:
-
-        ```bash  theme={null}
-        # Check QEMU
-        qemu-system-aarch64 --version  # Apple Silicon
-        qemu-system-x86_64 --version   # Intel
-
-        # Check SmolVM
-        python -c "from smolvm import SmolVM; print('SmolVM installed successfully')"
-
-        # Run system diagnostics
-        smolvm doctor
-        ```
-      </Step>
-    </Steps>
-  </Tab>
-</Tabs>
-
-## Advanced installation options
-
-### Custom backend selection
-
-You can override the automatic backend detection:
-
-```bash  theme={null}
-# Force QEMU backend (useful for testing on Linux)
-export SMOLVM_BACKEND=qemu
-
-# Force Firecracker backend
-export SMOLVM_BACKEND=firecracker
-
-# Auto-detect (default)
-export SMOLVM_BACKEND=auto
+```bash
+pip install "smolvm[examples]"   # pydantic-ai, openai-agents, langchain, playwright
+pip install "smolvm[dashboard]"  # fastapi, uvicorn, websockets
+pip install "smolvm[all]"        # everything above
 ```
-
-In Python:
-
-```python  theme={null}
-from smolvm import SmolVM
-
-# Explicitly use QEMU backend
-vm = SmolVM(backend="qemu")
-```
-
-### Installing with Docker support
-
-For building custom images, you may want Docker installed:
-
-<CodeGroup>
-  ```bash Linux theme={null}
-  sudo ./scripts/system-setup.sh --configure-runtime --with-docker
-  ```
-
-  ```bash macOS theme={null}
-  ./scripts/system-setup-macos.sh --with-docker
-  ```
-</CodeGroup>
-
-### Optional extras
-
-SmolVM includes optional dependency groups you can install depending on your use case:
-
-```bash  theme={null}
-# Agent framework examples (PydanticAI, OpenAI Agents, LangChain, Playwright)
-pip install "smolvm[examples]"
-
-# Web dashboard for monitoring VMs
-pip install "smolvm[dashboard]"
-
-# Everything (dashboard + examples)
-pip install "smolvm[all]"
-```
-
-| Extra | What it includes |
-| --- | --- |
-| `examples` | `pydantic-ai`, `openai-agents`, `langchain`, `langchain-openai`, `openai`, `playwright` |
-| `dashboard` | `fastapi`, `uvicorn`, `websockets` |
-| `all` | All of the above |
 
 <Tip>
-  If you only need SmolVM as a sandbox and won't use agent framework integrations, the base `pip install smolvm` is all you need.
+  If you only need SmolVM as a sandbox, the base `pip install smolvm` is all you need.
 </Tip>
-
-### Development install
-
-For development with testing and linting tools:
-
-```bash  theme={null}
-# Clone the repository
-git clone https://github.com/CelestoAI/SmolVM.git
-cd SmolVM
-
-# Install with dev dependencies
-pip install -e ".[dev]"
-
-# Run tests
-pytest
-
-# Run linter
-ruff check .
-
-# Type checking
-mypy src
-```
-
-### Skip dependency installation
-
-If you've already installed dependencies manually, skip the package manager step:
-
-<CodeGroup>
-  ```bash Linux theme={null}
-  sudo ./scripts/system-setup.sh --configure-runtime --skip-deps
-  ```
-
-  ```bash macOS theme={null}
-  ./scripts/system-setup-macos.sh --check-only
-  ```
-</CodeGroup>
-
-## Verifying your installation
-
-### System diagnostics
-
-SmolVM includes a diagnostic tool to verify your setup:
-
-```bash  theme={null}
-# Auto-detect backend and check dependencies
-smolvm doctor
-
-# Check specific backend
-smolvm doctor --backend firecracker
-smolvm doctor --backend qemu
-
-# CI-friendly JSON output
-smolvm doctor --json --strict
-```
-
-### Test your first VM
-
-Run a simple test to ensure everything works:
-
-```python  theme={null}
-from smolvm import SmolVM
-
-with SmolVM() as vm:
-    result = vm.run("echo 'SmolVM is working!'")
-    print(result.output)
-    print(f"VM IP: {vm.get_ip()}")
-    print(f"Status: {vm.status}")
-```
-
-If this runs without errors, your installation is complete!
 
 ## Troubleshooting
 
 <AccordionGroup>
   <Accordion title="Linux: KVM not available">
-    If `/dev/kvm` doesn't exist, ensure KVM is enabled:
+    If `/dev/kvm` doesn't exist, enable virtualization:
 
-    ```bash  theme={null}
-    # Check if KVM is loaded
-    lsmod | grep kvm
-
-    # For Intel CPUs
-    sudo modprobe kvm_intel
-
-    # For AMD CPUs
-    sudo modprobe kvm_amd
-
-    # Verify /dev/kvm exists
+    ```bash
+    sudo modprobe kvm_intel   # Intel CPUs
+    sudo modprobe kvm_amd     # AMD CPUs
     ls -l /dev/kvm
     ```
 
-    For cloud VMs, ensure nested virtualization is enabled in your hypervisor settings.
+    For cloud VMs, enable nested virtualization in your hypervisor settings.
   </Accordion>
 
   <Accordion title="Linux: Permission denied on /dev/kvm">
-    Add your user to the `kvm` group:
+    Add your user to the `kvm` group and activate it:
 
-    ```bash  theme={null}
+    ```bash
     sudo usermod -aG kvm $USER
     newgrp kvm
-    ```
-
-    Verify group membership:
-
-    ```bash  theme={null}
-    groups | grep kvm
-    ```
-  </Accordion>
-
-  <Accordion title="Linux: Firecracker not found after installation">
-    Ensure `/usr/local/bin` is in your `PATH`:
-
-    ```bash  theme={null}
-    echo $PATH
-    export PATH="/usr/local/bin:$PATH"
-
-    # Make permanent by adding to ~/.bashrc or ~/.zshrc
-    echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.bashrc
     ```
   </Accordion>
 
   <Accordion title="macOS: qemu-system not found">
-    Ensure Homebrew's bin directory is in your PATH:
+    Ensure Homebrew's bin directory is in your `PATH`:
 
-    ```bash  theme={null}
-    # For Apple Silicon
-    export PATH="/opt/homebrew/bin:$PATH"
-
-    # For Intel
-    export PATH="/usr/local/bin:$PATH"
-
-    # Verify QEMU
-    which qemu-system-aarch64
-    ```
-  </Accordion>
-
-  <Accordion title="Network connectivity issues">
-    **Linux**: Ensure `nftables` is installed and running:
-
-    ```bash  theme={null}
-    sudo systemctl status nftables
-    sudo nft list ruleset
-    ```
-
-    **macOS**: QEMU networking uses user-mode networking by default, which should work without additional configuration.
-  </Accordion>
-
-  <Accordion title="apt-get update failures on Linux">
-    If the setup script fails during `apt-get update`, your repository sources may need updating:
-
-    ```bash  theme={null}
-    # Check sources
-    cat /etc/apt/sources.list
-
-    # Update manually
-    sudo apt-get update
-
-    # If sources are broken, fix them first, then rerun with --skip-deps
-    sudo ./scripts/system-setup.sh --configure-runtime --skip-deps
+    ```bash
+    export PATH="/opt/homebrew/bin:$PATH"   # Apple Silicon
+    export PATH="/usr/local/bin:$PATH"      # Intel
     ```
   </Accordion>
 </AccordionGroup>
 
-## Uninstallation
+For golden-AMI builds, two-stage deploys, pinning the Firecracker version, and other non-default install paths, see the [upstream installation guide](https://github.com/CelestoAI/SmolVM/blob/main/docs/installation.md).
 
-### Remove the SmolVM Python package
+## Uninstall
 
-```bash  theme={null}
+```bash
 pip uninstall smolvm
+rm -rf ~/.local/state/smolvm ~/.smolvm
 ```
-
-### Remove system components (optional)
-
-<Tabs>
-  <Tab title="Linux">
-    ```bash  theme={null}
-    # Remove Firecracker binary
-    sudo rm /usr/local/bin/firecracker
-    sudo rm /usr/local/bin/jailer  # if installed
-
-    # Remove runtime sudoers configuration
-    sudo ./scripts/system-setup.sh --remove-runtime-config
-
-    # Remove user from KVM group (optional)
-    sudo deluser $USER kvm
-
-    # Clean up SmolVM data
-    rm -rf ~/.local/state/smolvm
-    rm -rf ~/.smolvm
-    ```
-  </Tab>
-
-  <Tab title="macOS">
-    ```bash  theme={null}
-    # Remove QEMU (if no longer needed)
-    brew uninstall qemu
-
-    # Clean up SmolVM data
-    rm -rf ~/.local/state/smolvm
-    rm -rf ~/.smolvm
-    ```
-  </Tab>
-</Tabs>
 
 ## Next steps
 
