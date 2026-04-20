@@ -97,12 +97,23 @@ The Computers API lets you create, manage, and interact with sandboxed virtual m
 
 ### Create a computer
 
-```python
+<CodeGroup>
+
+```python Python
 computer = client.computers.create(cpus=2, memory=2048)
 print(computer["name"])   # e.g., "einstein"
 print(computer["id"])     # e.g., "cmp_abc123"
 print(computer["status"]) # "creating" or "running"
 ```
+
+```ts JavaScript
+const computer = await client.computers.create({ cpus: 2, memory: 2048 });
+console.log(computer.name);   // e.g., "einstein"
+console.log(computer.id);     // e.g., "cmp_abc123"
+console.log(computer.status); // "creating" or "running"
+```
+
+</CodeGroup>
 
 <ParamField body="cpus" type="integer" default="1">
   Number of virtual CPUs. Range: 1-16.
@@ -172,11 +183,21 @@ The response includes these fields:
 
 Run a shell command on a computer:
 
-```python
+<CodeGroup>
+
+```python Python
 result = client.computers.exec(computer["id"], "ls -la /home")
 print(result["stdout"])
 print(result["exit_code"])
 ```
+
+```ts JavaScript
+const result = await client.computers.exec(computer.id, "ls -la /home");
+console.log(result.stdout);
+console.log(result.exitCode);
+```
+
+</CodeGroup>
 
 <ParamField body="computer_id" type="string" required>
   Computer ID or name.
@@ -208,19 +229,40 @@ The response includes:
 
 Retrieve details of a specific computer:
 
-```python
+<CodeGroup>
+
+```python Python
 info = client.computers.get(computer["id"])
 print(f"{info['name']}: {info['status']}")
 ```
 
+```ts JavaScript
+const info = await client.computers.get(computer.id);
+console.log(`${info.name}: ${info.status}`);
+```
+
+</CodeGroup>
+
 ### List computers
 
-```python
+<CodeGroup>
+
+```python Python
 result = client.computers.list()
 for vm in result["computers"]:
     print(f"{vm['name']}: {vm['status']}")
 print(f"Total: {result['count']}")
 ```
+
+```ts JavaScript
+const result = await client.computers.list();
+for (const vm of result.computers) {
+  console.log(`${vm.name}: ${vm.status}`);
+}
+console.log(`Total: ${result.count}`);
+```
+
+</CodeGroup>
 
 The response includes:
 
@@ -236,11 +278,46 @@ The response includes:
 
 Stop, start, and delete computers as needed:
 
-```python
+<CodeGroup>
+
+```python Python
 client.computers.stop(computer_id)
 client.computers.start(computer_id)
 client.computers.delete(computer_id)
 ```
+
+```ts JavaScript
+await client.computers.stop(computerId);
+await client.computers.start(computerId);
+await client.computers.delete(computerId);
+```
+
+</CodeGroup>
+
+### Terminal connection (JavaScript only)
+
+The JavaScript SDK provides a `getTerminalConnection` method that returns the URL and headers you need to open a WebSocket terminal session. You can use it with any WebSocket library.
+
+```ts
+const conn = await client.computers.getTerminalConnection("my-computer");
+const ws = new WebSocket(conn.url, { headers: conn.headers });
+ws.on("open", () => ws.send(conn.firstMessage));
+ws.on("message", (data) => process.stdout.write(data));
+```
+
+The method accepts either a computer ID (e.g., `cmp_abc123`) or a human-readable name. It resolves the name to the canonical ID automatically.
+
+<ResponseField name="url" type="string" required>
+  The `wss://` URL for the WebSocket connection.
+</ResponseField>
+
+<ResponseField name="headers" type="object" required>
+  Headers to include in the WebSocket handshake, including the `Authorization` header.
+</ResponseField>
+
+<ResponseField name="firstMessage" type="string" required>
+  JSON string to send as the first message after connecting.
+</ResponseField>
 
 ## CLI reference
 
@@ -298,6 +375,10 @@ celesto computer delete einstein
 The Deployment API lets you package and deploy AI agents to Celesto's managed infrastructure.
 
 ### Deploy an agent
+
+<Note>
+  The Deployment API is currently available in the Python SDK only.
+</Note>
 
 ```python
 from pathlib import Path
