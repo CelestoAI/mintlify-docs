@@ -48,7 +48,7 @@ SmolVM uses hardware virtualization (KVM-backed microVMs) rather than containers
 
 ## Agentor
 
-[Agentor](/agentor/introduction) is Celesto's own agent framework. It has built-in SmolVM support through `SmolVMRuntime`, so your agent's shell commands run inside a sandbox automatically — no glue code needed.
+[Agentor](/agentor/home) is Celesto's own agent framework. It has built-in SmolVM support through `SmolVMRuntime`, so your agent's shell commands run inside a sandbox automatically — no glue code needed.
 
 Pass `SmolVMRuntime` as the executor for `ShellTool` and Agentor routes every command through a dedicated microVM:
 

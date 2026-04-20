@@ -25,6 +25,61 @@
     },
     "tabs": [
       {
+        "tab": "Sandboxes",
+        "icon": "box",
+        "groups": [
+          {
+            "group": "Celesto Platform",
+            "icon": "cloud",
+            "pages": [
+              "celesto-sdk/overview",
+              "celesto-sdk/gatekeeper"
+            ]
+          },
+          {
+            "group": "SmolVM — Get Started",
+            "icon": "rocket",
+            "pages": [
+              "smolvm/introduction",
+              "smolvm/quickstart",
+              "smolvm/installation"
+            ]
+          },
+          {
+            "group": "SmolVM — Concepts",
+            "icon": "lightbulb",
+            "pages": [
+              "smolvm/concepts/overview",
+              "smolvm/concepts/security",
+              "smolvm/concepts/backends",
+              "smolvm/concepts/networking"
+            ]
+          },
+          {
+            "group": "SmolVM — Guides",
+            "icon": "map",
+            "pages": [
+              "smolvm/guides/basic-usage",
+              "smolvm/guides/vm-lifecycle",
+              "smolvm/guides/port-forwarding",
+              "smolvm/guides/environment-variables",
+              "smolvm/guides/snapshots",
+              "smolvm/guides/custom-images",
+              "smolvm/guides/ai-agent-integration"
+            ]
+          },
+          {
+            "group": "SmolVM — Advanced",
+            "icon": "gear",
+            "pages": [
+              "smolvm/advanced/performance",
+              "smolvm/advanced/troubleshooting",
+              "smolvm/advanced/architecture"
+            ]
+          }
+        ]
+      },
+      {
         "tab": "Agents",
         "icon": "robot",
         "groups": [
@@ -33,7 +88,6 @@
             "icon": "rocket",
             "pages": [
               "agentor/home",
-              "agentor/introduction",
               "agentor/installation",
               "agentor/quickstart"
             ]
@@ -87,7 +141,65 @@
             ]
           },
           {
-            "group": "API Reference",
+            "group": "SuperAuth",
+            "icon": "lock",
+            "pages": [
+              "superauth/google-oauth-setup"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "SDK Reference",
+        "icon": "code",
+        "groups": [
+          {
+            "group": "Celesto Platform SDK",
+            "icon": "cloud",
+            "pages": [
+              "celesto-sdk/overview"
+            ]
+          },
+          {
+            "group": "SmolVM API",
+            "icon": "book",
+            "pages": [
+              "smolvm/api/smolvm",
+              "smolvm/api/browsersession",
+              "smolvm/api/browsersessionconfig",
+              "smolvm/api/browsersessioninfo",
+              "smolvm/api/vmconfig",
+              "smolvm/api/internetsettings",
+              "smolvm/api/commandresult",
+              "smolvm/api/vminfo",
+              "smolvm/api/imagebuilder",
+              "smolvm/api/imagemanager",
+              "smolvm/api/imagesource",
+              "smolvm/api/hostmanager",
+              "smolvm/api/networkconfig",
+              "smolvm/api/snapshotinfo",
+              "smolvm/api/sshclient",
+              "smolvm/api/exceptions"
+            ]
+          },
+          {
+            "group": "SmolVM CLI",
+            "icon": "terminal",
+            "pages": [
+              "smolvm/cli/overview",
+              "smolvm/cli/list",
+              "smolvm/cli/create",
+              "smolvm/cli/stop",
+              "smolvm/cli/ssh",
+              "smolvm/cli/cleanup",
+              "smolvm/cli/doctor",
+              "smolvm/cli/snapshot",
+              "smolvm/cli/env",
+              "smolvm/cli/ui"
+            ]
+          },
+          {
+            "group": "Agentor API",
             "icon": "code",
             "pages": [
               "agentor/api/agentor",
@@ -113,92 +225,7 @@
         ]
       },
       {
-        "tab": "SmolVM",
-        "icon": "box",
-        "groups": [
-          {
-            "group": "Get Started",
-            "icon": "rocket",
-            "pages": [
-              "smolvm/introduction",
-              "smolvm/quickstart",
-              "smolvm/installation"
-            ]
-          },
-          {
-            "group": "Core Concepts",
-            "icon": "lightbulb",
-            "pages": [
-              "smolvm/concepts/overview",
-              "smolvm/concepts/security",
-              "smolvm/concepts/backends",
-              "smolvm/concepts/networking"
-            ]
-          },
-          {
-            "group": "Guides",
-            "icon": "map",
-            "pages": [
-              "smolvm/guides/basic-usage",
-              "smolvm/guides/vm-lifecycle",
-              "smolvm/guides/port-forwarding",
-              "smolvm/guides/environment-variables",
-              "smolvm/guides/snapshots",
-              "smolvm/guides/custom-images",
-              "smolvm/guides/ai-agent-integration"
-            ]
-          },
-          {
-            "group": "CLI Reference",
-            "icon": "terminal",
-            "pages": [
-              "smolvm/cli/overview",
-              "smolvm/cli/list",
-              "smolvm/cli/create",
-              "smolvm/cli/stop",
-              "smolvm/cli/ssh",
-              "smolvm/cli/cleanup",
-              "smolvm/cli/doctor",
-              "smolvm/cli/snapshot",
-              "smolvm/cli/env",
-              "smolvm/cli/ui"
-            ]
-          },
-          {
-            "group": "Advanced",
-            "icon": "gear",
-            "pages": [
-              "smolvm/advanced/performance",
-              "smolvm/advanced/troubleshooting",
-              "smolvm/advanced/architecture"
-            ]
-          },
-          {
-            "group": "API Reference",
-            "icon": "book",
-            "pages": [
-              "smolvm/api/smolvm",
-              "smolvm/api/browsersession",
-              "smolvm/api/browsersessionconfig",
-              "smolvm/api/browsersessioninfo",
-              "smolvm/api/vmconfig",
-              "smolvm/api/internetsettings",
-              "smolvm/api/commandresult",
-              "smolvm/api/vminfo",
-              "smolvm/api/imagebuilder",
-              "smolvm/api/imagemanager",
-              "smolvm/api/imagesource",
-              "smolvm/api/hostmanager",
-              "smolvm/api/networkconfig",
-              "smolvm/api/snapshotinfo",
-              "smolvm/api/sshclient",
-              "smolvm/api/exceptions"
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "Use cases",
+        "tab": "Cookbook",
         "icon": "compass",
         "pages": [
           "enterprise/use-cases/customer-support-Agent",
