@@ -7,21 +7,22 @@ description: "Run code, start a browser, and give AI agents an isolated workspac
 
 SmolVM gives AI agents their own disposable computer. Each microVM boots in milliseconds, runs any code or software you throw at it, keeps state when you need it, and vanishes when you don't — nothing touches your host.
 
-## What you can do
+## Features
 
-<CardGroup cols={3}>
-  <Card title="Run code safely" icon="code">
-    Execute shell commands or scripts in a clean sandbox instead of on your host machine
-  </Card>
+- **Sub-second boot** — VMs ready in ~500 ms.
+- **Hardware isolation** — Stronger security than containers.
+- **Network controls** — Domain allowlists for egress filtering.
+- **Browser sessions** — Full browser agents can see and control.
+- **Host mounts** — Give sandboxes read access to local directories.
+- **Snapshots** — Save and restore VM state instantly.
+- **OpenClaw** — GUI Linux apps inside a sandbox.
 
-  <Card title="Start a browser" icon="globe">
-    Launch a real Chromium session you can automate with Playwright or watch live through noVNC
-  </Card>
+## Use cases
 
-  <Card title="Power your agents" icon="robot">
-    Plug SmolVM into any agent framework — Claude, PydanticAI, OpenAI Agents, LangChain, and more
-  </Card>
-</CardGroup>
+- **Run untrusted code safely** — Execute AI-generated code in an isolated sandbox instead of on your machine.
+- **Give agents a browser** — Spin up a full browser session that agents can see and control in real time.
+- **Let agents read your project** — Mount a local directory so agents can explore your codebase inside a sandbox.
+- **Keep state across turns** — Reuse the same sandbox throughout a multi-step workflow.
 
 ## SDK and CLI
 
@@ -29,22 +30,6 @@ SmolVM ships with both a Python SDK and a CLI — use either or both.
 
 - **SDK** — embed sandboxes directly into your application or agent loop from Python code.
 - **CLI** — manage sandboxes from the terminal, start browser sessions, and script local workflows. See the [CLI reference](/smolvm/cli/overview) for the full command list.
-
-## Performance
-
-Typical lifecycle timings (p50) on a standard Linux host:
-
-| Phase | Time |
-| --- | --- |
-| Create \+ Start | ~572ms |
-| SSH ready | ~2.1s |
-| Command execution | **~43ms** |
-| Stop \+ Delete | ~751ms |
-| **Full lifecycle (boot, run, teardown)** | **~3.5s** |
-
-<Note>
-  Measured on AMD Ryzen 7 7800X3D (8C/16T), Ubuntu Linux, KVM/Firecracker backend.
-</Note>
 
 ## Get started
 
