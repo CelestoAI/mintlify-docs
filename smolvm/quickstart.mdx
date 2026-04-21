@@ -13,13 +13,12 @@ By the end of this guide you'll have an isolated Linux sandbox running on your m
 
     This installs everything you need and configures your machine. See [Installation](/smolvm/installation) for manual install and requirements.
   </Step>
-
   <Step title="Run your first sandbox">
     Create `quickstart.py`:
 
     ```python quickstart.py
     from smolvm import SmolVM
-
+    
     vm = SmolVM()
     result = vm.run("echo 'Hello from the sandbox!'")
     print(result.stdout.strip())
@@ -34,12 +33,12 @@ By the end of this guide you'll have an isolated Linux sandbox running on your m
 
     You should see:
 
-    ```
+    ```text
     Hello from the sandbox!
     ```
 
     <Note>
-      The first run takes 30–60 seconds while SmolVM downloads the Alpine base image. Subsequent runs boot in under a second.
+      The first run takes 30-60 seconds to download the operating system images.
     </Note>
   </Step>
 </Steps>

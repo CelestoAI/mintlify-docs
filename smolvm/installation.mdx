@@ -37,23 +37,22 @@ After setup on Linux, activate your new KVM group membership with `newgrp kvm`, 
 
 <Tabs>
   <Tab title="Linux">
-    * Ubuntu, Debian, or Fedora (other distributions work but `smolvm setup` may not install host dependencies automatically)
-    * KVM support — the kernel feature that lets SmolVM run virtual machines. Check with `ls /dev/kvm`
-    * x86\_64 architecture
-    * Python 3.10+
+    - Ubuntu, Debian, or Fedora (other distributions work but `smolvm setup` may not install host dependencies automatically)
+    - KVM support — the kernel feature that lets SmolVM run virtual machines. Check with `ls /dev/kvm`
+    - x86\_64 architecture
+    - Python 3.10\+
   </Tab>
-
   <Tab title="macOS">
-    * macOS on Apple Silicon or Intel
-    * [Homebrew](https://brew.sh)
-    * Python 3.10+
+    - macOS on Apple Silicon or Intel
+    - [Homebrew](https://brew.sh)
+    - Python 3.10\+
   </Tab>
 </Tabs>
 
 The backend is selected automatically based on your platform (Firecracker on Linux, QEMU on macOS). To force a specific backend:
 
 ```bash
-export SMOLVM_BACKEND=qemu          # or firecracker, or auto (the default)
+export SMOLVM_BACKEND=auto   # or firecracker, or auto (the default)
 ```
 
 ## Optional extras
