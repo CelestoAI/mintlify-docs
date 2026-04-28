@@ -17,8 +17,8 @@ SmolVM(
     data_dir: Path | None = None,
     socket_dir: Path | None = None,
     backend: str | None = None,
-    mem_size_mib: int | None = None,
-    disk_size_mib: int | None = None,
+    memory: int | None = None,
+    disk_size: int | None = None,
     ssh_user: str = "root",
     ssh_key_path: str | None = None,
 )
@@ -44,11 +44,11 @@ SmolVM(
   Runtime backend override. Options: `"firecracker"`, `"qemu"`, or `"auto"`.
 </ParamField>
 
-<ParamField path="mem_size_mib" type="int | None" default="None">
+<ParamField path="memory" type="int | None" default="None">
   Guest memory in MiB for auto-config mode (when both `config` and `vm_id` are omitted). Default is 512 MiB.
 </ParamField>
 
-<ParamField path="disk_size_mib" type="int | None" default="None">
+<ParamField path="disk_size" type="int | None" default="None">
   Root filesystem size in MiB for auto-config mode. Default is 512 MiB. Minimum is 64 MiB.
 </ParamField>
 
@@ -62,7 +62,7 @@ SmolVM(
 
 ### Raises
 
-* `ValueError`: If both `config` and `vm_id` are provided, or if `mem_size_mib`/`disk_size_mib` are set outside auto-config mode.
+* `ValueError`: If both `config` and `vm_id` are provided, or if `memory`/`disk_size` are set outside auto-config mode.
 
 ## Class Methods
 
@@ -596,8 +596,8 @@ async def async_create_many(
     cls,
     count: int,
     *,
-    mem_size_mib: int | None = None,
-    disk_size_mib: int | None = None,
+    memory: int | None = None,
+    disk_size: int | None = None,
     backend: str | None = None,
 ) -> list[SmolVM]
 ```
@@ -608,11 +608,11 @@ Create multiple sandboxes concurrently. Each sandbox is auto-configured and star
   Number of sandboxes to create.
 </ParamField>
 
-<ParamField path="mem_size_mib" type="int | None" default="None">
+<ParamField path="memory" type="int | None" default="None">
   Memory for each sandbox in MiB.
 </ParamField>
 
-<ParamField path="disk_size_mib" type="int | None" default="None">
+<ParamField path="disk_size" type="int | None" default="None">
   Disk size for each sandbox in MiB.
 </ParamField>
 
@@ -697,7 +697,7 @@ Create a VM with specific resources:
 ```python  theme={null}
 from smolvm import SmolVM
 
-with SmolVM(mem_size_mib=1024, disk_size_mib=1024) as vm:
+with SmolVM(memory=1024, disk_size=1024) as vm:
     result = vm.run("free -m")
     print(result.stdout)
 ```
@@ -711,7 +711,7 @@ from pathlib import Path
 config = VMConfig(
     vm_id="my-vm",
     vcpu_count=2,
-    mem_size_mib=512,
+    memory=512,
     kernel_path=Path("/path/to/kernel"),
     rootfs_path=Path("/path/to/rootfs"),
     boot_args="console=ttyS0 reboot=k panic=1 init=/init"

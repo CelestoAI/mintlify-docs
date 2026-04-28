@@ -276,7 +276,7 @@ For persistent sandboxes that survive across Python sessions:
     config = VMConfig(
         vm_id="persistent-agent-vm",  # Stable, reusable ID
         vcpu_count=2,
-        mem_size_mib=2048,
+        memory=2048,
         kernel_path=kernel,
         rootfs_path=rootfs,
         boot_args=SSH_BOOT_ARGS,

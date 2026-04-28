@@ -120,18 +120,42 @@ smolvm browser stop sess_a1b2c3
 
 See the [CLI reference](/smolvm/cli/overview) for the full command list.
 
-### Customize resources
+### Python SDK
 
-Configure memory and disk for heavier workloads (defaults: 512 MiB memory, 512 MiB disk):
+Create and manage sandboxes from Python:
 
 ```python
 from smolvm import SmolVM
 
-vm = SmolVM(mem_size_mib=2048, disk_size_mib=4096)
-result = vm.run("free -m")
-print(result.stdout)
-vm.stop()
+with SmolVM() as vm:
+    result = vm.run("echo 'Hello from the sandbox!'")
+    print(result.stdout.strip())
 ```
+
+Customize memory and disk for heavier workloads:
+
+```python
+vm = SmolVM(memory=2048, disk_size=4096)
+```
+
+Mount host directories:
+
+```python
+with SmolVM(mounts=["~/Projects/my-app"]) as vm:
+    result = vm.run("ls /workspace")
+    print(result.stdout)
+```
+
+Expose a port from the sandbox to your host:
+
+```python
+with SmolVM() as vm:
+    vm.run("python3 -m http.server 8000 &")
+    host_port = vm.expose_local(guest_port=8000)
+    print(f"http://127.0.0.1:{host_port}/")
+```
+
+See the [API reference](/smolvm/api/smolvm) for the full SDK documentation.
 
 ## Next steps
 

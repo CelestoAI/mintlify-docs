@@ -60,7 +60,7 @@ Configure memory and disk for heavier workloads (defaults: 512 MiB memory, 512 M
 ```python
 from smolvm import SmolVM
 
-vm = SmolVM(mem_size_mib=2048, disk_size_mib=4096)
+vm = SmolVM(memory=2048, disk_size=4096)
 result = vm.run("free -m")
 print(result.stdout)
 vm.stop()

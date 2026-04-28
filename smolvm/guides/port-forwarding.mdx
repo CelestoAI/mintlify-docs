@@ -169,7 +169,7 @@ kernel, rootfs = builder.build_debian_ssh_key(
 
 config = VMConfig(
     vcpu_count=1,
-    mem_size_mib=2048,
+    memory=2048,
     kernel_path=kernel,
     rootfs_path=rootfs,
     boot_args=SSH_BOOT_ARGS,
