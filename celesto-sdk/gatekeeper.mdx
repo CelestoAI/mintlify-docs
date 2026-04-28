@@ -100,20 +100,20 @@ print("drive_files:", files)
 ```
 
 ```ts gatekeeper.ts
-import { GatekeeperClient } from "@celestoai/sdk/gatekeeper";
+import { Celesto } from "@celestoai/sdk";
 
 const projectName = "Default";
 const subject = "user:acme:alice"; // Unique identifier for your end user
 
-const client = new GatekeeperClient({
+const client = new Celesto({
   token: process.env.CELESTO_API_KEY,
   // baseUrl: "https://api.celesto.ai",
 });
 
 const run = async () => {
-  const connect = await client.connect({
+  // `provider` defaults to "google_drive" — pass it explicitly to override.
+  const connect = await client.gatekeeper.connect({
     subject,
-    provider: "google_drive",
     projectName,
   });
   console.log("connect:", connect);
@@ -124,10 +124,10 @@ const run = async () => {
     return;
   }
 
-  const connections = await client.listConnections({ projectName });
+  const connections = await client.gatekeeper.listConnections({ projectName });
   console.log("connections:", connections);
 
-  const files = await client.listDriveFiles({
+  const files = await client.gatekeeper.listDriveFiles({
     projectName,
     subject,
     pageSize: 10,
@@ -136,7 +136,7 @@ const run = async () => {
   console.log("drive_files:", files);
 
   // Update access rules (restrict to specific folders)
-  // const rules = await client.updateAccessRules({
+  // const rules = await client.gatekeeper.updateAccessRules({
   //   subject,
   //   projectName,
   //   accessRules: { allowedFolders: ["folder_id_1", "folder_id_2"] },
@@ -144,7 +144,7 @@ const run = async () => {
   // console.log("access_rules:", rules);
 
   // Revoke connection when done
-  // await client.revokeConnection({ subject, projectName });
+  // await client.gatekeeper.revokeConnection({ subject, projectName });
 };
 
 run().catch(console.error);
