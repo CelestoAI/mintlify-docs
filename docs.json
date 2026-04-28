@@ -37,22 +37,23 @@
             ]
           },
           {
-            "group": "Sandbox Basics",
+            "group": "Features",
             "pages": [
-              "smolvm/guides/basic-usage",
-              "smolvm/guides/vm-lifecycle",
-              "smolvm/guides/environment-variables"
+              "smolvm/guides/coding-agents",
+              "smolvm/guides/host-mounts",
+              "smolvm/guides/network-controls",
+              "smolvm/guides/port-forwarding",
+              "smolvm/guides/snapshots"
             ]
           },
           {
-            "group": "Features",
+            "group": "Guides",
             "pages": [
-              "smolvm/guides/host-mounts",
-              "smolvm/guides/port-forwarding",
-              "smolvm/guides/snapshots",
+              "smolvm/guides/ai-agent-integration",
+              "smolvm/guides/basic-usage",
               "smolvm/guides/custom-images",
-              "smolvm/guides/coding-agents",
-              "smolvm/guides/ai-agent-integration"
+              "smolvm/guides/vm-lifecycle",
+              "smolvm/guides/environment-variables"
             ]
           },
           {
