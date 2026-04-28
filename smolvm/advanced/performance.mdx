@@ -79,15 +79,13 @@ from smolvm import SmolVM, VMConfig
 # Lightweight workload
 config = VMConfig(
     vcpu_count=1,
-    mem_size_mib=256,
-    disk_size_mib=2048
+    memory=256,
 )
 
 # Heavy workload
 config = VMConfig(
     vcpu_count=4,
-    mem_size_mib=2048,
-    disk_size_mib=8192
+    memory=2048,
 )
 ```
 

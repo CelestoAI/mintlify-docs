@@ -33,12 +33,30 @@
             "group": "Get Started",
             "pages": [
               "smolvm/introduction",
-              "smolvm/quickstart",
               "smolvm/installation"
             ]
           },
           {
-            "group": "Concepts",
+            "group": "Sandbox Basics",
+            "pages": [
+              "smolvm/guides/basic-usage",
+              "smolvm/guides/vm-lifecycle",
+              "smolvm/guides/environment-variables"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "smolvm/guides/host-mounts",
+              "smolvm/guides/port-forwarding",
+              "smolvm/guides/snapshots",
+              "smolvm/guides/custom-images",
+              "smolvm/guides/coding-agents",
+              "smolvm/guides/ai-agent-integration"
+            ]
+          },
+          {
+            "group": "Architecture",
             "pages": [
               "smolvm/concepts/overview",
               "smolvm/concepts/security",
@@ -47,23 +65,10 @@
             ]
           },
           {
-            "group": "Guides",
-            "pages": [
-              "smolvm/guides/basic-usage",
-              "smolvm/guides/vm-lifecycle",
-              "smolvm/guides/port-forwarding",
-              "smolvm/guides/environment-variables",
-              "smolvm/guides/snapshots",
-              "smolvm/guides/custom-images",
-              "smolvm/guides/ai-agent-integration"
-            ]
-          },
-          {
-            "group": "Advanced",
+            "group": "Operations",
             "pages": [
               "smolvm/advanced/performance",
-              "smolvm/advanced/troubleshooting",
-              "smolvm/advanced/architecture"
+              "smolvm/advanced/troubleshooting"
             ]
           }
         ]

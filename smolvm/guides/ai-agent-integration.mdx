@@ -59,7 +59,7 @@ from agentor.tools import ShellTool
 
 
 def main() -> None:
-    runtime = SmolVMRuntime(mem_size_mib=1024, disk_size_mib=2048)
+    runtime = SmolVMRuntime(memory=1024, disk_size=2048)
 
     try:
         agent = Agentor(
@@ -612,7 +612,7 @@ For agents that need to maintain state across multiple interactions without usin
     config = VMConfig(
         vm_id="agent-workspace",
         vcpu_count=2,
-        mem_size_mib=2048,
+        memory=2048,
         kernel_path=kernel,
         rootfs_path=rootfs,
         boot_args=SSH_BOOT_ARGS,
@@ -681,7 +681,7 @@ config = VMConfig(
 # Limit resources to prevent abuse
 config = VMConfig(
     vcpu_count=1,
-    mem_size_mib=512,
+    memory=512,
     # ... other config ...
 )
 ```

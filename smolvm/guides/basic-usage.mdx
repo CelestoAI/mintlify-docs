@@ -38,7 +38,7 @@ You can create a sandbox with sensible defaults or customize the configuration.
         print(f"VM running at {vm.get_ip()}")
 
     # Custom memory and disk size
-    with SmolVM(mem_size_mib=1024, disk_size_mib=1024) as vm:
+    with SmolVM(memory=1024, disk_size=1024) as vm:
         print(f"VM ID: {vm.vm_id}")
     ```
   </Tab>
@@ -56,7 +56,7 @@ You can create a sandbox with sensible defaults or customize the configuration.
     config = VMConfig(
         vm_id="my-vm",
         vcpu_count=2,
-        mem_size_mib=1024,
+        memory=1024,
         kernel_path=kernel,
         rootfs_path=rootfs,
         boot_args=SSH_BOOT_ARGS,

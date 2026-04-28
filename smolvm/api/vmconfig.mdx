@@ -27,7 +27,7 @@ All VMConfig instances are immutable (frozen) after creation.
   Number of virtual CPUs. Valid range: 1-32.
 </ParamField>
 
-<ParamField path="mem_size_mib" type="int" default="512">
+<ParamField path="memory" type="int" default="512">
   Memory size in MiB (mebibytes). Valid range: 128-16384.
 </ParamField>
 
@@ -138,7 +138,7 @@ config = VMConfig(
 
 print(config.vm_id)  # Auto-generated, e.g., "vm-a1b2c3d4"
 print(config.vcpu_count)  # 2 (default)
-print(config.mem_size_mib)  # 512 (default)
+print(config.memory)  # 512 (default)
 ```
 
 ### Custom VM ID and Resources
@@ -150,7 +150,7 @@ from pathlib import Path
 config = VMConfig(
     vm_id="my-custom-vm",
     vcpu_count=4,
-    mem_size_mib=2048,
+    memory=2048,
     kernel_path=Path("/path/to/vmlinux"),
     rootfs_path=Path("/path/to/rootfs.ext4"),
 )
@@ -165,7 +165,7 @@ from pathlib import Path
 config = VMConfig(
     vm_id="api-server",
     vcpu_count=2,
-    mem_size_mib=1024,
+    memory=1024,
     kernel_path=Path("/path/to/vmlinux"),
     rootfs_path=Path("/path/to/alpine-ssh.ext4"),
     boot_args=SSH_BOOT_ARGS,  # Includes init=/init for SSH support
@@ -261,7 +261,7 @@ from pathlib import Path
 config = VMConfig(
     vm_id="my-vm",
     vcpu_count=2,
-    mem_size_mib=512,
+    memory=512,
     kernel_path=Path("/path/to/vmlinux"),
     rootfs_path=Path("/path/to/rootfs.ext4"),
     boot_args="console=ttyS0 reboot=k panic=1 init=/init",
@@ -310,7 +310,7 @@ with SmolVM(config) as vm:
 | -------------------------- | ----------------------- | ------------------------------------------ | ------------------------------------ |
 | `vm_id`                    | `str`                   | Auto-generated                             | `^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$`  |
 | `vcpu_count`               | `int`                   | `2`                                        | 1-32                                 |
-| `mem_size_mib`             | `int`                   | `512`                                      | 128-16384                            |
+| `memory`                   | `int`                   | `512`                                      | 128-16384                            |
 | `kernel_path`              | `Path`                  | Required                                   | Must exist as file                   |
 | `rootfs_path`              | `Path`                  | Required                                   | Must exist as file                   |
 | `extra_drives`             | `list[Path]`            | `[]`                                       | Each must exist as file              |

@@ -112,7 +112,7 @@ with SmolVM() as vm:
     print(f"VM ID: {info.vm_id}")
     print(f"Status: {info.status.value}")
     print(f"vCPUs: {info.config.vcpu_count}")
-    print(f"Memory: {info.config.mem_size_mib} MiB")
+    print(f"Memory: {info.config.memory} MiB")
     
     if info.network:
         print(f"Guest IP: {info.network.guest_ip}")
@@ -216,7 +216,7 @@ from pathlib import Path
 config = VMConfig(
     vm_id="my-vm",
     vcpu_count=2,
-    mem_size_mib=512,
+    memory=512,
     kernel_path=Path("/path/to/vmlinux"),
     rootfs_path=Path("/path/to/rootfs.ext4"),
 )
@@ -276,8 +276,8 @@ with SmolVM() as vm:
 ```python  theme={null}
 from smolvm import SmolVM
 
-vm1 = SmolVM(mem_size_mib=512)
-vm2 = SmolVM(mem_size_mib=1024)
+vm1 = SmolVM(memory=512)
+vm2 = SmolVM(memory=1024)
 
 vm1.start()
 vm2.start()
@@ -285,8 +285,8 @@ vm2.start()
 info1 = vm1.info
 info2 = vm2.info
 
-print(f"VM1 memory: {info1.config.mem_size_mib} MiB")
-print(f"VM2 memory: {info2.config.mem_size_mib} MiB")
+print(f"VM1 memory: {info1.config.memory} MiB")
+print(f"VM2 memory: {info2.config.memory} MiB")
 print(f"VM1 IP: {info1.network.guest_ip if info1.network else 'N/A'}")
 print(f"VM2 IP: {info2.network.guest_ip if info2.network else 'N/A'}")
 
@@ -312,7 +312,7 @@ with SmolVM() as vm:
         "vm_id": info.vm_id,
         "status": info.status.value,
         "vcpu_count": info.config.vcpu_count,
-        "mem_size_mib": info.config.mem_size_mib,
+        "memory": info.config.memory,
         "guest_ip": info.network.guest_ip if info.network else None,
         "pid": info.pid,
     }

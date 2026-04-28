@@ -1,0 +1,38 @@
+---
+title: "Coding Agents"
+description: "Run Claude and Codex in an isolated sandbox so AI-generated code never touches your machine"
+---
+
+SmolVM lets you run coding agents like Claude and Codex inside an isolated sandbox. The agent gets a full development environment — git credentials, dev tools, terminal access — but nothing it does can affect your host machine.
+
+No more pressing "accept changes" every few seconds. Let the agent work freely in its own computer.
+
+## Start a coding agent
+
+<Tabs>
+  <Tab title="Claude">
+    ```bash
+    smolvm claude start
+    ```
+  </Tab>
+  <Tab title="Codex">
+    ```bash
+    smolvm codex start
+    ```
+  </Tab>
+</Tabs>
+
+Both commands launch a sandbox with the respective coding agent pre-installed and configured.
+
+## What you get
+
+Each coding agent sandbox comes with:
+
+- **Isolated environment** — the agent runs in its own VM, separate from your host
+- **Git credentials** — pre-configured so the agent can clone, commit, and push
+- **Dev tools** — common development tooling ready to use
+- **Terminal access** — full shell access for multi-step workflows
+
+<Tip>
+Combine with [host mounts](/smolvm/guides/host-mounts) to give the coding agent read-only access to your existing project while keeping your files safe.
+</Tip>
