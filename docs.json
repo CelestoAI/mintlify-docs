@@ -25,19 +25,33 @@
     },
     "tabs": [
       {
-        "tab": "Sandboxes",
-        "icon": "box",
+        "tab": "Getting Started",
+        "icon": "rocket",
         "groups": [
           {
-            "group": "Celesto Platform",
-            "icon": "cloud",
+            "group": "Overview",
             "pages": [
-              "celesto-sdk/overview",
-              "celesto-sdk/gatekeeper"
+              "index"
             ]
           },
           {
-            "group": "SmolVM — Get Started",
+            "group": "Cookbook",
+            "icon": "compass",
+            "pages": [
+              "enterprise/use-cases/customer-support-Agent",
+              "enterprise/use-cases/ecommerce-Agent",
+              "enterprise/use-cases/human-resource-Agent",
+              "enterprise/use-cases/SDR-Agent"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "SmolVM",
+        "icon": "box",
+        "groups": [
+          {
+            "group": "Get Started",
             "icon": "rocket",
             "pages": [
               "smolvm/introduction",
@@ -46,7 +60,7 @@
             ]
           },
           {
-            "group": "SmolVM — Concepts",
+            "group": "Concepts",
             "icon": "lightbulb",
             "pages": [
               "smolvm/concepts/overview",
@@ -56,7 +70,7 @@
             ]
           },
           {
-            "group": "SmolVM — Guides",
+            "group": "Guides",
             "icon": "map",
             "pages": [
               "smolvm/guides/basic-usage",
@@ -69,7 +83,7 @@
             ]
           },
           {
-            "group": "SmolVM — Advanced",
+            "group": "Advanced",
             "icon": "gear",
             "pages": [
               "smolvm/advanced/performance",
@@ -150,6 +164,20 @@
         ]
       },
       {
+        "tab": "Celesto Platform",
+        "icon": "cloud",
+        "groups": [
+          {
+            "group": "Celesto Platform",
+            "icon": "cloud",
+            "pages": [
+              "celesto-sdk/overview",
+              "celesto-sdk/gatekeeper"
+            ]
+          }
+        ]
+      },
+      {
         "tab": "SDK Reference",
         "icon": "code",
         "groups": [
@@ -222,16 +250,6 @@
               "agentor/api/a2a/types"
             ]
           }
-        ]
-      },
-      {
-        "tab": "Cookbook",
-        "icon": "compass",
-        "pages": [
-          "enterprise/use-cases/customer-support-Agent",
-          "enterprise/use-cases/ecommerce-Agent",
-          "enterprise/use-cases/human-resource-Agent",
-          "enterprise/use-cases/SDR-Agent"
         ]
       }
     ]
