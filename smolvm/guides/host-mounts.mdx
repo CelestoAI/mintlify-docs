@@ -1,0 +1,46 @@
+---
+title: "Host Mounts"
+description: "Give sandboxes read-only access to files and directories on your host machine"
+---
+
+Host mounts let a sandbox read files from your local machine without copying them. This is useful when an agent needs to explore a codebase or process data that already lives on your host.
+
+The host folder is read-only — the sandbox can read every file, but changes stay inside the sandbox and never touch the originals.
+
+## CLI
+
+Mount a directory when creating a sandbox:
+
+```bash
+smolvm create --mount ~/Projects/my-app
+smolvm ssh my-sandbox
+ls /workspace   # your host files appear here
+```
+
+Mount multiple directories at custom paths:
+
+```bash
+smolvm create --mount ~/Projects/my-app:/code --mount ~/data:/mnt/data
+```
+
+## Python SDK
+
+```python
+from smolvm import SmolVM
+
+with SmolVM(mounts=["~/Projects/my-app"]) as vm:
+    result = vm.run("ls /workspace")
+    print(result.stdout)
+```
+
+You can also specify custom mount paths:
+
+```python
+with SmolVM(mounts=["~/Projects/my-app:/code", "~/data:/mnt/data"]) as vm:
+    result = vm.run("ls /code")
+    print(result.stdout)
+```
+
+<Warning>
+Host mounts are read-only. Any changes you make inside the sandbox do not travel back to the host. Write-back support is planned for a future release.
+</Warning>

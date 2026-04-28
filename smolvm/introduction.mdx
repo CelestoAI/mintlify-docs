@@ -9,49 +9,148 @@ SmolVM gives AI agents their own disposable computer. Each microVM boots in mill
 
 ## Features
 
-- **Sub-second boot** — VMs ready in ~500 ms.
-- **Hardware isolation** — Stronger security than containers.
-- **Network controls** — Domain allowlists for egress filtering.
-- **Browser sessions** — Full browser agents can see and control.
-- **Host mounts** — Give sandboxes read access to local directories.
-- **Snapshots** — Save and restore VM state instantly.
-- **OpenClaw** — GUI Linux apps inside a sandbox.
+<CardGroup cols={3}>
+  <Card title="Sub-second boot" icon="bolt">
+    VMs ready in ~500 ms.
+  </Card>
+  <Card title="Hardware isolation" icon="shield">
+    Stronger security than containers.
+  </Card>
+  <Card title="Network controls" icon="filter">
+    Domain allowlists for egress filtering.
+  </Card>
+  <Card title="Browser sessions" icon="globe">
+    Full browser agents can see and control.
+  </Card>
+  <Card title="Host mounts" icon="folder-open">
+    Give sandboxes read access to local directories.
+  </Card>
+  <Card title="Snapshots" icon="camera">
+    Save and restore VM state instantly.
+  </Card>
+</CardGroup>
 
-## Use cases
+## Quickstart
 
-- **Run untrusted code safely** — Execute AI-generated code in an isolated sandbox instead of on your machine.
-- **Give agents a browser** — Spin up a full browser session that agents can see and control in real time.
-- **Let agents read your project** — Mount a local directory so agents can explore your codebase inside a sandbox.
-- **Keep state across turns** — Reuse the same sandbox throughout a multi-step workflow.
+<Steps>
+  <Step title="Install SmolVM">
+    ```bash
+    curl -sSL https://celesto.ai/install.sh | bash
+    ```
 
-## SDK and CLI
+    This installs everything you need and configures your machine. See [Installation](/smolvm/installation) for manual install and requirements.
+  </Step>
+  <Step title="Run your first sandbox">
+    <Tabs>
+      <Tab title="Python">
+        Create `quickstart.py`:
 
-SmolVM ships with both a Python SDK and a CLI — use either or both.
+        ```python quickstart.py
+        from smolvm import SmolVM
+        
+        vm = SmolVM()
+        result = vm.run("echo 'Hello from the sandbox!'")
+        print(result.stdout.strip())
+        vm.stop()
+        ```
 
-- **SDK** — embed sandboxes directly into your application or agent loop from Python code.
-- **CLI** — manage sandboxes from the terminal, start browser sessions, and script local workflows. See the [CLI reference](/smolvm/cli/overview) for the full command list.
+        Run it:
 
-## Get started
+        ```bash
+        python quickstart.py
+        ```
+      </Tab>
+      <Tab title="CLI">
+        ```bash
+        smolvm create --name my-sandbox
+        smolvm ssh my-sandbox
+        echo 'Hello from the sandbox!'
+        exit
+        smolvm stop my-sandbox
+        ```
+      </Tab>
+    </Tabs>
+
+    You should see:
+
+    ```text
+    Hello from the sandbox!
+    ```
+  </Step>
+</Steps>
+
+### CLI usage
+
+Create and manage sandboxes from the terminal:
+
+```bash
+smolvm create --name my-sandbox
+smolvm ssh my-sandbox
+smolvm list
+smolvm stop my-sandbox
+```
+
+Run coding agents in an isolated sandbox:
+
+```bash
+smolvm claude start
+smolvm codex start
+```
+
+Mount host directories for read-only access:
+
+```bash
+smolvm create --mount ~/Projects/my-app
+smolvm create --mount ~/Projects/my-app:/code --mount ~/data:/mnt/data
+```
+
+Save and restore VM state with snapshots:
+
+```bash
+smolvm snapshot create my-sandbox
+smolvm snapshot list
+smolvm snapshot restore my-sandbox --snapshot-id snap_abc123
+```
+
+Start a browser session with live view:
+
+```bash
+smolvm browser start --live
+smolvm browser list
+smolvm browser stop sess_a1b2c3
+```
+
+See the [CLI reference](/smolvm/cli/overview) for the full command list.
+
+### Customize resources
+
+Configure memory and disk for heavier workloads (defaults: 512 MiB memory, 512 MiB disk):
+
+```python
+from smolvm import SmolVM
+
+vm = SmolVM(mem_size_mib=2048, disk_size_mib=4096)
+result = vm.run("free -m")
+print(result.stdout)
+vm.stop()
+```
+
+## Next steps
 
 <CardGroup cols={2}>
-  <Card title="Quickstart" icon="rocket" href="/smolvm/quickstart">
-    Set up SmolVM and run your first sandbox in minutes
-  </Card>
-
-  <Card title="Installation" icon="download" href="/smolvm/installation">
-    Detailed installation instructions for Linux and macOS
-  </Card>
-
   <Card title="AI agent integration" icon="robot" href="/smolvm/guides/ai-agent-integration">
     Plug SmolVM into PydanticAI, OpenAI Agents, LangChain, and more
   </Card>
 
+  <Card title="Port forwarding" icon="network-wired" href="/smolvm/guides/port-forwarding">
+    Expose services running inside a sandbox to your host machine
+  </Card>
+
+  <Card title="Custom images" icon="box" href="/smolvm/guides/custom-images">
+    Build specialized images with your own tools pre-installed
+  </Card>
+
   <Card title="API reference" icon="book" href="/smolvm/api/smolvm">
-    Explore the complete API documentation
+    Explore the complete SmolVM API
   </Card>
 </CardGroup>
-
-## Community
-
-- [Slack](https://join.slack.com/t/celestoai/shared_invite/zt-3qc7h8gno-Nb5_PElEWHDNnGqdVzC~4Q)
-- [GitHub](https://github.com/CelestoAI/SmolVM)
