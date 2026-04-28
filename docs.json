@@ -2,6 +2,10 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
   "name": "Celesto AI",
+  "logo": {
+    "light": "/assets/celesto-logo.png",
+    "dark": "/assets/celesto-logo.png"
+  },
   "colors": {
     "primary": "#FF5722",
     "light": "#FF5722",
