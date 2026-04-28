@@ -1,0 +1,37 @@
+---
+title: "Network Controls"
+description: "Restrict which domains a sandbox can access to prevent data exfiltration"
+---
+
+By default, sandboxes have full internet access. You can lock this down to specific domains using `internet_settings`, so agents can only reach the APIs you approve.
+
+## Allow specific domains
+
+```python
+from smolvm import SmolVM
+
+vm = SmolVM(internet_settings={
+    "allowed_domains": ["https://api.openai.com"],
+})
+
+vm.run("curl https://api.openai.com/v1/models")  # allowed
+vm.run("curl https://evil.com/exfiltrate")        # blocked
+```
+
+## Allow multiple domains
+
+```python
+vm = SmolVM(internet_settings={
+    "allowed_domains": [
+        "https://api.openai.com",
+        "https://api.anthropic.com",
+        "https://pypi.org",
+    ],
+})
+```
+
+<Tip>
+  Domain allowlisting is especially useful for AI agents that need API access but shouldn't be able to reach arbitrary URLs.
+</Tip>
+
+For details on how sandbox networking works under the hood, see [Network configuration](/smolvm/concepts/networking).

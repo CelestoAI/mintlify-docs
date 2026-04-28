@@ -1,119 +1,40 @@
 ---
-title: "Port forwarding"
+title: "Port Forwarding"
 description: "Access web servers, databases, and other services running inside a sandbox from your host"
 ---
 
-Sometimes you need to reach a service running inside a sandbox — a web server, a database, or an API — from your host machine. SmolVM's `expose_local()` method forwards a TCP port from the sandbox to `localhost` on your host so you can connect to it directly.
+When you run a web server, database, or API inside a sandbox, port forwarding lets you access it from your host machine as if it were running locally.
 
-## Basic port forwarding
+## Expose a port
 
-Expose a guest port to localhost:
+Start a service inside the sandbox and expose it to your host:
 
-```python  theme={null}
+```python
 from smolvm import SmolVM
 
 with SmolVM() as vm:
-    # Start a web server in the guest
     vm.run("python3 -m http.server 8000 &")
 
-    # Expose guest port 8000 to host localhost:8000
     host_port = vm.expose_local(guest_port=8000, host_port=8000)
     print(f"Service available at http://127.0.0.1:{host_port}/")
-
-    # Access the service from your host
-    import requests
-    response = requests.get(f"http://127.0.0.1:{host_port}/")
-    print(response.text)
 ```
 
-## Automatic port allocation
+Omit `host_port` to let SmolVM pick an available port automatically:
 
-Omit `host_port` to let SmolVM choose an available port:
+```python
+host_port = vm.expose_local(guest_port=8080)
+print(f"Guest port 8080 exposed on localhost:{host_port}")
+```
 
-```python  theme={null}
+## Multiple ports
+
+Expose multiple services from the same sandbox:
+
+```python
 with SmolVM() as vm:
-    vm.run("python3 -m http.server 8080 &")
-
-    # SmolVM picks an available port automatically
-    host_port = vm.expose_local(guest_port=8080)
-    print(f"Guest port 8080 exposed on localhost:{host_port}")
-```
-
-<Tip>
-  Automatic port allocation is useful when the desired port might already be in use, or when running multiple VMs simultaneously.
-</Tip>
-
-## Method signature
-
-```python  theme={null}
-def expose_local(self, guest_port: int, host_port: int | None = None) -> int:
-    """Expose a guest TCP port on localhost only.
-
-    Forwards 127.0.0.1:<host_port> on the host to
-    <guest_ip>:<guest_port> inside the VM.
-
-    Args:
-        guest_port: Guest TCP port to expose.
-        host_port: Host localhost port. If omitted, an available port is chosen.
-
-    Returns:
-        The host localhost port to connect to.
-    """
-```
-
-## Transport methods
-
-SmolVM automatically selects the best transport method:
-
-<Tabs>
-  <Tab title="nftables (Preferred)">
-    Uses Linux nftables for high-performance port forwarding:
-
-    ```python  theme={null}
-    # SmolVM attempts nftables first (Linux only)
-    host_port = vm.expose_local(guest_port=3000)
-    # Forwarding configured via nftables NAT rules
-    ```
-
-    **Advantages:**
-
-    * Native Linux networking
-    * Higher performance
-    * Lower overhead
-  </Tab>
-
-  <Tab title="SSH Tunnel (Fallback)">
-    Falls back to SSH tunneling if nftables is unavailable:
-
-    ```python  theme={null}
-    # Automatically uses SSH tunnel if nftables fails
-    host_port = vm.expose_local(guest_port=5432)
-    # Background SSH process forwards the port
-    ```
-
-    **Advantages:**
-
-    * Works without privileged network access
-    * Cross-platform compatible
-    * Automatic cleanup on VM stop
-  </Tab>
-</Tabs>
-
-<Note>
-  You don't need to choose the transport method manually. SmolVM tries nftables first and falls back to SSH tunnels automatically.
-</Note>
-
-## Multiple port forwards
-
-Expose multiple services from the same VM:
-
-```python  theme={null}
-with SmolVM() as vm:
-    # Start multiple services
     vm.run("python3 -m http.server 8000 &")
     vm.run("python3 -m http.server 9000 &")
 
-    # Expose both ports
     port1 = vm.expose_local(guest_port=8000, host_port=8000)
     port2 = vm.expose_local(guest_port=9000, host_port=9000)
 
@@ -121,163 +42,14 @@ with SmolVM() as vm:
     print(f"Service 2: http://127.0.0.1:{port2}/")
 ```
 
-## Removing port forwards
+## Remove a port forward
 
-Manually remove a port forward before VM shutdown:
+Port forwards are automatically cleaned up when the sandbox stops. To remove one manually:
 
-```python  theme={null}
-with SmolVM() as vm:
-    # Expose a port
-    host_port = vm.expose_local(guest_port=8080, host_port=8080)
-    print(f"Exposed on localhost:{host_port}")
-
-    # Do work...
-    # ...
-
-    # Remove the forward
-    vm.unexpose_local(host_port=8080, guest_port=8080)
-    print("Port forward removed")
+```python
+vm.unexpose_local(host_port=8080, guest_port=8080)
 ```
-
-### Method signature
-
-```python  theme={null}
-def unexpose_local(self, host_port: int, guest_port: int) -> SmolVM:
-    """Remove a previously configured localhost-only port forward."""
-```
-
-<Note>
-  Port forwards are automatically cleaned up when the VM stops or the context manager exits. Manual cleanup is only needed for long-running VMs.
-</Note>
-
-## Real-world example: OpenClaw dashboard
-
-From the OpenClaw integration example:
-
-```python  theme={null}
-from smolvm import SmolVM, VMConfig
-from smolvm.build import ImageBuilder, SSH_BOOT_ARGS
-
-GUEST_DASHBOARD_PORT = 18789
-HOST_DASHBOARD_PORT = 18789
-
-builder = ImageBuilder()
-kernel, rootfs = builder.build_debian_ssh_key(
-    ssh_public_key=public_key,
-    rootfs_size_mb=4096,
-)
-
-config = VMConfig(
-    vcpu_count=1,
-    memory=2048,
-    kernel_path=kernel,
-    rootfs_path=rootfs,
-    boot_args=SSH_BOOT_ARGS,
-)
-
-with SmolVM(config) as vm:
-    # Install and start OpenClaw gateway inside VM
-    vm.run(f"openclaw gateway --port {GUEST_DASHBOARD_PORT} &")
-
-    # Expose the dashboard to host
-    host_port = vm.expose_local(
-        guest_port=GUEST_DASHBOARD_PORT,
-        host_port=HOST_DASHBOARD_PORT,
-    )
-
-    print(f"Dashboard available: http://127.0.0.1:{host_port}/")
-    input("Press Enter to stop...")
-```
-
-## Security considerations
-
-### Localhost-only binding
 
 <Warning>
-  `expose_local()` only binds to `127.0.0.1` (localhost), NOT to `0.0.0.0`. Services are NOT exposed to your network.
+  `expose_local()` only binds to `127.0.0.1` (localhost). Services are not exposed to your network.
 </Warning>
-
-```python  theme={null}
-# This is secure - only accessible from your machine
-host_port = vm.expose_local(guest_port=8080)
-# Binds to 127.0.0.1:8080, not 0.0.0.0:8080
-```
-
-If you need to expose to your network, you must set up additional forwarding outside of SmolVM.
-
-### Port conflicts
-
-`expose_local()` handles port conflicts gracefully:
-
-```python  theme={null}
-# If port 8080 is already in use, SmolVM tries a fallback port
-host_port = vm.expose_local(guest_port=8080, host_port=8080)
-if host_port != 8080:
-    print(f"Port 8080 unavailable, using {host_port} instead")
-```
-
-## Troubleshooting
-
-### Port forward not reachable
-
-If `expose_local()` succeeds but the port is not reachable:
-
-<Steps>
-  <Step title="Verify the service is running">
-    ```python  theme={null}
-    # Check if the service is listening in the guest
-    result = vm.run("netstat -tuln | grep 8080")
-    print(result.output)
-    ```
-  </Step>
-
-  <Step title="Check the service binds to the correct interface">
-    Services must bind to `0.0.0.0` or the guest IP, NOT `127.0.0.1` only:
-
-    ```python  theme={null}
-    # Good - binds to all interfaces
-    vm.run("python3 -m http.server 8000 --bind 0.0.0.0 &")
-
-    # Bad - only accessible within the guest
-    vm.run("python3 -m http.server 8000 --bind 127.0.0.1 &")
-    ```
-  </Step>
-
-  <Step title="Test connectivity from inside the guest">
-    ```python  theme={null}
-    result = vm.run("curl -v http://127.0.0.1:8000/")
-    print(result.output)
-    ```
-  </Step>
-</Steps>
-
-### Permission errors (nftables)
-
-If you see permission errors related to nftables:
-
-```
-Failed to configure nftables: Permission denied
-```
-
-SmolVM will automatically fall back to SSH tunnels. To enable nftables:
-
-```bash  theme={null}
-# Run the SmolVM system setup script
-sudo ./scripts/system-setup.sh --configure-runtime
-```
-
-## Next steps
-
-<CardGroup cols={2}>
-  <Card title="Environment variables" icon="code" href="/smolvm/guides/environment-variables">
-    Inject configuration into sandboxes at runtime
-  </Card>
-
-  <Card title="AI agent integration" icon="robot" href="/smolvm/guides/ai-agent-integration">
-    Build secure sandboxes for AI agents
-  </Card>
-
-  <Card title="Custom images" icon="box" href="/smolvm/guides/custom-images">
-    Create custom images with pre-installed services
-  </Card>
-</CardGroup>
