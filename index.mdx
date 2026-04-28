@@ -1,38 +1,49 @@
 ---
 title: "Celesto AI"
-sidebarTitle: "Introduction"
-description: "Secure, isolated computers that AI agents can use to browse, code, and get real work done."
+sidebarTitle: "Overview"
+description: "Computers for AI Agents"
 ---
 
-Celesto gives AI agents their own computer. Spin up a sandbox in seconds, let your agent run untrusted code, browse the web, or use a terminal — all isolated from your infrastructure. Run it yourself with the open-source stack, or use the managed platform.
+![Computer for AI Agents](/assets/celesto-cover.jpg)
 
-## AI Sandboxes
+<p className="dark:text-white text-black" style={{textAlign: 'center', fontSize: '1.25rem', fontWeight: 500, lineHeight: 1.6}}>
+Secure, isolated computers that AI agents can use to browse, code, and get real work done.
+</p>
 
-<CardGroup cols={2}>
-  <Card icon="box" href="/smolvm/introduction" title="SmolVM">
-    Open-source microVM sandbox for running untrusted agent-generated code with fast startup and strong isolation.
-  </Card>
-  <Card icon="cloud" href="/celesto-sdk/overview" title="Celesto Platform">
-    Managed sandboxes on demand. Use the Celesto SDK to launch, orchestrate, and operate agent computers at scale.
-  </Card>
-</CardGroup>
+Celesto gives AI agents their own computer. Spin up a sandbox in seconds, let your agent run untrusted code, browse the web, or use a terminal — all isolated from your infrastructure.
 
-## Agent tooling
+## Open-source projects
 
 <CardGroup cols={2}>
+  <Card icon="computer" href="/smolvm/introduction" title="SmolVM">
+    Open-source microVM sandbox with sub-second boot and hardware-level isolation.
+  </Card>
   <Card icon="robot" href="/agentor/home" title="Agentor">
-    Build production-ready AI agents with tool use, MCP server support, and A2A communication.
-  </Card>
-  <Card icon="lock" href="/superauth/google-oauth-setup" title="SuperAuth">
-    OAuth-based access and secure identity flows for agent tools like Gmail and Calendar.
+    Build production-ready AI agents with tool use, MCP, and agent-to-agent communication.
   </Card>
 </CardGroup>
 
+## Managed platform
+
+<Card icon="cloud" href="/celesto-sdk/overview" title="Celesto Platform">
+  Launch and orchestrate sandboxes at scale with the Celesto SDK. No infrastructure to manage.
+</Card>
+
+## Cookbook
+
+Real-world agent templates you can use as starting points.
+
 <CardGroup cols={2}>
-  <Card icon="rocket" href="/smolvm/quickstart" title="Quickstart">
-    Launch your first sandbox in under a minute.
+  <Card icon="headset" href="/enterprise/use-cases/customer-support-Agent" title="Customer Support">
+    Intent understanding, order tracking, refund workflows, and escalations.
   </Card>
-  <Card icon="slack" href="https://join.slack.com/t/celestoai/shared_invite/zt-3qc7h8gno-Nb5_PElEWHDNnGqdVzC~4Q" title="Join the community">
-    Get help, share ideas, and connect with other builders on Slack.
+  <Card icon="cart-shopping" href="/enterprise/use-cases/ecommerce-Agent" title="E-commerce">
+    Product discovery, order tracking, returns, and personalized recommendations.
+  </Card>
+  <Card icon="user-tie" href="/enterprise/use-cases/human-resource-Agent" title="HR & People Ops">
+    Policy lookup, onboarding assistance, and internal HR workflows.
+  </Card>
+  <Card icon="envelope" href="/enterprise/use-cases/SDR-Agent" title="Sales Development">
+    Lead research, email outreach, follow-ups, and CRM synchronization.
   </Card>
 </CardGroup>

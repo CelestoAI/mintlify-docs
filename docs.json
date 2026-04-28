@@ -2,6 +2,10 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
   "name": "Celesto AI",
+  "logo": {
+    "light": "/assets/celesto-logo.png",
+    "dark": "/assets/celesto-logo.png"
+  },
   "colors": {
     "primary": "#FF5722",
     "light": "#FF5722",
@@ -9,36 +13,24 @@
   },
   "favicon": "favicon.png",
   "navigation": {
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Get started",
-          "icon": "rocket-launch",
-          "href": "https://celesto.ai"
-        },
-        {
-          "anchor": "GitHub",
-          "icon": "github",
-          "href": "https://github.com/celestoai"
-        }
-      ]
-    },
+    "global": {},
     "tabs": [
       {
-        "tab": "Sandboxes",
-        "icon": "box",
+        "tab": "Getting Started",
         "groups": [
           {
-            "group": "Celesto Platform",
-            "icon": "cloud",
+            "group": "Overview",
             "pages": [
-              "celesto-sdk/overview",
-              "celesto-sdk/gatekeeper"
+              "index"
             ]
-          },
+          }
+        ]
+      },
+      {
+        "tab": "SmolVM",
+        "groups": [
           {
-            "group": "SmolVM — Get Started",
-            "icon": "rocket",
+            "group": "Get Started",
             "pages": [
               "smolvm/introduction",
               "smolvm/quickstart",
@@ -46,8 +38,7 @@
             ]
           },
           {
-            "group": "SmolVM — Concepts",
-            "icon": "lightbulb",
+            "group": "Concepts",
             "pages": [
               "smolvm/concepts/overview",
               "smolvm/concepts/security",
@@ -56,8 +47,7 @@
             ]
           },
           {
-            "group": "SmolVM — Guides",
-            "icon": "map",
+            "group": "Guides",
             "pages": [
               "smolvm/guides/basic-usage",
               "smolvm/guides/vm-lifecycle",
@@ -69,8 +59,7 @@
             ]
           },
           {
-            "group": "SmolVM — Advanced",
-            "icon": "gear",
+            "group": "Advanced",
             "pages": [
               "smolvm/advanced/performance",
               "smolvm/advanced/troubleshooting",
@@ -81,11 +70,9 @@
       },
       {
         "tab": "Agents",
-        "icon": "robot",
         "groups": [
           {
             "group": "Start Here",
-            "icon": "rocket",
             "pages": [
               "agentor/home",
               "agentor/installation",
@@ -94,7 +81,6 @@
           },
           {
             "group": "Build Agents",
-            "icon": "robot",
             "pages": [
               "agentor/agents-api",
               "agentor/deploy",
@@ -105,7 +91,6 @@
           },
           {
             "group": "Concepts",
-            "icon": "lightbulb",
             "pages": [
               "agentor/concepts/agents",
               "agentor/concepts/tools",
@@ -117,7 +102,6 @@
           },
           {
             "group": "Tool Use & MCP",
-            "icon": "screwdriver-wrench",
             "pages": [
               "agentor/tools/overview",
               "agentor/tools/tool-use",
@@ -130,7 +114,6 @@
           },
           {
             "group": "Guides",
-            "icon": "map",
             "pages": [
               "agentor/guides/building-agents",
               "agentor/guides/custom-tools",
@@ -142,7 +125,6 @@
           },
           {
             "group": "SuperAuth",
-            "icon": "lock",
             "pages": [
               "superauth/google-oauth-setup"
             ]
@@ -150,19 +132,22 @@
         ]
       },
       {
-        "tab": "SDK Reference",
-        "icon": "code",
+        "tab": "Celesto Platform",
         "groups": [
           {
-            "group": "Celesto Platform SDK",
-            "icon": "cloud",
+            "group": "Celesto Platform",
             "pages": [
-              "celesto-sdk/overview"
+              "celesto-sdk/overview",
+              "celesto-sdk/gatekeeper"
             ]
-          },
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
           {
             "group": "SmolVM API",
-            "icon": "book",
             "pages": [
               "smolvm/api/smolvm",
               "smolvm/api/browsersession",
@@ -184,7 +169,6 @@
           },
           {
             "group": "SmolVM CLI",
-            "icon": "terminal",
             "pages": [
               "smolvm/cli/overview",
               "smolvm/cli/list",
@@ -200,7 +184,6 @@
           },
           {
             "group": "Agentor API",
-            "icon": "code",
             "pages": [
               "agentor/api/agentor",
               "agentor/api/model-settings",
@@ -223,16 +206,6 @@
             ]
           }
         ]
-      },
-      {
-        "tab": "Cookbook",
-        "icon": "compass",
-        "pages": [
-          "enterprise/use-cases/customer-support-Agent",
-          "enterprise/use-cases/ecommerce-Agent",
-          "enterprise/use-cases/human-resource-Agent",
-          "enterprise/use-cases/SDR-Agent"
-        ]
       }
     ]
   },
@@ -240,7 +213,18 @@
     "links": [
       {
         "label": "Support",
+        "icon": "envelope",
         "href": "mailto:aniket@celesto.ai"
+      },
+      {
+        "label": "Slack",
+        "icon": "slack",
+        "href": "https://join.slack.com/t/celestoai/shared_invite/zt-3qc7h8gno-Nb5_PElEWHDNnGqdVzC~4Q"
+      },
+      {
+        "label": "GitHub",
+        "icon": "github",
+        "href": "https://github.com/celestoai"
       }
     ],
     "primary": {
