@@ -49,7 +49,7 @@ nft add rule inet smolvm_filter forward iifname "tap*" oifname "tap*" counter dr
 Each sandbox can:
 
 * Access the internet via NAT
-* Be reached from the host via [port forwarding](/smolvm/guides/port-forwarding)
+* Be reached from the host via [port forwarding](/smolvm/features/port-forwarding)
 * **Not** communicate directly with other sandboxes
 
 <Note>
@@ -134,7 +134,7 @@ flowchart TB
   `expose_local()` only binds to `127.0.0.1` (localhost). Services are not exposed to your network. If you need external access, set up additional forwarding outside of SmolVM.
 </Warning>
 
-See the [port forwarding guide](/smolvm/guides/port-forwarding) for more examples including automatic port allocation, multiple forwards, and troubleshooting.
+See the [port forwarding guide](/smolvm/features/port-forwarding) for more examples including automatic port allocation, multiple forwards, and troubleshooting.
 
 ## Network prerequisites
 
