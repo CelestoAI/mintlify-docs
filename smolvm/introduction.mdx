@@ -5,7 +5,7 @@ description: "Run code, start a browser, and give AI agents an isolated workspac
 
 # SmolVM
 
-SmolVM gives AI agents their own disposable computer. Each microVM boots in milliseconds, runs any code or software you throw at it, keeps state when you need it, and vanishes when you don't — nothing touches your host.
+SmolVM gives AI agents their own disposable computer. Each <Tooltip tip="A lightweight virtual machine that provides hardware-level isolation with near-instant startup, combining the speed of containers with the security of full VMs">microVM</Tooltip> boots in milliseconds, runs any code or software you throw at it, keeps state when you need it, and vanishes when you don't — nothing touches your host.
 
 <CardGroup cols={3}>
   <Card title="Sub-second boot" icon="bolt">
@@ -93,6 +93,7 @@ Run coding agents in an isolated sandbox:
 ```bash
 smolvm claude start
 smolvm codex start
+smolvm pi start
 ```
 
 Mount host directories for read-only access:

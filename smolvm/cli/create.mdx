@@ -35,6 +35,14 @@ The `create` command spins up a new VM, waits for it to be SSH-ready, and leaves
   Backend override. Choices: `auto`, `firecracker`, `qemu`. The `auto` option selects the best backend for your platform.
 </ParamField>
 
+<ParamField path="--mount" type="string">
+  Mount a host directory into the sandbox. Format: `HOST_PATH` or `HOST_PATH:GUEST_PATH`. Can be specified multiple times. Mounts are read-only by default.
+</ParamField>
+
+<ParamField path="--writable-mounts" type="boolean" default="false">
+  Allow the sandbox to write back to all mounted host directories. Without this flag, mounts are read-only and guest writes stay inside the sandbox.
+</ParamField>
+
 <ParamField path="--boot-timeout" type="float" default="30">
   Seconds to wait for VM boot and SSH readiness.
 </ParamField>

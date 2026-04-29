@@ -1,11 +1,11 @@
 ---
 title: "Mount Folders and Data"
-description: "Let agents work with your existing files and projects without copying anything."
+description: "Give your sandbox direct access to files and projects on your machine."
 ---
 
 Host mounts let a sandbox read files from your local machine without copying them. This is useful when an agent needs to explore a codebase or process data that already lives on your host.
 
-The host folder is read-only — the sandbox can read every file, but changes stay inside the sandbox and never touch the originals.
+By default, the host folder is read-only — the sandbox can read every file, but changes stay inside the sandbox and never touch the originals. If you need the sandbox to write back to the host, see [writable mounts](#writable-mounts) below.
 
 ## CLI
 
@@ -41,6 +41,28 @@ with SmolVM(mounts=["~/Projects/my-app:/code", "~/data:/mnt/data"]) as vm:
     print(result.stdout)
 ```
 
+## Writable mounts
+
+By default, mounts are read-only. Add `--writable-mounts` to let the sandbox write back to your host directories.
+
+### CLI
+
+```bash
+smolvm create --mount ~/Projects/my-app --writable-mounts
+```
+
+Any file the sandbox creates or modifies inside the mount point appears on your host immediately.
+
+### Python SDK
+
+```python
+from smolvm import SmolVM
+
+with SmolVM(mounts=["~/Projects/my-app"], writable_mounts=True) as vm:
+    vm.run("echo 'hello' > /workspace/new-file.txt")
+    # new-file.txt now exists on the host at ~/Projects/my-app/new-file.txt
+```
+
 <Warning>
-Host mounts are read-only. Any changes you make inside the sandbox do not travel back to the host. Write-back support is planned for a future release.
+Writable mounts give the sandbox full write access to the mounted host directories. Make sure you trust the code running inside the sandbox before enabling this flag.
 </Warning>
