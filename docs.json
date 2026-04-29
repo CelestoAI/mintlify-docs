@@ -39,11 +39,11 @@
           {
             "group": "Features",
             "pages": [
-              "smolvm/guides/coding-agents",
-              "smolvm/guides/host-mounts",
-              "smolvm/guides/network-controls",
-              "smolvm/guides/port-forwarding",
-              "smolvm/guides/snapshots"
+              "smolvm/features/coding-agents",
+              "smolvm/features/host-mounts",
+              "smolvm/features/network-controls",
+              "smolvm/features/port-forwarding",
+              "smolvm/features/snapshots"
             ]
           },
           {
