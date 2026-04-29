@@ -1,9 +1,9 @@
 ---
 title: "Coding Agents in Sandbox"
-description: "Run Claude and Codex with full permission in a sandbox risk free."
+description: "Run Claude, Codex, and Pi with full permission in a sandbox risk free."
 ---
 
-SmolVM lets you run coding agents like Claude and Codex inside an isolated sandbox. The agent gets a full development environment — git credentials, dev tools, terminal access — but nothing it does can affect your host machine.
+SmolVM lets you run coding agents like Claude, Codex, and Pi inside an isolated sandbox. The agent gets a full development environment — git credentials, dev tools, terminal access — but nothing it does can affect your host machine.
 
 No more pressing "accept changes" every few seconds. Let the agent work freely in its own computer.
 
@@ -20,9 +20,14 @@ No more pressing "accept changes" every few seconds. Let the agent work freely i
     smolvm codex start
     ```
   </Tab>
+  <Tab title="Pi">
+    ```bash
+    smolvm pi start
+    ```
+  </Tab>
 </Tabs>
 
-Both commands launch a sandbox with the respective coding agent pre-installed and configured.
+Each command launches a sandbox with the respective coding agent pre-installed and configured. Your existing credentials (from `claude login`, `codex login`, etc.) are forwarded into the sandbox automatically — no re-authentication needed.
 
 ## What you get
 
@@ -33,6 +38,26 @@ Each coding agent sandbox comes with:
 - **Dev tools** — common development tooling ready to use
 - **Terminal access** — full shell access for multi-step workflows
 
+## Share folders with the sandbox
+
+You can share folders from your machine so the coding agent can see your existing code. By default, shared folders are read-only — the agent can read your files but cannot modify the originals.
+
+```bash
+smolvm claude start --mount ~/Projects/my-app
+```
+
+The agent sees your project files inside the sandbox at `/workspace`.
+
+To let the agent write changes back to your machine, add `--writable-mounts`:
+
+```bash
+smolvm claude start --mount ~/Projects/my-app --writable-mounts
+```
+
+<Warning>
+With `--writable-mounts`, the agent can modify and delete files in the shared folder. Only enable this when you trust the code the agent will run.
+</Warning>
+
 <Tip>
-Combine with [host mounts](/smolvm/guides/host-mounts) to give the coding agent read-only access to your existing project while keeping your files safe.
+See the [host mounts guide](/smolvm/guides/host-mounts) for more options like sharing multiple folders and custom mount paths.
 </Tip>
