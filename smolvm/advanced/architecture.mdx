@@ -1,6 +1,6 @@
 ---
 title: "Technical architecture"
-description: "Deep dive into SmolVM's architecture, components, and design decisions"
+description: "Deep dive into SmolVM's layered architecture — facade, lifecycle manager, Firecracker and QEMU backends, networking layer, and image management internals."
 ---
 
 SmolVM is built as a layered system that abstracts Firecracker and QEMU microVMs into a simple Python API. This guide explains the internal architecture and how components interact.
