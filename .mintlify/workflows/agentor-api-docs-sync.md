@@ -3,6 +3,7 @@ name: "API docs sync"
 on:
   cron: "0 0 * * 1"
 context:
+  - repo: "celestoai/SmolVM"
   - repo: "celestoai/sdk"
 ---
 
