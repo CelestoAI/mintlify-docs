@@ -23,6 +23,7 @@ Do not include private repository file paths, directory structures, code snippet
 ## Core writing principles
 - Follow progressive disclosure of complexity.
 - Lead with outcomes, not implementation details.
+- Capability first, motivation second.
 - The first paragraph of every page must be plain English with no jargon.
 - Assume the reader may be a beginner engineer or even a non-developer.
 - Do not assume prior knowledge.
