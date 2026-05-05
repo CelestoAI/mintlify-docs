@@ -1,6 +1,6 @@
 ---
 title: "Network configuration"
-description: "How SmolVM connects sandboxes to the internet while keeping them isolated from each other"
+description: "How SmolVM networking works — TAP devices, private subnets, NAT, and outbound internet access — so sandboxes stay isolated from each other and the host."
 ---
 
 Every SmolVM sandbox gets its own private network connection. The sandbox can reach the internet, but it cannot talk to other sandboxes or access host network interfaces directly. This page explains how the networking works and what you can configure.

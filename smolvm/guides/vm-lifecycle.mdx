@@ -1,6 +1,6 @@
 ---
 title: "VM lifecycle management"
-description: "Create, start, stop, pause, and reconnect to SmolVM sandboxes"
+description: "Manage the full SmolVM sandbox lifecycle — created, running, paused, and stopped states — and learn when to use the context manager versus manual control."
 ---
 
 Every SmolVM sandbox follows a simple lifecycle: you create it, start it, run your work, and tear it down. Most of the time the context manager (`with SmolVM() as vm`) handles all of this for you. This guide covers the full lifecycle for cases where you need more control.
