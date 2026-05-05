@@ -296,16 +296,18 @@ await client.computers.delete(computerId);
 
 ### Terminal connection (JavaScript only)
 
-The JavaScript SDK provides a `getTerminalConnection` method that returns the URL and headers you need to open a WebSocket terminal session. You can use it with any WebSocket library.
+The JavaScript SDK provides a `getTerminalConnection` method that returns the URL, headers, and first message you need to open an interactive WebSocket terminal session. Bring your own WebSocket library — the SDK has zero runtime dependencies, so you can use [`ws`](https://www.npmjs.com/package/ws), Node's built-in WebSocket (Node 22+), or any other client.
 
 ```ts
+import WebSocket from "ws";
+
 const conn = await client.computers.getTerminalConnection("my-computer");
 const ws = new WebSocket(conn.url, { headers: conn.headers });
 ws.on("open", () => ws.send(conn.firstMessage));
 ws.on("message", (data) => process.stdout.write(data));
 ```
 
-The method accepts either a computer ID (e.g., `cmp_abc123`) or a human-readable name. It resolves the name to the canonical ID automatically.
+The method accepts either a computer ID (e.g., `cmp_abc123`) or a human-readable name. It resolves the name to the canonical ID before the handshake.
 
 <ResponseField name="url" type="string" required>
   The `wss://` URL for the WebSocket connection.
@@ -495,12 +497,28 @@ Both SDKs provide typed errors so you can handle different failure modes.
   <Tab title="JavaScript">
     ```ts
     import { CelestoError, CelestoApiError, CelestoNetworkError } from "@celestoai/sdk";
+
+    try {
+      await client.computers.get("missing-name");
+    } catch (err) {
+      if (err instanceof CelestoApiError) {
+        console.error(`API ${err.status}:`, err.data);
+      } else if (err instanceof CelestoNetworkError) {
+        console.error("Network error:", err.cause);
+      } else if (err instanceof CelestoError) {
+        console.error("SDK error:", err.message);
+      }
+    }
     ```
 
-    | Error class | When it occurs |
-    |---|---|
-    | `CelestoApiError` | Any non-2xx HTTP response (check `.status` for the code) |
-    | `CelestoNetworkError` | DNS failures, timeouts, or connection errors |
-    | `CelestoError` | Base class — catch this for all SDK errors |
+    | Error class | Extends | When it occurs |
+    |---|---|---|
+    | `CelestoApiError` | `CelestoError` | Any non-2xx HTTP response. Inspect `.status` (HTTP code), `.data` (parsed body), and `.requestId`. |
+    | `CelestoNetworkError` | `CelestoError` | DNS failures, timeouts, or connection errors. Inspect `.cause` for the underlying `Error`. |
+    | `CelestoError` | `Error` | Base class. Catch this to handle any SDK error. |
+
+    <Note>
+      Network failures from `fetch()` (DNS, offline, timeout) are wrapped as `CelestoNetworkError` instead of leaking raw `TypeError`. Catch `CelestoError` to handle both API and network errors with one branch.
+    </Note>
   </Tab>
 </Tabs>
