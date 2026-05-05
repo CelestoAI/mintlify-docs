@@ -5,6 +5,10 @@ description: "Python and JavaScript client for creating sandboxed computers, run
 
 The Celesto SDK lets you create sandboxed computers, run commands inside them, and manage the full lifecycle from your code or the command line. You can use it to spin up isolated environments for AI agents, run untrusted code safely, or automate development workflows. The SDK is available for both Python and JavaScript/TypeScript.
 
+<Note>
+  Both SDKs use the same top-level class name: `Celesto`. The JavaScript SDK previously exported `CelestoClient`, which has been removed — import `Celesto` instead.
+</Note>
+
 ## Installation
 
 <CodeGroup>
@@ -57,6 +61,30 @@ const client = new Celesto({ token: "your-api-key" });
 <Tip>
   Get your API key from [celesto.ai](https://celesto.ai) under **Settings > Security**.
 </Tip>
+
+### JavaScript client options
+
+The `Celesto` constructor accepts an optional configuration object:
+
+<ParamField body="token" type="string">
+  Celesto API key or JWT. You can also pass it as `apiKey`. If omitted, the SDK does not read the environment for you — set `process.env.CELESTO_API_KEY` and pass it explicitly.
+</ParamField>
+
+<ParamField body="organizationId" type="string">
+  Organization ID to send as the `X-Current-Organization` header. Useful for JWTs that span multiple organizations.
+</ParamField>
+
+<ParamField body="baseUrl" type="string" default="https://api.celesto.ai">
+  Override the API base URL (for example, to point at a staging environment).
+</ParamField>
+
+<ParamField body="timeoutMs" type="number">
+  Default request timeout in milliseconds. Individual calls can still pass their own `timeout`.
+</ParamField>
+
+<Note>
+  The JavaScript SDK requires Node 18 or newer for the built-in `fetch`. It has zero runtime dependencies.
+</Note>
 
 ## Quick example
 
@@ -297,6 +325,14 @@ await client.computers.delete(computerId);
 ### Terminal connection (JavaScript only)
 
 The JavaScript SDK provides a `getTerminalConnection` method that returns the URL, headers, and first message you need to open an interactive WebSocket terminal session. Bring your own WebSocket library — the SDK has zero runtime dependencies, so you can use [`ws`](https://www.npmjs.com/package/ws), Node's built-in WebSocket (Node 22+), or any other client.
+
+<Warning>
+  Earlier versions exposed `openTerminal()` and a `Terminal` class backed by the `ws` package. Both were removed. Replace them with `getTerminalConnection()` and the WebSocket library of your choice.
+</Warning>
+
+<Note>
+  `getTerminalConnection()` does not auto-resume a stopped computer. Call `start()` and wait for `status === "running"` before opening the connection.
+</Note>
 
 ```ts
 import WebSocket from "ws";
