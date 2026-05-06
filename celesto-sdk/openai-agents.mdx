@@ -1,0 +1,217 @@
+---
+title: "OpenAI Agents SDK sandboxes"
+description: "Give an OpenAI SandboxAgent its own computer to run commands and create files, using either a hosted Celesto computer or a local SmolVM sandbox."
+---
+
+OpenAI's Agents SDK lets you build agents that can run shell commands, read files, and produce work artifacts. Celesto plugs into that SDK so the agent does all of that inside an isolated computer instead of on your laptop or server. The agent gets a real workspace, and your machine stays untouched.
+
+You pick where the workspace lives:
+
+- **Hosted Celesto computer** — Celesto creates a cloud computer for the agent. Good for production, long-running jobs, and anything the agent should not have on your local box.
+- **Local SmolVM sandbox** — The agent works inside a local microVM (a tiny isolated virtual machine) on your own machine. Good for development and offline work.
+
+Both options expose the same OpenAI `SandboxAgent` interface, so you can switch between them with a single line of code.
+
+## Prerequisites
+
+- Python 3.10 or higher.
+- A Celesto API key. See [authentication](/celesto-sdk/overview#authentication).
+- The OpenAI Agents SDK and the Celesto integration extra:
+
+```bash
+pip install "celesto[openai-agents]"
+```
+
+<Note>
+  The `openai-agents` extra installs the OpenAI Agents SDK and SmolVM as optional dependencies. You only need the SmolVM dependency if you plan to run the local sandbox option.
+</Note>
+
+## Run an agent on a hosted Celesto computer
+
+Use `CelestoSandboxClient` when you want the agent to work on a Celesto-managed computer in the cloud. The client creates the computer, hands it to the agent, and tears it down when you call `delete`.
+
+```python
+import asyncio
+
+from agents import Runner
+from agents.run import RunConfig
+from agents.sandbox import SandboxAgent, SandboxRunConfig
+from celesto.integrations.openai_agents import (
+    CelestoSandboxClient,
+    CelestoSandboxClientOptions,
+)
+
+
+async def main() -> None:
+    agent = SandboxAgent(
+        name="Workspace analyst",
+        instructions="Inspect the sandbox workspace before answering.",
+    )
+
+    client = CelestoSandboxClient()
+    session = await client.create(
+        options=CelestoSandboxClientOptions(cpus=2, memory=2048),
+    )
+
+    try:
+        async with session:
+            result = await Runner.run(
+                agent,
+                "Run `uname -a` in the sandbox and summarize the result.",
+                run_config=RunConfig(sandbox=SandboxRunConfig(session=session)),
+            )
+            print(result.final_output)
+    finally:
+        await client.delete(session)
+
+
+asyncio.run(main())
+```
+
+### `CelestoSandboxClient` options
+
+Pass an instance of `CelestoSandboxClientOptions` to `create` to control the computer that backs the session.
+
+<ParamField body="cpus" type="integer" default="1">
+  Number of virtual CPUs for the computer. Range: 1-16.
+</ParamField>
+
+<ParamField body="memory" type="integer" default="1024">
+  Memory in MB. Range: 512-32768.
+</ParamField>
+
+<ParamField body="image" type="string" default="ubuntu-desktop-24.04">
+  OS image used for the computer. See [Computers API](/celesto-sdk/overview#computers-api) for available images.
+</ParamField>
+
+<ParamField body="computer_id" type="string">
+  Reuse an existing computer instead of creating a new one. When set, the client starts the computer if it is stopped and reuses it for the session.
+</ParamField>
+
+<ParamField body="delete_on_close" type="boolean">
+  Whether to delete the computer when the session ends. Defaults to `true` for computers the client created and `false` for reused computers.
+</ParamField>
+
+### Authentication
+
+`CelestoSandboxClient` reuses the same authentication as the main Celesto SDK. By default it reads the `CELESTO_API_KEY` environment variable. You can also pass credentials directly:
+
+```python
+client = CelestoSandboxClient(api_key="your-api-key")
+```
+
+Or pass an existing `Celesto` client:
+
+```python
+from celesto import Celesto
+
+celesto = Celesto(api_key="your-api-key")
+client = CelestoSandboxClient(client=celesto)
+```
+
+## Run an agent on a local SmolVM sandbox
+
+Use `SmolVMSandboxClient` when you want the agent to work on a microVM running on your own machine. This keeps the workflow local and offline-friendly while still isolating the agent's commands from your host.
+
+```python
+import asyncio
+
+from agents import Runner
+from agents.run import RunConfig
+from agents.sandbox import SandboxAgent, SandboxRunConfig
+from celesto.integrations.openai_agents import (
+    SmolVMSandboxClient,
+    SmolVMSandboxClientOptions,
+)
+
+
+async def main() -> None:
+    agent = SandboxAgent(
+        name="Local workspace analyst",
+        instructions="Inspect the sandbox workspace before answering.",
+    )
+
+    client = SmolVMSandboxClient()
+    session = await client.create(
+        options=SmolVMSandboxClientOptions(memory=2048, disk_size=4096),
+    )
+
+    try:
+        async with session:
+            result = await Runner.run(
+                agent,
+                "Run `uname -a` in the sandbox and summarize the result.",
+                run_config=RunConfig(sandbox=SandboxRunConfig(session=session)),
+            )
+            print(result.final_output)
+    finally:
+        await client.delete(session)
+
+
+asyncio.run(main())
+```
+
+### `SmolVMSandboxClient` options
+
+<ParamField body="memory" type="integer">
+  Memory in MB for the local microVM. Defaults to the SmolVM default if omitted.
+</ParamField>
+
+<ParamField body="disk_size" type="integer">
+  Disk size in MB for the local microVM. Defaults to the SmolVM default if omitted.
+</ParamField>
+
+<ParamField body="os" type="string">
+  Guest OS image to boot. See [SmolVM custom images](/smolvm/guides/custom-images) for available options.
+</ParamField>
+
+<ParamField body="backend" type="string">
+  Virtualization backend to use. Defaults to the SmolVM default for your platform. See [SmolVM backends](/smolvm/concepts/backends).
+</ParamField>
+
+<ParamField body="exposed_ports" type="tuple of integers" default="()">
+  Ports inside the sandbox to expose on the host. Useful when the agent runs a server that another tool needs to reach.
+</ParamField>
+
+<ParamField body="vm_id" type="string">
+  Reuse an existing SmolVM by ID instead of creating a new one.
+</ParamField>
+
+<ParamField body="delete_on_close" type="boolean">
+  Whether to delete the VM when the session ends. Defaults to `true` for VMs the client created and `false` for reused VMs.
+</ParamField>
+
+## Resume a saved session
+
+Both clients can rebuild a session from saved state, which is useful when an agent run spans multiple processes or jobs.
+
+```python
+saved = session.state.model_dump()  # serialize before exit
+# ...later, in another process...
+state = client.deserialize_session_state(saved)
+session = await client.resume(state)
+```
+
+The resumed session reconnects to the same computer or VM and reuses the same workspace.
+
+## Choosing between hosted and local
+
+<CardGroup cols={2}>
+  <Card title="Hosted Celesto" icon="cloud">
+    Use when the agent runs in production, when you want the workspace to outlive your local machine, or when you want central audit logs and lifecycle controls.
+  </Card>
+  <Card title="Local SmolVM" icon="laptop">
+    Use during development, in CI, or when you want a fast loop without spending cloud time.
+  </Card>
+</CardGroup>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Computers API" icon="server" href="/celesto-sdk/overview#computers-api">
+    The underlying API used by the hosted client.
+  </Card>
+  <Card title="SmolVM framework integration" icon="puzzle-piece" href="/smolvm/guides/ai-agent-integration">
+    More agent-framework recipes for SmolVM, including PydanticAI and LangChain.
+  </Card>
+</CardGroup>
