@@ -216,6 +216,10 @@ asyncio.run(main())
   See the full working example in [`examples/agent_tools/openai_agents_tool.py`](https://github.com/celestoai/smolvm/blob/main/examples/agent_tools/openai_agents_tool.py).
 </Tip>
 
+### Use SmolVM as a SandboxAgent provider
+
+If you want OpenAI's `SandboxAgent` to treat SmolVM as its full working computer (not just a one-shot tool), use the ready-made provider in the Celesto SDK. It plugs into `Runner` and `SandboxRunConfig` directly, and ships alongside a hosted Celesto option you can swap in without changing your agent code. See [OpenAI Agents SDK sandboxes](/celesto-sdk/openai-agents) for the full guide.
+
 ## LangChain
 
 Wrap SmolVM as a [LangChain tool](https://python.langchain.com/docs/concepts/tools/):

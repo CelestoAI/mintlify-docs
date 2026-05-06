@@ -144,6 +144,7 @@
             "group": "Celesto Platform",
             "pages": [
               "celesto-sdk/overview",
+              "celesto-sdk/openai-agents",
               "celesto-sdk/gatekeeper"
             ]
           }
