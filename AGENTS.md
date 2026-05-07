@@ -235,15 +235,15 @@ Example of accordion groups:
 
 Example of cards and card groups:
 
-<Card title="Getting started guide" icon="rocket" href="/quickstart">
+<Card title="Getting started guide" icon="rocket" href="#">
   Complete walkthrough from installation to your first API call in under 10 minutes.
 </Card>
 
 <CardGroup cols={2}>
-  <Card title="Authentication" icon="key" href="/auth">
+  <Card title="Authentication" icon="key" href="#">
     Learn how to authenticate requests using API keys or JWT tokens.
   </Card>
-  <Card title="Rate limiting" icon="clock" href="/rate-limits">
+  <Card title="Rate limiting" icon="clock" href="#">
     Understand rate limits and best practices for high-volume usage.
   </Card>
 </CardGroup>
@@ -316,11 +316,11 @@ Example of nested field documentation:
 Wrap all images in frames:
 
 <Frame>
-  ![Main dashboard showing analytics overview](/images/dashboard.png)
+  ![Main dashboard showing analytics overview](https://mintlify.s3.us-west-1.amazonaws.com/mintlify/images/hero-light.png)
 </Frame>
 
 <Frame caption="The analytics dashboard provides real-time insights">
-  ![Analytics dashboard with charts](/images/analytics.png)
+  ![Analytics dashboard with charts](https://mintlify.s3.us-west-1.amazonaws.com/mintlify/images/hero-dark.png)
 </Frame>
 
 #### Videos
