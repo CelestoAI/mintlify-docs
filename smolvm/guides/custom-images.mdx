@@ -82,6 +82,10 @@ with SmolVM(config, ssh_key_path=str(private_key)) as vm:
 
 For workloads that need `apt`, glibc, or broader package compatibility. Debian images are larger but more compatible:
 
+<Note>
+  Since v0.0.14, `debian` is no longer accepted by `smolvm create --os` or by auto-config. The `build_debian_ssh_key` method below remains available when you call `ImageBuilder` directly. For new projects, prefer the [Ubuntu auto-config path](/smolvm/concepts/published-images) or build on the Alpine/Ubuntu base.
+</Note>
+
 ```python
 from smolvm.utils import ensure_ssh_key
 
@@ -151,23 +155,11 @@ print(kernel)  # /mnt/fast-ssd/vm-images/alpine-ssh/vmlinux.bin
 print(rootfs)  # /mnt/fast-ssd/vm-images/alpine-ssh/rootfs.ext4
 ```
 
-## Custom kernel URLs
+## The kernel SmolVM uses
 
-Override the default kernel URL if you need a specific kernel version:
+Every image you build with `ImageBuilder` boots SmolVM's own Linux 6.12.85 kernel. SmolVM builds it in CI from upstream Linux source and tunes it for sandbox workloads — it is the same kernel used by the [published images](/smolvm/concepts/published-images) so behavior stays consistent across hosts.
 
-```python
-kernel, rootfs = builder.build_alpine_ssh(
-    kernel_url="https://example.com/my-custom-kernel"
-)
-```
-
-SmolVM ships default kernel URLs for both Firecracker and QEMU backends, targeting x86_64 and aarch64 architectures. You can inspect them:
-
-```python
-from smolvm.build import FIRECRACKER_KERNEL_URLS, QEMU_KERNEL_URLS
-print(FIRECRACKER_KERNEL_URLS)
-print(QEMU_KERNEL_URLS)
-```
+You don't need to pick a kernel or pass a URL. SmolVM downloads the universal kernel once and caches it under `~/.smolvm/images/<version>/`.
 
 ## How the init script works
 
@@ -183,6 +175,10 @@ All SSH-capable images include a custom `/init` script that runs as PID 1 inside
 You do not need to modify this script for most use cases. It is included automatically when you use any `ImageBuilder` method.
 
 ## Real-world example: OpenClaw
+
+<Tip>
+  For day-to-day use, run `smolvm openclaw start` — it boots from a [pre-built image](/smolvm/concepts/published-images) in seconds and forwards your `OPENROUTER_API_KEY` and `OPENCLAW_GATEWAY_TOKEN` automatically. The example below shows the manual builder path, which is useful when you're customizing the image.
+</Tip>
 
 This example from `examples/openclaw.py` builds a 4 GB Debian image for the OpenClaw application:
 

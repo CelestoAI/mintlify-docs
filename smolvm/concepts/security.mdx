@@ -138,6 +138,28 @@ with SmolVM() as vm:
 # DO NOT expose VM SSH ports publicly without additional controls
 ```
 
+## SSH credentials in published images
+
+[Published images](/smolvm/concepts/published-images) are downloaded to your machine and shared across users, so they must not contain any per-user secrets. SmolVM handles credentials at first boot instead of bake time.
+
+### Host keys are generated on first boot
+
+SSH host keys identify the sandbox to your SSH client. Earlier releases baked one set of host keys into every copy of the image — that meant every sandbox launched from the same image presented the same identity, which defeats SSH's man-in-the-middle protection.
+
+SmolVM now generates fresh SSH host keys the first time each sandbox boots, before `sshd` starts. Each sandbox has its own identity, even when many launch from the same image.
+
+### Your public key is injected at boot
+
+When you run `smolvm claude start` or any other preset, SmolVM passes your SSH public key to the sandbox on the kernel command line. The first-boot script base64-decodes the key, writes it to `/root/.ssh/authorized_keys` with mode `0600`, and starts `sshd`. The image itself never contains your key, so the same image can be safely cached and reused across machines.
+
+### Password authentication is disabled
+
+Published images ship with `PasswordAuthentication no` in `sshd_config`. SSH access is key-only. You cannot log in with a password even if you know the root password — `sshd` will refuse the attempt.
+
+<Note>
+  These behaviors apply to all images launched through the published-image fast path. If you build your own image with [`ImageBuilder`](/smolvm/api/imagebuilder), you control its `sshd_config` and the host-key-generation logic in your `/init` script.
+</Note>
+
 ## Disk isolation
 
 ### Isolated mode (default)

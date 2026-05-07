@@ -62,6 +62,7 @@
               "smolvm/concepts/overview",
               "smolvm/concepts/security",
               "smolvm/concepts/backends",
+              "smolvm/concepts/published-images",
               "smolvm/concepts/networking"
             ]
           },
@@ -183,6 +184,7 @@
               "smolvm/cli/stop",
               "smolvm/cli/ssh",
               "smolvm/cli/cleanup",
+              "smolvm/cli/prune",
               "smolvm/cli/doctor",
               "smolvm/cli/snapshot",
               "smolvm/cli/env",

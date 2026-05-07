@@ -223,6 +223,44 @@ with SmolVM(config) as vm:
 
 This pattern is used in `examples/openclaw.py` to inject `OPENROUTER_API_KEY` and `OPENAI_API_KEY` from the host.
 
+## Host-side variables SmolVM reads
+
+A few environment variables on your host machine change how SmolVM itself behaves. Set these in your shell, not inside the sandbox.
+
+### SmolVM behavior
+
+<ResponseField name="SMOLVM_BACKEND" type="string">
+  Override the virtual machine monitor SmolVM uses. Accepts `firecracker`, `qemu`, or `auto` (the default). On macOS the default is QEMU; on Linux it is Firecracker.
+</ResponseField>
+
+<ResponseField name="SMOLVM_USE_PUBLISHED" type="string" default="1">
+  Controls the [published-image fast path](/smolvm/concepts/published-images). On by default. Set to `0`, `false`, or `no` to force SmolVM to build images locally instead of downloading pre-built ones. Useful when you're testing changes to a preset's install script.
+</ResponseField>
+
+### Coding-agent presets
+
+When you launch a coding-agent preset, SmolVM forwards a small list of host environment variables into the sandbox so the agent can authenticate without an extra login step.
+
+<ResponseField name="OPENAI_API_KEY" type="string">
+  Forwarded to presets that talk to OpenAI APIs (for example `codex`).
+</ResponseField>
+
+<ResponseField name="OPENROUTER_API_KEY" type="string">
+  Forwarded to the `openclaw` preset and any preset that supports OpenRouter.
+</ResponseField>
+
+<ResponseField name="OPENCLAW_GATEWAY_TOKEN" type="string">
+  Forwarded to the `openclaw` preset. OpenClaw rejects boot with a clear error message if neither this nor `OPENCLAW_GATEWAY_PASSWORD` is set, so populate one of the two before running `smolvm openclaw start`.
+</ResponseField>
+
+<ResponseField name="OPENCLAW_GATEWAY_PASSWORD" type="string">
+  Alternative to `OPENCLAW_GATEWAY_TOKEN` for the `openclaw` preset. Use whichever credential type matches your OpenClaw deployment.
+</ResponseField>
+
+<Tip>
+  Set these in your shell profile (`~/.zshrc`, `~/.bashrc`) so every `smolvm openclaw start` picks them up automatically. They never get baked into a published image — they only travel into a sandbox you boot.
+</Tip>
+
 ## Variable validation
 
 SmolVM validates environment variable keys:
