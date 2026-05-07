@@ -5,6 +5,14 @@ description: "ImageBuilder reference: build minimal Alpine or Debian-based VM ro
 
 `ImageBuilder` automates the creation of VM images with SSH server pre-configured. It uses Docker to build minimal Alpine or Debian-based rootfs images, complete with networking and a custom init script.
 
+<Note>
+  Since v0.0.14, the auto-config path (`smolvm create --os ...`) supports `alpine` and `ubuntu` only — Debian was removed from the `GuestOS` enum. The `build_debian_ssh_key` method below remains callable when you instantiate `ImageBuilder` directly, but it is no longer wired into the CLI's `--os` flag.
+</Note>
+
+<Note>
+  The optional `kernel_url` parameter on each build method is retained for backward compatibility. Since v0.0.14, SmolVM ships its own [universal kernel](/smolvm/concepts/published-images) and uses it by default — you only need to override `kernel_url` for advanced custom-kernel scenarios.
+</Note>
+
 ## Constructor
 
 ### `ImageBuilder(cache_dir=None)`

@@ -1,0 +1,102 @@
+---
+title: "smolvm prune"
+description: "Reclaim disk space by deleting cached SmolVM images from older releases. Preview targets with --dry-run or get machine-readable output with --json."
+---
+
+When you upgrade SmolVM, the new release pulls a fresh set of pre-built sandbox images. The images from older releases stay on disk under `~/.smolvm/images/` and slowly add up. The `smolvm prune` command finds those leftover image folders and deletes them so you get the space back.
+
+Run it any time after an upgrade. It only touches caches that belong to versions you're no longer using, so your current sandboxes keep working.
+
+## Synopsis
+
+```bash  theme={null}
+smolvm prune [OPTIONS]
+```
+
+## Options
+
+<ParamField path="--dry-run" type="flag" default="false">
+  Show what would be deleted without removing anything. Useful for previewing the targets before you commit.
+</ParamField>
+
+<ParamField path="--json" type="flag" default="false">
+  Print results as JSON instead of a formatted table. Useful for scripts and automation.
+</ParamField>
+
+## Examples
+
+### Preview before deleting
+
+Always safe to run first — it never deletes:
+
+```bash  theme={null}
+smolvm prune --dry-run
+```
+
+**Example output:**
+
+```
+Stale image caches (2):
+  - ~/.smolvm/images/0.0.12/   (412 MB)
+  - ~/.smolvm/images/0.0.13/   (487 MB)
+
+Total reclaimable: 899 MB
+Dry run complete. No changes made.
+```
+
+### Reclaim disk space
+
+Delete the stale caches:
+
+```bash  theme={null}
+smolvm prune
+```
+
+**Example output:**
+
+```
+Removed: ~/.smolvm/images/0.0.12/
+Removed: ~/.smolvm/images/0.0.13/
+Reclaimed 899 MB.
+```
+
+### JSON output for automation
+
+Get a machine-readable report:
+
+```bash  theme={null}
+smolvm prune --json
+```
+
+The `--json` flag emits a structured object listing the cache directories that were considered, which were removed, and the total bytes reclaimed. Pipe into `jq` to extract specific fields, or combine with `--dry-run` to inspect targets without deleting:
+
+```bash  theme={null}
+smolvm prune --dry-run --json | jq .
+```
+
+## What gets deleted
+
+`smolvm prune` only removes cached image folders for SmolVM versions other than the one currently installed. The current version's cache is preserved.
+
+It does not touch:
+
+* Running sandboxes or their state
+* Custom images you built with [`ImageBuilder`](/smolvm/api/imagebuilder)
+* Snapshots stored under `~/.smolvm/snapshots/`
+* SSH keys under `~/.smolvm/keys/`
+
+<Note>
+  If you upgrade SmolVM frequently, run `smolvm prune` periodically to keep your cache footprint small. Each release ships a fresh set of pre-built rootfs and kernel artifacts.
+</Note>
+
+## Exit codes
+
+| Code | Description                          |
+| ---- | ------------------------------------ |
+| `0`  | Success — caches removed (or none found) |
+| `1`  | Error reading or deleting cache files |
+
+## Related commands
+
+* [`smolvm cleanup`](/smolvm/cli/cleanup) — remove stale VMs and free TAP devices
+* [`smolvm doctor`](/smolvm/cli/doctor) — diagnose your install before pruning

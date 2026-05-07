@@ -1,9 +1,9 @@
 ---
 title: "Coding Agents in Sandbox"
-description: "Run Claude Code, Codex, and Pi coding agents inside a SmolVM sandbox with full permissions — no more accept-changes prompts and no risk to your host machine."
+description: "Run Claude Code, Codex, Hermes, and Pi coding agents inside a SmolVM sandbox with full permissions — no more accept-changes prompts and no risk to your host machine."
 ---
 
-SmolVM lets you run coding agents like Claude, Codex, and Pi inside an isolated sandbox. The agent gets a full development environment — git credentials, dev tools, terminal access — but nothing it does can affect your host machine.
+SmolVM lets you run coding agents like Claude, Codex, Hermes, and Pi inside an isolated sandbox. The agent gets a full development environment — git credentials, dev tools, terminal access — but nothing it does can affect your host machine.
 
 No more pressing "accept changes" every few seconds. Let the agent work freely in its own computer.
 
@@ -20,6 +20,11 @@ No more pressing "accept changes" every few seconds. Let the agent work freely i
     smolvm codex start
     ```
   </Tab>
+  <Tab title="Hermes">
+    ```bash
+    smolvm hermes start
+    ```
+  </Tab>
   <Tab title="Pi">
     ```bash
     smolvm pi start
@@ -28,6 +33,8 @@ No more pressing "accept changes" every few seconds. Let the agent work freely i
 </Tabs>
 
 Each command launches a sandbox with the respective coding agent pre-installed and configured. Your existing credentials (from `claude login`, `codex login`, etc.) are forwarded into the sandbox automatically — no re-authentication needed.
+
+The first launch typically takes 5–10 seconds because SmolVM downloads a pre-built sandbox image instead of installing the agent on every run. See [Published images](/smolvm/concepts/published-images) for how the fast path works and how to opt out.
 
 ## What you get
 
