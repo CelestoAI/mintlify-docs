@@ -31,8 +31,26 @@ All VMConfig instances are immutable (frozen) after creation.
   Memory size in MiB (mebibytes). Valid range: 128-16384.
 </ParamField>
 
-<ParamField path="kernel_path" type="Path" required>
-  Path to the kernel image file. The path must exist and point to a valid file.
+<ParamField path="guest_os" type="GuestOS" default="GuestOS.ALPINE">
+  The operating system running inside the VM. Used by SmolVM to pick the right
+  QEMU machine type, firmware, and device topology.
+
+  Valid values:
+
+  * `GuestOS.ALPINE` — Alpine Linux (default).
+  * `GuestOS.UBUNTU` — Ubuntu Linux.
+  * `GuestOS.WINDOWS` — Windows 11. Requires `boot_mode="firmware"` and `backend="qemu"`, and only runs on Linux hosts. See [Windows guests](/smolvm/guides/windows-guests).
+</ParamField>
+
+<ParamField path="boot_mode" type="Literal['direct_kernel', 'firmware']" default="direct_kernel">
+  How the VM boots:
+
+  * `"direct_kernel"` — Boot a Linux kernel directly. Requires `kernel_path`. Used by every Linux sandbox.
+  * `"firmware"` — Boot through UEFI firmware reading the disk's own boot manager. Required for Windows guests. `kernel_path` must be `None`.
+</ParamField>
+
+<ParamField path="kernel_path" type="Path | None" required>
+  Path to the kernel image file. The path must exist and point to a valid file. Set to `None` (and omitted) when `boot_mode="firmware"`.
 </ParamField>
 
 <ParamField path="rootfs_path" type="Path" required>
@@ -216,6 +234,30 @@ config2 = VMConfig(
 )
 ```
 
+### Windows guest
+
+Boot a pre-installed Windows 11 image. Requires `boot_mode="firmware"` and the QEMU backend; SmolVM enforces both invariants.
+
+```python  theme={null}
+from smolvm import VMConfig
+from smolvm.types import GuestOS
+from pathlib import Path
+
+config = VMConfig(
+    vm_id="win11-vm",
+    vcpu_count=4,
+    memory=4096,
+    guest_os=GuestOS.WINDOWS,
+    boot_mode="firmware",
+    kernel_path=None,
+    rootfs_path=Path("/var/lib/vms/win11.qcow2"),
+    backend="qemu",
+    disk_mode="shared",
+)
+```
+
+For the high-level path, use [`SmolVM(os="windows", image=...)`](/smolvm/guides/windows-guests) — it constructs this config for you.
+
 ### QEMU Backend
 
 ```python  theme={null}
@@ -311,7 +353,9 @@ with SmolVM(config) as vm:
 | `vm_id`                    | `str`                   | Auto-generated                             | `^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$`  |
 | `vcpu_count`               | `int`                   | `2`                                        | 1-32                                 |
 | `memory`                   | `int`                   | `512`                                      | 128-16384                            |
-| `kernel_path`              | `Path`                  | Required                                   | Must exist as file                   |
+| `guest_os`                 | `GuestOS`               | `GuestOS.ALPINE`                           | `alpine`, `ubuntu`, `windows`        |
+| `boot_mode`                | `Literal`               | `"direct_kernel"`                          | `"direct_kernel"`, `"firmware"`      |
+| `kernel_path`              | `Path \| None`          | Required for direct_kernel                 | Must exist as file                   |
 | `rootfs_path`              | `Path`                  | Required                                   | Must exist as file                   |
 | `extra_drives`             | `list[Path]`            | `[]`                                       | Each must exist as file              |
 | `boot_args`                | `str`                   | `"console=ttyS0 reboot=k panic=1 pci=off"` | Any string                           |

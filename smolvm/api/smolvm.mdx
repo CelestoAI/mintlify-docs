@@ -14,9 +14,11 @@ SmolVM(
     config: VMConfig | None = None,
     *,
     vm_id: str | None = None,
+    image: str | None = None,
     data_dir: Path | None = None,
     socket_dir: Path | None = None,
     backend: str | None = None,
+    os: GuestOS | str | None = None,
     memory: int | None = None,
     disk_size: int | None = None,
     ssh_user: str = "root",
@@ -30,6 +32,23 @@ SmolVM(
 
 <ParamField path="vm_id" type="str | None" default="None">
   ID of an existing VM to reconnect to. Mutually exclusive with `config`.
+</ParamField>
+
+<ParamField path="image" type="str | None" default="None">
+  Disk image to boot. Accepts:
+
+  * A published S3 image URI (`s3://bucket/images/alpine/`) — the manifest defines the OS, so `os=` must be omitted.
+  * A local `qcow2` file path (`/var/lib/vms/win11.qcow2`, `~/win11/disk.qcow2`) or `file://` URI — requires `os=` since the file alone doesn't self-identify.
+
+  Mutually exclusive with `config` and `vm_id`. Local images are only supported for `os="windows"` in this release; see [Windows guests](/smolvm/guides/windows-guests).
+</ParamField>
+
+<ParamField path="os" type="GuestOS | str | None" default="None">
+  Guest operating system. Valid values: `"alpine"`, `"ubuntu"`, `"windows"`.
+
+  * For auto-config mode (no `image=`), selects the Linux distribution.
+  * For local images, **required** — tells SmolVM which OS is inside the file. Must be `"windows"` for the local-image path in this release.
+  * For S3 images, must be omitted — the image manifest already records the OS.
 </ParamField>
 
 <ParamField path="data_dir" type="Path | None" default="None">
@@ -726,6 +745,21 @@ print(result.stdout)
 vm.stop()
 vm.delete()
 vm.close()
+```
+
+### Windows Guest
+
+Boot a pre-installed Windows 11 `qcow2` image. Requires a Linux host with KVM and the OVMF + `swtpm` packages installed. See the [Windows guests guide](/smolvm/guides/windows-guests) for prerequisites and limitations.
+
+```python  theme={null}
+from smolvm import SmolVM
+
+with SmolVM(
+    os="windows",
+    image="~/win11-vm/disk-baseline.qcow2",
+    memory=4096,
+) as vm:
+    print(vm.vm_id)
 ```
 
 ### Reconnecting to Existing VM

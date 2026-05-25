@@ -53,7 +53,8 @@
               "smolvm/guides/basic-usage",
               "smolvm/guides/custom-images",
               "smolvm/guides/vm-lifecycle",
-              "smolvm/guides/environment-variables"
+              "smolvm/guides/environment-variables",
+              "smolvm/guides/windows-guests"
             ]
           },
           {
