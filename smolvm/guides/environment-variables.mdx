@@ -1,11 +1,11 @@
 ---
 title: "Environment variables"
-description: "Pass configuration values, API keys, and secrets into a SmolVM sandbox at boot or runtime — variables are written to /etc/profile.d for new login shells."
+description: "Pass configuration values, API keys, and secrets into a SmolVM sandbox at boot or runtime — works for both Linux and Windows guests with a unified Python API."
 ---
 
 You can pass configuration values, API keys, and other settings into a sandbox using environment variables. SmolVM supports two approaches: setting variables when you create the sandbox, or adding them at runtime while the sandbox is running.
 
-Variables are written to `/etc/profile.d/smolvm_env.sh` inside the guest and automatically available in new login shells.
+The same Python API (`env_vars=`, `vm.set_env_vars(...)`, `vm.unset_env_vars(...)`, `vm.list_env_vars(...)`) works for both Linux and Windows guests. On Linux the variables are written to `/etc/profile.d/smolvm_env.sh` and picked up by new login shells; on Windows they're written to `HKCU\Environment` and picked up by new processes. See [Windows guests](#windows-guests) below for the details specific to Windows.
 
 ## Setting variables at boot
 
@@ -78,6 +78,41 @@ with SmolVM() as vm:
     result = vm.run("echo DEBUG=$DEBUG")
     print(result.output)  # "DEBUG="
 ```
+
+## Windows sandboxes
+
+Environment variables work for Windows sandboxes too, using the same API. The only difference is where the values are stored.
+
+```python
+from smolvm import SmolVM
+
+with SmolVM(
+    os="windows",
+    image="~/.smolvm/images/win11.qcow2",
+    ssh_user="smolvm",
+    ssh_password="smolvm",
+    env_vars={"OPENAI_API_KEY": "sk-..."},
+) as vm:
+    vm.wait_for_ssh()
+
+    # Fresh SSH session, so the new value is visible.
+    print(vm.run("$env:OPENAI_API_KEY").stdout.strip())
+
+    vm.set_env_vars({"DEBUG": "1"})
+    print(vm.list_env_vars())
+    vm.unset_env_vars(["DEBUG"])
+```
+
+How it works on Windows:
+
+* SmolVM runs `[Environment]::SetEnvironmentVariable(name, value, 'User')` over SSH, which writes the value into the `HKCU\Environment` registry hive — the standard per-user environment store on Windows.
+* New processes inherit the updated environment automatically. The SSH session that issued the change does **not** — `vm.run(...)` opens a fresh session every call, so the next `vm.run(...)` sees the new value.
+* SmolVM tracks which keys it owns via a `SMOLVM_ENV_MANAGED_KEYS` sentinel value. `list_env_vars()` and `unset_env_vars()` only ever touch variables SmolVM set; anything you configured inside Windows yourself is left untouched.
+* Values are passed through verbatim — spaces, embedded quotes, and special characters are escaped safely by SmolVM before the PowerShell call.
+
+<Note>
+  Variable changes are visible to new processes, not the current one. Inside a single SSH session you can verify the change by spawning a fresh process — for example `start-process powershell -wait`, or simply rely on the fact that the next `vm.run(...)` call will see the new value.
+</Note>
 
 ## Method reference
 

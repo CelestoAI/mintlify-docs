@@ -33,6 +33,7 @@ pip install 'smolvm[dashboard]'
 | `smolvm cleanup` | Clean stale SmolVM resources and VMs |
 | `smolvm doctor` | Run host diagnostics for the selected backend |
 | `smolvm env` | Manage environment variables on a running VM |
+| `smolvm windows` | Windows-guest helpers (build a Windows qcow2 from an ISO) |
 | `smolvm ui` | Start the SmolVM dashboard UI server |
 
 ## Snapshot commands
@@ -79,6 +80,25 @@ smolvm browser open <session_id>
 smolvm browser stop <session_id>
 ```
 
+## Windows commands
+
+The `smolvm windows` command bundles helpers for Windows guests:
+
+| Command | Description |
+| --- | --- |
+| `smolvm windows build-image` | Build a Windows 11 qcow2 from a Windows ISO via unattended install |
+
+Build a Windows image once, then boot as many sandboxes as you want from it:
+
+```bash
+smolvm windows build-image \
+  --iso ./Win11.iso \
+  --virtio-win-iso ./virtio-win.iso \
+  --output ~/.smolvm/images/win11.qcow2
+```
+
+See [`smolvm windows`](/smolvm/cli/windows) for the full reference.
+
 ## Getting help
 
 Display help for the main command:
@@ -123,6 +143,10 @@ smolvm browser start --help
 
   <Card title="Environment" icon="gear" href="/smolvm/cli/env">
     Manage VM environment variables
+  </Card>
+
+  <Card title="Windows images" icon="window" href="/smolvm/cli/windows">
+    Build a Windows qcow2 from an ISO
   </Card>
 
   <Card title="Snapshots" icon="camera" href="/smolvm/cli/snapshot">

@@ -189,6 +189,7 @@
               "smolvm/cli/doctor",
               "smolvm/cli/snapshot",
               "smolvm/cli/env",
+              "smolvm/cli/windows",
               "smolvm/cli/ui"
             ]
           },
