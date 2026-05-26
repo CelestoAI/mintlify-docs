@@ -10,7 +10,7 @@ You can boot the VM, run PowerShell commands inside it with `vm.run(...)`, and u
 This guide explains when to use Windows guests, what you need before you start, and how to drive one end to end.
 
 <Note>
-  Windows guest support is rolling out in phases. Boot, PowerShell command execution, and file upload work today. Building the image from an ISO, host mounts, environment variable injection, network controls, and snapshots are not yet supported — see [Current limitations](#current-limitations).
+  Windows guest support is rolling out in phases. Boot, PowerShell command execution, file upload, environment variable injection, and unattended image building work today. Host mounts, network controls, and snapshots are not yet supported — see [Current limitations](#current-limitations).
 </Note>
 
 ## What this is
@@ -28,7 +28,7 @@ The Windows VM boots the same way Linux sandboxes do — with `SmolVM(...)` in P
 You need three things on the host:
 
 1. **A Linux host with KVM.** Windows guests use QEMU + KVM. macOS hosts are not supported yet.
-2. **A pre-installed Windows 11 `qcow2` disk image with OpenSSH Server.** SmolVM does not build one for you in this release. You can install Windows 11 once into a `qcow2` using QEMU directly, install the optional **OpenSSH Server** Windows feature, and then point SmolVM at that file. If the image does not have sshd running, `vm.run(...)` and `vm.upload_file(...)` will fail with a clear connection or auth error from paramiko.
+2. **A Windows 11 `qcow2` disk image with OpenSSH Server.** The easiest way to get one is the [`smolvm windows build-image`](/smolvm/cli/windows) CLI command, which drives an unattended Windows install from a stock Windows ISO + the virtio-win driver ISO and produces a ready-to-use `qcow2` (OpenSSH, virtio-win drivers, and a known local admin account all pre-installed). If you already have your own Windows `qcow2`, point SmolVM at that file instead — just make sure the OpenSSH Server feature is installed and running, otherwise `vm.run(...)` and `vm.upload_file(...)` will fail with a connection or auth error.
 3. **OVMF (UEFI firmware) and `swtpm` (software TPM).** Windows 11 requires UEFI Secure Boot and TPM 2.0. SmolVM looks for OVMF in the standard distro install paths and will tell you exactly which package to install if it's missing.
 
 Quick install of the prerequisites:
@@ -50,6 +50,34 @@ Quick install of the prerequisites:
     ```
   </Tab>
 </Tabs>
+
+## Build a Windows image
+
+If you don't have a Windows `qcow2` yet, `smolvm windows build-image` produces one for you in a single command. You provide a Windows ISO and the [virtio-win driver ISO](https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso), walk away for 15–30 minutes, and get back a ready-to-boot image:
+
+```bash
+smolvm windows build-image \
+  --iso ./Win11.iso \
+  --virtio-win-iso ./virtio-win.iso \
+  --output ~/.smolvm/images/win11.qcow2
+```
+
+The built image has OpenSSH Server installed and running, the virtio-win drivers in place, and a local admin account (`smolvm` / `smolvm` by default — override with `--username` and `--password`). Boot it like any other Windows image:
+
+```python
+from smolvm import SmolVM
+
+with SmolVM(
+    os="windows",
+    image="~/.smolvm/images/win11.qcow2",
+    ssh_user="smolvm",
+    ssh_password="smolvm",
+) as vm:
+    vm.wait_for_ssh()
+    print(vm.run("hostname").stdout)
+```
+
+See the [`smolvm windows build-image`](/smolvm/cli/windows) reference for all available flags (edition, hostname, disk size, build timeout) and for using `WindowsImageBuilder` directly from Python.
 
 ## Launch a Windows sandbox
 
@@ -123,6 +151,38 @@ with SmolVM(
 
 Under the hood, SmolVM base64-encodes the command and runs it with `powershell.exe -NoProfile -EncodedCommand` so quotes, backticks, and special characters survive the Windows OpenSSH `cmd.exe` layer unchanged. You don't need to escape anything yourself.
 
+### Inject environment variables
+
+Pass secrets and configuration into a Windows sandbox the same way you do for Linux — via `env_vars=` on the constructor, or `vm.set_env_vars(...)` / `vm.unset_env_vars(...)` / `vm.list_env_vars(...)` at runtime:
+
+```python
+from smolvm import SmolVM
+
+with SmolVM(
+    os="windows",
+    image="~/.smolvm/images/win11.qcow2",
+    ssh_user="smolvm",
+    ssh_password="smolvm",
+    env_vars={
+        "OPENAI_API_KEY": "sk-...",
+        "APP_MODE": "production",
+    },
+) as vm:
+    vm.wait_for_ssh()
+
+    # New SSH sessions see the variables.
+    print(vm.run("$env:APP_MODE").stdout.strip())  # production
+
+    # Add / remove at runtime.
+    vm.set_env_vars({"DEBUG": "1"})
+    vm.unset_env_vars(["APP_MODE"])
+    print(vm.list_env_vars())  # {'OPENAI_API_KEY': '...', 'DEBUG': '1'}
+```
+
+On Windows, SmolVM writes the variables into `HKCU\Environment` (the standard per-user environment store) via `[Environment]::SetEnvironmentVariable(name, value, 'User')`. SmolVM tracks which variables it owns through a sentinel key, so `list_env_vars` and `unset_env_vars` only ever touch values SmolVM set — anything you configure inside Windows yourself is left alone.
+
+Variables become visible to **new** processes, not the SSH session that set them. Every `vm.run()` call opens a fresh SSH session, so the very next `vm.run()` after `set_env_vars` will see the new values. See the [environment variables guide](/smolvm/guides/environment-variables) for the full API.
+
 ### Upload files into Windows paths
 
 `vm.upload_file(...)` accepts Windows-style destination paths. All three forms work:
@@ -193,8 +253,6 @@ The first release of Windows guest support is deliberately narrow. The following
 * **No `mounts=`.** Host directory mounts (`virtio-9p`) are Linux-guest only for now.
 * **No `internet_settings=`.** Domain allowlists and egress controls are not yet wired into the Windows network stack.
 * **No snapshots.** `vm.snapshot()` and `SmolVM.from_snapshot()` are rejected for Windows VMs — Windows guests use multiple state artifacts (qcow2 + UEFI vars + TPM state) that can't be checkpointed atomically yet.
-* **No `env_vars=`.** Environment variable injection is Linux-only today. Passing `env_vars` to a Windows `VMConfig` raises `ValueError` upfront. A later phase will add `setx`-based injection.
-* **You bring the image.** SmolVM does not build a Windows `qcow2` from an ISO for you in this release.
 
 If you call any of the unsupported features, SmolVM raises `ValueError` with a plain-English message naming the feature and the workaround.
 
@@ -225,14 +283,14 @@ If you call any of the unsupported features, SmolVM raises `ValueError` with a p
 ## Next steps
 
 <CardGroup cols={2}>
+  <Card title="Build a Windows image" icon="hammer" href="/smolvm/cli/windows">
+    Run `smolvm windows build-image` to produce a Windows qcow2 unattended
+  </Card>
   <Card title="Backends" icon="microchip" href="/smolvm/concepts/backends">
     Why Windows guests run on QEMU
   </Card>
   <Card title="VMConfig" icon="sliders" href="/smolvm/api/vmconfig">
     The full configuration model, including `guest_os`
-  </Card>
-  <Card title="SmolVM API" icon="book" href="/smolvm/api/smolvm">
-    All constructor arguments, including `os=` and `image=`
   </Card>
   <Card title="VM lifecycle" icon="circle-play" href="/smolvm/guides/vm-lifecycle">
     Start, stop, and delete sandboxes

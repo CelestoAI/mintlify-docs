@@ -1,0 +1,244 @@
+---
+title: "smolvm windows"
+description: "Build a reusable Windows 11 qcow2 image with smolvm windows build-image — an unattended install that runs end to end with no clicks and produces a ready-to-boot SmolVM Windows guest."
+---
+
+## Synopsis
+
+```bash  theme={null}
+smolvm windows build-image --iso PATH --virtio-win-iso PATH --output PATH [OPTIONS]
+```
+
+## Description
+
+The `windows` command group bundles helpers for working with Windows guests. Today it has one subcommand:
+
+* `smolvm windows build-image` — produce a ready-to-use Windows 11 `qcow2` from a stock Windows ISO. The install runs unattended end to end (no clicks), and the resulting image has OpenSSH Server, the virtio-win drivers, and a known local admin account baked in — exactly what `SmolVM(os="windows", image=...)` needs to boot.
+
+After you build the image once, you can spin up as many Windows sandboxes as you want from it; SmolVM creates per-VM overlay disks on top of the baseline so your original image is never modified.
+
+<Note>
+  The build takes 15–30 minutes. It runs an unattended Windows Setup inside a temporary QEMU VM, so plan accordingly — kick it off, walk away, come back to a finished image.
+</Note>
+
+## Prerequisites
+
+* A Linux host with KVM enabled (the same host requirements as [running Windows guests](/smolvm/guides/windows-guests#before-you-start)).
+* A Windows 11 ISO. Download from [microsoft.com/software-download/windows11](https://www.microsoft.com/software-download/windows11).
+* The virtio-win driver ISO. One-time download (~750 MiB) from [fedorapeople.org](https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso).
+* `xorriso` installed on the host (used to package the unattended-install answer file). On Debian/Ubuntu: `sudo apt-get install -y xorriso`. On Fedora: `sudo dnf install -y xorriso`.
+
+## Subcommands
+
+### build-image
+
+Drive an unattended Windows install and write the result to a qcow2 file.
+
+```bash  theme={null}
+smolvm windows build-image \
+  --iso ./Win11.iso \
+  --virtio-win-iso ./virtio-win.iso \
+  --output ~/.smolvm/images/win11.qcow2
+```
+
+#### Required flags
+
+<ParamField path="--iso" type="path" required>
+  Path to the Windows ISO (for example `./Win11.iso`).
+</ParamField>
+
+<ParamField path="--virtio-win-iso" type="path" required>
+  Path to the virtio-win driver ISO. Required so Windows Setup can see the virtio-scsi disk and virtio NIC during install.
+</ParamField>
+
+<ParamField path="--output" type="path" required>
+  Destination for the built qcow2 (for example `~/.smolvm/images/win11.qcow2`). The directory is created if needed. The command refuses to overwrite an existing non-empty file as a safeguard.
+</ParamField>
+
+#### Optional flags
+
+<ParamField path="--username" type="string" default="smolvm">
+  Local admin account to create inside Windows. Use this account name as `ssh_user=` when booting the image.
+</ParamField>
+
+<ParamField path="--password" type="string" default="smolvm">
+  Password for the local admin account. **Override the default** for any image you'll reuse beyond throwaway proof-of-concept work — the default is intentionally weak and public.
+</ParamField>
+
+<ParamField path="--hostname" type="string" default="smolvm-win">
+  Windows computer name baked into the install.
+</ParamField>
+
+<ParamField path="--edition" type="string" default="Windows 11 Pro">
+  Edition name as it appears in `install.wim`. `Windows 11 Home` is also valid for a stock consumer ISO.
+</ParamField>
+
+<ParamField path="--disk-size" type="integer" default="65536">
+  Virtual size of the built qcow2, in MiB. The default is 65536 MiB (64 GiB). The qcow2 grows on demand — this is a ceiling, not a preallocation.
+</ParamField>
+
+<ParamField path="--build-timeout" type="number" default="2700">
+  Upper bound on the install duration, in seconds. The default (2700 s = 45 min) is generous; a typical install finishes in 15–20 minutes.
+</ParamField>
+
+<ParamField path="--json" type="flag">
+  Emit machine-readable JSON instead of human-friendly text.
+</ParamField>
+
+#### Examples
+
+Build with all defaults:
+
+```bash  theme={null}
+smolvm windows build-image \
+  --iso ./Win11.iso \
+  --virtio-win-iso ./virtio-win.iso \
+  --output ~/.smolvm/images/win11.qcow2
+```
+
+Build with a custom account and a smaller virtual disk:
+
+```bash  theme={null}
+smolvm windows build-image \
+  --iso ./Win11.iso \
+  --virtio-win-iso ./virtio-win.iso \
+  --output ~/.smolvm/images/win11-dev.qcow2 \
+  --username dev \
+  --password 'Str0ng-passphrase!' \
+  --hostname dev-box \
+  --disk-size 32768
+```
+
+Build Windows 11 Home and emit JSON:
+
+```bash  theme={null}
+smolvm windows build-image \
+  --iso ./Win11.iso \
+  --virtio-win-iso ./virtio-win.iso \
+  --output ~/.smolvm/images/win11-home.qcow2 \
+  --edition 'Windows 11 Home' \
+  --json
+```
+
+JSON output shape:
+
+```json
+{
+  "command": "windows build-image",
+  "exit_code": 0,
+  "data": {
+    "output_qcow2": "/home/you/.smolvm/images/win11-home.qcow2",
+    "size_bytes": 8345128448,
+    "username": "smolvm",
+    "hostname": "smolvm-win",
+    "edition": "Windows 11 Home"
+  }
+}
+```
+
+## Boot the image you just built
+
+Once the build finishes, point `SmolVM(os="windows", image=...)` at the qcow2 with the credentials you chose:
+
+```python
+from smolvm import SmolVM
+
+with SmolVM(
+    os="windows",
+    image="~/.smolvm/images/win11.qcow2",
+    ssh_user="smolvm",
+    ssh_password="smolvm",
+) as vm:
+    vm.wait_for_ssh()
+    print(vm.run("hostname").stdout.strip())
+```
+
+SmolVM creates a per-VM overlay disk on top of the baseline, so the qcow2 you built stays read-only and you can launch many sandboxes from it in parallel. See [Windows sandboxes](/smolvm/guides/windows-guests) for the full guest API.
+
+## Use it from Python
+
+The same flow is available as a Python class, `WindowsImageBuilder`. Use it when you want to bake images programmatically — for example, from a CI job that rebuilds the baseline on a schedule.
+
+```python
+from pathlib import Path
+from smolvm.windows import WindowsImageBuilder
+
+builder = WindowsImageBuilder(
+    windows_iso=Path("./Win11.iso"),
+    virtio_win_iso=Path("./virtio-win.iso"),
+    output_qcow2=Path("~/.smolvm/images/win11.qcow2").expanduser(),
+    username="smolvm",
+    password="smolvm",
+    hostname="smolvm-win",
+    edition="Windows 11 Pro",
+    disk_size_mib=64 * 1024,
+    build_timeout_s=45 * 60,
+)
+output = builder.build()
+print(f"Built {output}")
+```
+
+`builder.build()` returns the `Path` of the finished qcow2 on success and raises `SmolVMError` (or another exception) on failure.
+
+## How the build works
+
+The builder runs the same Windows Setup flow you'd run by hand, just driven by an answer file:
+
+1. **Render** the bundled `autounattend.xml` template with your chosen username, password, hostname, and edition.
+2. **Wrap** the rendered XML in a tiny ISO labeled `AUTOUNATTEND` (Windows Setup auto-discovers any attached removable media with that volume label).
+3. **Create** an empty qcow2 at `--output` for Windows to install into.
+4. **Spawn** a QEMU VM with the Windows ISO, the virtio-win ISO, the autounattend ISO, and the empty qcow2 all attached.
+5. **Poll** the guest over SSH for `C:\smolvm-ready.txt` every 30 seconds. The answer file writes this marker as the last step of `FirstLogonCommands`, after Windows installs OpenSSH, registers the sshd service, opens TCP/22 in the firewall, and installs the virtio-win guest tools.
+6. **Shut down** the build VM cleanly. The qcow2 at `--output` is left behind as the build artifact.
+
+Transient SSH failures across the install's multiple reboots (Setup → Specialize → OOBE → first login) are absorbed and retried automatically.
+
+For a deep dive into the answer file and the reasoning behind each Setup pass, see [Windows guest QEMU deep dive](https://github.com/celestoai/smolvm/blob/main/docs/deep-dive/windows-guest-qemu.md) in the SmolVM repo.
+
+## Exit codes
+
+| Code | Description                                                              |
+| ---- | ------------------------------------------------------------------------ |
+| `0`  | Image built successfully                                                 |
+| `1`  | Build failed (missing ISO, `xorriso` not installed, install timed out, etc.) |
+| `2`  | Invalid usage (missing subcommand or required flag)                      |
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="xorrisofs is required to build the autounattend answer-file ISO">
+    Install the `xorriso` package: `sudo apt-get install -y xorriso` on Debian/Ubuntu, `sudo dnf install -y xorriso` on Fedora, `brew install xorriso` on macOS.
+  </Accordion>
+
+  <Accordion title="The output path already exists">
+    The builder refuses to overwrite an existing non-empty file. Pass a different `--output` path, or delete the previous build first.
+  </Accordion>
+
+  <Accordion title="Build timed out before the ready marker appeared">
+    The install is normally finished in 15–20 minutes. If your host is slow or under heavy load, raise `--build-timeout` (in seconds) — for example `--build-timeout 5400` for 90 minutes.
+  </Accordion>
+
+  <Accordion title="Setup couldn't find a disk to install Windows on">
+    This almost always means `--virtio-win-iso` points at the wrong file or an old version. Re-download the latest stable ISO from the [virtio-win direct-downloads page](https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso) and retry.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Windows sandboxes" icon="window" href="/smolvm/guides/windows-guests">
+    Boot the image you just built and run PowerShell over SSH
+  </Card>
+
+  <Card title="Environment variables" icon="key" href="/smolvm/guides/environment-variables">
+    Inject API keys and config into Windows guests
+  </Card>
+
+  <Card title="CLI overview" icon="terminal" href="/smolvm/cli/overview">
+    All available SmolVM CLI commands
+  </Card>
+
+  <Card title="VM lifecycle" icon="circle-play" href="/smolvm/guides/vm-lifecycle">
+    Start, stop, and delete sandboxes
+  </Card>
+</CardGroup>
