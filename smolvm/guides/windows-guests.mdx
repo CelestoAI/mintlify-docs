@@ -149,6 +149,31 @@ Windows 11 defaults to **4096 MiB** of RAM in SmolVM. The minimum that boots is 
 SmolVM(os="windows", image="~/win11-vm/disk.qcow2", memory=8192)
 ```
 
+### Your baseline image stays read-only
+
+When you point `SmolVM` at a Windows `qcow2`, SmolVM does **not** write to that file. Each sandbox gets its own thin scratch disk — a per-VM `qcow2` overlay stacked on top of your baseline — so the original image stays byte-for-byte unchanged across runs.
+
+This gives you two things for free:
+
+* **Run multiple Windows sandboxes from the same image in parallel.** Each `SmolVM(os="windows", image=...)` call gets a fresh overlay, so concurrent processes don't fight over the disk write lock.
+* **Crashes and Ctrl-C don't corrupt your baseline.** If a sandbox dies mid-run, the only thing lost is its overlay. Your golden image is untouched.
+
+The overlay is created near-instantly with `qemu-img create -b` and lives under `data_dir/disks/{vm_id}.qcow2`. It is deleted automatically when the VM is deleted unless you set `retain_disk_on_delete=True` on the `VMConfig`.
+
+```python
+from smolvm import SmolVM
+
+# Two sandboxes, same baseline image, running side by side — safe.
+with SmolVM(os="windows", image="~/win11-vm/baseline.qcow2") as vm_a, \
+     SmolVM(os="windows", image="~/win11-vm/baseline.qcow2") as vm_b:
+    vm_a.wait_for_ssh()
+    vm_b.wait_for_ssh()
+    # Writes inside vm_a and vm_b land in their own overlays.
+    # baseline.qcow2 is read-only across both lifecycles.
+```
+
+If you specifically want writes to land in the baseline — for example, a one-shot image-baking workflow where you install software once and want it to persist — drop down to the lower-level API and construct a `VMConfig` directly with `disk_mode="shared"`. See [`VMConfig`](/smolvm/api/vmconfig) for the full options.
+
 ## How `os=` and `image=` work together
 
 SmolVM uses two slightly different rules depending on where the image comes from:
@@ -169,7 +194,6 @@ The first release of Windows guest support is deliberately narrow. The following
 * **No `internet_settings=`.** Domain allowlists and egress controls are not yet wired into the Windows network stack.
 * **No snapshots.** `vm.snapshot()` and `SmolVM.from_snapshot()` are rejected for Windows VMs — Windows guests use multiple state artifacts (qcow2 + UEFI vars + TPM state) that can't be checkpointed atomically yet.
 * **No `env_vars=`.** Environment variable injection is Linux-only today. Passing `env_vars` to a Windows `VMConfig` raises `ValueError` upfront. A later phase will add `setx`-based injection.
-* **Shared disk mode only.** Today's Windows runs mutate the baseline `qcow2`. Take a copy if you need an immutable golden image until overlay cloning ships.
 * **You bring the image.** SmolVM does not build a Windows `qcow2` from an ISO for you in this release.
 
 If you call any of the unsupported features, SmolVM raises `ValueError` with a plain-English message naming the feature and the workaround.
