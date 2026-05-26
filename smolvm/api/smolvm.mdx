@@ -23,6 +23,7 @@ SmolVM(
     disk_size: int | None = None,
     ssh_user: str = "root",
     ssh_key_path: str | None = None,
+    ssh_password: str | None = None,
 )
 ```
 
@@ -72,11 +73,15 @@ SmolVM(
 </ParamField>
 
 <ParamField path="ssh_user" type="str" default="root">
-  SSH user for command execution via the `run()` method.
+  SSH user for command execution via the `run()` method. For Windows guests, pass the local Windows account name (for example `"Administrator"`) — `root` does not exist on Windows OpenSSH.
 </ParamField>
 
 <ParamField path="ssh_key_path" type="str | None" default="None">
   SSH private key path. If omitted, SmolVM first tries default SSH auth, then falls back to `~/.smolvm/keys/id_ed25519`.
+</ParamField>
+
+<ParamField path="ssh_password" type="str | None" default="None">
+  SSH password. Use this when the guest only accepts password authentication — common for Windows qcow2s that ship with OpenSSH Server but no preinstalled key. When set, SmolVM skips key-based auth so paramiko does not silently prefer a key over your password.
 </ParamField>
 
 ### Raises
@@ -97,10 +102,11 @@ SmolVM.from_id(
     backend: str | None = None,
     ssh_user: str = "root",
     ssh_key_path: str | None = None,
+    ssh_password: str | None = None,
 ) -> SmolVM
 ```
 
-Reconnect to an existing VM by ID.
+Reconnect to an existing VM by ID. Pass `ssh_password=` for Windows guests that use password-based SSH.
 
 <ParamField path="vm_id" type="str" required>
   VM identifier to reconnect to.
@@ -749,7 +755,7 @@ vm.close()
 
 ### Windows Guest
 
-Boot a pre-installed Windows 11 `qcow2` image. Requires a Linux host with KVM and the OVMF + `swtpm` packages installed. See the [Windows guests guide](/smolvm/guides/windows-guests) for prerequisites and limitations.
+Boot a pre-installed Windows 11 `qcow2` image, run a PowerShell command, and upload a file. Requires a Linux host with KVM, the OVMF + `swtpm` packages installed, and an image with OpenSSH Server set up. See the [Windows guests guide](/smolvm/guides/windows-guests) for prerequisites and limitations.
 
 ```python  theme={null}
 from smolvm import SmolVM
@@ -757,10 +763,19 @@ from smolvm import SmolVM
 with SmolVM(
     os="windows",
     image="~/win11-vm/disk-baseline.qcow2",
+    ssh_user="celesto",
+    ssh_password="celesto",
     memory=4096,
 ) as vm:
-    print(vm.vm_id)
+    vm.wait_for_ssh()
+
+    result = vm.run("Write-Output 'hello from windows'")
+    print(result.stdout)  # 'hello from windows\r\n'
+
+    vm.upload_file("./hello.ps1", "C:\\Users\\celesto\\hello.ps1")
 ```
+
+On Windows guests, `vm.run(...)` executes the command in PowerShell, and `vm.upload_file(...)` accepts Windows-style destination paths (`C:\\...`, `C:/...`, or `/C:/...`).
 
 ### Reconnecting to Existing VM
 

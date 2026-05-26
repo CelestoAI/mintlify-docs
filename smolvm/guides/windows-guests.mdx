@@ -1,14 +1,16 @@
 ---
 title: "Windows sandboxes"
-description: "Boot a pre-installed Windows 11 sandbox in SmolVM on a Linux host — point at your own qcow2 disk image and get a fully isolated Windows VM."
+description: "Boot a Windows 11 sandbox in SmolVM, run PowerShell commands over SSH, and upload files into Windows paths — all from Python on a Linux host."
 ---
 
-SmolVM can boot a Windows 11 sandbox alongside its Linux sandboxes. You bring a pre-installed Windows disk image (a `.qcow2` file), and SmolVM handles the firmware, virtual TPM, and QEMU wiring for you.
+SmolVM can boot a Windows 11 sandbox alongside its Linux sandboxes. You bring a pre-installed Windows disk image (a `.qcow2` file), and SmolVM handles the firmware, virtual TPM, QEMU wiring, and SSH plumbing for you.
 
-This guide explains when to use Windows guests, what you need before you start, and how to launch one.
+You can boot the VM, run PowerShell commands inside it with `vm.run(...)`, and upload files to Windows-style paths with `vm.upload_file(...)` — the same API you use for Linux guests.
+
+This guide explains when to use Windows guests, what you need before you start, and how to drive one end to end.
 
 <Note>
-  Windows guest support is the first phase of a larger effort. Today it boots an existing Windows 11 image on Linux hosts. Building the image from an ISO, SSH-into-Windows automation, host mounts, network controls, and snapshots are not yet supported — see [Current limitations](#current-limitations).
+  Windows guest support is rolling out in phases. Boot, PowerShell command execution, and file upload work today. Building the image from an ISO, host mounts, environment variable injection, network controls, and snapshots are not yet supported — see [Current limitations](#current-limitations).
 </Note>
 
 ## What this is
@@ -26,7 +28,7 @@ The Windows VM boots the same way Linux sandboxes do — with `SmolVM(...)` in P
 You need three things on the host:
 
 1. **A Linux host with KVM.** Windows guests use QEMU + KVM. macOS hosts are not supported yet.
-2. **A pre-installed Windows 11 `qcow2` disk image.** SmolVM does not build one for you in this release. You can install Windows 11 once into a `qcow2` using QEMU directly, then point SmolVM at that file.
+2. **A pre-installed Windows 11 `qcow2` disk image with OpenSSH Server.** SmolVM does not build one for you in this release. You can install Windows 11 once into a `qcow2` using QEMU directly, install the optional **OpenSSH Server** Windows feature, and then point SmolVM at that file. If the image does not have sshd running, `vm.run(...)` and `vm.upload_file(...)` will fail with a clear connection or auth error from paramiko.
 3. **OVMF (UEFI firmware) and `swtpm` (software TPM).** Windows 11 requires UEFI Secure Boot and TPM 2.0. SmolVM looks for OVMF in the standard distro install paths and will tell you exactly which package to install if it's missing.
 
 Quick install of the prerequisites:
@@ -51,7 +53,7 @@ Quick install of the prerequisites:
 
 ## Launch a Windows sandbox
 
-Point `SmolVM` at your Windows `qcow2` file and pass `os="windows"`:
+Point `SmolVM` at your Windows `qcow2` file, pass `os="windows"`, and supply the Windows account credentials that map to the OpenSSH user inside the image:
 
 ```python
 from smolvm import SmolVM
@@ -59,10 +61,13 @@ from smolvm import SmolVM
 with SmolVM(
     os="windows",
     image="~/win11-vm/disk-baseline.qcow2",
+    ssh_user="celesto",
+    ssh_password="celesto",
     memory=4096,
 ) as vm:
+    vm.wait_for_ssh()
     print(vm.vm_id)
-    # The VM is now running Windows 11.
+    # The VM is now running Windows 11 and accepting SSH.
     # Stop / delete happens automatically on context exit.
 ```
 
@@ -82,6 +87,59 @@ What happens behind the scenes:
 * A `file://` URI: `image="file:///var/lib/vms/win11.qcow2"`
 
 S3 URIs work too, but in this release only the local-path form is meaningful for Windows — there is no published Windows image yet.
+
+### SSH user and password
+
+Windows OpenSSH does not support the `root` user that SmolVM uses for Linux guests. Pass the local Windows account you set up inside the qcow2:
+
+* `ssh_user="..."` — the Windows account name (for example `"Administrator"`, or whatever local user you created).
+* `ssh_password="..."` — that account's password.
+
+When `ssh_password` is set, SmolVM uses paramiko's password-auth path and does not try SSH keys. If you have configured key-based SSH inside the Windows image, drop `ssh_password` and pass `ssh_key_path=` instead.
+
+### Run PowerShell commands
+
+`vm.run(...)` works on Windows guests just like on Linux guests, but the command string is interpreted by PowerShell instead of `sh`:
+
+```python
+from smolvm import SmolVM
+
+with SmolVM(
+    os="windows",
+    image="~/win11-vm/disk-baseline.qcow2",
+    ssh_user="celesto",
+    ssh_password="celesto",
+) as vm:
+    vm.wait_for_ssh()
+
+    result = vm.run("Write-Output 'hello from windows'")
+    print(result.stdout)          # 'hello from windows\r\n'
+    print(result.exit_code)       # 0
+
+    # Real PowerShell cmdlets work too.
+    result = vm.run("(Get-Item C:\\Windows).Name")
+    print(result.stdout.strip())  # 'Windows'
+```
+
+Under the hood, SmolVM base64-encodes the command and runs it with `powershell.exe -NoProfile -EncodedCommand` so quotes, backticks, and special characters survive the Windows OpenSSH `cmd.exe` layer unchanged. You don't need to escape anything yourself.
+
+### Upload files into Windows paths
+
+`vm.upload_file(...)` accepts Windows-style destination paths. All three forms work:
+
+* Native Windows: `"C:\\Users\\celesto\\hello.ps1"`
+* Forward-slash mix: `"C:/Users/celesto/hello.ps1"`
+* SFTP/POSIX style: `"/C:/Users/celesto/hello.ps1"`
+
+```python
+vm.upload_file("./hello.ps1", "C:\\Users\\celesto\\scripts\\hello.ps1")
+
+# Then run the script you just uploaded.
+result = vm.run("powershell.exe -File C:\\Users\\celesto\\scripts\\hello.ps1")
+print(result.stdout)
+```
+
+SmolVM creates missing parent directories on the Windows side using `New-Item -ItemType Directory -Force`, so you can upload straight into a path that doesn't exist yet.
 
 ### Memory defaults
 
@@ -110,7 +168,8 @@ The first release of Windows guest support is deliberately narrow. The following
 * **No `mounts=`.** Host directory mounts (`virtio-9p`) are Linux-guest only for now.
 * **No `internet_settings=`.** Domain allowlists and egress controls are not yet wired into the Windows network stack.
 * **No snapshots.** `vm.snapshot()` and `SmolVM.from_snapshot()` are rejected for Windows VMs — Windows guests use multiple state artifacts (qcow2 + UEFI vars + TPM state) that can't be checkpointed atomically yet.
-* **No SSH `vm.run(...)`.** Command execution over SSH is a Linux-guest feature; on Windows you interact with the VM through its desktop.
+* **No `env_vars=`.** Environment variable injection is Linux-only today. Passing `env_vars` to a Windows `VMConfig` raises `ValueError` upfront. A later phase will add `setx`-based injection.
+* **Shared disk mode only.** Today's Windows runs mutate the baseline `qcow2`. Take a copy if you need an immutable golden image until overlay cloning ships.
 * **You bring the image.** SmolVM does not build a Windows `qcow2` from an ISO for you in this release.
 
 If you call any of the unsupported features, SmolVM raises `ValueError` with a plain-English message naming the feature and the workaround.
@@ -132,6 +191,10 @@ If you call any of the unsupported features, SmolVM raises `ValueError` with a p
 
   <Accordion title="Windows guests need a pre-installed disk image">
     You passed `os="windows"` without `image=`. SmolVM does not build a Windows image for you yet — point at a `qcow2` you've already installed Windows into.
+  </Accordion>
+
+  <Accordion title="`vm.run()` or `vm.wait_for_ssh()` fails with an auth or connection error">
+    SmolVM expects the OpenSSH Server feature to be installed and running inside the Windows image, and the `ssh_user` / `ssh_password` you passed must match a real local Windows account. Install OpenSSH Server (Settings → Apps → Optional features → "OpenSSH Server"), start the `sshd` service, and confirm you can SSH in from the host before retrying.
   </Accordion>
 </AccordionGroup>
 

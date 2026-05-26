@@ -18,7 +18,8 @@ SSHClient(
     port: int = 22,
     key_path: str | None = None,
     password: str | None = None,
-    connect_timeout: int = 10
+    connect_timeout: int = 10,
+    shell_kind: Literal["sh", "powershell", "cmd"] = "sh",
 )
 ```
 
@@ -46,6 +47,16 @@ SSHClient(
   Seconds to wait for the TCP connection.
 </ParamField>
 
+<ParamField path="shell_kind" type='Literal["sh", "powershell", "cmd"]' default="sh">
+  Login-shell flavor used to wrap commands when `run(..., shell="login")` is called:
+
+  * `"sh"` (default) — POSIX guests. Wraps with `$SHELL -lc <quoted>`.
+  * `"powershell"` — Windows guests. Wraps with `powershell.exe -NoProfile -EncodedCommand <base64>` so the command bytes survive Windows OpenSSH's `cmd.exe` layer unchanged.
+  * `"cmd"` — Windows guests where you want `cmd.exe /c "<command>"` semantics instead. You are responsible for `cmd.exe` quoting.
+
+  `shell="raw"` on `run(...)` bypasses the wrap entirely regardless of `shell_kind`.
+</ParamField>
+
 ```python  theme={null}
 from smolvm import SSHClient
 
@@ -65,6 +76,14 @@ client = SSHClient(
 client = SSHClient(
     host="172.16.0.2",
     password="secret"
+)
+
+# Windows guest (PowerShell wrap + password auth)
+client = SSHClient(
+    host="172.16.0.2",
+    user="celesto",
+    password="celesto",
+    shell_kind="powershell",
 )
 ```
 
