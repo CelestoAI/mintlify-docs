@@ -19,9 +19,9 @@ This guide explains when to use Windows guests, what you need before you start, 
 
 A Windows sandbox is a virtual machine that runs the real Windows 11 operating system instead of Linux. You'd reach for it when:
 
-* You're testing software that only ships for Windows.
-* You're building an agent that needs to drive a Windows desktop or Windows-only application.
-* You want a disposable Windows environment that won't touch your host machine.
+- You're testing software that only ships for Windows.
+- You're building an agent that needs to drive a Windows desktop or Windows-only application.
+- You want a disposable Windows environment that won't touch your host machine.
 
 The Windows VM boots the same way Linux sandboxes do — with `SmolVM(...)` in Python — and is isolated from your host using KVM hardware virtualization.
 
@@ -29,8 +29,8 @@ The Windows VM boots the same way Linux sandboxes do — with `SmolVM(...)` in P
 
 You need three things on the host:
 
-1. **A Linux host with KVM.** Windows guests use QEMU + KVM. macOS hosts are not supported yet.
-2. **A Windows 11 `qcow2` disk image with OpenSSH Server.** The easiest way to get one is the [`smolvm windows build-image`](/smolvm/cli/windows) CLI command, which drives an unattended Windows install from a stock Windows ISO + the virtio-win driver ISO and produces a ready-to-use `qcow2` (OpenSSH, virtio-win drivers, and a known local admin account all pre-installed). If you already have your own Windows `qcow2`, point SmolVM at that file instead — just make sure the OpenSSH Server feature is installed and running, otherwise `vm.run(...)` and `vm.upload_file(...)` will fail with a connection or auth error.
+1. **A Linux host with KVM.** Windows guests use QEMU \+ KVM. macOS hosts are not supported yet.
+2. **A Windows 11 `qcow2` disk image with OpenSSH Server.** The easiest way to get one is the [`smolvm windows build-image`](/smolvm/cli/windows) CLI command, which drives an unattended Windows install from a stock Windows ISO \+ the virtio-win driver ISO and produces a ready-to-use `qcow2` (OpenSSH, virtio-win drivers, and a known local admin account all pre-installed). If you already have your own Windows `qcow2`, point SmolVM at that file instead — just make sure the OpenSSH Server feature is installed and running, otherwise `vm.run(...)` and `vm.upload_file(...)` will fail with a connection or auth error.
 3. **OVMF (UEFI firmware) and `swtpm` (software TPM).** Windows 11 requires UEFI Secure Boot and TPM 2.0. SmolVM looks for OVMF in the standard distro install paths and will tell you exactly which package to install if it's missing.
 
 Quick install of the prerequisites:
@@ -75,7 +75,6 @@ with SmolVM(
     ssh_user="smolvm",
     ssh_password="smolvm",
 ) as vm:
-    vm.wait_for_ssh()
     print(vm.run("hostname").stdout)
 ```
 
@@ -95,7 +94,6 @@ with SmolVM(
     ssh_password="celesto",
     memory=4096,
 ) as vm:
-    vm.wait_for_ssh()
     print(vm.vm_id)
     # The VM is now running Windows 11 and accepting SSH.
     # Stop / delete happens automatically on context exit.
@@ -103,18 +101,18 @@ with SmolVM(
 
 What happens behind the scenes:
 
-* SmolVM copies the OVMF UEFI variable store to a per-VM location so the firmware can persist boot order independently.
-* It starts a per-VM `swtpm` software TPM 2.0 process.
-* It launches QEMU with the right machine type (`q35`), Hyper-V enlightenments for performance, and a `virtio-scsi` root disk.
-* On `stop()` or `delete()`, the `swtpm` sidecar and per-VM firmware state are cleaned up.
+- SmolVM copies the OVMF UEFI variable store to a per-VM location so the firmware can persist boot order independently.
+- It starts a per-VM `swtpm` software TPM 2.0 process.
+- It launches QEMU with the right machine type (`q35`), Hyper-V enlightenments for performance, and a `virtio-scsi` root disk.
+- On `stop()` or `delete()`, the `swtpm` sidecar and per-VM firmware state are cleaned up.
 
 ### Accepted image paths
 
 `image=` accepts any of these for Windows guests:
 
-* An absolute path: `image="/var/lib/vms/win11.qcow2"`
-* A tilde-relative path: `image="~/win11-vm/disk.qcow2"`
-* A `file://` URI: `image="file:///var/lib/vms/win11.qcow2"`
+- An absolute path: `image="/var/lib/vms/win11.qcow2"`
+- A tilde-relative path: `image="~/win11-vm/disk.qcow2"`
+- A `file://` URI: `image="file:///var/lib/vms/win11.qcow2"`
 
 S3 URIs work too, but in this release only the local-path form is meaningful for Windows — there is no published Windows image yet.
 
@@ -122,8 +120,8 @@ S3 URIs work too, but in this release only the local-path form is meaningful for
 
 Windows OpenSSH does not support the `root` user that SmolVM uses for Linux guests. Pass the local Windows account you set up inside the qcow2:
 
-* `ssh_user="..."` — the Windows account name (for example `"Administrator"`, or whatever local user you created).
-* `ssh_password="..."` — that account's password.
+- `ssh_user="..."` — the Windows account name (for example `"Administrator"`, or whatever local user you created).
+- `ssh_password="..."` — that account's password.
 
 When `ssh_password` is set, SmolVM uses paramiko's password-auth path and does not try SSH keys. If you have configured key-based SSH inside the Windows image, drop `ssh_password` and pass `ssh_key_path=` instead.
 
@@ -189,9 +187,9 @@ Variables become visible to **new** processes, not the SSH session that set them
 
 `vm.upload_file(...)` accepts Windows-style destination paths. All three forms work:
 
-* Native Windows: `"C:\\Users\\celesto\\hello.ps1"`
-* Forward-slash mix: `"C:/Users/celesto/hello.ps1"`
-* SFTP/POSIX style: `"/C:/Users/celesto/hello.ps1"`
+- Native Windows: `"C:\\Users\\celesto\\hello.ps1"`
+- Forward-slash mix: `"C:/Users/celesto/hello.ps1"`
+- SFTP/POSIX style: `"/C:/Users/celesto/hello.ps1"`
 
 ```python
 vm.upload_file("./hello.ps1", "C:\\Users\\celesto\\scripts\\hello.ps1")
@@ -217,8 +215,8 @@ When you point `SmolVM` at a Windows `qcow2`, SmolVM does **not** write to that 
 
 This gives you two things for free:
 
-* **Run multiple Windows sandboxes from the same image in parallel.** Each `SmolVM(os="windows", image=...)` call gets a fresh overlay, so concurrent processes don't fight over the disk write lock.
-* **Crashes and Ctrl-C don't corrupt your baseline.** If a sandbox dies mid-run, the only thing lost is its overlay. Your golden image is untouched.
+- **Run multiple Windows sandboxes from the same image in parallel.** Each `SmolVM(os="windows", image=...)` call gets a fresh overlay, so concurrent processes don't fight over the disk write lock.
+- **Crashes and Ctrl-C don't corrupt your baseline.** If a sandbox dies mid-run, the only thing lost is its overlay. Your golden image is untouched.
 
 The overlay is created near-instantly with `qemu-img create -b` and lives under `data_dir/disks/{vm_id}.qcow2`. It is deleted automatically when the VM is deleted unless you set `retain_disk_on_delete=True` on the `VMConfig`.
 
@@ -240,10 +238,10 @@ If you specifically want writes to land in the baseline — for example, a one-s
 
 SmolVM uses two slightly different rules depending on where the image comes from:
 
-| Image source                     | Pass `os=`? | Why                                                                |
-| -------------------------------- | ----------- | ------------------------------------------------------------------ |
-| Local file (path or `file://`)   | **Yes**     | The file alone doesn't tell SmolVM which OS is inside.             |
-| Published S3 image               | No          | The image manifest already records the OS — passing `os=` errors. |
+| Image source | Pass `os=`? | Why |
+| --- | --- | --- |
+| Local file (path or `file://`) | **Yes** | The file alone doesn't tell SmolVM which OS is inside. |
+| Published S3 image | No | The image manifest already records the OS — passing `os=` errors. |
 
 For Windows today, you always use the local-file form, so always pass `os="windows"`.
 
@@ -251,10 +249,10 @@ For Windows today, you always use the local-file form, so always pass `os="windo
 
 The first release of Windows guest support is deliberately narrow. The following raise a clear error rather than silently misbehaving:
 
-* **Linux hosts only.** macOS support comes in a later phase.
-* **No `mounts=`.** Host directory mounts (`virtio-9p`) are Linux-guest only for now.
-* **No `internet_settings=`.** Domain allowlists and egress controls are not yet wired into the Windows network stack.
-* **No snapshots.** `vm.snapshot()` and `SmolVM.from_snapshot()` are rejected for Windows VMs — Windows guests use multiple state artifacts (qcow2 + UEFI vars + TPM state) that can't be checkpointed atomically yet.
+- **Linux hosts only.** macOS support comes in a later phase.
+- **No `mounts=`.** Host directory mounts (`virtio-9p`) are Linux-guest only for now.
+- **No `internet_settings=`.** Domain allowlists and egress controls are not yet wired into the Windows network stack.
+- **No snapshots.** `vm.snapshot()` and `SmolVM.from_snapshot()` are rejected for Windows VMs — Windows guests use multiple state artifacts (qcow2 \+ UEFI vars \+ TPM state) that can't be checkpointed atomically yet.
 
 If you call any of the unsupported features, SmolVM raises `ValueError` with a plain-English message naming the feature and the workaround.
 
@@ -288,12 +286,15 @@ If you call any of the unsupported features, SmolVM raises `ValueError` with a p
   <Card title="Build a Windows image" icon="hammer" href="/smolvm/cli/windows">
     Run `smolvm windows build-image` to produce a Windows qcow2 unattended
   </Card>
+
   <Card title="Backends" icon="microchip" href="/smolvm/concepts/backends">
     Why Windows guests run on QEMU
   </Card>
+
   <Card title="VMConfig" icon="sliders" href="/smolvm/api/vmconfig">
     The full configuration model, including `guest_os`
   </Card>
+
   <Card title="VM lifecycle" icon="circle-play" href="/smolvm/guides/vm-lifecycle">
     Start, stop, and delete sandboxes
   </Card>
