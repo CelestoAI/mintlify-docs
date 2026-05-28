@@ -31,6 +31,31 @@ The `cleanup` command removes stale or auto-created VMs and their associated res
   Print targets without deleting. Useful for previewing what would be cleaned up.
 </ParamField>
 
+<ParamField path="--force, -f" type="flag" default="false">
+  Skip the confirmation prompt and delete the targeted VMs without asking. Required when running non-interactively (no TTY) or together with `--json`.
+</ParamField>
+
+## Confirmation prompt
+
+Because cleanup permanently deletes VMs, the command lists the targeted IDs and asks you to confirm before doing anything:
+
+```
+This will permanently delete 3 VM(s): vm-abc123, vm-test-001, vm-demo
+This action cannot be undone.
+Continue? [y/N]
+```
+
+Type `y` or `yes` to proceed. Anything else — including pressing Enter — aborts cleanly with exit code `0` and no VMs are deleted.
+
+Use `--force` to skip the prompt in scripts or CI. Without `--force`, `smolvm cleanup` refuses to run in two cases to avoid silently destroying data:
+
+* You passed `--json` (machine-readable output, no interactive prompt possible).
+* Standard input is not a TTY (for example, piped or redirected).
+
+In either case, the command exits with `1` and prints an error telling you to add `--force`.
+
+`--dry-run` never deletes anything, so it does not prompt or require `--force`.
+
 ## Examples
 
 ### Clean auto-created VMs (default prefix)
@@ -49,10 +74,27 @@ Targets (3):
   - vm-abc123
   - vm-test-001
   - vm-demo
+This will permanently delete 3 VM(s): vm-abc123, vm-test-001, vm-demo
+This action cannot be undone.
+Continue? [y/N] y
 Deleted: vm-abc123
 Deleted: vm-test-001
 Deleted: vm-demo
 Cleanup complete.
+```
+
+### Skip the prompt in scripts
+
+Use `--force` (or `-f`) when you are running cleanup non-interactively and have already decided to delete everything:
+
+```bash  theme={null}
+smolvm cleanup --force
+```
+
+Combine `--force` with `--json` for automation pipelines:
+
+```bash  theme={null}
+smolvm cleanup --json --force
 ```
 
 ### Preview cleanup targets
@@ -122,10 +164,10 @@ The cleanup command performs the following steps:
 
 ## Exit Codes
 
-| Code | Description                                     |
-| ---- | ----------------------------------------------- |
-| `0`  | Success - all targets cleaned successfully      |
-| `1`  | Partial failure - some VMs could not be deleted |
+| Code | Description                                                                                  |
+| ---- | -------------------------------------------------------------------------------------------- |
+| `0`  | Success — all targets cleaned, or user declined at the confirmation prompt                   |
+| `1`  | Partial failure, or refused to run unattended without `--force` (no TTY, or `--json` mode)   |
 
 ## Standalone Command
 
