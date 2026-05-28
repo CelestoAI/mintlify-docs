@@ -83,6 +83,16 @@ The `ssh` command handles VMs in different states:
   If you get an "ssh binary not found" error, install the `openssh-client` package on your system.
 </Tip>
 
+## Crashed VMs
+
+If `smolvm list` says a VM is `running` but its process actually exited (for example, after a host reboot), `ssh` would normally fail with a misleading "Connection refused". SmolVM detects this case and prints a clearer message after the SSH attempt fails:
+
+```
+VM 'my-agent' is not running — its process has exited. Run 'smolvm delete my-agent' to clear it.
+```
+
+The original SSH exit code is preserved, so scripts that branch on the return value keep working. The same recovery message is raised by `smolvm pause` and `smolvm resume` when they hit a crashed VM.
+
 ## Related commands
 
 * [`smolvm create`](/smolvm/cli/create) - Create a new VM to connect to

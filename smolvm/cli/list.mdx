@@ -13,6 +13,8 @@ smolvm list [OPTIONS]
 
 The `list` command shows you which VMs are currently running on your system. By default it displays only running VMs in a formatted table. You can also filter by status or get machine-readable JSON output for use in scripts.
 
+Before rendering the table, `list` does a quick liveness check on every VM marked `running` or `paused`. If the underlying process is gone — for example, because the host was rebooted or the process was killed — the VM is shown as `error` instead of falsely appearing healthy. Run [`smolvm delete <vm_id>`](/smolvm/cli/cleanup) (or `smolvm cleanup`) to clear those rows.
+
 ## Options
 
 <ParamField path="--all" type="flag" default="false">
