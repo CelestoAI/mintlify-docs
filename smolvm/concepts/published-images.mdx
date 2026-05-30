@@ -24,8 +24,11 @@ You don't need to change any code. The fast path is on by default for the preset
 | `codex`       | OpenAI's Codex CLI                                  |
 | `hermes`      | Hermes coding agent                                 |
 | `pi`          | Pi coding agent                                     |
+| `ubuntu`      | Bare Ubuntu base image (no preset tools installed)  |
 
 Each preset is published for both `amd64` and `arm64` architectures. If you launch a preset that isn't on this list, SmolVM transparently falls back to the older install-at-boot flow — no error, just a slower first run.
+
+The `ubuntu` row powers `smolvm create --os ubuntu` on Firecracker and libkrun. It boots a clean Ubuntu rootfs in seconds when you want `apt` and a familiar Linux environment without any preset tooling. The QEMU path keeps using its qcow2 cloud image.
 
 ## How SmolVM picks a published image
 
