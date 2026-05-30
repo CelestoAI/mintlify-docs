@@ -12,7 +12,7 @@ When you call `SmolVM()` and run a command, five things happen behind the scenes
 1. **SmolVM builds or reuses a lightweight Linux image** — an Alpine-based filesystem with SSH pre-configured.
 2. **A microVM boots** using Firecracker (Linux) or QEMU (macOS).
 3. **A private network is created** so the sandbox can reach the internet but is isolated from other sandboxes.
-4. **SmolVM connects over SSH** to execute your commands and return the output.
+4. **SmolVM connects to the sandbox** — over SSH, or a faster [vsock channel](/smolvm/concepts/control-channel) when available — to execute your commands and return the output.
 5. **Everything is torn down** when you exit the `with` block.
 
 The whole cycle — boot, run, teardown — takes about 3.5 seconds on typical hardware.
