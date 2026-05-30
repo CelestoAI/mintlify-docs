@@ -64,7 +64,8 @@
               "smolvm/concepts/security",
               "smolvm/concepts/backends",
               "smolvm/concepts/published-images",
-              "smolvm/concepts/networking"
+              "smolvm/concepts/networking",
+              "smolvm/concepts/control-channel"
             ]
           },
           {

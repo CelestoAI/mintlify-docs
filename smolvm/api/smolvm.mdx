@@ -1,5 +1,5 @@
 ---
-title: "SmolVM"
+title: "SmolVM Python class reference"
 description: "SmolVM class reference: the high-level Python API for creating microVM sandboxes, executing SSH commands, and managing the full sandbox lifecycle."
 ---
 
@@ -24,6 +24,7 @@ SmolVM(
     ssh_user: str = "root",
     ssh_key_path: str | None = None,
     ssh_password: str | None = None,
+    comm_channel: Literal["ssh", "vsock"] | None = None,
 )
 ```
 
@@ -84,6 +85,10 @@ SmolVM(
   SSH password. Use this when the guest only accepts password authentication — common for Windows qcow2s that ship with OpenSSH Server but no preinstalled key. When set, SmolVM skips key-based auth so paramiko does not silently prefer a key over your password.
 </ParamField>
 
+<ParamField path="comm_channel" type='Literal["ssh", "vsock"] | None' default="None">
+  Host-to-guest control channel for `run()`, file transfer, and env var operations. Leave unset for auto-selection (vsock when the SmolVM guest agent answers on a Linux QEMU host, otherwise SSH). Pass `"vsock"` to require vsock — SmolVM raises if the agent does not answer instead of falling back. Pass `"ssh"` to force the SSH path. See [control channel](/smolvm/concepts/control-channel) for details.
+</ParamField>
+
 ### Raises
 
 * `ValueError`: If both `config` and `vm_id` are provided, or if `memory`/`disk_size` are set outside auto-config mode.
@@ -103,10 +108,11 @@ SmolVM.from_id(
     ssh_user: str = "root",
     ssh_key_path: str | None = None,
     ssh_password: str | None = None,
+    comm_channel: Literal["ssh", "vsock"] | None = None,
 ) -> SmolVM
 ```
 
-Reconnect to an existing VM by ID. Pass `ssh_password=` for Windows guests that use password-based SSH.
+Reconnect to an existing VM by ID. Pass `ssh_password=` for Windows guests that use password-based SSH. Pass `comm_channel=` to override the host-to-guest control channel — see [control channel](/smolvm/concepts/control-channel).
 
 <ParamField path="vm_id" type="str" required>
   VM identifier to reconnect to.
