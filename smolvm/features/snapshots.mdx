@@ -69,6 +69,57 @@ To create a snapshot, the VM must be running or paused. SmolVM pauses the VM dur
   </Tab>
 </Tabs>
 
+## Choose a snapshot type
+
+When you create a snapshot, you can pick how much of the disk to store:
+
+- **`full`** (default) — A complete, self-contained copy of the disk. Restores on its own even if the original base image is gone. Use this for everyday work and anytime you want a portable, no-surprises snapshot.
+- **`diff`** — Stores only the data that changed since the shared base image, so it takes far less space. Use this in production systems that take many snapshots and keep their base images in place. A diff snapshot needs its base image to still be present to restore.
+
+On the Firecracker backend, the VM state and memory files are always captured in full — `diff` only changes how the disk is stored, so a diff snapshot still restores on its own as long as the base image is available.
+
+<Tabs>
+  <Tab title="Python SDK">
+    ```python  theme={null}
+    from smolvm import SmolVM
+
+    vm = SmolVM()
+    vm.start()
+
+    # Space-saving snapshot — stores only what changed since the base image
+    snapshot = vm.snapshot(
+        snapshot_id="nightly-checkpoint",
+        snapshot_type="diff",
+    )
+    print(snapshot.snapshot_type)  # SnapshotType.DIFF
+
+    vm.close()
+    ```
+
+    You can also pass the `SnapshotType` enum for type safety:
+
+    ```python  theme={null}
+    from smolvm import SnapshotType
+
+    snapshot = vm.snapshot(snapshot_type=SnapshotType.DIFF)
+    ```
+  </Tab>
+
+  <Tab title="CLI">
+    ```bash  theme={null}
+    # Space-saving snapshot
+    smolvm snapshot create my-vm --snapshot-type diff
+
+    # Full snapshot (default — same as omitting the flag)
+    smolvm snapshot create my-vm --snapshot-type full
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+  If the base image for a diff snapshot is missing at restore time, SmolVM raises a clear error pointing to the missing path and suggesting you take a `full` snapshot instead. To stay safe, only delete a base image once you've removed every diff snapshot that depends on it — or take a `full` snapshot first.
+</Note>
+
 ## Restore a snapshot
 
 Restoring a snapshot recreates the original VM with the saved state. The restored VM starts in a paused state by default.
@@ -220,6 +271,7 @@ from smolvm import (
     SmolVM,
     SnapshotAlreadyExistsError,
     SnapshotNotFoundError,
+    SnapshotType,
     SmolVMError,
 )
 
