@@ -41,6 +41,10 @@ The `SnapshotInfo` model holds all metadata about a saved VM snapshot. It is ret
   UTC timestamp of when the snapshot was created.
 </ResponseField>
 
+<ResponseField name="snapshot_type" type="SnapshotType" default="SnapshotType.FULL">
+  How much of the disk was stored. `SnapshotType.FULL` is a complete, self-contained copy of the disk that always restores on its own. `SnapshotType.DIFF` is a space-saving snapshot that stores only what changed since the base image and needs that base image to still be present at restore time. Snapshots created before this field existed read back as `FULL`. See the [Snapshots feature page](/smolvm/features/snapshots#choose-a-snapshot-type) for when to use each.
+</ResponseField>
+
 <ResponseField name="restored" type="bool" default="false">
   Whether this snapshot has been restored at least once.
 </ResponseField>
