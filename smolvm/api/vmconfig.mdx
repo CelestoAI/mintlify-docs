@@ -69,6 +69,13 @@ All VMConfig instances are immutable (frozen) after creation.
   * `None` or `"auto"`: Auto-detect based on host capabilities
 </ParamField>
 
+<ParamField path="qemu_network" type="Literal['slirp', 'tap']" default="slirp">
+  How the QEMU backend connects the guest to the network. Ignored when `backend="firecracker"` (Firecracker always uses a host TAP device).
+
+  * `"slirp"` — Userspace NAT with host port forwards. Works without root or host network setup, which makes it the right choice for local macOS development. This is the default.
+  * `"tap"` — Attach the guest to a host TAP device on Linux, so the sandbox gets a real routable IP and falls under the same nftables NAT and isolation rules as Firecracker (egress masquerade, cross-sandbox drop, and IMDS block). Use this for multi-tenant or production Linux hosts where you need the same network isolation guarantees as Firecracker. Requires the same Linux network setup as Firecracker (`ip`, `nft`, sudo) — see [network configuration](/smolvm/concepts/networking).
+</ParamField>
+
 <ParamField path="disk_mode" type="Literal['isolated', 'shared']" default="isolated">
   Disk lifecycle mode:
 
@@ -360,6 +367,7 @@ with SmolVM(config) as vm:
 | `extra_drives`             | `list[Path]`            | `[]`                                       | Each must exist as file              |
 | `boot_args`                | `str`                   | `"console=ttyS0 reboot=k panic=1 pci=off"` | Any string                           |
 | `backend`                  | `str \| None`           | `None`                                     | `"firecracker"`, `"qemu"`, `None`    |
+| `qemu_network`             | `Literal`               | `"slirp"`                                  | `"slirp"`, `"tap"`                   |
 | `disk_mode`                | `Literal`               | `"isolated"`                               | `"isolated"`, `"shared"`             |
 | `retain_disk_on_delete`    | `bool`                  | `False`                                    | `True`, `False`                      |
 | `env_vars`                 | `dict[str, str]`        | `{}`                                       | Keys must be valid shell identifiers |
