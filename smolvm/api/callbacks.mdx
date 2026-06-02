@@ -1,0 +1,157 @@
+---
+title: "Callback hooks Python reference"
+description: "Reference for SmolVM's Callback base class, RunContext dataclass, and CommandBlockedError — the pre-run, post-run, and error hooks that fire around run()."
+---
+
+## Overview
+
+Callbacks let you hook into the SmolVM command lifecycle. You subclass `Callback`, override the hooks you care about, and pass instances to `SmolVM(callbacks=[...])`. Every other hook is a no-op by default.
+
+For a task-oriented walkthrough, see [Run callbacks and safety hooks](/smolvm/features/callbacks).
+
+## Callback
+
+Base class for SmolVM command-lifecycle callbacks. Subclass it and override only the hooks you need.
+
+```python  theme={null}
+from smolvm import Callback
+
+class MyCallback(Callback):
+    def on_pre_run(self, ctx): ...
+    def on_post_run(self, ctx): ...
+    def on_run_error(self, ctx): ...
+```
+
+### Hooks
+
+Each hook receives a single [`RunContext`](#runcontext) argument.
+
+#### on\_pre\_run
+
+```python  theme={null}
+def on_pre_run(self, ctx: RunContext) -> None
+```
+
+Called before a command is sent to the guest. This is the **veto** channel — if it raises, the command is aborted and the exception propagates to the caller of `run()`. Raise [`CommandBlockedError`](#commandblockederror) for an explicit, typed block.
+
+A blocked command keeps the SSH or vsock connection open, so the next allowed `run()` call reuses it.
+
+#### on\_post\_run
+
+```python  theme={null}
+def on_post_run(self, ctx: RunContext) -> None
+```
+
+Called after a command completes successfully. `ctx.result` is populated. Observer hook — exceptions are logged and swallowed so a faulty observer cannot break a command that already ran.
+
+#### on\_run\_error
+
+```python  theme={null}
+def on_run_error(self, ctx: RunContext) -> None
+```
+
+Called when the transport raised while executing a command. `ctx.error` is populated. Observer hook — exceptions are logged and swallowed, and the original transport error still propagates from `run()`.
+
+## RunContext
+
+Dataclass passed to every hook for a single `SmolVM.run()` call. Using one object means new fields can be added later without changing any callback's method signature.
+
+```python  theme={null}
+@dataclass
+class RunContext:
+    vm_id: str
+    command: str
+    shell: str
+    timeout: int
+    result: CommandResult | None = None
+    error: Exception | None = None
+```
+
+<ParamField path="vm_id" type="str">
+  The VM the command targets.
+</ParamField>
+
+<ParamField path="command" type="str">
+  The shell command as passed to `run()`.
+</ParamField>
+
+<ParamField path="shell" type="str">
+  Execution mode — `"login"` or `"raw"`.
+</ParamField>
+
+<ParamField path="timeout" type="int">
+  Per-command timeout in seconds.
+</ParamField>
+
+<ParamField path="result" type="CommandResult | None" default="None">
+  The command result. `None` until `on_post_run`. See [CommandResult](/smolvm/api/commandresult).
+</ParamField>
+
+<ParamField path="error" type="Exception | None" default="None">
+  The transport error raised during execution. `None` unless the hook is `on_run_error`.
+</ParamField>
+
+## CommandBlockedError
+
+Exception type for vetoing a command from `on_pre_run`. Inherits from [`SmolVMError`](/smolvm/api/exceptions#smolvmerror).
+
+```python  theme={null}
+class CommandBlockedError(SmolVMError):
+    def __init__(
+        self,
+        message: str,
+        vm_id: str | None = None,
+        command: str | None = None,
+    ) -> None: ...
+```
+
+<ParamField path="message" type="str" required>
+  Human-readable reason for the block.
+</ParamField>
+
+<ParamField path="vm_id" type="str | None" default="None">
+  ID of the VM the command targeted. Stored on the exception and in `details`.
+</ParamField>
+
+<ParamField path="command" type="str | None" default="None">
+  The blocked command string. Stored on the exception and in `details`.
+</ParamField>
+
+**Attributes:**
+
+* `vm_id` (`str | None`): The VM the command targeted.
+* `command` (`str | None`): The blocked command string.
+* `message` (`str`): Reason passed to the constructor.
+* `details` (`dict`): Contains `vm_id` and `command`.
+
+## Example
+
+A pre-run hook that blocks a few known-dangerous commands, plus a post-run hook that logs every command:
+
+```python  theme={null}
+from smolvm import SmolVM, Callback, CommandBlockedError
+
+class SafetyGuard(Callback):
+    DENY = ("rm -rf /", "mkfs", ":(){ :|:& };:")
+
+    def on_pre_run(self, ctx):
+        if any(bad in ctx.command for bad in self.DENY):
+            raise CommandBlockedError(
+                f"Blocked unsafe command: {ctx.command!r}",
+                vm_id=ctx.vm_id,
+                command=ctx.command,
+            )
+
+class AuditLog(Callback):
+    def on_post_run(self, ctx):
+        print(f"[{ctx.vm_id}] {ctx.command!r} -> exit={ctx.result.exit_code}")
+
+with SmolVM(callbacks=[SafetyGuard(), AuditLog()]) as vm:
+    vm.run("echo hello")
+    try:
+        vm.run("rm -rf /")
+    except CommandBlockedError as e:
+        print(f"refused: {e.command}")
+```
+
+Callbacks fire in the order they were registered.

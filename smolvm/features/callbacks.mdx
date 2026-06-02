@@ -1,0 +1,102 @@
+---
+title: "Run callbacks and safety hooks"
+description: "Attach Python callbacks to a SmolVM sandbox to inspect, log, or block commands before they run on the guest — useful for safety filters and audit trails."
+---
+
+Callbacks let you run your own Python code every time the sandbox executes a command. You can use them to inspect what an agent is about to run, log results, or block commands you consider unsafe.
+
+This is useful when an LLM or agent is driving the sandbox and you want a final say before a command reaches the guest.
+
+A callback is a small Python class. You subclass `Callback`, override the hooks you care about, and pass instances to `SmolVM(..., callbacks=[...])`. Every other hook is a no-op by default, so you only write the parts you need.
+
+## When to use callbacks
+
+- **Block unsafe commands** — Stop destructive commands like `rm -rf /` before they reach the guest.
+- **Audit and log** — Record every command an agent runs, along with its exit code and output.
+- **Observe failures** — Collect telemetry when a command errors out, without changing the rest of your code.
+
+## Block an unsafe command
+
+The pre-run hook is the only hook that can stop a command. If `on_pre_run` raises, the command is aborted and the exception is raised to the caller. Raise `CommandBlockedError` for an explicit, typed block.
+
+```python
+from smolvm import SmolVM, Callback, CommandBlockedError
+
+class SafetyGuard(Callback):
+    DENY = ("rm -rf /", "mkfs", ":(){ :|:& };:")
+
+    def on_pre_run(self, ctx):
+        if any(bad in ctx.command for bad in self.DENY):
+            raise CommandBlockedError(
+                f"Blocked unsafe command: {ctx.command!r}",
+                vm_id=ctx.vm_id,
+                command=ctx.command,
+            )
+
+with SmolVM(callbacks=[SafetyGuard()]) as vm:
+    vm.run("echo hello")     # runs normally
+    vm.run("rm -rf /")       # raises CommandBlockedError; never reaches the guest
+```
+
+A blocked command does not tear down the sandbox or the SSH session — the next allowed `run()` call uses the same connection.
+
+## Log every command
+
+The post-run hook fires after a command completes. The context object carries the result, so you can log the exit code, stdout, and stderr.
+
+```python
+from smolvm import SmolVM, Callback
+
+class AuditLog(Callback):
+    def on_post_run(self, ctx):
+        print(f"[{ctx.vm_id}] {ctx.command!r} -> exit={ctx.result.exit_code}")
+
+    def on_run_error(self, ctx):
+        print(f"[{ctx.vm_id}] {ctx.command!r} errored: {ctx.error}")
+
+with SmolVM(callbacks=[AuditLog()]) as vm:
+    vm.run("uname -r")
+```
+
+`on_post_run` and `on_run_error` are passive observers. If they raise, the exception is logged and swallowed so a buggy logger never breaks a command that already ran.
+
+## Add callbacks after construction
+
+You can also attach callbacks to a sandbox you have already created. `add_callback()` returns the sandbox so calls can be chained.
+
+```python
+from smolvm import SmolVM, Callback
+
+class HelloHook(Callback):
+    def on_pre_run(self, ctx):
+        print(f"about to run: {ctx.command}")
+
+vm = SmolVM()
+vm.add_callback(HelloHook())
+vm.start()
+vm.run("echo hi")
+vm.stop()
+vm.delete()
+vm.close()
+```
+
+## The run context
+
+Every hook receives a single `RunContext` object. Read from it to decide what to do.
+
+| Field     | Type                    | Available in              | Description                                 |
+| --------- | ----------------------- | ------------------------- | ------------------------------------------- |
+| `vm_id`   | `str`                   | all hooks                 | ID of the sandbox running the command.      |
+| `command` | `str`                   | all hooks                 | The command string passed to `run()`.       |
+| `shell`   | `str`                   | all hooks                 | `"login"` or `"raw"` execution mode.        |
+| `timeout` | `int`                   | all hooks                 | Per-command timeout in seconds.             |
+| `result`  | `CommandResult \| None` | `on_post_run`             | Exit code, stdout, and stderr.              |
+| `error`   | `Exception \| None`     | `on_run_error`            | The transport error raised during the run.  |
+
+For the full API, see the [Callback reference](/smolvm/api/callbacks).
+
+## What callbacks cover today
+
+Callbacks fire around the synchronous `SmolVM.run()` method. They cover both the SSH and vsock transports, because the hooks run on the facade before any transport is selected.
+
+This first release intentionally covers command hooks only. Lifecycle hooks (start, stop, snapshot), file-transfer hooks, and the async `run()` path are not wired up yet.
