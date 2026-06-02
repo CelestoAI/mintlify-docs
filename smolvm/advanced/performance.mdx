@@ -1,24 +1,27 @@
 ---
 title: "Performance benchmarks"
-description: "SmolVM benchmark numbers for boot time, SSH readiness, and command latency, plus tuning tips to optimize sandbox performance for AI agent workloads."
+description: "SmolVM benchmark numbers for boot time, control-channel readiness, and command latency, plus tuning tips for fast agent workloads."
 ---
 
-SmolVM is optimized for low-latency agent workflows, providing sub-second boot times and minimal overhead for command execution.
+SmolVM is optimized for low-latency agent workflows: a fresh sandbox is ready to run a command in about a second, and follow-up commands return in milliseconds.
 
 ## Benchmark results
 
-Latest lifecycle timings (p50) on a standard Linux host:
+Wall-clock timings on a standard Linux host (Alpine guest, 1 vCPU / 512 MB, KVM), measuring from `SmolVM(...)` to a command returning:
 
-| Phase                                      | Time       |
-| ------------------------------------------ | ---------- |
-| Create + Start                             | \~572ms    |
-| SSH ready                                  | \~2.1s     |
-| Command execution                          | **\~43ms** |
-| Stop + Delete                              | \~751ms    |
-| **Full lifecycle (boot → run → teardown)** | **\~3.5s** |
+| Phase                                              | Time         |
+| -------------------------------------------------- | ------------ |
+| Create                                             | \~11ms       |
+| Launch                                             | \~53ms       |
+| First command (vsock, default on Linux + QEMU)     | \~1.28s      |
+| First command (SSH path, e.g. Firecracker)         | \~1.67s      |
+| **Warm command (vsock)**                           | **\~1.3ms**  |
+| Warm command (SSH)                                 | \~43ms       |
+| Stop + delete                                      | \~751ms      |
+| **Create → first command (QEMU + vsock default)**  | **\~1.34s**  |
 
 <Note>
-  Benchmarks measured on AMD Ryzen 7 7800X3D (8C/16T), Ubuntu Linux, KVM/Firecracker backend.
+  Benchmarks measured on a 16-vCPU KVM host with the Alpine Linux guest. Numbers reflect the default boot profile after the boot-latency fixes shipped in mid-2026: a ~6× speed-up on QEMU defaults and a ~32× speed-up on warm commands once vsock is the working channel. See [Control channel](/smolvm/concepts/control-channel) for what vsock is and when it kicks in.
 </Note>
 
 ## Running your own benchmarks
@@ -35,15 +38,16 @@ This will create, start, run commands in, and teardown 10 VMs sequentially, repo
 
 ### Boot performance
 
-* **MicroVM Creation**: SmolVM allocates IP addresses, TAP devices, and network rules in \~572ms
-* **SSH Ready Time**: The VM boots and becomes accessible via SSH in \~2.1s total
-* **Hardware Virtualization**: Uses KVM on Linux and Hypervisor.framework on macOS for near-native performance
+* **MicroVM creation**: SmolVM allocates IP addresses, TAP devices, and network rules in tens of milliseconds.
+* **Time to first command**: \~1.3s on the default QEMU + vsock path, \~1.7s on the SSH path (Firecracker today).
+* **Hardware virtualization**: Uses KVM on Linux and Hypervisor.framework on macOS for near-native performance.
+* **Safe boot trims**: The default `MICROVM_DIRECT` profile appends `tsc=reliable no_timer_check quiet` to the kernel cmdline. Set [`SMOLVM_VERBOSE_BOOT=1`](/smolvm/guides/environment-variables#host-side-variables-smolvm-reads) to drop `quiet` when debugging a stuck boot.
 
 ### Runtime performance
 
-* **Command Execution**: \~43ms average latency for running commands via SSH
-* **Memory Overhead**: Minimal host overhead beyond configured VM memory (default 512MB)
-* **CPU Efficiency**: Hardware virtualization provides near-native CPU performance
+* **Command execution**: \~1.3ms warm-command latency on vsock; \~43ms on SSH.
+* **Memory overhead**: Minimal host overhead beyond configured VM memory (default 512MB).
+* **CPU efficiency**: Hardware virtualization provides near-native CPU performance.
 
 ### Teardown performance
 
@@ -67,7 +71,7 @@ with SmolVM() as vm:
     result3 = vm.run("cat output.txt")
 ```
 
-This amortizes the \~2.1s boot time across multiple operations.
+This amortizes the \~1.3s first-command cost across many operations — and on vsock every follow-up command returns in around a millisecond.
 
 ### 2. Use appropriate resource allocation
 

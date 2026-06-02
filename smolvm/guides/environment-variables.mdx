@@ -1,7 +1,7 @@
 ---
 title: "Environment variables in SmolVM sandboxes"
 sidebarTitle: "Environment variables"
-description: "Inject API keys, secrets, and config into SmolVM sandboxes at boot or runtime with one Python API that works for both Linux and Windows guests."
+description: "Inject API keys, secrets, and config into SmolVM sandboxes at boot or at runtime with one Python API that works on Linux and Windows guests."
 keywords: ["environment variables", "sandbox secrets", "API keys VM", "SmolVM env_vars", "Linux Windows env", "set_env_vars", "Python sandbox config"]
 ---
 
@@ -272,6 +272,16 @@ A few environment variables on your host machine change how SmolVM itself behave
 
 <ResponseField name="SMOLVM_USE_PUBLISHED" type="string" default="1">
   Controls the [published-image fast path](/smolvm/concepts/published-images). On by default. Set to `0`, `false`, or `no` to force SmolVM to build images locally instead of downloading pre-built ones. Useful when you're testing changes to a preset's install script.
+</ResponseField>
+
+<ResponseField name="SMOLVM_VERBOSE_BOOT" type="string">
+  Show the guest kernel's full boot log on the serial console. Off by default — SmolVM appends `quiet` to the kernel command line so boots stay fast and clean. Set to `1`, `true`, `yes`, or `on` to drop `quiet` and surface every kernel message, which is the first thing to try when a sandbox hangs during start or panics before the agent answers.
+
+  ```bash  theme={null}
+  SMOLVM_VERBOSE_BOOT=1 smolvm run "echo hello"
+  ```
+
+  This only affects sandboxes that use the default low-latency boot profile (`MICROVM_DIRECT`). It does not change behaviour after the guest is up.
 </ResponseField>
 
 ### Coding-agent presets
