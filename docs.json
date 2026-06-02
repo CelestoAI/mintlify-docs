@@ -39,22 +39,22 @@
           {
             "group": "Features",
             "pages": [
-              "smolvm/features/callbacks",
               "smolvm/features/coding-agents",
               "smolvm/features/host-mounts",
               "smolvm/features/network-controls",
               "smolvm/features/port-forwarding",
+              "smolvm/features/callbacks",
               "smolvm/features/snapshots"
             ]
           },
           {
             "group": "Guides",
             "pages": [
-              "smolvm/guides/ai-agent-integration",
               "smolvm/guides/basic-usage",
               "smolvm/guides/custom-images",
-              "smolvm/guides/vm-lifecycle",
               "smolvm/guides/environment-variables",
+              "smolvm/guides/ai-agent-integration",
+              "smolvm/guides/vm-lifecycle",
               "smolvm/guides/windows-guests"
             ]
           },
@@ -164,57 +164,57 @@
               "smolvm/api/browsersession",
               "smolvm/api/browsersessionconfig",
               "smolvm/api/browsersessioninfo",
-              "smolvm/api/vmconfig",
-              "smolvm/api/internetsettings",
+              "smolvm/api/callbacks",
               "smolvm/api/commandresult",
-              "smolvm/api/vminfo",
+              "smolvm/api/exceptions",
+              "smolvm/api/hostmanager",
               "smolvm/api/imagebuilder",
               "smolvm/api/imagemanager",
               "smolvm/api/imagesource",
-              "smolvm/api/hostmanager",
+              "smolvm/api/internetsettings",
               "smolvm/api/networkconfig",
               "smolvm/api/snapshotinfo",
               "smolvm/api/sshclient",
-              "smolvm/api/callbacks",
-              "smolvm/api/exceptions"
+              "smolvm/api/vmconfig",
+              "smolvm/api/vminfo"
             ]
           },
           {
             "group": "SmolVM CLI",
             "pages": [
               "smolvm/cli/overview",
-              "smolvm/cli/list",
-              "smolvm/cli/create",
-              "smolvm/cli/stop",
-              "smolvm/cli/ssh",
               "smolvm/cli/cleanup",
-              "smolvm/cli/prune",
+              "smolvm/cli/create",
               "smolvm/cli/doctor",
-              "smolvm/cli/snapshot",
               "smolvm/cli/env",
-              "smolvm/cli/windows",
-              "smolvm/cli/ui"
+              "smolvm/cli/list",
+              "smolvm/cli/prune",
+              "smolvm/cli/snapshot",
+              "smolvm/cli/ssh",
+              "smolvm/cli/stop",
+              "smolvm/cli/ui",
+              "smolvm/cli/windows"
             ]
           },
           {
             "group": "Agentor API",
             "pages": [
               "agentor/api/agentor",
-              "agentor/api/model-settings",
               "agentor/api/llm",
+              "agentor/api/model-settings",
               "agentor/api/tools",
+              "agentor/api/tools/calculator",
+              "agentor/api/tools/google-calendar",
+              "agentor/api/tools/fetch",
+              "agentor/api/tools/github",
+              "agentor/api/tools/git",
+              "agentor/api/tools/gmail",
+              "agentor/api/tools/shell",
               "agentor/api/tools/weather",
               "agentor/api/tools/web-search",
-              "agentor/api/tools/fetch",
-              "agentor/api/tools/git",
-              "agentor/api/tools/github",
-              "agentor/api/tools/gmail",
-              "agentor/api/tools/google-calendar",
-              "agentor/api/tools/calculator",
-              "agentor/api/tools/shell",
+              "agentor/api/mcp/hub",
               "agentor/api/mcp/litemcp",
               "agentor/api/mcp/router",
-              "agentor/api/mcp/hub",
               "agentor/api/a2a/controller",
               "agentor/api/a2a/types"
             ]
