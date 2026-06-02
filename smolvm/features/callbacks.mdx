@@ -15,7 +15,7 @@ There are three hooks:
 - `on_post_run` — runs **after** a command finishes successfully.
 - `on_run_error` — runs when a command fails to execute.
 
-Every hook receives one argument, which you'll see called `ctx` in the examples below. This is a **run context** — a single object that describes the command in flight: what was run, on which sandbox, and (afterwards) its result. You read from it to decide what to do. The [run context](#the-run-context) section lists every field; for now, just know that `ctx.command` is the command string and `ctx.vm_id` is the sandbox ID.
+Every hook receives one argument, which you'll see called `ctx` in the examples below. This is a **run context** — a single object that describes the command in flight: what was run, on which sandbox, and (afterwards) its result. You read from it to decide what to do. The [run context](#read-command-details-from-the-run-context) section lists every field; for now, just know that `ctx.command` is the command string and `ctx.vm_id` is the sandbox ID.
 
 ## When to use callbacks
 
@@ -23,7 +23,7 @@ Every hook receives one argument, which you'll see called `ctx` in the examples 
 - **Audit and log** — Record every command an agent runs, along with its exit code and output.
 - **Observe failures** — Collect telemetry when a command errors out, without changing the rest of your code.
 
-## Block an unsafe command
+## Block unsafe commands before they run
 
 The pre-run hook is the only hook that can stop a command. If `on_pre_run` raises, the command is aborted and the exception is raised to the caller. Raise `CommandBlockedError` for an explicit, typed block.
 
@@ -48,7 +48,7 @@ with SmolVM(callbacks=[SafetyGuard()]) as vm:
 
 A blocked command does not tear down the sandbox or the SSH session — the next allowed `run()` call uses the same connection.
 
-## Log every command
+## Log every command an agent runs
 
 The post-run hook fires after a command completes. The context object carries the result, so you can log the exit code, stdout, and stderr.
 
@@ -68,7 +68,7 @@ with SmolVM(callbacks=[AuditLog()]) as vm:
 
 `on_post_run` and `on_run_error` are passive observers. If they raise, the exception is logged and swallowed so a buggy logger never breaks a command that already ran.
 
-## Add callbacks after construction
+## Attach callbacks to an existing sandbox
 
 You can also attach callbacks to a sandbox you have already created. `add_callback()` returns the sandbox so calls can be chained.
 
@@ -88,7 +88,7 @@ vm.delete()
 vm.close()
 ```
 
-## The run context
+## Read command details from the run context
 
 Every hook receives a single `RunContext` object. Read from it to decide what to do.
 
@@ -103,7 +103,7 @@ Every hook receives a single `RunContext` object. Read from it to decide what to
 
 For the full API, see the [Callback reference](/smolvm/api/callbacks).
 
-## What callbacks cover today
+## Scope and limitations
 
 Callbacks fire around the synchronous `SmolVM.run()` method. They cover both the SSH and vsock transports, because the hooks run on the facade before any transport is selected.
 
