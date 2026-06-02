@@ -121,6 +121,30 @@ export SMOLVM_BACKEND=qemu
 python my_agent.py
 ```
 
+### Networking modes
+
+The QEMU backend supports two networking modes, controlled by the `qemu_network` field on [`VMConfig`](/smolvm/api/vmconfig):
+
+* `"slirp"` (default) — Userspace NAT with host port forwards. Works without root or extra host setup, which makes it the right choice for local macOS development.
+* `"tap"` — Linux-only. Attaches the guest to a host TAP device so it gets a real routable IP and falls under the same nftables NAT and isolation rules as Firecracker (egress masquerade, cross-sandbox drop, and IMDS block). Use this when you need Firecracker-level network isolation on a QEMU host — for example, running QEMU on a Linux production host for multi-tenant or untrusted workloads.
+
+```python  theme={null}
+from smolvm import SmolVM, VMConfig
+from pathlib import Path
+
+config = VMConfig(
+    kernel_path=Path("/path/to/vmlinux"),
+    rootfs_path=Path("/path/to/rootfs.ext4"),
+    backend="qemu",
+    qemu_network="tap",  # Linux only; needs the same setup as Firecracker
+)
+
+with SmolVM(config) as vm:
+    print(vm.run("ip -4 addr show eth0").stdout)
+```
+
+See [network configuration](/smolvm/concepts/networking) for the host setup TAP mode reuses.
+
 ## Comparison matrix
 
 | Feature              | Firecracker      | QEMU            |
