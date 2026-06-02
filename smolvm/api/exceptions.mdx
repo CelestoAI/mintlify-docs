@@ -19,7 +19,8 @@ SmolVMError (base)
 ├── ImageError
 ├── FirecrackerAPIError
 ├── OperationTimeoutError
-└── CommandExecutionUnavailableError
+├── CommandExecutionUnavailableError
+└── CommandBlockedError
 ```
 
 ## Base Exception
@@ -364,6 +365,45 @@ except CommandExecutionUnavailableError as e:
     if e.remediation:
         print(f"Solution: {e.remediation}")
 ```
+
+### CommandBlockedError
+
+Raised by `SmolVM.run()` when an `on_pre_run` [callback](/smolvm/features/callbacks) vetoes a command before it reaches the guest.
+
+**Attributes:**
+
+* `vm_id` (str | None): The VM the command targeted
+* `command` (str | None): The blocked command string
+* `message` (str): Human-readable reason for the block
+* `details` (dict): Contains `vm_id` and `command`
+
+**When raised:**
+
+* A registered `Callback` raises `CommandBlockedError` from its `on_pre_run` hook
+* Any other exception raised by a pre-run callback also propagates from `run()`
+
+**Example:**
+
+```python  theme={null}
+from smolvm import SmolVM, Callback, CommandBlockedError
+
+class DenyRm(Callback):
+    def on_pre_run(self, ctx):
+        if ctx.command.startswith("rm "):
+            raise CommandBlockedError(
+                "rm is not allowed in this sandbox",
+                vm_id=ctx.vm_id,
+                command=ctx.command,
+            )
+
+with SmolVM(callbacks=[DenyRm()]) as vm:
+    try:
+        vm.run("rm -rf /tmp/data")
+    except CommandBlockedError as e:
+        print(f"refused: {e.command}")
+```
+
+See the [Callback reference](/smolvm/api/callbacks) for full details on the hook contract.
 
 ## Error Handling Best Practices
 

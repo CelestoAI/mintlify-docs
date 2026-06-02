@@ -39,6 +39,7 @@
           {
             "group": "Features",
             "pages": [
+              "smolvm/features/callbacks",
               "smolvm/features/coding-agents",
               "smolvm/features/host-mounts",
               "smolvm/features/network-controls",
@@ -174,6 +175,7 @@
               "smolvm/api/networkconfig",
               "smolvm/api/snapshotinfo",
               "smolvm/api/sshclient",
+              "smolvm/api/callbacks",
               "smolvm/api/exceptions"
             ]
           },

@@ -25,6 +25,7 @@ SmolVM(
     ssh_key_path: str | None = None,
     ssh_password: str | None = None,
     comm_channel: Literal["ssh", "vsock"] | None = None,
+    callbacks: list[Callback] | None = None,
 )
 ```
 
@@ -87,6 +88,10 @@ SmolVM(
 
 <ParamField path="comm_channel" type='Literal["ssh", "vsock"] | None' default="None">
   Host-to-guest control channel for `run()`, file transfer, and env var operations. Leave unset for auto-selection (vsock when the SmolVM guest agent answers on a Linux QEMU host, otherwise SSH). Pass `"vsock"` to require vsock — SmolVM raises if the agent does not answer instead of falling back. Pass `"ssh"` to force the SSH path. See [control channel](/smolvm/concepts/control-channel) for details.
+</ParamField>
+
+<ParamField path="callbacks" type="list[Callback] | None" default="None">
+  Callbacks that fire around each `run()` call. Use them to inspect, log, or block commands before they reach the guest. See [Run callbacks and safety hooks](/smolvm/features/callbacks) for the full guide and the [Callback reference](/smolvm/api/callbacks).
 </ParamField>
 
 ### Raises
@@ -332,6 +337,27 @@ Execute a command on the guest via SSH. Lazily creates an SSH client on first ca
 
 * `SmolVMError`: If the VM is not running or has no network.
 * `CommandExecutionUnavailableError`: If SSH is not available on the guest.
+* `CommandBlockedError`: If an `on_pre_run` callback vetoes the command. Any other exception raised by a pre-run callback also propagates from `run()`.
+
+### add\_callback
+
+```python  theme={null}
+def add_callback(self, callback: Callback) -> SmolVM
+```
+
+Register a [`Callback`](/smolvm/api/callbacks) on this sandbox after construction. Returns `self` so calls can be chained.
+
+<ParamField path="callback" type="Callback" required>
+  A `Callback` instance to attach. Its hooks will fire on subsequent `run()` calls.
+</ParamField>
+
+<ResponseField name="return" type="SmolVM">
+  Returns `self` for method chaining.
+</ResponseField>
+
+#### Raises
+
+* `TypeError`: If `callback` is not a `Callback` instance.
 
 ### wait\_for\_ssh
 
