@@ -7,7 +7,15 @@ Callbacks let you run your own Python code every time the sandbox executes a com
 
 This is useful when an LLM or agent is driving the sandbox and you want a final say before a command reaches the guest.
 
-A callback is a small Python class. You subclass `Callback`, override the hooks you care about, and pass instances to `SmolVM(..., callbacks=[...])`. Every other hook is a no-op by default, so you only write the parts you need.
+A callback is a Python class that SmolVM calls at set points in a command's lifecycle — before a command runs, after it finishes, or when it errors. You subclass `Callback`, override only the hooks for the moments you care about, and pass instances to `SmolVM(..., callbacks=[...])`.
+
+There are three hooks:
+
+- `on_pre_run` — runs **before** a command reaches the guest. This is the only hook that can block a command.
+- `on_post_run` — runs **after** a command finishes successfully.
+- `on_run_error` — runs when a command fails to execute.
+
+Every hook receives one argument, which you'll see called `ctx` in the examples below. This is a **run context** — a single object that describes the command in flight: what was run, on which sandbox, and (afterwards) its result. You read from it to decide what to do. The [run context](#the-run-context) section lists every field; for now, just know that `ctx.command` is the command string and `ctx.vm_id` is the sandbox ID.
 
 ## When to use callbacks
 
