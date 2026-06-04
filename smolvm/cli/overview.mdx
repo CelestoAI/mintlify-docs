@@ -33,6 +33,7 @@ pip install 'smolvm[dashboard]'
 | `smolvm cleanup` | Clean stale SmolVM resources and VMs |
 | `smolvm doctor` | Run host diagnostics for the selected backend |
 | `smolvm env` | Manage environment variables on a running VM |
+| `smolvm port` | Forward sandbox ports to localhost |
 | `smolvm windows` | Windows-guest helpers (build a Windows qcow2 from an ISO) |
 | `smolvm ui` | Start the SmolVM dashboard UI server |
 
@@ -143,6 +144,10 @@ smolvm browser start --help
 
   <Card title="Environment" icon="gear" href="/smolvm/cli/env">
     Manage VM environment variables
+  </Card>
+
+  <Card title="Port forwarding" icon="plug" href="/smolvm/cli/port">
+    Expose sandbox ports on localhost
   </Card>
 
   <Card title="Windows images" icon="window" href="/smolvm/cli/windows">

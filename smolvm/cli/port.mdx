@@ -1,0 +1,265 @@
+---
+title: "smolvm port"
+description: "Forward sandbox ports to localhost with smolvm port expose, close, and list — reach web servers, APIs, and databases inside a sandbox as if they ran locally."
+---
+
+## Synopsis
+
+```bash  theme={null}
+smolvm port expose <sandbox> [host-port:]sandbox-port [OPTIONS]
+smolvm port close <sandbox> host-port:sandbox-port [OPTIONS]
+smolvm port list <sandbox> [OPTIONS]
+```
+
+## Description
+
+The `port` command group forwards ports from a running sandbox to your host so you can open `http://localhost:<port>/` in a browser, point a database client at the sandbox, or hit an API running inside the guest — without leaving your terminal or writing Python.
+
+Use it when you started a web server, dev server, or API inside a sandbox and want to reach it from your host machine.
+
+<Note>
+  Forwards are **non-blocking** and survive the CLI process exiting. They keep running until you call `smolvm port close`, stop the sandbox, or reboot your host. Active forwards are tracked in `~/.smolvm/forwards/<sandbox>.json`.
+</Note>
+
+<Warning>
+  Forwards bind to `127.0.0.1` only. Services are reachable from your host but are not exposed to other machines on your network.
+</Warning>
+
+## Subcommands
+
+<Note>
+  All `port` subcommands accept `--comm-channel {ssh,vsock}` to choose the host-to-guest control channel. Leave it unset for auto-selection. See [control channel](/smolvm/concepts/control-channel).
+</Note>
+
+### expose
+
+Forward a guest port to localhost.
+
+```bash  theme={null}
+smolvm port expose <sandbox> [host-port:]sandbox-port [OPTIONS]
+```
+
+The mapping has two forms:
+
+* `host-port:sandbox-port` — bind a specific host port (for example `8080:3000`).
+* `sandbox-port` — let SmolVM pick any free host port (for example `3000`).
+
+#### Arguments
+
+<ParamField path="sandbox" type="string" required>
+  Name or ID of the running sandbox.
+</ParamField>
+
+<ParamField path="mapping" type="string" required>
+  Port mapping in the form `host-port:sandbox-port` or just `sandbox-port` to auto-select a host port.
+</ParamField>
+
+#### Options
+
+<ParamField path="--json" type="flag" default="false">
+  Emit machine-readable JSON output.
+</ParamField>
+
+<ParamField path="--ssh-key" type="string" default="~/.smolvm/keys/id_ed25519">
+  SSH private key path for connecting to the sandbox.
+</ParamField>
+
+<ParamField path="--ssh-user" type="string" default="root">
+  SSH user to connect as.
+</ParamField>
+
+#### Examples
+
+Forward sandbox port 3000 to host port 8080:
+
+```bash  theme={null}
+smolvm port expose my-vm 8080:3000
+```
+
+**Output:**
+
+```
+Exposed localhost:8080 → guest:3000
+Connect to localhost:8080
+Stop with: smolvm port close my-vm 8080:3000
+```
+
+Auto-select a host port:
+
+```bash  theme={null}
+smolvm port expose my-vm 3000
+```
+
+Get a structured response for scripting:
+
+```bash  theme={null}
+smolvm port expose my-vm 8080:3000 --json
+```
+
+**Output:**
+
+```json
+{
+  "command": "port expose",
+  "exit_code": 0,
+  "data": {
+    "sandbox": "my-vm",
+    "guest_port": 3000,
+    "host_port": 8080,
+    "mapping": "8080:3000"
+  }
+}
+```
+
+***
+
+### close
+
+Remove a forwarded port.
+
+```bash  theme={null}
+smolvm port close <sandbox> host-port:sandbox-port [OPTIONS]
+```
+
+Both ports are required — use `smolvm port list` if you've forgotten the mapping.
+
+#### Arguments
+
+<ParamField path="sandbox" type="string" required>
+  Name or ID of the sandbox.
+</ParamField>
+
+<ParamField path="mapping" type="string" required>
+  Mapping to remove, in the form `host-port:sandbox-port`.
+</ParamField>
+
+#### Options
+
+<ParamField path="--json" type="flag" default="false">
+  Emit machine-readable JSON output.
+</ParamField>
+
+<ParamField path="--ssh-key" type="string" default="~/.smolvm/keys/id_ed25519">
+  SSH private key path for connecting to the sandbox.
+</ParamField>
+
+<ParamField path="--ssh-user" type="string" default="root">
+  SSH user to connect as.
+</ParamField>
+
+#### Example
+
+```bash  theme={null}
+smolvm port close my-vm 8080:3000
+```
+
+**Output:**
+
+```
+Closed localhost:8080 → guest:3000
+```
+
+***
+
+### list
+
+Show every active forward for a sandbox.
+
+```bash  theme={null}
+smolvm port list <sandbox> [OPTIONS]
+```
+
+#### Arguments
+
+<ParamField path="sandbox" type="string" required>
+  Name or ID of the sandbox.
+</ParamField>
+
+#### Options
+
+<ParamField path="--json" type="flag" default="false">
+  Emit machine-readable JSON output.
+</ParamField>
+
+#### Example
+
+```bash  theme={null}
+smolvm port list my-vm
+```
+
+**Output:**
+
+```
+       Port Forwards — my-vm
+┏━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━┓
+┃ Host port ┃ Sandbox port ┃ Transport  ┃
+┡━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━┩
+│      8080 │         3000 │ ssh_tunnel │
+│      9000 │         9000 │ nftables   │
+└───────────┴──────────────┴────────────┘
+```
+
+If no forwards are active:
+
+```
+No active port forwards for 'my-vm'.
+```
+
+## Transports
+
+The `Transport` column shows how a forward is implemented:
+
+* `nftables` — kernel-level NAT, used when the host can route directly to the guest. Lowest overhead.
+* `ssh_tunnel` — a background SSH tunnel, used when direct routing isn't available (for example macOS hosts). Survives CLI exit and is cleaned up automatically by `port close`.
+
+You don't pick a transport — SmolVM chooses the best option for your setup.
+
+## Exit codes
+
+| Code | Description                                                |
+| ---- | ---------------------------------------------------------- |
+| `0`  | Success                                                    |
+| `1`  | Error occurred (invalid mapping, sandbox unreachable, etc.) |
+| `2`  | Invalid usage (missing subcommand, malformed arguments)    |
+
+## Common workflows
+
+### Preview a web app running in a sandbox
+
+```bash  theme={null}
+# Inside the sandbox, start a dev server on port 3000.
+smolvm ssh my-vm -- "cd /app && npm run dev &"
+
+# Forward it to host port 3000.
+smolvm port expose my-vm 3000:3000
+
+# Open http://localhost:3000/ in your browser.
+```
+
+### Connect a local client to a sandbox database
+
+```bash  theme={null}
+smolvm port expose db-vm 5432:5432
+psql -h 127.0.0.1 -p 5432 -U postgres
+```
+
+### Tear everything down
+
+```bash  theme={null}
+# See what's active.
+smolvm port list my-vm
+
+# Close each forward.
+smolvm port close my-vm 8080:3000
+smolvm port close my-vm 9000:9000
+```
+
+<Tip>
+  Forwards are also released automatically when the sandbox stops, so a quick `smolvm stop my-vm` clears them all at once.
+</Tip>
+
+## Related
+
+* [Port forwarding](/smolvm/features/port-forwarding) — programmatic API from Python (`vm.expose_local()`).
+* [`smolvm ssh`](/smolvm/cli/ssh) — connect to a sandbox shell.
+* [`smolvm list`](/smolvm/cli/list) — find sandbox names and IDs.
