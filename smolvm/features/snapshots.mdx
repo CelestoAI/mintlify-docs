@@ -71,12 +71,17 @@ To create a snapshot, the VM must be running or paused. SmolVM pauses the VM dur
 
 ## Choose a snapshot type
 
-When you create a snapshot, you can pick how much of the disk to store:
+When you create a snapshot, you can pick how much of the VM to store:
 
-- **`full`** (default) — A complete, self-contained copy of the disk. Restores on its own even if the original base image is gone. Use this for everyday work and anytime you want a portable, no-surprises snapshot.
-- **`diff`** — Stores only the data that changed since the shared base image, so it takes far less space. Use this in production systems that take many snapshots and keep their base images in place. A diff snapshot needs its base image to still be present to restore.
+- **`full`** (default) — A complete, self-contained copy of the disk plus the guest's memory and CPU state. Restores on its own to the exact running state, even if the original base image is gone. Use this when you want to resume the sandbox exactly where you left off.
+- **`diff`** — Stores only the disk data that changed since the shared base image, so it takes far less space. Use this in production systems that take many snapshots and keep their base images in place. A diff snapshot needs its base image to still be present to restore.
+- **`disk`** — Self-contained like `full`, but stores **only the disk** — it skips the guest's memory (RAM/vmstate) entirely. Restoring boots the sandbox fresh from that disk instead of resuming the running state. Use this when you only need the filesystem state and a cold boot is acceptable — for example, suspending and resuming sandboxes across hosts, or taking frequent snapshots without blocking the VM.
 
 On the Firecracker backend, the VM state and memory files are always captured in full — `diff` only changes how the disk is stored, so a diff snapshot still restores on its own as long as the base image is available.
+
+<Note>
+  `disk` snapshots are much faster and use far less space than `full` because they skip the RAM dump. They are the right choice for sandbox suspend/restore workflows where you don't need to resume the exact running process state. Taking a `disk` snapshot does not block the QEMU monitor, so it's also safer to use under load.
+</Note>
 
 <Tabs>
   <Tab title="Python SDK">
@@ -110,11 +115,34 @@ On the Firecracker backend, the VM state and memory files are always captured in
     # Space-saving snapshot
     smolvm snapshot create my-vm --snapshot-type diff
 
+    # Disk-only snapshot — fast, no RAM dump, restores as a cold boot
+    smolvm snapshot create my-vm --snapshot-type disk
+
     # Full snapshot (default — same as omitting the flag)
     smolvm snapshot create my-vm --snapshot-type full
     ```
   </Tab>
 </Tabs>
+
+Take a `disk` snapshot when you want to save the filesystem state quickly and don't need to resume the running process state:
+
+```python  theme={null}
+from smolvm import SmolVM, SnapshotType
+
+vm = SmolVM()
+vm.start()
+vm.run("apk add python3")
+
+# Fast, lightweight snapshot — disk only, no RAM
+snapshot = vm.snapshot(
+    snapshot_id="cold-boot-checkpoint",
+    snapshot_type=SnapshotType.DISK,
+)
+
+# Later — restoring boots the sandbox fresh from the saved disk
+vm = SmolVM.from_snapshot("cold-boot-checkpoint", resume_vm=True)
+result = vm.run("python3 --version")  # python3 is already installed
+```
 
 <Note>
   If the base image for a diff snapshot is missing at restore time, SmolVM raises a clear error pointing to the missing path and suggesting you take a `full` snapshot instead. To stay safe, only delete a base image once you've removed every diff snapshot that depends on it — or take a `full` snapshot first.
