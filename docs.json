@@ -188,6 +188,7 @@
               "smolvm/cli/doctor",
               "smolvm/cli/env",
               "smolvm/cli/list",
+              "smolvm/cli/port",
               "smolvm/cli/prune",
               "smolvm/cli/snapshot",
               "smolvm/cli/ssh",
