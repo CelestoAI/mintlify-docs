@@ -1,6 +1,6 @@
 ---
 title: "Custom images"
-description: "Use ImageBuilder to build custom SmolVM images with your packages, libraries, or base OS pre-installed — Docker-based builds with local caching."
+description: "Build custom SmolVM images with your own packages, libraries, or base OS using ImageBuilder, DockerRootfsBuilder, and BootImage helpers."
 ---
 
 By default, SmolVM boots a minimal Alpine Linux image with SSH. If you need specific packages, libraries, or a different base OS, you can build a custom image using the `ImageBuilder` class. Custom images are built with Docker and cached locally so you only build once.
@@ -343,6 +343,28 @@ A few things to know:
 * Firmware images (qcow2 cloud images, Windows guests, anything booted through OVMF) must run on QEMU; passing `backend="firecracker"` raises early.
 
 See the full parameter list in the [`SmolVM.from_image()` reference](/smolvm/api/smolvm#from-image).
+
+### Resize the disk on launch
+
+Most custom images ship at the smallest size that works for the base OS. When a workload needs more space — extra packages, build caches, sample data — pass `disk_size_mb` to grow the per-VM disk and, for raw ext4 images, set `grow_filesystem=True` so the guest sees the new space without any in-guest commands:
+
+```python  theme={null}
+with SmolVM.from_image(
+    image,
+    vcpus=2,
+    memory_mb=1024,
+    disk_size_mb=4096,        # grow the per-VM disk to 4 GiB
+    grow_filesystem=True,     # expand the ext4 filesystem to fill it
+) as vm:
+    result = vm.run("df -h /")
+    print(result.stdout)
+```
+
+A few things to keep in mind:
+
+* `disk_size_mb` only grows the disk. SmolVM rejects values smaller than the image's current size to avoid corrupting the filesystem.
+* `grow_filesystem=True` requires `rootfs_format="raw-ext4"` and `e2fsprogs` (`e2fsck`, `resize2fs`) on the host. For `qcow2` images (Ubuntu and Windows cloud images), leave it `False` and resize the partition or filesystem from inside the guest.
+* Both options need `disk_mode="isolated"` (the default). SmolVM never resizes a shared base image.
 
 ## Image caching
 
