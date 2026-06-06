@@ -114,7 +114,7 @@ with SmolVM(config, ssh_key_path=str(private_key)) as vm:
 
 ## Boot arguments
 
-Use the `SSH_BOOT_ARGS` constant for any SSH-capable image:
+Use the `SSH_BOOT_ARGS` constant for any SSH-capable image on Firecracker:
 
 ```python
 from smolvm.build import SSH_BOOT_ARGS
@@ -126,6 +126,68 @@ print(SSH_BOOT_ARGS)
 <Warning>
   The `init=/init` parameter is required for SmolVM's SSH functionality. Without it, the custom init script will not run and SSH will not start.
 </Warning>
+
+### Boot args for any backend
+
+`SSH_BOOT_ARGS` is wired for Firecracker on x86\_64. If you also run sandboxes on QEMU or libkrun — for example on macOS or arm64 hosts — use `DirectKernelBoot` instead. It renders the right kernel command line for each backend so you don't have to remember which flags belong where:
+
+* Firecracker needs `pci=off`; QEMU and libkrun must not get it.
+* QEMU on arm64 uses the `ttyAMA0` serial console; everything else uses `ttyS0`.
+* Safe defaults like `tsc=reliable`, `no_timer_check`, and `quiet` are added automatically.
+
+```python
+from smolvm import DirectKernelBoot, SmolVM, VMConfig
+
+boot = DirectKernelBoot(root="/dev/vda", init="/init")
+
+config = VMConfig(
+    vm_id="cross-backend-vm",
+    vcpu_count=1,
+    memory=512,
+    kernel_path=kernel,
+    rootfs_path=rootfs,
+    boot_args=boot.render(backend="qemu", arch="host"),
+)
+```
+
+`backend` accepts `"firecracker"`, `"qemu"`, or `"libkrun"`. `arch` accepts `"host"`, `"amd64"`/`"x86_64"`, or `"arm64"`/`"aarch64"`. Use `arch="host"` to match the current machine.
+
+You can customize the profile when you need to:
+
+```python
+boot = DirectKernelBoot(
+    root="/dev/vda",
+    init="/init",
+    console="serial",          # or "none" to drop console=...
+    rw=True,                    # rw or ro
+    quiet=False,                # show kernel log lines while debugging
+    extra_args=("acpi=off",),  # one token per entry, no spaces
+)
+```
+
+Set `SMOLVM_VERBOSE_BOOT=1` in your environment to drop the default `quiet` flag without changing your code — useful when debugging boot failures.
+
+### Pick the right kernel for your backend
+
+SmolVM publishes the same Linux 6.12.85 kernel in two formats. Firecracker and libkrun load the ELF artifact, while QEMU loads the Image/bzImage artifact. `ensure_base_kernel_for_backend` picks the right one, downloads and verifies it on first use, and caches it under `~/.smolvm/images/`:
+
+```python
+from smolvm import DirectKernelBoot, SmolVM, VMConfig, ensure_base_kernel_for_backend
+
+backend = "qemu"
+kernel = ensure_base_kernel_for_backend(backend, arch="host")
+
+config = VMConfig(
+    vm_id="cross-backend-vm",
+    vcpu_count=1,
+    memory=512,
+    kernel_path=kernel,
+    rootfs_path=rootfs,
+    boot_args=DirectKernelBoot().render(backend=backend, arch="host"),
+)
+```
+
+Use this whenever you supply your own rootfs but want SmolVM's verified kernel — for example, when boot-testing a custom image on both macOS (QEMU) and Linux (Firecracker) with one script.
 
 ## Image caching
 
