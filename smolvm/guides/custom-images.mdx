@@ -189,6 +189,124 @@ config = VMConfig(
 
 Use this whenever you supply your own rootfs but want SmolVM's verified kernel — for example, when boot-testing a custom image on both macOS (QEMU) and Linux (Firecracker) with one script.
 
+## Bring your own Dockerfile
+
+`ImageBuilder` bakes SmolVM's SSH guest agent into every rootfs. If you'd rather supply your own Dockerfile — for example to ship a custom init, a different control agent, or a minimal scratch image — use `DockerRootfsBuilder`. It builds a raw ext4 rootfs straight from your Dockerfile, caches the result by build inputs, and gives you back a `BootImage` you can boot on any backend.
+
+Use `DockerRootfsBuilder` when:
+
+* You don't want SmolVM's SSH agent inside the image.
+* You already have a working Dockerfile and want to keep it as the source of truth.
+* You want the same rootfs to boot on Firecracker, QEMU, and libkrun without rebuilding for each backend.
+
+### Build a rootfs from a Dockerfile
+
+```python
+from smolvm import DirectKernelBoot, DockerRootfsBuilder
+
+builder = DockerRootfsBuilder(
+    name="scratch-demo",
+    dockerfile="""
+        FROM alpine:3.20
+        RUN apk add --no-cache busybox-extras
+        COPY init /init
+        RUN chmod +x /init
+    """,
+    context={"init": "#!/bin/sh\nexec /bin/sh\n"},
+    rootfs_size_mb=256,
+)
+
+image = builder.ensure(
+    backend="qemu",
+    arch="host",
+    boot=DirectKernelBoot(root="/dev/vda", init="/init"),
+)
+
+print(image.rootfs_path)   # ~/.smolvm/images/custom/scratch-demo/<hash>/rootfs.ext4
+print(image.kernel_path)   # SmolVM's verified kernel for QEMU/host arch
+```
+
+`ensure()` returns a `BootImage` describing the rootfs, the matching kernel, and the rendered boot arguments. It does not start a VM.
+
+### Constructor options
+
+| Option | What it does |
+| --- | --- |
+| `name` | Cache directory name. Letters, numbers, `.`, `_`, and `-` only. |
+| `dockerfile` | Inline Dockerfile text. SmolVM writes it into a temporary build context. |
+| `context` | Files to copy alongside the Dockerfile. Accepts `Path`, `str`, or `bytes` values keyed by safe relative paths. |
+| `rootfs_size_mb` | Size of the raw ext4 rootfs (default `512`). |
+| `cache_dir` | Where built rootfs artifacts and metadata live (default `~/.smolvm/images/`). |
+| `fingerprint_inputs` | Extra JSON-serializable values to mix into the cache key — useful for tagging template versions. |
+| `build_args` | `--build-arg` pairs forwarded to `docker build`. |
+| `docker_platform` | Override the Docker target platform (defaults to `linux/amd64` or `linux/arm64`). |
+| `ssh_capable` | Set `True` if your image ships an SSH server so downstream code can choose SSH transport. |
+
+### Reuse one rootfs across backends
+
+The cache key is built from the Dockerfile, the build context, `build_args`, the target arch, and your `fingerprint_inputs`. It deliberately leaves out the backend and the kernel identity, so Firecracker and QEMU share the same rootfs as long as the arch matches:
+
+```python
+qemu_image = builder.ensure(backend="qemu", arch="amd64", boot=DirectKernelBoot())
+fc_image = builder.ensure(backend="firecracker", arch="amd64", boot=DirectKernelBoot())
+
+assert qemu_image.rootfs_path == fc_image.rootfs_path
+# Different kernels — same rootfs.
+```
+
+Boot in one place; switch hosts without rebuilding.
+
+### Safety rules for build contexts
+
+`DockerRootfsBuilder` rejects unsafe context paths before it touches Docker:
+
+* Paths must be relative — no absolute paths or `..` traversal.
+* A context entry named `Dockerfile` (any case) is reserved.
+* Missing files referenced by `Path` raise a clear `ImageError` before the build starts.
+
+## Describe a bootable image
+
+`BootImage` is the small Pydantic model that ties a rootfs, a kernel, and boot metadata together. `DockerRootfsBuilder.ensure()` returns one, but you can also build one by hand if you already have rootfs and kernel artifacts on disk:
+
+```python
+from pathlib import Path
+
+from smolvm import BootImage, DirectKernelBoot
+
+image = BootImage(
+    name="prebuilt-demo",
+    rootfs_path=Path("/var/images/demo.ext4"),
+    rootfs_format="raw-ext4",
+    kernel_path=Path("/var/images/vmlinux.elf"),
+    boot=DirectKernelBoot(root="/dev/vda", init="/init"),
+    backend="firecracker",
+    arch="amd64",
+)
+
+print(image.render_boot_args())   # rendered for firecracker / amd64
+print(image.boot_mode)            # "direct_kernel"
+```
+
+`BootImage` validates that artifact paths exist, that `boot` and `boot_args` are not both set, and that direct-kernel images carry one of them. It does not allocate networking, clone disks, or start a VM — it is a description you can pass around.
+
+### Firmware-booted images
+
+For QEMU images that boot through firmware instead of `-kernel` (for example, a cloud image with its own bootloader), use the `FirmwareBoot` marker:
+
+```python
+from smolvm import BootImage, FirmwareBoot
+
+image = BootImage(
+    name="ubuntu-cloud",
+    rootfs_path=Path("/var/images/ubuntu.qcow2"),
+    rootfs_format="qcow2",
+    boot=FirmwareBoot(),
+    backend="qemu",
+)
+```
+
+Firmware images must not set `kernel_path`, `initrd_path`, or `boot_args`, and only `qemu` is supported as the backend.
+
 ## Image caching
 
 `ImageBuilder` caches built images to avoid rebuilding. The first build downloads base images and runs Docker. Subsequent calls with the same name return cached paths instantly:
