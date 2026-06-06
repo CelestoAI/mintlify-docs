@@ -94,7 +94,7 @@ Downloads are atomic: files are written to a temporary location, SHA-256 verifie
 * `ImageError` - If the image is not in the registry, download fails, or checksum verification fails
 
 ```python  theme={null}
-from smolvm import ImageManager, SmolVM, VMConfig
+from smolvm import BootImage, DirectKernelBoot, ImageManager, SmolVM
 
 manager = ImageManager()
 
@@ -104,14 +104,18 @@ print(f"Kernel: {image.kernel_path}")
 print(f"Rootfs: {image.rootfs_path}")
 
 # Use the image with SmolVM
-config = VMConfig(
-    kernel_path=image.kernel_path,
+boot_image = BootImage(
+    name=image.name,
     rootfs_path=image.rootfs_path,
+    rootfs_format="raw-ext4",
+    kernel_path=image.kernel_path,
+    boot=DirectKernelBoot(),
+    ssh_capable=True,
 )
 
-with SmolVM(config) as vm:
-    vm.start()
+with SmolVM.from_image(boot_image, ssh_password="smolvm") as vm:
     # VM is now running with the "hello" image
+    print(vm.status)
 ```
 
 ## Built-in Image Registry
@@ -200,4 +204,5 @@ except ImageError as e:
 
 * [ImageSource](/smolvm/api/imagesource) - Define downloadable image metadata
 * [LocalImage](/smolvm/api/imagesource#localimage) - Locally-cached image representation
-* [ImageBuilder](/smolvm/api/imagebuilder) - Build custom images with SSH
+* [BootImage](/smolvm/api/bootimage) - Describe a cached or custom image
+* [DockerRootfsBuilder](/smolvm/api/dockerrootfsbuilder) - Build custom root filesystems from Dockerfiles

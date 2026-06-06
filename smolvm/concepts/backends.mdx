@@ -222,9 +222,7 @@ from smolvm import SmolVM
 # Production configuration
 vm = SmolVM(
     backend="firecracker",
-    vcpu_count=2,
-    mem_size_mib=512,
-    disk_mode="isolated"
+    memory=512,
 )
 ```
 
@@ -242,7 +240,7 @@ from smolvm import SmolVM
 # Development configuration
 vm = SmolVM(
     backend="qemu",  # Auto-detected on macOS
-    mem_size_mib=1024
+    memory=1024,
 )
 ```
 

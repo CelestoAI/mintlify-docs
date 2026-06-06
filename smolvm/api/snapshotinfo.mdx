@@ -1,100 +1,85 @@
 ---
 title: "SnapshotInfo"
-description: "Metadata for a saved VM snapshot, including file paths and restore status"
+description: "Metadata for a saved SmolVM snapshot, including type, artifacts, and restore status"
 ---
 
-## Overview
-
-The `SnapshotInfo` model holds all metadata about a saved VM snapshot. It is returned when you create a snapshot and can be retrieved from the snapshot list.
+`SnapshotInfo` tells you what SmolVM saved when it created a snapshot. It includes the snapshot type, backend, artifact paths, original VM config, and restore status.
 
 ## Fields
 
 <ResponseField name="snapshot_id" type="string" required>
-  Unique identifier for the snapshot. Must contain only lowercase letters, numbers, and hyphens. If not provided during creation, SmolVM generates one automatically.
+  Unique snapshot ID.
 </ResponseField>
 
 <ResponseField name="vm_id" type="string" required>
-  The identifier of the source VM that was snapshotted.
+  Source VM ID.
 </ResponseField>
 
-<ResponseField name="snapshot_path" type="Path" required>
-  Path to the saved VM state file (`vmstate.bin`).
+<ResponseField name="backend" type='"firecracker" | "qemu" | "libkrun"' required>
+  Backend used by the source VM.
 </ResponseField>
 
-<ResponseField name="mem_file_path" type="Path" required>
-  Path to the saved memory dump (`mem.bin`).
+<ResponseField name="snapshot_type" type='SnapshotType' default="SnapshotType.FULL">
+  Snapshot type. Values are `"full"`, `"diff"`, and `"disk"`.
 </ResponseField>
 
-<ResponseField name="disk_path" type="Path" required>
-  Path to the saved root filesystem copy (`disk.ext4`).
+<ResponseField name="artifacts" type="SnapshotArtifacts" required>
+  Files saved for this snapshot.
+
+  <Expandable title="Snapshot artifact fields">
+    <ResponseField name="state_path" type="Path | None">
+      VM state file path when the snapshot type/backend writes one.
+    </ResponseField>
+
+    <ResponseField name="memory_path" type="Path | None">
+      Guest memory file path when the snapshot type/backend writes one.
+    </ResponseField>
+
+    <ResponseField name="disk_path" type="Path">
+      Saved disk artifact path.
+    </ResponseField>
+  </Expandable>
 </ResponseField>
 
 <ResponseField name="vm_config" type="VMConfig" required>
-  The full VM configuration at the time of the snapshot. Used during restore to recreate the VM with the same settings.
+  VM configuration captured at snapshot time.
 </ResponseField>
 
 <ResponseField name="network_config" type="NetworkConfig" required>
-  The network configuration at the time of the snapshot. Used during restore to reattach the VM to its original network identity.
+  Network configuration captured at snapshot time.
 </ResponseField>
 
 <ResponseField name="created_at" type="datetime" required>
-  UTC timestamp of when the snapshot was created.
+  UTC timestamp when the snapshot was created.
 </ResponseField>
 
 <ResponseField name="restored" type="bool" default="false">
-  Whether this snapshot has been restored at least once.
+  Whether this snapshot has already been restored.
 </ResponseField>
 
 <ResponseField name="restored_vm_id" type="string | None" default="None">
-  The VM ID of the most recently restored instance, if any.
+  VM ID of the most recently restored instance, if any.
 </ResponseField>
 
-## Usage
-
-### Creating a snapshot
+## Example
 
 ```python  theme={null}
 from smolvm import SmolVM
 
-vm = SmolVM()
-vm.start()
+with SmolVM(backend="qemu") as vm:
+    snapshot = vm.snapshot(
+        snapshot_id="filesystem-checkpoint",
+        snapshot_type="disk",
+        resume_source=True,
+    )
 
-snapshot = vm.snapshot(snapshot_id="my-checkpoint")
-print(f"ID: {snapshot.snapshot_id}")
-print(f"Source VM: {snapshot.vm_id}")
-print(f"Created: {snapshot.created_at}")
-print(f"Disk path: {snapshot.disk_path}")
-
-vm.close()
-```
-
-### Listing snapshots
-
-```python  theme={null}
-from smolvm import SmolVMManager
-
-with SmolVMManager() as sdk:
-    snapshots = sdk.list_snapshots()
-    for snap in snapshots:
-        status = "restored" if snap.restored else "available"
-        print(f"{snap.snapshot_id} ({status}) — from {snap.vm_id}")
-```
-
-### Restoring from a snapshot
-
-```python  theme={null}
-from smolvm import SmolVM
-
-vm = SmolVM.from_snapshot("my-checkpoint", resume_vm=True)
-print(f"Restored into: {vm.vm_id}")
-print(f"Status: {vm.status}")
-
-vm.close()
+    print(snapshot.snapshot_id)
+    print(snapshot.snapshot_type)
+    print(snapshot.artifacts.disk_path)
 ```
 
 ## Related
 
-* [`SmolVM.snapshot()`](/smolvm/api/smolvm) — Create a snapshot from a running VM
-* [`SmolVM.from_snapshot()`](/smolvm/api/smolvm) — Restore a VM from a snapshot
-* [Snapshots guide](/smolvm/guides/snapshots) — Step-by-step guide to using snapshots
-* [Exceptions](/smolvm/api/exceptions) — `SnapshotAlreadyExistsError` and `SnapshotNotFoundError`
+* [`SmolVM.snapshot()`](/smolvm/api/smolvm#snapshot) - Create a snapshot from a VM
+* [`SmolVM.from_snapshot()`](/smolvm/api/smolvm#from_snapshot) - Restore a VM from a snapshot
+* [Snapshots guide](/smolvm/guides/snapshots) - Choose between full, diff, and disk snapshots

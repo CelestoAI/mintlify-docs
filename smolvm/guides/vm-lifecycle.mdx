@@ -267,22 +267,29 @@ For persistent sandboxes that survive across Python sessions:
 <Steps>
   <Step title="Create a VM with a stable ID">
     ```python  theme={null}
-    from smolvm import SmolVM, VMConfig
-    from smolvm.build import ImageBuilder, SSH_BOOT_ARGS
+    from smolvm import BootImage, DirectKernelBoot, ImageBuilder, SmolVM
 
     builder = ImageBuilder()
     kernel, rootfs = builder.build_alpine_ssh()
 
-    config = VMConfig(
-        vm_id="persistent-agent-vm",  # Stable, reusable ID
-        vcpu_count=2,
-        mem_size_mib=2048,
-        kernel_path=kernel,
+    image = BootImage(
+        name="persistent-agent",
         rootfs_path=rootfs,
-        boot_args=SSH_BOOT_ARGS,
+        rootfs_format="raw-ext4",
+        kernel_path=kernel,
+        boot=DirectKernelBoot(),
+        backend="firecracker",
+        ssh_capable=True,
     )
 
-    vm = SmolVM(config)
+    vm = SmolVM.from_image(
+        image,
+        vm_id="persistent-agent-vm",  # Stable, reusable ID
+        backend="firecracker",
+        vcpus=2,
+        memory_mb=2048,
+        ssh_password="smolvm",
+    )
     vm.start()
     print(f"Created persistent VM: {vm.vm_id}")
     vm.close()  # Release SDK resources, keep VM running

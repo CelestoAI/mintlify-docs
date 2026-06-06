@@ -1,0 +1,90 @@
+---
+title: "DirectKernelBoot"
+description: "Render backend-specific kernel arguments for direct-kernel custom images"
+---
+
+`DirectKernelBoot` builds the kernel command line for images where the hypervisor loads the guest kernel directly. Use it with `BootImage` when your root filesystem is a raw ext4 image that boots with a SmolVM-compatible kernel.
+
+## Constructor
+
+```python  theme={null}
+DirectKernelBoot(
+    root: str = "/dev/vda",
+    init: str | None = "/init",
+    rw: bool = True,
+    console: Literal["serial", "none"] = "serial",
+    panic: int = 1,
+    reboot: str = "k",
+    safe_trims: bool = True,
+    quiet: bool | None = None,
+    extra_args: tuple[str, ...] = (),
+)
+```
+
+<ParamField path="root" type="str" default='"/dev/vda"'>
+  Guest block device that contains the root filesystem.
+</ParamField>
+
+<ParamField path="init" type="str | None" default='"/init"'>
+  Init process path passed to the kernel. Use `None` if the image should use the kernel's default init search path.
+</ParamField>
+
+<ParamField path="rw" type="bool" default="True">
+  Mount the root filesystem read-write when `True`; otherwise mount it read-only.
+</ParamField>
+
+<ParamField path="console" type='"serial" | "none"' default='"serial"'>
+  Add the backend-correct serial console argument. Use `"none"` to omit console configuration.
+</ParamField>
+
+<ParamField path="panic" type="int" default="1">
+  Kernel panic timeout. Must be zero or greater.
+</ParamField>
+
+<ParamField path="reboot" type="str" default='"k"'>
+  Kernel reboot behavior.
+</ParamField>
+
+<ParamField path="safe_trims" type="bool" default="True">
+  Include SmolVM's safe kernel command-line trim arguments.
+</ParamField>
+
+<ParamField path="quiet" type="bool | None" default="None">
+  Control quiet boot logging when safe trim arguments are enabled.
+</ParamField>
+
+<ParamField path="extra_args" type="tuple[str, ...]" default="()">
+  Extra kernel arguments appended after SmolVM-rendered arguments.
+</ParamField>
+
+## Example
+
+```python  theme={null}
+from smolvm import BootImage, DirectKernelBoot
+
+image = BootImage(
+    name="worker",
+    rootfs_path="/var/lib/images/worker.ext4",
+    rootfs_format="raw-ext4",
+    kernel_path="/var/lib/kernels/vmlinux",
+    boot=DirectKernelBoot(
+        init="/init",
+        extra_args=("smolvm.role=worker",),
+    ),
+    backend="firecracker",
+)
+```
+
+`DirectKernelBoot.render(backend=..., arch=...)` handles backend details such as `pci=off` for Firecracker and the correct serial console for QEMU on arm64.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="BootImage" icon="hard-drive" href="/smolvm/api/bootimage">
+    Use `DirectKernelBoot` in a custom image descriptor.
+  </Card>
+
+  <Card title="Custom images" icon="book-open" href="/smolvm/guides/custom-images">
+    Build and launch custom images.
+  </Card>
+</CardGroup>

@@ -26,15 +26,13 @@ from smolvm import InternetSettings
 ### Allow specific domains
 
 ```python
-from smolvm import SmolVM, VMConfig, InternetSettings
+from smolvm import InternetSettings, SmolVM
 
-config = VMConfig(
-    internet=InternetSettings(
-        allowed_domains=["api.openai.com", "api.anthropic.com"]
-    )
+settings = InternetSettings(
+    allowed_domains=["api.openai.com", "api.anthropic.com"]
 )
 
-with SmolVM(config=config) as vm:
+with SmolVM(internet_settings=settings) as vm:
     # This works:
     vm.run("curl -s https://api.openai.com/v1/models")
 
@@ -45,19 +43,17 @@ with SmolVM(config=config) as vm:
 ### Agent with restricted internet
 
 ```python
-from smolvm import SmolVM, InternetSettings, VMConfig
+from smolvm import InternetSettings, SmolVM
 
-config = VMConfig(
-    internet=InternetSettings(
-        allowed_domains=[
-            "api.github.com",
-            "pypi.org",
-            "files.pythonhosted.org",
-        ]
-    )
+settings = InternetSettings(
+    allowed_domains=[
+        "api.github.com",
+        "pypi.org",
+        "files.pythonhosted.org",
+    ]
 )
 
-with SmolVM(config=config) as vm:
+with SmolVM(internet_settings=settings) as vm:
     vm.run("pip install requests")  # allowed (pypi.org)
 ```
 

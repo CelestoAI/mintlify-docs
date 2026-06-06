@@ -12,8 +12,7 @@ Variables are written to `/etc/profile.d/smolvm_env.sh` inside the guest and aut
 Set environment variables when creating a VM:
 
 ```python  theme={null}
-from smolvm import SmolVM, VMConfig
-from smolvm.build import ImageBuilder, SSH_BOOT_ARGS
+from smolvm import ImageBuilder, SmolVM, SSH_BOOT_ARGS, VMConfig
 
 builder = ImageBuilder()
 kernel, rootfs = builder.build_alpine_ssh()
@@ -21,10 +20,13 @@ kernel, rootfs = builder.build_alpine_ssh()
 config = VMConfig(
     vm_id="env-vm",
     vcpu_count=1,
-    mem_size_mib=512,
+    memory=512,
     kernel_path=kernel,
     rootfs_path=rootfs,
+    rootfs_format="raw-ext4",
     boot_args=SSH_BOOT_ARGS,
+    backend="firecracker",
+    ssh_capable=True,
     env_vars={  # Variables injected after boot
         "APP_MODE": "production",
         "DATABASE_URL": "postgres://localhost:5432/mydb",
@@ -32,7 +34,7 @@ config = VMConfig(
     },
 )
 
-with SmolVM(config) as vm:
+with SmolVM(config, ssh_password="smolvm") as vm:
     # Variables are automatically injected during start()
     result = vm.run("echo $APP_MODE")
     print(result.output)  # "production"
@@ -48,7 +50,7 @@ When `env_vars` is set in `VMConfig`:
 4. All subsequent login shells source these variables
 
 <Note>
-  Environment variable injection requires an SSH-capable image. Use `ImageBuilder` or auto-config mode to ensure your image supports this feature.
+  Environment variable injection requires an SSH-capable image. Use auto-config mode, `ImageBuilder`, or a `BootImage` with `ssh_capable=True`.
 </Note>
 
 ## Setting variables at runtime
@@ -188,8 +190,7 @@ You can forward environment variables from your host machine into the sandbox. T
 
 ```python  theme={null}
 import os
-from smolvm import SmolVM, VMConfig
-from smolvm.build import ImageBuilder, SSH_BOOT_ARGS
+from smolvm import ImageBuilder, SmolVM, SSH_BOOT_ARGS, VMConfig
 
 def collect_host_env() -> dict[str, str]:
     """Collect API keys from host environment."""
@@ -209,14 +210,17 @@ kernel, rootfs = builder.build_alpine_ssh()
 config = VMConfig(
     vm_id="host-env-vm",
     vcpu_count=1,
-    mem_size_mib=512,
+    memory=512,
     kernel_path=kernel,
     rootfs_path=rootfs,
+    rootfs_format="raw-ext4",
     boot_args=SSH_BOOT_ARGS,
+    backend="firecracker",
+    ssh_capable=True,
     env_vars=collect_host_env(),  # Inject host environment
 )
 
-with SmolVM(config) as vm:
+with SmolVM(config, ssh_password="smolvm") as vm:
     result = vm.run("env | grep API_KEY")
     print(result.output)
 ```

@@ -86,7 +86,7 @@ The `smolvm doctor` command validates:
     You can also check Docker status programmatically before building:
 
     ```python  theme={null}
-    from smolvm.build import ImageBuilder
+    from smolvm import ImageBuilder
 
     builder = ImageBuilder()
     if not builder.check_docker():
@@ -228,13 +228,13 @@ The `smolvm doctor` command validates:
     cat ~/.local/state/smolvm/vm-xxxxx.log
     ```
 
-    5. Increase SSH timeout:
+    5. Increase boot timeout:
 
     ```python  theme={null}
-    from smolvm import SmolVM, VMConfig
+    from smolvm import SmolVM
 
-    config = VMConfig(ssh_timeout=60.0)  # Increase from default 30s
-    vm = SmolVM(config)
+    vm = SmolVM()
+    vm.start(boot_timeout=60.0)
     ```
   </Accordion>
 

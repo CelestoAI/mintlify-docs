@@ -20,7 +20,7 @@ The whole cycle — boot, run, teardown — takes about 3.5 seconds on typical h
 ```python
 from smolvm import SmolVM
 
-with SmolVM(mem_size_mib=2048) as vm:
+with SmolVM(memory=2048) as vm:
     result = vm.run("free -m")
     print(result.stdout)
 # Sandbox automatically stopped and cleaned up
@@ -56,7 +56,7 @@ SmolVM tracks sandbox metadata, network assignments, and process state in a loca
 
 ### Image builder
 
-Builds Alpine Linux root filesystems with SSH pre-configured. You can also [create custom images](/smolvm/guides/custom-images) with your own tools and dependencies baked in.
+Builds or describes root filesystem images that can be launched as sandboxes. Use [custom images](/smolvm/guides/custom-images) when you want your own packages, init process, disk format, or boot mode.
 
 ## Resource defaults
 
@@ -69,7 +69,7 @@ Builds Alpine Linux root filesystems with SSH pre-configured. You can also [crea
 
 ```python
 # Customize resources
-with SmolVM(mem_size_mib=2048, disk_size_mib=4096) as vm:
+with SmolVM(memory=2048, disk_size=4096) as vm:
     vm.run("echo 'more room to work'")
 ```
 

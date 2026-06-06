@@ -1,0 +1,129 @@
+---
+title: "BootImage"
+description: "Describe a bootable root filesystem image before launching it with SmolVM"
+---
+
+`BootImage` describes a root filesystem image that SmolVM can launch later. Use it when you already have an image file, or when a builder returns an image description for `SmolVM.from_image()`.
+
+## Constructor
+
+```python  theme={null}
+BootImage(
+    name: str,
+    rootfs_path: Path,
+    rootfs_format: Literal["raw-ext4", "qcow2"],
+    kernel_path: Path | None = None,
+    initrd_path: Path | None = None,
+    boot: DirectKernelBoot | FirmwareBoot | None = None,
+    boot_args: str | None = None,
+    backend: Literal["firecracker", "qemu", "libkrun"] | None = None,
+    arch: Literal["amd64", "arm64"] | None = None,
+    ssh_capable: bool = False,
+)
+```
+
+<ParamField path="name" type="str" required>
+  Human-readable image name. Blank names are rejected.
+</ParamField>
+
+<ParamField path="rootfs_path" type="Path" required>
+  Path to the root filesystem image. The path must exist and point to a file.
+</ParamField>
+
+<ParamField path="rootfs_format" type='"raw-ext4" | "qcow2"' required>
+  Declared disk format. Use `"raw-ext4"` for raw ext4 images and `"qcow2"` for QEMU qcow2 images.
+</ParamField>
+
+<ParamField path="kernel_path" type="Path | None" default="None">
+  Path to the kernel image for direct-kernel boot. Leave this empty for firmware images.
+</ParamField>
+
+<ParamField path="initrd_path" type="Path | None" default="None">
+  Optional initrd image for direct-kernel boot.
+</ParamField>
+
+<ParamField path="boot" type="DirectKernelBoot | FirmwareBoot | None" default="None">
+  Boot description. Use `DirectKernelBoot` for Firecracker, libkrun, and microVM-style QEMU. Use `FirmwareBoot` for QEMU images with their own bootloader or guest kernel.
+</ParamField>
+
+<ParamField path="boot_args" type="str | None" default="None">
+  Explicit kernel command line for direct-kernel boot. Mutually exclusive with `boot`.
+</ParamField>
+
+<ParamField path="backend" type='"firecracker" | "qemu" | "libkrun" | None' default="None">
+  Preferred runtime backend for this image. Firmware images require `backend="qemu"` if a backend is set.
+</ParamField>
+
+<ParamField path="arch" type='"amd64" | "arm64" | None' default="None">
+  Architecture the image was built for. If omitted, callers can resolve it at launch time.
+</ParamField>
+
+<ParamField path="ssh_capable" type="bool" default="False">
+  Whether the guest is expected to accept SSH connections after boot.
+</ParamField>
+
+<Warning>
+  `BootImage` does not install SSH, start a guest agent, resize disks, or create network devices. It only describes image artifacts and boot metadata.
+</Warning>
+
+## Direct-kernel example
+
+```python  theme={null}
+from pathlib import Path
+
+from smolvm import BootImage, DirectKernelBoot, SmolVM, ensure_base_kernel_for_backend
+
+image = BootImage(
+    name="alpine-tools",
+    rootfs_path=Path("/var/lib/smolvm/images/alpine-tools/rootfs.ext4"),
+    rootfs_format="raw-ext4",
+    kernel_path=ensure_base_kernel_for_backend("qemu"),
+    boot=DirectKernelBoot(),
+    backend="qemu",
+    ssh_capable=True,
+)
+
+with SmolVM.from_image(image, backend="qemu", ssh_password="smolvm") as vm:
+    print(vm.run("whoami").output)
+```
+
+## Firmware example
+
+```python  theme={null}
+from pathlib import Path
+
+from smolvm import BootImage, FirmwareBoot, SmolVM
+
+image = BootImage(
+    name="ubuntu-cloud",
+    rootfs_path=Path("/var/lib/smolvm/images/ubuntu.qcow2"),
+    rootfs_format="qcow2",
+    boot=FirmwareBoot(),
+    backend="qemu",
+    ssh_capable=True,
+)
+
+with SmolVM.from_image(image, backend="qemu", network="slirp") as vm:
+    print(vm.status)
+```
+
+## Validation rules
+
+- `rootfs_path`, `kernel_path`, and `initrd_path` must point to existing files when set.
+- Direct-kernel images must provide either `boot` or `boot_args`.
+- `boot` and `boot_args` are mutually exclusive.
+- Firmware images must not set `kernel_path`, `initrd_path`, or `boot_args`.
+- Firmware images require QEMU if a backend is declared.
+- Unknown fields are rejected.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="SmolVM.from_image" icon="box-open" href="/smolvm/api/smolvm#from_image">
+    Launch a `BootImage` as a sandbox.
+  </Card>
+
+  <Card title="DockerRootfsBuilder" icon="cube" href="/smolvm/api/dockerrootfsbuilder">
+    Build a `BootImage` from a Dockerfile.
+  </Card>
+</CardGroup>

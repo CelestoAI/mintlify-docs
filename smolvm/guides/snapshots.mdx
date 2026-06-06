@@ -1,90 +1,112 @@
 ---
 title: "Snapshots"
-description: "Save and restore the full state of a running sandbox so you can resume it later"
+description: "Save and restore sandbox disk or runtime state so you can recover later"
 ---
 
-Snapshots let you freeze a running sandbox and bring it back exactly where you left off. This is useful when you want to save a configured environment, retry a failed step, or checkpoint an agent's progress before a risky operation.
+Snapshots let you save a sandbox and restore it later. Use them when you want to checkpoint work, retry a risky step, or preserve a configured environment without rebuilding it.
 
-A snapshot captures the full state of the VM: CPU registers, memory contents, and the root filesystem disk. When you restore a snapshot, the sandbox boots into the exact same state it was in when the snapshot was created.
+## Snapshot types
+
+SmolVM supports three snapshot types.
+
+| Type | What it stores | Restore behavior | Best for |
+| --- | --- | --- | --- |
+| `"full"` | Self-contained disk plus runtime state when the backend supports it | Restores without depending on the original base image | General checkpoints |
+| `"diff"` | Changed disk data relative to the base image | Depends on the original base image staying present | Smaller local snapshots |
+| `"disk"` | Self-contained disk only on QEMU | Boots fresh from the saved disk instead of resuming memory | Suspend/restore across hosts, filesystem checkpoints |
 
 <Note>
-  Snapshots are available on the **Firecracker** backend (Linux only). The QEMU backend does not currently support SmolVM snapshots.
+  QEMU disk snapshots with `snapshot_type="disk"` skip the guest RAM dump. That makes them faster and smaller, but restore starts as a cold boot from the saved disk.
 </Note>
-
-## When to use snapshots
-
-- **Checkpoint before risky operations** — Save state before an agent runs untrusted code, so you can roll back if something goes wrong.
-- **Reuse a configured environment** — Set up a sandbox with the right packages and files, snapshot it, and restore it multiple times instead of repeating setup.
-- **Speed up agent workflows** — Skip boot and configuration time by restoring from a ready-to-go snapshot.
 
 ## Create a snapshot
 
-To create a snapshot, the VM must be running or paused. SmolVM pauses the VM during snapshot creation and optionally resumes it afterward.
+To create a snapshot, the VM must be running or paused. SmolVM pauses the VM while it takes the snapshot.
 
 <Tabs>
-  <Tab title="Python SDK">
+  <Tab title="Python">
     ```python  theme={null}
     from smolvm import SmolVM
 
-    vm = SmolVM()
-    vm.start()
+    with SmolVM(backend="qemu") as vm:
+        vm.run("apk add --no-cache python3")
 
-    # Install packages and configure the environment
-    vm.run("apk add python3 py3-pip")
-    vm.run("pip install requests")
+        snapshot = vm.snapshot(
+            snapshot_id="python-ready",
+            snapshot_type="disk",
+            resume_source=True,
+        )
 
-    # Save the current state
-    snapshot = vm.snapshot(snapshot_id="my-checkpoint")
-    print(f"Snapshot created: {snapshot.snapshot_id}")
-
-    vm.close()
+        print(snapshot.snapshot_id)
     ```
-
-    By default, the VM stays paused after a snapshot. Pass `resume_source=True` to keep working with it:
-
-    ```python  theme={null}
-    snapshot = vm.snapshot(
-        snapshot_id="my-checkpoint",
-        resume_source=True,
-    )
-    # VM is still running — you can continue using it
-    result = vm.run("echo 'still running'")
-    ```
-
-    If you omit `snapshot_id`, SmolVM generates one automatically (for example, `snap-my-vm-1717012345`).
   </Tab>
 
   <Tab title="CLI">
     ```bash  theme={null}
-    smolvm snapshot create my-vm --snapshot-id my-checkpoint
+    smolvm snapshot create my-vm \
+      --snapshot-id python-ready \
+      --snapshot-type disk \
+      --resume-source
     ```
-
-    To keep the source VM running after the snapshot:
-
-    ```bash  theme={null}
-    smolvm snapshot create my-vm --snapshot-id my-checkpoint --resume-source
-    ```
-
-    If you skip `--snapshot-id`, SmolVM generates a unique name automatically.
   </Tab>
 </Tabs>
 
+If you omit `snapshot_id`, SmolVM generates one for you.
+
+## Choose a snapshot type
+
+### Full snapshots
+
+Use `"full"` when you want the most portable snapshot for normal restore workflows.
+
+```python  theme={null}
+snapshot = vm.snapshot(
+    snapshot_id="before-upgrade",
+    snapshot_type="full",
+)
+```
+
+### Diff snapshots
+
+Use `"diff"` when local disk usage matters and the original base image will stay available.
+
+```python  theme={null}
+snapshot = vm.snapshot(
+    snapshot_id="small-checkpoint",
+    snapshot_type="diff",
+)
+```
+
+<Warning>
+  A diff snapshot depends on its original base image. If that base image is deleted or moved, restore can fail.
+</Warning>
+
+### Disk-only snapshots
+
+Use `"disk"` when you only need filesystem state and a fresh boot is acceptable.
+
+```python  theme={null}
+snapshot = vm.snapshot(
+    snapshot_id="filesystem-state",
+    snapshot_type="disk",
+)
+```
+
+Disk-only snapshots are especially useful for QEMU sandboxes because they avoid saving guest RAM through QMP.
+
 ## Restore a snapshot
 
-Restoring a snapshot recreates the original VM with the saved state. The restored VM starts in a paused state by default.
+Restoring a snapshot recreates the original VM from the saved state.
 
 <Tabs>
-  <Tab title="Python SDK">
+  <Tab title="Python">
     ```python  theme={null}
     from smolvm import SmolVM
 
-    # Restore and resume the VM in one step
-    vm = SmolVM.from_snapshot("my-checkpoint", resume_vm=True)
-    print(f"Restored VM: {vm.vm_id}")
-    print(f"Status: {vm.status}")  # VMState.RUNNING
+    vm = SmolVM.from_snapshot("python-ready", resume_vm=True)
+    print(vm.status)
 
-    # The VM is back exactly where it was
-    result = vm.run("python3 -c 'import requests; print(requests.__version__)'")
+    result = vm.run("python3 --version")
     print(result.output)
 
     vm.close()
@@ -93,23 +115,23 @@ Restoring a snapshot recreates the original VM with the saved state. The restore
 
   <Tab title="CLI">
     ```bash  theme={null}
-    smolvm snapshot restore my-checkpoint --resume
+    smolvm snapshot restore python-ready --resume
     ```
   </Tab>
 </Tabs>
 
-A snapshot can only be restored once by default. If you need to restore the same snapshot again, use the `force` flag:
+A snapshot can only be restored once by default. Use `force=True` or `--force` when you intentionally want to restore the same snapshot again.
 
 <Tabs>
-  <Tab title="Python SDK">
+  <Tab title="Python">
     ```python  theme={null}
-    vm = SmolVM.from_snapshot("my-checkpoint", resume_vm=True, force=True)
+    vm = SmolVM.from_snapshot("python-ready", resume_vm=True, force=True)
     ```
   </Tab>
 
   <Tab title="CLI">
     ```bash  theme={null}
-    smolvm snapshot restore my-checkpoint --resume --force
+    smolvm snapshot restore python-ready --resume --force
     ```
   </Tab>
 </Tabs>
@@ -117,20 +139,14 @@ A snapshot can only be restored once by default. If you need to restore the same
 ## List snapshots
 
 <Tabs>
-  <Tab title="Python SDK">
+  <Tab title="Python">
     ```python  theme={null}
     from smolvm import SmolVMManager
 
-    with SmolVMManager() as sdk:
-        snapshots = sdk.list_snapshots()
-        for snap in snapshots:
-            print(f"{snap.snapshot_id}  vm={snap.vm_id}  restored={snap.restored}")
-    ```
-
-    Filter by source VM:
-
-    ```python  theme={null}
-    snapshots = sdk.list_snapshots(vm_id="my-vm")
+    with SmolVMManager() as manager:
+        snapshots = manager.list_snapshots()
+        for snapshot in snapshots:
+            print(snapshot.snapshot_id, snapshot.snapshot_type)
     ```
   </Tab>
 
@@ -138,120 +154,62 @@ A snapshot can only be restored once by default. If you need to restore the same
     ```bash  theme={null}
     smolvm snapshot list
     ```
-
-    Filter by VM:
-
-    ```bash  theme={null}
-    smolvm snapshot list --vm-id my-vm
-    ```
   </Tab>
 </Tabs>
 
 ## Delete a snapshot
 
-Deleting a snapshot removes the saved state files and metadata. You cannot delete a snapshot while a restored VM from that snapshot is still running.
+Deleting a snapshot removes the saved files and metadata.
 
 <Tabs>
-  <Tab title="Python SDK">
+  <Tab title="Python">
     ```python  theme={null}
     from smolvm import SmolVMManager
 
-    with SmolVMManager() as sdk:
-        sdk.delete_snapshot("my-checkpoint")
+    with SmolVMManager() as manager:
+        manager.delete_snapshot("python-ready")
     ```
   </Tab>
 
   <Tab title="CLI">
     ```bash  theme={null}
-    smolvm snapshot delete my-checkpoint
+    smolvm snapshot delete python-ready
     ```
   </Tab>
 </Tabs>
 
 <Warning>
-  Deleting a snapshot is permanent. The saved VM state, memory dump, and disk copy are removed and cannot be recovered.
+  Do not delete a snapshot while a restored VM from that snapshot is still running.
 </Warning>
 
-## Full example: checkpoint and retry
+## Backend notes
 
-This example shows how an agent can checkpoint a sandbox before running untrusted code, then roll back if something fails.
-
-```python  theme={null}
-from smolvm import SmolVM, SmolVMError
-
-# Set up a sandbox
-vm = SmolVM()
-vm.start()
-vm.run("apk add python3")
-
-# Checkpoint before the risky step
-snapshot = vm.snapshot(snapshot_id="before-experiment")
-vm.close()
-
-# Restore and try the experiment
-vm = SmolVM.from_snapshot("before-experiment", resume_vm=True)
-result = vm.run("python3 -c 'import this_will_fail'")
-
-if not result.ok:
-    print("Experiment failed — rolling back")
-    vm.stop()
-    vm.delete()
-
-    # Restore from checkpoint and try a different approach
-    vm = SmolVM.from_snapshot("before-experiment", resume_vm=True, force=True)
-    result = vm.run("python3 -c 'print(42)'")
-    print(result.output)  # 42
-
-vm.close()
-```
-
-## Snapshot ID rules
-
-Snapshot IDs must contain only lowercase letters, numbers, and hyphens. SmolVM validates this on creation and raises an error for invalid IDs.
-
-Valid examples: `my-checkpoint`, `snap-agent-001`, `pre-deploy-v2`
+- QEMU supports disk-only snapshots that skip guest RAM and cold-boot on restore.
+- QEMU full snapshots preserve runtime state inside the copied qcow2 snapshot data.
+- Firecracker snapshots capture Firecracker VM state and guest memory; use `"diff"` to reduce disk copy size when the base image can stay available.
+- Snapshots are not supported for VMs with workspace mounts.
 
 ## Error handling
 
-SmolVM provides specific exceptions for snapshot operations:
-
 ```python  theme={null}
-from smolvm import (
-    SmolVM,
-    SnapshotAlreadyExistsError,
-    SnapshotNotFoundError,
-    SmolVMError,
-)
-
-try:
-    snapshot = vm.snapshot(snapshot_id="my-checkpoint")
-except SnapshotAlreadyExistsError:
-    print("A snapshot with this ID already exists")
-except SmolVMError as e:
-    print(f"Snapshot failed: {e.message}")
+from smolvm import SmolVM, SnapshotNotFoundError, SmolVMError
 
 try:
     vm = SmolVM.from_snapshot("missing-snapshot")
 except SnapshotNotFoundError:
-    print("Snapshot not found")
+    print("Snapshot does not exist")
+except SmolVMError as exc:
+    print(f"Restore failed: {exc}")
 ```
 
 ## Next steps
 
 <CardGroup cols={2}>
-  <Card title="Snapshot CLI reference" icon="terminal" href="/smolvm/cli/snapshot">
-    Full list of snapshot CLI commands and options
+  <Card title="VM lifecycle" icon="circle-play" href="/smolvm/guides/vm-lifecycle">
+    Learn how snapshots fit into create, pause, resume, and delete flows.
   </Card>
 
-  <Card title="SnapshotInfo API" icon="code" href="/smolvm/api/snapshotinfo">
-    Snapshot metadata returned by the SDK
-  </Card>
-
-  <Card title="VM lifecycle" icon="arrows-rotate" href="/smolvm/guides/vm-lifecycle">
-    Understand the full sandbox lifecycle
-  </Card>
-
-  <Card title="AI agent integration" icon="robot" href="/smolvm/guides/ai-agent-integration">
-    Build secure agent sandboxes with checkpointing
+  <Card title="Technical architecture" icon="diagram-project" href="/smolvm/advanced/architecture">
+    See how SmolVM manages disks and snapshot artifacts.
   </Card>
 </CardGroup>

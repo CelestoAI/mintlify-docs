@@ -1,323 +1,230 @@
 ---
 title: "VMConfig"
-description: "Configuration model for creating a microVM with resource allocation, disk settings, and boot parameters"
+description: "Configure CPU, memory, boot mode, disk format, networking, and disk lifecycle for a SmolVM sandbox"
 ---
 
-## Overview
+`VMConfig` is the low-level configuration model for a sandbox. Most users can start with `SmolVM(...)` or `SmolVM.from_image(...)`; use `VMConfig` when you need direct control over boot paths, disk lifecycle, or runtime backend settings.
 
-`VMConfig` is a Pydantic model that defines the configuration for creating a microVM. It specifies CPU, memory, kernel, rootfs, and other runtime settings.
-
-## Model Definition
+## Model
 
 ```python  theme={null}
 class VMConfig(BaseModel)
 ```
 
-All VMConfig instances are immutable (frozen) after creation.
+`VMConfig` is immutable and rejects unknown fields.
 
-## Fields
+## Core fields
 
 <ParamField path="vm_id" type="str" default="auto-generated">
-  Unique identifier for the VM. Must be lowercase alphanumeric with hyphens or underscores, matching the pattern `^[a-z0-9][a-z0-9_-]{0,62}[a-z0-9]$` or a single character `^[a-z0-9]$`.
-
-  If omitted or explicitly set to `None`, SmolVM auto-generates an ID in the format `vm-<8-char-hex>` (for example, `vm-a1b2c3d4`).
+  Unique sandbox ID. If omitted, SmolVM generates one.
 </ParamField>
 
 <ParamField path="vcpu_count" type="int" default="2">
   Number of virtual CPUs. Valid range: 1-32.
 </ParamField>
 
-<ParamField path="mem_size_mib" type="int" default="512">
-  Memory size in MiB (mebibytes). Valid range: 128-16384.
+<ParamField path="memory" type="int" default="512">
+  Guest memory in MiB. Valid range: 128-16384.
 </ParamField>
 
-<ParamField path="kernel_path" type="Path" required>
-  Path to the kernel image file. The path must exist and point to a valid file.
-</ParamField>
-
-<ParamField path="rootfs_path" type="Path" required>
-  Path to the root filesystem image. The path must exist and point to a valid file.
-</ParamField>
-
-<ParamField path="boot_args" type="str" default="console=ttyS0 reboot=k panic=1 pci=off">
-  Kernel boot arguments. For SSH-capable VMs built with ImageBuilder, include `init=/init`.
+<ParamField path="guest_os" type="GuestOS" default="GuestOS.ALPINE">
+  Guest operating system metadata.
 </ParamField>
 
 <ParamField path="backend" type="str | None" default="None">
-  Runtime backend override. Valid options:
-
-  * `"firecracker"`: Use Firecracker VMM
-  * `"qemu"`: Use QEMU
-  * `None` or `"auto"`: Auto-detect based on host capabilities
+  Runtime backend override. Options are `"firecracker"`, `"qemu"`, `"libkrun"`, or `None`.
 </ParamField>
 
-<ParamField path="disk_mode" type="Literal['isolated', 'shared']" default="isolated">
-  Disk lifecycle mode:
+## Boot fields
 
-  * `"isolated"`: Clone rootfs per VM for sandbox isolation. Each VM gets its own copy.
-  * `"shared"`: Boot directly from `rootfs_path`. Multiple VMs can share the same disk image.
+<ParamField path="boot_mode" type='"direct_kernel" | "firmware"' default='"direct_kernel"'>
+  How the guest boots.
+
+  - `"direct_kernel"`: the backend loads `kernel_path` directly and passes `boot_args`.
+  - `"firmware"`: QEMU boots the disk through firmware. The guest kernel lives inside `rootfs_path`.
 </ParamField>
 
-<ParamField path="retain_disk_on_delete" type="bool" default="False">
-  Whether to keep the isolated VM disk after deletion. When `True`, a later create operation with the same VM ID can reuse prior disk state.
-
-  Only applies when `disk_mode="isolated"`.
+<ParamField path="kernel_path" type="Path | None" default="None">
+  Kernel image path. Required for `boot_mode="direct_kernel"` and forbidden for `boot_mode="firmware"`.
 </ParamField>
 
-<ParamField path="env_vars" type="dict[str, str]" default="{}">
-  Environment variables to inject into the guest after boot via SSH. Keys must be valid shell identifiers (matching `^[a-zA-Z_][a-zA-Z0-9_]*$`).
-
-  Variables are persisted in `/etc/profile.d/smolvm_env.sh` and affect new SSH sessions/login shells.
-
-  Requires an SSH-capable image (boot args must contain `init=/init`).
+<ParamField path="initrd_path" type="Path | None" default="None">
+  Optional initrd image path.
 </ParamField>
 
-<ParamField path="network_rate_limit_mbps" type="int | None" default="None">
-  Optional network bandwidth limit in megabits per second. When set, SmolVM caps the guest's outbound traffic to this rate. Must be at least 1.
+<ParamField path="rootfs_path" type="Path" required>
+  Root filesystem image path. The path must exist and point to a file.
 </ParamField>
 
-<ParamField path="port_forwards" type="list[PortForwardConfig]" default="[]">
-  Host-to-guest TCP port forwards configured at VM launch. Each entry maps a `host_port` to a `guest_port`. Host and guest ports must be unique within the list.
-
-  ```python  theme={null}
-  from smolvm.types import PortForwardConfig
-
-  port_forwards=[
-      PortForwardConfig(host_port=8080, guest_port=80),
-      PortForwardConfig(host_port=3000, guest_port=3000),
-  ]
-  ```
+<ParamField path="rootfs_format" type='"raw-ext4" | "qcow2" | None' default="None">
+  Declared root filesystem format. New configs should set this to `"raw-ext4"` or `"qcow2"`.
 </ParamField>
 
 <ParamField path="extra_drives" type="list[Path]" default="[]">
-  Additional block-device image paths to attach at boot. Each path must exist and point to a valid file.
+  Additional block-device image paths to attach at boot.
 </ParamField>
 
-## Validation Rules
+<ParamField path="boot_args" type="str" default='"console=ttyS0 reboot=k panic=1 pci=off"'>
+  Kernel command line for direct-kernel boot. Ignored in firmware mode.
+</ParamField>
 
-### Path Validation
+<ParamField path="ssh_capable" type="bool" default="False">
+  Whether this boot path is expected to start SSH without relying on SmolVM auto-config.
+</ParamField>
 
-Both `kernel_path` and `rootfs_path` are validated to ensure:
+<ParamField path="ssh_public_key" type="str | None" default="None">
+  OpenSSH public key to pass to SmolVM-ready images at first boot.
+</ParamField>
 
-1. The path exists on the filesystem
-2. The path points to a file (not a directory)
+## Disk lifecycle fields
 
-Validation occurs during model instantiation.
+<ParamField path="disk_mode" type='"isolated" | "shared"' default='"isolated"'>
+  Disk lifecycle mode.
 
-### Environment Variable Validation
+  - `"isolated"`: create a per-VM disk from `rootfs_path`.
+  - `"shared"`: boot directly from `rootfs_path`.
+</ParamField>
 
-All keys in `env_vars` must be valid shell identifiers:
+<ParamField path="disk_size_mib" type="int | None" default="None">
+  Requested size for the isolated per-VM disk. SmolVM refuses to resize a shared base image.
+</ParamField>
 
-* Start with a letter or underscore
-* Contain only letters, numbers, and underscores
-* Pattern: `^[a-zA-Z_][a-zA-Z0-9_]*$`
+<ParamField path="grow_filesystem" type="bool" default="False">
+  Grow the guest filesystem after resizing when supported. This currently supports raw ext4 images.
+</ParamField>
 
-Invalid keys raise a `ValidationError` during model instantiation.
+<ParamField path="retain_disk_on_delete" type="bool" default="False">
+  Keep the isolated VM disk after deletion so a later create with the same VM ID can reuse it.
+</ParamField>
 
-### VM ID Validation
+## Network and communication fields
 
-The `vm_id` must:
+<ParamField path="qemu_network" type='"slirp" | "tap"' default='"slirp"'>
+  QEMU network mode. Ignored by non-QEMU backends.
+</ParamField>
 
-* Be lowercase
-* Start and end with alphanumeric characters
-* Contain only lowercase letters, numbers, and hyphens
-* Be 1-64 characters long
+<ParamField path="port_forwards" type="list[PortForwardConfig]" default="[]">
+  Host-to-guest TCP forwards configured at VM launch. Host and guest ports must be unique within the list.
+</ParamField>
 
-## Usage Examples
+<ParamField path="vsock" type="VsockConfig | None" default="None">
+  Optional vsock configuration.
+</ParamField>
 
-### Basic Configuration
+<ParamField path="comm_channel" type='"ssh" | "vsock" | None' default="None">
+  Host-to-guest control channel. `None` means SmolVM auto-selects when possible.
+</ParamField>
+
+<ParamField path="internet_settings" type="InternetSettings | None" default="None">
+  Internet access configuration.
+</ParamField>
+
+<ParamField path="network_rate_limit_mbps" type="int | None" default="None">
+  Optional outbound network bandwidth limit in megabits per second.
+</ParamField>
+
+<ParamField path="workspace_mounts" type="list[WorkspaceMount]" default="[]">
+  Workspace mounts exposed to the guest.
+</ParamField>
+
+<ParamField path="env_vars" type="dict[str, str]" default="{}">
+  Environment variables to inject into the guest after boot through SSH.
+</ParamField>
+
+## Direct-kernel example
 
 ```python  theme={null}
-from smolvm import VMConfig
 from pathlib import Path
 
-config = VMConfig(
-    kernel_path=Path("/path/to/vmlinux"),
-    rootfs_path=Path("/path/to/rootfs.ext4"),
-)
-
-print(config.vm_id)  # Auto-generated, e.g., "vm-a1b2c3d4"
-print(config.vcpu_count)  # 2 (default)
-print(config.mem_size_mib)  # 512 (default)
-```
-
-### Custom VM ID and Resources
-
-```python  theme={null}
-from smolvm import VMConfig
-from pathlib import Path
+from smolvm import VMConfig, ensure_base_kernel_for_backend
 
 config = VMConfig(
-    vm_id="my-custom-vm",
-    vcpu_count=4,
-    mem_size_mib=2048,
-    kernel_path=Path("/path/to/vmlinux"),
-    rootfs_path=Path("/path/to/rootfs.ext4"),
-)
-```
-
-### SSH-Capable VM with Environment Variables
-
-```python  theme={null}
-from smolvm import VMConfig, SSH_BOOT_ARGS
-from pathlib import Path
-
-config = VMConfig(
-    vm_id="api-server",
+    vm_id="worker",
     vcpu_count=2,
-    mem_size_mib=1024,
-    kernel_path=Path("/path/to/vmlinux"),
-    rootfs_path=Path("/path/to/alpine-ssh.ext4"),
-    boot_args=SSH_BOOT_ARGS,  # Includes init=/init for SSH support
-    env_vars={
-        "API_KEY": "secret-key",
-        "DATABASE_URL": "postgresql://localhost/mydb",
-        "LOG_LEVEL": "debug",
-    },
-)
-```
-
-### Shared Disk Mode
-
-```python  theme={null}
-from smolvm import VMConfig
-from pathlib import Path
-
-# Multiple VMs can boot from the same rootfs
-config = VMConfig(
-    vm_id="shared-vm-1",
-    kernel_path=Path("/path/to/vmlinux"),
-    rootfs_path=Path("/shared/rootfs.ext4"),
-    disk_mode="shared",
-)
-```
-
-### Persistent Isolated Disk
-
-```python  theme={null}
-from smolvm import VMConfig
-from pathlib import Path
-
-# Keep VM disk after deletion for state persistence
-config = VMConfig(
-    vm_id="stateful-vm",
-    kernel_path=Path("/path/to/vmlinux"),
-    rootfs_path=Path("/path/to/rootfs.ext4"),
-    disk_mode="isolated",
-    retain_disk_on_delete=True,
-)
-
-# Later, create a new VM with the same ID to reuse the disk
-config2 = VMConfig(
-    vm_id="stateful-vm",  # Same ID
-    kernel_path=Path("/path/to/vmlinux"),
-    rootfs_path=Path("/path/to/rootfs.ext4"),
-    disk_mode="isolated",
-)
-```
-
-### QEMU Backend
-
-```python  theme={null}
-from smolvm import VMConfig
-from pathlib import Path
-
-config = VMConfig(
-    vm_id="qemu-vm",
-    kernel_path=Path("/path/to/vmlinux"),
-    rootfs_path=Path("/path/to/rootfs.ext4"),
+    memory=1024,
+    kernel_path=ensure_base_kernel_for_backend("qemu"),
+    rootfs_path=Path("/var/lib/smolvm/images/worker/rootfs.ext4"),
+    rootfs_format="raw-ext4",
+    boot_args="console=ttyS0 reboot=k panic=1 root=/dev/vda rw init=/init",
     backend="qemu",
-    boot_args="console=ttyAMA0 reboot=k panic=1 init=/init",
+    ssh_capable=True,
 )
 ```
 
-## Immutability
-
-VMConfig instances are frozen and cannot be modified after creation:
+## Firmware example
 
 ```python  theme={null}
-config = VMConfig(
-    kernel_path=Path("/path/to/vmlinux"),
-    rootfs_path=Path("/path/to/rootfs.ext4"),
-)
-
-# This raises an error
-config.vcpu_count = 4  # ValidationError: "VMConfig" is frozen
-
-# Instead, create a new instance
-from pydantic import BaseModel
-
-new_config = config.model_copy(update={"vcpu_count": 4})
-```
-
-## Integration with SmolVM
-
-Pass VMConfig to the SmolVM constructor:
-
-```python  theme={null}
-from smolvm import SmolVM, VMConfig
 from pathlib import Path
 
-config = VMConfig(
-    vm_id="my-vm",
-    vcpu_count=2,
-    mem_size_mib=512,
-    kernel_path=Path("/path/to/vmlinux"),
-    rootfs_path=Path("/path/to/rootfs.ext4"),
-    boot_args="console=ttyS0 reboot=k panic=1 init=/init",
-)
+from smolvm import VMConfig
 
-with SmolVM(config) as vm:
-    result = vm.run("echo 'Hello from configured VM'")
-    print(result.stdout)
+config = VMConfig(
+    vm_id="ubuntu-cloud",
+    memory=2048,
+    boot_mode="firmware",
+    kernel_path=None,
+    rootfs_path=Path("/var/lib/smolvm/images/ubuntu.qcow2"),
+    rootfs_format="qcow2",
+    backend="qemu",
+    ssh_capable=True,
+)
 ```
 
-## Building Images for VMConfig
-
-Use `ImageBuilder` to create kernel and rootfs images:
+## Resized custom image example
 
 ```python  theme={null}
-from smolvm import VMConfig, SmolVM
-from smolvm.build import ImageBuilder
 from pathlib import Path
 
-# Build an SSH-capable Alpine Linux image
-builder = ImageBuilder()
-public_key = Path("~/.ssh/id_rsa.pub").expanduser().read_text()
+from smolvm import VMConfig, ensure_base_kernel_for_backend
 
-kernel, rootfs = builder.build_alpine_ssh_key(
-    ssh_public_key=public_key,
-    name="my-alpine",
-    rootfs_size_mb=512,
-)
-
-# Use the built images in VMConfig
 config = VMConfig(
-    vm_id="alpine-vm",
-    kernel_path=kernel,
-    rootfs_path=rootfs,
-    boot_args="console=ttyS0 reboot=k panic=1 init=/init",
+    vm_id="large-worker",
+    kernel_path=ensure_base_kernel_for_backend("qemu"),
+    rootfs_path=Path("/var/lib/smolvm/images/worker/rootfs.ext4"),
+    rootfs_format="raw-ext4",
+    boot_args="console=ttyS0 reboot=k panic=1 root=/dev/vda rw init=/init",
+    backend="qemu",
+    disk_mode="isolated",
+    disk_size_mib=8192,
+    grow_filesystem=True,
 )
-
-with SmolVM(config) as vm:
-    result = vm.run("cat /etc/os-release")
-    print(result.stdout)
 ```
 
-## Field Summary
+<Note>
+  Prefer `SmolVM.from_image(..., disk_size_mb=..., grow_filesystem=True)` for custom images. Use `VMConfig` directly when you need lower-level control.
+</Note>
 
-| Field                      | Type                    | Default                                    | Range/Validation                     |
-| -------------------------- | ----------------------- | ------------------------------------------ | ------------------------------------ |
-| `vm_id`                    | `str`                   | Auto-generated                             | `^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$`  |
-| `vcpu_count`               | `int`                   | `2`                                        | 1-32                                 |
-| `mem_size_mib`             | `int`                   | `512`                                      | 128-16384                            |
-| `kernel_path`              | `Path`                  | Required                                   | Must exist as file                   |
-| `rootfs_path`              | `Path`                  | Required                                   | Must exist as file                   |
-| `extra_drives`             | `list[Path]`            | `[]`                                       | Each must exist as file              |
-| `boot_args`                | `str`                   | `"console=ttyS0 reboot=k panic=1 pci=off"` | Any string                           |
-| `backend`                  | `str \| None`           | `None`                                     | `"firecracker"`, `"qemu"`, `None`    |
-| `disk_mode`                | `Literal`               | `"isolated"`                               | `"isolated"`, `"shared"`             |
-| `retain_disk_on_delete`    | `bool`                  | `False`                                    | `True`, `False`                      |
-| `env_vars`                 | `dict[str, str]`        | `{}`                                       | Keys must be valid shell identifiers |
-| `network_rate_limit_mbps`  | `int \| None`           | `None`                                     | >= 1 when set                        |
-| `port_forwards`            | `list[PortForwardConfig]` | `[]`                                     | No duplicate host or guest ports     |
+## Validation rules
+
+- `VMConfig` rejects unknown fields.
+- `memory` must be between 128 and 16384 MiB.
+- `vcpu_count` must be between 1 and 32.
+- Direct-kernel boot requires `kernel_path`.
+- Firmware boot requires `backend="qemu"` and `kernel_path=None`.
+- Windows guests require firmware boot.
+- `rootfs_path`, `kernel_path`, `initrd_path`, and `extra_drives` must point to files when set.
+- `port_forwards` cannot reuse host or guest ports.
+- `workspace_mounts` cannot reuse mount tags or guest paths.
+
+## Disk format behavior
+
+`rootfs_format` controls QEMU drive arguments and disk lifecycle behavior.
+
+| Format | Use case | Resize behavior |
+| --- | --- | --- |
+| `"raw-ext4"` | Raw ext4 root filesystem images | SmolVM can resize the disk and grow the filesystem when `grow_filesystem=True` |
+| `"qcow2"` | QEMU firmware or cloud images | SmolVM can resize virtual disk size, but it does not grow the guest filesystem |
+
+If `rootfs_format` is omitted, SmolVM falls back to filename inference for older configs. New docs and code should set it explicitly.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="SmolVM.from_image" icon="box-open" href="/smolvm/api/smolvm#from_image">
+    Launch a custom image with high-level runtime settings.
+  </Card>
+
+  <Card title="BootImage" icon="hard-drive" href="/smolvm/api/bootimage">
+    Describe custom images before launch.
+  </Card>
+</CardGroup>

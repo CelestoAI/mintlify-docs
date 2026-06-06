@@ -155,8 +155,7 @@ def unexpose_local(self, host_port: int, guest_port: int) -> SmolVM:
 From the OpenClaw integration example:
 
 ```python  theme={null}
-from smolvm import SmolVM, VMConfig
-from smolvm.build import ImageBuilder, SSH_BOOT_ARGS
+from smolvm import BootImage, DirectKernelBoot, ImageBuilder, SmolVM
 
 GUEST_DASHBOARD_PORT = 18789
 HOST_DASHBOARD_PORT = 18789
@@ -167,15 +166,21 @@ kernel, rootfs = builder.build_debian_ssh_key(
     rootfs_size_mb=4096,
 )
 
-config = VMConfig(
-    vcpu_count=1,
-    mem_size_mib=2048,
-    kernel_path=kernel,
+image = BootImage(
+    name="openclaw-dashboard",
     rootfs_path=rootfs,
-    boot_args=SSH_BOOT_ARGS,
+    rootfs_format="raw-ext4",
+    kernel_path=kernel,
+    boot=DirectKernelBoot(),
+    backend="firecracker",
+    ssh_capable=True,
 )
 
-with SmolVM(config) as vm:
+with SmolVM.from_image(
+    image,
+    backend="firecracker",
+    memory_mb=2048,
+) as vm:
     # Install and start OpenClaw gateway inside VM
     vm.run(f"openclaw gateway --port {GUEST_DASHBOARD_PORT} &")
 

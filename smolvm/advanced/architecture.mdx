@@ -296,67 +296,126 @@ qemu-system-aarch64 \
 
 ## Disk Management
 
-SmolVM supports two disk modes:
+SmolVM separates the base image from the disk that a running VM writes to. In the default mode, the base image stays unchanged and each VM gets its own managed disk.
 
 ### Isolated Mode (Default)
 
-Each VM gets a private copy of the rootfs:
+Each VM gets a private disk materialized from the configured root filesystem:
 
 ```
 ~/.local/state/smolvm/disks/
-├── vm-abc123.ext4  (copy of base rootfs)
-├── vm-def456.ext4  (another copy)
-└── vm-ghi789.ext4  (another copy)
+|-- vm-abc123.ext4
+|-- vm-def456.ext4
+`-- vm-ghi789.ext4
 ```
 
-**Workflow** (vm.py:274-300):
+**Workflow**:
 
-1. On `create()`, check if `data_dir/disks/<vm_id>.ext4` exists
-2. If not, `shutil.copy2(config.rootfs_path, instance_disk_path)`
-3. Update `config.rootfs_path` to point to the isolated copy
-4. Firecracker/QEMU mounts this copy (writable)
-5. On `delete()`, remove the copy (unless `retain_disk_on_delete=True`)
+1. SmolVM resolves the base image from `config.rootfs_path`.
+2. It creates a per-VM disk under the state directory.
+3. It applies `disk_size_mib` when a larger managed disk is requested.
+4. It updates the effective VM config so the backend boots the managed disk.
+5. It removes the managed disk on delete unless `retain_disk_on_delete=True`.
 
 **Benefits**:
 
-* Complete isolation between VMs
-* No state pollution across VM instances
-* Safe for concurrent VMs
+- Complete filesystem isolation between VMs
+- No writes to the original image artifact
+- Safer concurrent VM creation
+- Transactional cleanup when create, resize, or restore fails
 
 **Tradeoffs**:
 
-* Disk usage: N × rootfs size
-* Copy overhead: \~100-200ms on first boot
+- More disk usage than shared mode
+- Extra work during create, especially for larger images
+
+### Disk Resize And Filesystem Growth
+
+SmolVM can resize managed disks during create when `disk_size_mib` is set.
+
+```python  theme={null}
+from pathlib import Path
+
+from smolvm import VMConfig, ensure_base_kernel_for_backend
+
+config = VMConfig(
+    kernel_path=ensure_base_kernel_for_backend("qemu"),
+    rootfs_path=Path("/var/lib/images/worker.ext4"),
+    rootfs_format="raw-ext4",
+    boot_args="console=ttyS0 reboot=k panic=1 root=/dev/vda rw init=/init",
+    backend="qemu",
+    disk_mode="isolated",
+    disk_size_mib=8192,
+    grow_filesystem=True,
+)
+```
+
+Resize behavior depends on `rootfs_format`:
+
+| Format | Managed disk behavior |
+| --- | --- |
+| `raw-ext4` | SmolVM can grow the disk file and run `e2fsck` plus `resize2fs` when `grow_filesystem=True`. |
+| `qcow2` | SmolVM can resize the virtual disk with `qemu-img`, but it does not grow the guest filesystem. |
+
+For QEMU raw ext4 images with `grow_filesystem=True`, SmolVM materializes a raw per-VM disk instead of a qcow2 overlay so host-side ext4 growth can work.
+
+### Root Filesystem Format
+
+`rootfs_format` tells SmolVM how to treat the base image.
+
+```python  theme={null}
+from pathlib import Path
+
+from smolvm import VMConfig, ensure_base_kernel_for_backend
+
+config = VMConfig(
+    kernel_path=ensure_base_kernel_for_backend("qemu"),
+    rootfs_path=Path("/var/lib/images/worker.ext4"),
+    rootfs_format="raw-ext4",
+    boot_args="console=ttyS0 reboot=k panic=1 root=/dev/vda rw init=/init",
+    backend="qemu",
+)
+```
+
+QEMU uses this declared format for drive arguments, `qemu-img` backing format, resizing, and snapshot decisions. New configs should set `rootfs_format` explicitly instead of relying on filename suffixes.
 
 ### Shared Mode
 
 All VMs mount the same rootfs image:
 
 ```python  theme={null}
+from pathlib import Path
+
 from smolvm import VMConfig
+from smolvm import ensure_base_kernel_for_backend
 
 config = VMConfig(
-    rootfs_path="/path/to/base.ext4",
+    kernel_path=ensure_base_kernel_for_backend("qemu"),
+    rootfs_path=Path("/path/to/base.ext4"),
+    rootfs_format="raw-ext4",
+    boot_args="console=ttyS0 reboot=k panic=1 root=/dev/vda rw init=/init",
+    backend="qemu",
     disk_mode="shared"
 )
 ```
 
 **Workflow**:
 
-1. Firecracker/QEMU mounts `config.rootfs_path` directly (writable)
-2. All changes persist in the base image
-3. Multiple VMs share the same filesystem state
+1. The backend mounts `config.rootfs_path` directly.
+2. Writes land in the base image.
+3. Multiple VMs can share the same filesystem state.
 
 **Use cases**:
 
-* Read-only workloads (mount as read-only externally)
-* Persistent development environment
-* Lower disk usage
+- Read-only workloads where the image is protected externally
+- Trusted persistent development environments
+- Lower disk usage
 
 **Risks**:
 
-* Cross-VM contamination
-* Concurrent writes can corrupt filesystem
+- Cross-VM contamination
+- Concurrent writes can corrupt the filesystem
+- SmolVM refuses resize requests for shared base images
 
 ## Backend Abstraction
 

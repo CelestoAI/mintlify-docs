@@ -176,7 +176,7 @@ from smolvm import SmolVM, VMConfig, ValidationError
 try:
     config = VMConfig(
         vcpu_count=0,  # Invalid: must be at least 1
-        mem_size_mib=0  # Invalid: must be positive
+        memory=0  # Invalid: must be at least 128 MiB
     )
 except ValidationError as e:
     print(f"Invalid configuration: {e.message}")

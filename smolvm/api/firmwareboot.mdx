@@ -1,0 +1,54 @@
+---
+title: "FirmwareBoot"
+description: "Mark a QEMU image that boots through firmware instead of a direct kernel"
+---
+
+`FirmwareBoot` tells SmolVM that QEMU should boot the disk through firmware. Use it for qcow2 images that contain their own bootloader or guest kernel.
+
+## Constructor
+
+```python  theme={null}
+FirmwareBoot()
+```
+
+`FirmwareBoot` has no fields. It is a marker used inside `BootImage`.
+
+## Example
+
+```python  theme={null}
+from pathlib import Path
+
+from smolvm import BootImage, FirmwareBoot, SmolVM
+
+image = BootImage(
+    name="ubuntu-cloud",
+    rootfs_path=Path("/var/lib/images/ubuntu.qcow2"),
+    rootfs_format="qcow2",
+    boot=FirmwareBoot(),
+    backend="qemu",
+    ssh_capable=True,
+)
+
+with SmolVM.from_image(image, backend="qemu", network="slirp") as vm:
+    print(vm.status)
+```
+
+## Rules
+
+- Firmware boot is QEMU-only.
+- Firmware images must not set `kernel_path`.
+- Firmware images must not set `initrd_path`.
+- Firmware images must not set `boot_args`.
+- The guest kernel and bootloader must live inside the disk image.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="BootImage" icon="hard-drive" href="/smolvm/api/bootimage">
+    Describe firmware and direct-kernel images.
+  </Card>
+
+  <Card title="Custom images" icon="book-open" href="/smolvm/guides/custom-images">
+    Learn when to use firmware boot.
+  </Card>
+</CardGroup>

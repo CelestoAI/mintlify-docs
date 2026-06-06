@@ -109,27 +109,26 @@ The resulting VM must be booted with `boot_args` containing `init=/init` so the 
 * `ImageError` - If Docker is not available or build fails
 
 ```python  theme={null}
-from smolvm import ImageBuilder, SmolVM, VMConfig, SSH_BOOT_ARGS
+from smolvm import BootImage, DirectKernelBoot, ImageBuilder, SmolVM
 
 builder = ImageBuilder()
 kernel, rootfs = builder.build_alpine_ssh(
     name="my-alpine",
     ssh_password="mysecret",
     rootfs_size_mb=1024
-)
-
-config = VMConfig(
-    vm_id="test-vm",
-    kernel_path=kernel,
+image = BootImage(
+    name="my-alpine",
     rootfs_path=rootfs,
-    boot_args=SSH_BOOT_ARGS,
+    rootfs_format="raw-ext4",
+    kernel_path=kernel,
+    boot=DirectKernelBoot(),
+    backend="firecracker",
+    ssh_capable=True,
 )
 
-with SmolVM(config) as vm:
-    vm.start()
-    # SSH into vm.get_ip() with root / mysecret
+with SmolVM.from_image(image, backend="firecracker", ssh_password="mysecret") as vm:
     result = vm.run("hostname")
-    print(result.stdout)
+    print(result.output)
 ```
 
 ### `build_alpine_ssh_key(ssh_public_key, name, rootfs_size_mb, kernel_url)`
@@ -205,7 +204,7 @@ This method creates a larger, more feature-complete image based on Debian. It's 
 * `ImageError` - If Docker is not available, build fails, or SSH key format is invalid
 
 ```python  theme={null}
-from smolvm import ImageBuilder, SmolVM, VMConfig, SSH_BOOT_ARGS
+from smolvm import BootImage, DirectKernelBoot, ImageBuilder, SmolVM
 from smolvm.utils import ensure_ssh_key
 
 # Generate or get existing SSH key pair
@@ -219,16 +218,22 @@ kernel, rootfs = builder.build_debian_ssh_key(
     rootfs_size_mb=4096,
 )
 
-config = VMConfig(
-    vcpu_count=1,
-    mem_size_mib=2048,
-    kernel_path=kernel,
+image = BootImage(
+    name="debian-openclaw-4g",
     rootfs_path=rootfs,
-    boot_args=SSH_BOOT_ARGS,
+    rootfs_format="raw-ext4",
+    kernel_path=kernel,
+    boot=DirectKernelBoot(),
+    backend="firecracker",
+    ssh_capable=True,
 )
 
-with SmolVM(config, ssh_key_path=str(private_key)) as vm:
-    vm.start()
+with SmolVM.from_image(
+    image,
+    backend="firecracker",
+    memory_mb=2048,
+    ssh_key_path=str(private_key),
+) as vm:
     result = vm.run("apt-get update && apt-get install -y curl")
     print(f"Package install: {result.ok}")
 ```
@@ -272,7 +277,10 @@ kernel, rootfs = builder.build_alpine_ssh()
 config = VMConfig(
     kernel_path=kernel,
     rootfs_path=rootfs,
+    rootfs_format="raw-ext4",
     boot_args=SSH_BOOT_ARGS,  # Required for SSH to work
+    backend="firecracker",
+    ssh_capable=True,
 )
 ```
 
@@ -295,6 +303,6 @@ assert rootfs1 == rootfs2
 
 ## Related
 
-* [ImageManager](/smolvm/api/imagemanager) - Download and cache pre-built images
-* [ImageSource](/smolvm/api/imagesource) - Define downloadable image metadata
-* [VMConfig](/smolvm/api/vmconfig) - Configure VM instances
+* [DockerRootfsBuilder](/smolvm/api/dockerrootfsbuilder) - Build raw ext4 root filesystems from Dockerfiles
+* [BootImage](/smolvm/api/bootimage) - Describe a custom image before launch
+* [VMConfig](/smolvm/api/vmconfig) - Configure lower-level VM boot and disk settings

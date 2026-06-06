@@ -113,7 +113,7 @@ image = manager.ensure_image("alpine-minimal")
 ### Usage
 
 ```python  theme={null}
-from smolvm import ImageManager, VMConfig, SmolVM
+from smolvm import BootImage, DirectKernelBoot, ImageManager, SmolVM
 
 manager = ImageManager()
 image = manager.ensure_image("hello")
@@ -123,14 +123,18 @@ print(image.name)   # hello
 print(image.kernel_path)  # PosixPath('/home/user/.smolvm/images/hello/vmlinux.bin')
 print(image.rootfs_path)  # PosixPath('/home/user/.smolvm/images/hello/rootfs.ext4')
 
-# Use with VMConfig
-config = VMConfig(
-    kernel_path=image.kernel_path,
+# Use with BootImage
+boot_image = BootImage(
+    name=image.name,
     rootfs_path=image.rootfs_path,
+    rootfs_format="raw-ext4",
+    kernel_path=image.kernel_path,
+    boot=DirectKernelBoot(),
+    ssh_capable=True,
 )
 
-with SmolVM(config) as vm:
-    vm.start()
+with SmolVM.from_image(boot_image, ssh_password="smolvm") as vm:
+    print(vm.status)
 ```
 
 ### Immutability
@@ -183,5 +187,6 @@ for name, source in BUILTIN_IMAGES.items():
 ## Related
 
 * [ImageManager](/smolvm/api/imagemanager) - Download and cache images
-* [ImageBuilder](/smolvm/api/imagebuilder) - Build custom images with SSH
-* [VMConfig](/smolvm/api/vmconfig) - Configure VM instances
+* [BootImage](/smolvm/api/bootimage) - Describe a cached or custom image
+* [DockerRootfsBuilder](/smolvm/api/dockerrootfsbuilder) - Build custom root filesystems from Dockerfiles
+* [VMConfig](/smolvm/api/vmconfig) - Configure lower-level VM instances

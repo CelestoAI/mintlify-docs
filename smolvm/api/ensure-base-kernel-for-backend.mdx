@@ -1,0 +1,72 @@
+---
+title: "ensure_base_kernel_for_backend"
+description: "Resolve the cached SmolVM base kernel for a backend and architecture"
+---
+
+`ensure_base_kernel_for_backend()` returns the SmolVM base kernel file that matches a backend and architecture. Use it when you create a `BootImage` manually and want SmolVM to choose the correct kernel artifact format.
+
+## Signature
+
+```python  theme={null}
+ensure_base_kernel_for_backend(
+    backend: str | None = None,
+    arch: str = "host",
+    *,
+    cache_dir: Path | None = None,
+) -> Path
+```
+
+<ParamField path="backend" type="str | None" default="None">
+  Runtime backend. Options are `"firecracker"`, `"qemu"`, and `"libkrun"`. If omitted, SmolVM resolves the default backend for the host.
+</ParamField>
+
+<ParamField path="arch" type="str" default='"host"'>
+  Architecture. Use `"host"` for the current machine, or pass `"amd64"`, `"arm64"`, `"x86_64"`, or `"aarch64"`.
+</ParamField>
+
+<ParamField path="cache_dir" type="Path | None" default="None">
+  Optional kernel cache directory.
+</ParamField>
+
+<ResponseField name="return" type="Path">
+  Path to the SHA-verified cached kernel file.
+</ResponseField>
+
+## Example
+
+```python  theme={null}
+from pathlib import Path
+
+from smolvm import BootImage, DirectKernelBoot, ensure_base_kernel_for_backend
+
+image = BootImage(
+    name="worker",
+    rootfs_path=Path("/var/lib/images/worker.ext4"),
+    rootfs_format="raw-ext4",
+    kernel_path=ensure_base_kernel_for_backend("qemu", arch="host"),
+    boot=DirectKernelBoot(),
+    backend="qemu",
+)
+```
+
+## Backend behavior
+
+SmolVM publishes the same base kernel in backend-specific artifact formats:
+
+- Firecracker uses the ELF kernel artifact.
+- libkrun uses the ELF kernel artifact.
+- QEMU uses the Image or bzImage kernel artifact.
+
+This helper hides that format choice from your application.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="BootImage" icon="hard-drive" href="/smolvm/api/bootimage">
+    Use the resolved kernel in a custom image.
+  </Card>
+
+  <Card title="Custom images" icon="book-open" href="/smolvm/guides/custom-images">
+    Build and launch custom images.
+  </Card>
+</CardGroup>

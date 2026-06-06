@@ -598,8 +598,7 @@ For agents that need to maintain state across multiple interactions without usin
 <Steps>
   <Step title="Create a persistent VM">
     ```python
-    from smolvm import SmolVM, VMConfig
-    from smolvm.build import ImageBuilder, SSH_BOOT_ARGS
+    from smolvm import BootImage, DirectKernelBoot, ImageBuilder, SmolVM
     from smolvm.utils import ensure_ssh_key
 
     private_key, public_key = ensure_ssh_key()
@@ -609,16 +608,24 @@ For agents that need to maintain state across multiple interactions without usin
         rootfs_size_mb=4096,
     )
 
-    config = VMConfig(
-        vm_id="agent-workspace",
-        vcpu_count=2,
-        mem_size_mib=2048,
-        kernel_path=kernel,
+    image = BootImage(
+        name="agent-workspace",
         rootfs_path=rootfs,
-        boot_args=SSH_BOOT_ARGS,
+        rootfs_format="raw-ext4",
+        kernel_path=kernel,
+        boot=DirectKernelBoot(),
+        backend="firecracker",
+        ssh_capable=True,
     )
 
-    vm = SmolVM(config, ssh_key_path=str(private_key))
+    vm = SmolVM.from_image(
+        image,
+        vm_id="agent-workspace",
+        backend="firecracker",
+        vcpus=2,
+        memory_mb=2048,
+        ssh_key_path=str(private_key),
+    )
     vm.start()
 
     # Install dependencies once
@@ -681,7 +688,7 @@ config = VMConfig(
 # Limit resources to prevent abuse
 config = VMConfig(
     vcpu_count=1,
-    mem_size_mib=512,
+    memory=512,
     # ... other config ...
 )
 ```

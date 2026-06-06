@@ -61,14 +61,9 @@ print(f"TAP device: {network.tap_device}")
 ### Accessing Network Info from a VM
 
 ```python  theme={null}
-from smolvm import SmolVM, VMConfig
+from smolvm import SmolVM
 
-config = VMConfig(
-    kernel_path="/path/to/vmlinux",
-    rootfs_path="/path/to/rootfs.ext4"
-)
-
-vm = SmolVM(config)
+vm = SmolVM()
 vm.start()
 
 info = vm.info

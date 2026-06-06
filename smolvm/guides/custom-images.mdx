@@ -1,273 +1,262 @@
 ---
 title: "Custom images"
-description: "Build custom VM images with your own tools and dependencies pre-installed"
+description: "Build, describe, and launch SmolVM sandboxes from your own root filesystem images"
 ---
 
-By default, SmolVM boots a minimal Alpine Linux image with SSH. If you need specific packages, libraries, or a different base OS, you can build a custom image using the `ImageBuilder` class. Custom images are built with Docker and cached locally so you only build once.
+Custom images let you start a sandbox with the operating system packages, files, and startup behavior your workload already needs. SmolVM now treats custom images as first-class inputs: you describe the image with `BootImage`, then launch it with `SmolVM.from_image()`.
+
+## How custom images work
+
+The current custom image flow has four parts:
+
+1. Build or provide a root filesystem image.
+2. Describe that image with `BootImage`.
+3. Launch it with `SmolVM.from_image(...)`.
+4. Let SmolVM create an isolated per-VM disk, resize it, and grow the filesystem when supported.
+
+<Note>
+  A root filesystem is the disk image that becomes `/` inside the guest. SmolVM supports `raw-ext4` images and QEMU `qcow2` images.
+</Note>
 
 ## Quick start
 
-```python
-from smolvm import SmolVM, VMConfig
-from smolvm.build import ImageBuilder, SSH_BOOT_ARGS
+This example builds an SSH-capable Alpine root filesystem from a Dockerfile, then launches it as a QEMU sandbox.
 
-builder = ImageBuilder()
-kernel, rootfs = builder.build_alpine_ssh()
+```python  theme={null}
+from smolvm import DockerRootfsBuilder, DirectKernelBoot, SmolVM
 
-config = VMConfig(
-    vm_id="my-custom-vm",
-    vcpu_count=1,
-    mem_size_mib=512,
-    kernel_path=kernel,
-    rootfs_path=rootfs,
-    boot_args=SSH_BOOT_ARGS,
+dockerfile = """
+FROM alpine:3.20
+
+RUN apk add --no-cache openssh
+RUN echo 'root:smolvm' | chpasswd
+RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+RUN sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
+RUN ssh-keygen -A
+
+COPY init /init
+RUN chmod +x /init
+"""
+
+init_script = """#!/bin/sh
+set -eu
+
+mount -t proc proc /proc || true
+mount -t sysfs sysfs /sys || true
+mount -t devtmpfs devtmpfs /dev || true
+mkdir -p /dev/pts /run/sshd /tmp
+mount -t devpts devpts /dev/pts || true
+mount -t tmpfs tmpfs /tmp || true
+
+ip link set lo up || true
+ip link set eth0 up || true
+udhcpc -i eth0 -q -t 5 || true
+
+/usr/sbin/sshd
+exec tail -f /dev/null
+"""
+
+image = DockerRootfsBuilder(
+    name="python-tools",
+    dockerfile=dockerfile,
+    context={"init": init_script},
+    rootfs_size_mb=1024,
+    ssh_capable=True,
+).ensure(
+    backend="qemu",
+    boot=DirectKernelBoot(),
 )
 
-with SmolVM(config) as vm:
+with SmolVM.from_image(
+    image,
+    backend="qemu",
+    network="slirp",
+    memory_mb=1024,
+    disk_size_mb=2048,
+    grow_filesystem=True,
+    ssh_password="smolvm",
+) as vm:
     result = vm.run("cat /etc/os-release")
     print(result.output)
 ```
 
-<Note>
-  `ImageBuilder` requires Docker to be installed and running. On macOS, use Docker Desktop. On Linux, install `docker.io`.
-</Note>
-
-## Build methods
-
-SmolVM provides three image build methods. Each creates a Linux filesystem with SSH pre-configured and returns a `(kernel_path, rootfs_path)` tuple.
-
-### Alpine with SSH password
-
-The simplest option — builds a minimal Alpine Linux image with root password authentication:
-
-```python
-kernel, rootfs = builder.build_alpine_ssh(
-    name="my-alpine",           # Cache name (default: "alpine-ssh")
-    ssh_password="mypassword",  # Root password (default: "smolvm")
-    rootfs_size_mb=512,         # Disk size in MB (default: 512)
-)
-```
-
-### Alpine with SSH key (recommended)
-
-More secure — uses public key authentication instead of a password:
-
-```python
-from smolvm.utils import ensure_ssh_key
-
-# Generate or load SSH keys
-private_key, public_key = ensure_ssh_key()
-
-kernel, rootfs = builder.build_alpine_ssh_key(
-    ssh_public_key=public_key,
-    name="alpine-key",
-    rootfs_size_mb=512,
-)
-
-config = VMConfig(
-    vm_id="key-vm",
-    vcpu_count=1,
-    mem_size_mib=512,
-    kernel_path=kernel,
-    rootfs_path=rootfs,
-    boot_args=SSH_BOOT_ARGS,
-)
-
-with SmolVM(config, ssh_key_path=str(private_key)) as vm:
-    result = vm.run("whoami")
-    print(result.output)  # "root"
-```
-
-### Debian with SSH key
-
-For workloads that need `apt`, glibc, or broader package compatibility. Debian images are larger but more compatible:
-
-```python
-from smolvm.utils import ensure_ssh_key
-
-private_key, public_key = ensure_ssh_key()
-
-kernel, rootfs = builder.build_debian_ssh_key(
-    ssh_public_key=public_key,
-    name="debian-key",
-    rootfs_size_mb=2048,  # Debian needs more space
-    base_image="debian:bookworm-slim",
-)
-
-config = VMConfig(
-    vm_id="debian-vm",
-    vcpu_count=2,
-    mem_size_mib=1024,
-    kernel_path=kernel,
-    rootfs_path=rootfs,
-    boot_args=SSH_BOOT_ARGS,
-)
-
-with SmolVM(config, ssh_key_path=str(private_key)) as vm:
-    result = vm.run("cat /etc/debian_version")
-    print(result.output)
-```
-
-## Boot arguments
-
-Use the `SSH_BOOT_ARGS` constant for any SSH-capable image:
-
-```python
-from smolvm.build import SSH_BOOT_ARGS
-
-print(SSH_BOOT_ARGS)
-# "console=ttyS0 reboot=k panic=1 pci=off root=/dev/vda rw init=/init"
-```
-
 <Warning>
-  The `init=/init` parameter is required for SmolVM's SSH functionality. Without it, the custom init script will not run and SSH will not start.
+  `DockerRootfsBuilder` does not install SmolVM's guest agent or SSH server for you. Your Dockerfile and init process must start the services you want to use. Set `ssh_capable=True` only when the guest can accept SSH connections.
 </Warning>
 
-## Image caching
+## Build from a Dockerfile
 
-`ImageBuilder` caches built images to avoid rebuilding. The first build downloads base images and runs Docker. Subsequent calls with the same name return cached paths instantly:
+Use `DockerRootfsBuilder` when you want to build a raw ext4 root filesystem from a Dockerfile.
 
-```python
-builder = ImageBuilder()
+```python  theme={null}
+from smolvm import DockerRootfsBuilder, DirectKernelBoot
 
-# First build — downloads and builds everything
-kernel1, rootfs1 = builder.build_alpine_ssh(name="my-image")
+builder = DockerRootfsBuilder(
+    name="worker-image",
+    dockerfile="""
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates curl python3 openssh-server \
+    && rm -rf /var/lib/apt/lists/*
+COPY init /init
+RUN chmod +x /init
+""",
+    context={"init": "#!/bin/sh\nexec /bin/sh\n"},
+    rootfs_size_mb=2048,
+    fingerprint_inputs={"app_version": "2026-06-06"},
+)
 
-# Second call — returns cached paths immediately
-kernel2, rootfs2 = builder.build_alpine_ssh(name="my-image")
+image = builder.ensure(
+    backend="qemu",
+    boot=DirectKernelBoot(init="/init"),
+)
 ```
 
-For key-based images, the cache is automatically invalidated if the SSH key is newer than the cached image.
+`DockerRootfsBuilder` caches builds by input. It rebuilds when the Dockerfile, build context, build args, Docker platform, rootfs size, or `fingerprint_inputs` change.
 
-### Custom cache directory
+<Tip>
+  Use `fingerprint_inputs` for values that should invalidate the cache even when they are not files in the Docker build context, such as an application version or dependency lock hash.
+</Tip>
 
-```python
+## Launch a custom image
+
+Use `SmolVM.from_image()` to turn a `BootImage` into a running sandbox.
+
+```python  theme={null}
+from smolvm import SmolVM
+
+with SmolVM.from_image(
+    image,
+    vm_id="worker-1",
+    backend="qemu",
+    vcpus=2,
+    memory_mb=2048,
+    disk_size_mb=4096,
+    grow_filesystem=True,
+) as vm:
+    print(vm.status)
+```
+
+`from_image()` reads boot metadata from the image and applies runtime settings such as CPU, memory, backend, networking, mounts, port forwards, vsock, and the communication channel.
+
+## Resize the per-VM disk
+
+Custom images use isolated per-VM disks by default. That means SmolVM copies or materializes the base image before booting the sandbox, so resizing the sandbox does not mutate the original image artifact.
+
+```python  theme={null}
+vm = SmolVM.from_image(
+    image,
+    disk_size_mb=8192,
+    grow_filesystem=True,
+)
+```
+
+Use `disk_size_mb` to request a larger isolated disk at launch time.
+
+Use `grow_filesystem=True` when the image is `raw-ext4` and you want SmolVM to expand the guest filesystem after resizing the disk.
+
+<Note>
+  `grow_filesystem=True` currently supports raw ext4 images. For `qcow2` images, SmolVM can resize the virtual disk, but it does not grow the guest filesystem for you.
+</Note>
+
+## Describe an existing raw ext4 image
+
+If you already have a root filesystem image, create a `BootImage` directly.
+
+```python  theme={null}
 from pathlib import Path
 
-builder = ImageBuilder(cache_dir=Path("/mnt/fast-ssd/vm-images"))
+from smolvm import BootImage, DirectKernelBoot, SmolVM, ensure_base_kernel_for_backend
 
-kernel, rootfs = builder.build_alpine_ssh()
-print(kernel)  # /mnt/fast-ssd/vm-images/alpine-ssh/vmlinux.bin
-print(rootfs)  # /mnt/fast-ssd/vm-images/alpine-ssh/rootfs.ext4
-```
-
-## Custom kernel URLs
-
-Override the default kernel URL if you need a specific kernel version:
-
-```python
-kernel, rootfs = builder.build_alpine_ssh(
-    kernel_url="https://example.com/my-custom-kernel"
-)
-```
-
-SmolVM ships default kernel URLs for both Firecracker and QEMU backends, targeting x86_64 and aarch64 architectures. You can inspect them:
-
-```python
-from smolvm.build import FIRECRACKER_KERNEL_URLS, QEMU_KERNEL_URLS
-print(FIRECRACKER_KERNEL_URLS)
-print(QEMU_KERNEL_URLS)
-```
-
-## How the init script works
-
-All SSH-capable images include a custom `/init` script that runs as PID 1 inside the sandbox. This script:
-
-* Mounts essential filesystems (`/proc`, `/sys`, `/dev`, `/tmp`)
-* Configures networking from kernel boot arguments
-* Sets up DNS resolution (8.8.8.8)
-* Generates SSH host keys if missing
-* Starts the SSH daemon
-* Stays alive as PID 1 to keep the sandbox running
-
-You do not need to modify this script for most use cases. It is included automatically when you use any `ImageBuilder` method.
-
-## Real-world example: OpenClaw
-
-This example from `examples/openclaw.py` builds a 4 GB Debian image for the OpenClaw application:
-
-```python
-import os
-from smolvm import SmolVM, VMConfig
-from smolvm.build import ImageBuilder, SSH_BOOT_ARGS
-from smolvm.utils import ensure_ssh_key
-
-private_key, public_key = ensure_ssh_key()
-
-kernel, rootfs = ImageBuilder().build_debian_ssh_key(
-    ssh_public_key=public_key,
-    name="debian-ssh-key-openclaw-4g",
-    rootfs_size_mb=4096,
+image = BootImage(
+    name="existing-alpine",
+    rootfs_path=Path("/var/lib/images/alpine-rootfs.ext4"),
+    rootfs_format="raw-ext4",
+    kernel_path=ensure_base_kernel_for_backend("qemu", arch="host"),
+    boot=DirectKernelBoot(),
+    backend="qemu",
+    ssh_capable=True,
 )
 
-config = VMConfig(
-    vcpu_count=1,
-    mem_size_mib=2048,
-    kernel_path=kernel,
+with SmolVM.from_image(image, backend="qemu", ssh_password="smolvm") as vm:
+    print(vm.run("uname -a").output)
+```
+
+`DirectKernelBoot` renders backend-specific kernel arguments for Firecracker, QEMU, and libkrun. For example, Firecracker needs `pci=off`, while QEMU on arm64 uses a different serial console.
+
+## Boot a QEMU firmware image
+
+Use `FirmwareBoot` for images that boot through firmware, such as a QEMU cloud image or a disk with its own bootloader.
+
+```python  theme={null}
+from pathlib import Path
+
+from smolvm import BootImage, FirmwareBoot, SmolVM
+
+image = BootImage(
+    name="ubuntu-cloud",
+    rootfs_path=Path("/var/lib/images/ubuntu.qcow2"),
+    rootfs_format="qcow2",
+    boot=FirmwareBoot(),
+    backend="qemu",
+    ssh_capable=True,
+)
+
+with SmolVM.from_image(
+    image,
+    backend="qemu",
+    network="slirp",
+    memory_mb=2048,
+) as vm:
+    print(vm.status)
+```
+
+Firmware images must use the QEMU backend. They do not set `kernel_path`, `initrd_path`, or `boot_args` because the guest kernel lives inside the disk image.
+
+## Use ImageBuilder for SSH-ready images
+
+`ImageBuilder` is still useful when you want SmolVM to build an SSH-ready Alpine or Debian image for you. You can wrap its output in `BootImage` and launch it through `from_image()`.
+
+```python  theme={null}
+from smolvm import BootImage, DirectKernelBoot, ImageBuilder, SmolVM
+
+builder = ImageBuilder()
+kernel, rootfs = builder.build_alpine_ssh(rootfs_size_mb=1024)
+
+image = BootImage(
+    name="alpine-ssh",
     rootfs_path=rootfs,
-    boot_args=SSH_BOOT_ARGS,
-    env_vars={
-        "OPENROUTER_API_KEY": os.getenv("OPENROUTER_API_KEY", ""),
-    },
+    rootfs_format="raw-ext4",
+    kernel_path=kernel,
+    boot=DirectKernelBoot(),
+    backend="firecracker",
+    ssh_capable=True,
 )
 
-with SmolVM(config, ssh_key_path=str(private_key)) as vm:
-    vm.run("apt-get update && apt-get install -y nodejs npm")
-    vm.run("npm install -g openclaw")
+with SmolVM.from_image(image, backend="firecracker", ssh_password="smolvm") as vm:
+    print(vm.run("whoami").output)
 ```
 
 ## Troubleshooting
 
-When an image build fails, SmolVM diagnoses the root cause and returns a specific error message. You do not need to debug Docker issues manually.
-
 <AccordionGroup>
-  <Accordion title="Docker not installed">
-    SmolVM raises an `ImageError` with install instructions:
-
-    * **macOS**: Install [Docker Desktop](https://www.docker.com/products/docker-desktop)
-    * **Linux**: `sudo apt-get install docker.io` (Debian/Ubuntu)
-
-    You can check Docker availability before building:
-
-    ```python
-    builder = ImageBuilder()
-    if not builder.check_docker():
-        print(builder.docker_requirement_error())
-    ```
+  <Accordion title="The VM starts, but run() fails">
+    `run()` needs a communication path into the guest. Use an SSH-capable image, pass the right SSH credential to `SmolVM.from_image()`, and set `ssh_capable=True` on the `BootImage`.
   </Accordion>
 
-  <Accordion title="Docker daemon not running">
-    Start the Docker service:
-
-    <Tabs>
-      <Tab title="macOS">
-        ```bash
-        open -a Docker
-        ```
-      </Tab>
-      <Tab title="Linux">
-        ```bash
-        sudo systemctl start docker
-        ```
-      </Tab>
-    </Tabs>
+  <Accordion title="The Docker build is not rerunning">
+    `DockerRootfsBuilder` uses a fingerprinted cache. Change the Dockerfile, build context, build args, Docker platform, rootfs size, or `fingerprint_inputs` to force a rebuild.
   </Accordion>
 
-  <Accordion title="Permission denied on Docker socket">
-    Add your user to the `docker` group:
+  <Accordion title="grow_filesystem=True fails">
+    Filesystem growth currently supports raw ext4 images. For qcow2 images, omit `grow_filesystem` and grow the filesystem inside the guest with the operating system's own tools.
+  </Accordion>
+
+  <Accordion title="QEMU cannot inspect or resize the disk">
+    Install `qemu-img`. On Debian or Ubuntu, run:
 
     ```bash
-    sudo usermod -aG docker $USER
-    newgrp docker  # or log out and back in
-    ```
-  </Accordion>
-
-  <Accordion title="Build fails with disk space errors">
-    Image builds require sufficient disk space. Check available space and clean the Docker cache if needed:
-
-    ```bash
-    df -h ~/.smolvm/images/
-    docker system prune -a
+    sudo apt-get update && sudo apt-get install -y qemu-utils
     ```
   </Accordion>
 </AccordionGroup>
@@ -275,15 +264,19 @@ When an image build fails, SmolVM diagnoses the root cause and returns a specifi
 ## Next steps
 
 <CardGroup cols={2}>
-  <Card title="Environment variables" icon="code" href="/smolvm/guides/environment-variables">
-    Inject configuration into custom images
+  <Card title="SmolVM.from_image" icon="box-open" href="/smolvm/api/smolvm#from_image">
+    Launch a custom image with runtime settings.
   </Card>
 
-  <Card title="AI agent integration" icon="robot" href="/smolvm/guides/ai-agent-integration">
-    Build specialized images for AI agent sandboxes
+  <Card title="BootImage" icon="hard-drive" href="/smolvm/api/bootimage">
+    Describe a bootable root filesystem image.
   </Card>
 
-  <Card title="VM lifecycle" icon="circle-play" href="/smolvm/guides/vm-lifecycle">
-    Manage sandboxes built with custom images
+  <Card title="DockerRootfsBuilder" icon="cube" href="/smolvm/api/dockerrootfsbuilder">
+    Build raw ext4 root filesystems from Dockerfiles.
+  </Card>
+
+  <Card title="VMConfig" icon="sliders" href="/smolvm/api/vmconfig">
+    See the lower-level disk and boot fields.
   </Card>
 </CardGroup>

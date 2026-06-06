@@ -1,0 +1,146 @@
+---
+title: "DockerRootfsBuilder"
+description: "Build and cache raw ext4 root filesystem images from Dockerfiles"
+---
+
+`DockerRootfsBuilder` turns a Dockerfile into a raw ext4 root filesystem image and returns a `BootImage`. Use it when you want your sandbox image to be built from a normal Docker build context.
+
+## Constructor
+
+```python  theme={null}
+DockerRootfsBuilder(
+    *,
+    name: str,
+    dockerfile: str,
+    context: dict[str, Path | str | bytes] | None = None,
+    rootfs_size_mb: int = 512,
+    cache_dir: Path | None = None,
+    fingerprint_inputs: dict[str, Any] | None = None,
+    build_args: dict[str, str] | None = None,
+    docker_platform: str | None = None,
+    ssh_capable: bool = False,
+)
+```
+
+<ParamField path="name" type="str" required>
+  Cache name for this custom image. It may contain letters, numbers, `.`, `_`, and `-`.
+</ParamField>
+
+<ParamField path="dockerfile" type="str" required>
+  Dockerfile content. It must not be empty.
+</ParamField>
+
+<ParamField path="context" type="dict[str, Path | str | bytes] | None" default="None">
+  Extra build-context files. Keys are safe relative paths inside the context. Values can be local file paths, strings, or bytes.
+</ParamField>
+
+<ParamField path="rootfs_size_mb" type="int" default="512">
+  Size of the raw ext4 root filesystem to create.
+</ParamField>
+
+<ParamField path="cache_dir" type="Path | None" default="None">
+  Cache directory. Defaults to SmolVM's image cache.
+</ParamField>
+
+<ParamField path="fingerprint_inputs" type="dict[str, Any] | None" default="None">
+  Extra JSON-serializable values included in the cache fingerprint.
+</ParamField>
+
+<ParamField path="build_args" type="dict[str, str] | None" default="None">
+  Docker build arguments.
+</ParamField>
+
+<ParamField path="docker_platform" type="str | None" default="None">
+  Docker platform override, such as `"linux/amd64"`. If omitted, SmolVM derives it from the requested architecture.
+</ParamField>
+
+<ParamField path="ssh_capable" type="bool" default="False">
+  Whether the built image is expected to accept SSH connections after boot.
+</ParamField>
+
+## ensure()
+
+```python  theme={null}
+builder.ensure(
+    *,
+    backend: str,
+    arch: str = "host",
+    boot: DirectKernelBoot | None = None,
+    boot_args: str | None = None,
+) -> BootImage
+```
+
+<ParamField path="backend" type="str" required>
+  Runtime backend that will boot this image. Options are `"firecracker"`, `"qemu"`, and `"libkrun"`.
+</ParamField>
+
+<ParamField path="arch" type="str" default='"host"'>
+  Target architecture. Use `"host"` to match the current machine, or pass `"amd64"`, `"arm64"`, `"x86_64"`, or `"aarch64"`.
+</ParamField>
+
+<ParamField path="boot" type="DirectKernelBoot | None" default="None">
+  Direct-kernel boot profile.
+</ParamField>
+
+<ParamField path="boot_args" type="str | None" default="None">
+  Explicit kernel command line. Mutually exclusive with `boot`.
+</ParamField>
+
+<ResponseField name="return" type="BootImage">
+  A bootable image descriptor with `rootfs_format="raw-ext4"`.
+</ResponseField>
+
+## Example
+
+```python  theme={null}
+from smolvm import DockerRootfsBuilder, DirectKernelBoot, SmolVM
+
+image = DockerRootfsBuilder(
+    name="python-worker",
+    dockerfile="""
+FROM alpine:3.20
+RUN apk add --no-cache python3 openssh
+COPY init /init
+RUN chmod +x /init
+""",
+    context={"init": "#!/bin/sh\nexec /bin/sh\n"},
+    rootfs_size_mb=1024,
+    fingerprint_inputs={"requirements_hash": "e3b0c442"},
+).ensure(
+    backend="qemu",
+    boot=DirectKernelBoot(init="/init"),
+)
+
+with SmolVM.from_image(image, backend="qemu") as vm:
+    print(vm.status)
+```
+
+<Warning>
+  The builder exports the Docker image filesystem. It does not add a guest agent, configure networking, or start SSH unless your Dockerfile and init process do that work.
+</Warning>
+
+## Cache behavior
+
+The cache key includes:
+
+- Dockerfile content
+- build-context file contents
+- build args
+- Docker platform
+- target architecture
+- rootfs size
+- `fingerprint_inputs`
+
+If any of these values change, SmolVM builds a new root filesystem.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Custom images" icon="book-open" href="/smolvm/guides/custom-images">
+    Build and launch a custom image end to end.
+  </Card>
+
+  <Card title="BootImage" icon="hard-drive" href="/smolvm/api/bootimage">
+    See the image descriptor returned by `ensure()`.
+  </Card>
+</CardGroup>

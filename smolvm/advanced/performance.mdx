@@ -74,21 +74,13 @@ This amortizes the \~2.1s boot time across multiple operations.
 Configure CPU and memory based on your workload:
 
 ```python  theme={null}
-from smolvm import SmolVM, VMConfig
+from smolvm import SmolVM
 
 # Lightweight workload
-config = VMConfig(
-    vcpu_count=1,
-    mem_size_mib=256,
-    disk_size_mib=2048
-)
+vm = SmolVM(memory=512, disk_size=2048)
 
 # Heavy workload
-config = VMConfig(
-    vcpu_count=4,
-    mem_size_mib=2048,
-    disk_size_mib=8192
-)
+vm = SmolVM(memory=2048, disk_size=8192)
 ```
 
 <Warning>
@@ -97,31 +89,35 @@ config = VMConfig(
 
 ### 3. Pre-built custom images
 
-For workloads requiring specific dependencies, build a custom rootfs image with pre-installed packages using `ImageBuilder`:
+For workloads that need specific dependencies, build them into a custom image and launch that image with `SmolVM.from_image()`. This avoids reinstalling packages every time the sandbox starts.
 
 ```python  theme={null}
-from smolvm.build import ImageBuilder
-from smolvm import SmolVM, VMConfig
-from smolvm.utils import ensure_ssh_key
+from smolvm import DockerRootfsBuilder, DirectKernelBoot, SmolVM
 
-private_key, public_key = ensure_ssh_key()
-builder = ImageBuilder()
-kernel, rootfs = builder.build_alpine_ssh_key(
-    public_key,
+image = DockerRootfsBuilder(
+    name="data-worker",
+    dockerfile="""
+FROM alpine:3.20
+RUN apk add --no-cache python3 py3-requests py3-numpy
+COPY init /init
+RUN chmod +x /init
+""",
+    context={"init": "#!/bin/sh\nexec /bin/sh\n"},
     rootfs_size_mb=2048,
+).ensure(
+    backend="qemu",
+    boot=DirectKernelBoot(init="/init"),
 )
 
-config = VMConfig(
-    kernel_path=kernel,
-    rootfs_path=rootfs,
-    boot_args="console=ttyS0 reboot=k panic=1 init=/init",
+vm = SmolVM.from_image(
+    image,
+    backend="qemu",
+    memory_mb=2048,
+    disk_size_mb=4096,
 )
-
-with SmolVM(config, ssh_key_path=str(private_key)) as vm:
-    vm.run("apk add python3 py3-requests py3-numpy")
 ```
 
-This eliminates the need to install packages at runtime.
+The first build runs Docker. Later launches reuse the cached root filesystem unless the Dockerfile, build context, build args, platform, rootfs size, or fingerprint inputs change.
 
 ### 4. Shared vs isolated disk mode
 
@@ -129,21 +125,23 @@ Choose the appropriate disk mode for your use case:
 
 **Isolated Mode (default)**: Each VM gets its own copy of the rootfs
 
-* ✅ Complete isolation between VMs
-* ✅ No cross-VM contamination
-* ❌ Higher disk usage
-* ❌ Copy overhead on first boot
+* Complete isolation between VMs
+* No cross-VM contamination
+* Higher disk usage
+* Copy or materialization overhead on create
 
 **Shared Mode**: All VMs use the same rootfs image
 
-* ✅ No disk copy overhead
-* ✅ Lower disk usage
-* ❌ Changes persist across VMs
-* ❌ Potential cross-VM contamination
+* No disk copy overhead
+* Lower disk usage
+* Changes persist across VMs
+* Potential cross-VM contamination
 
 ```python  theme={null}
-config = VMConfig(disk_mode="shared")  # For read-only workloads
+vm = SmolVM.from_image(image, disk_mode="shared")
 ```
+
+Use shared mode only when the image is trusted and protected from concurrent writes.
 
 ### 5. Backend selection
 

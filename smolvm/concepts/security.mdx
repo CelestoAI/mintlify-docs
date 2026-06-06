@@ -56,12 +56,9 @@ Each sandbox can:
 Each sandbox has dedicated, capped resources:
 
 ```python  theme={null}
-from smolvm import VMConfig
+from smolvm import SmolVM
 
-config = VMConfig(
-    vcpu_count=2,      # Max 2 CPUs
-    mem_size_mib=512   # Max 512 MiB RAM
-)
+vm = SmolVM(memory=512)
 ```
 
 ## What SmolVM does not protect
@@ -140,38 +137,58 @@ with SmolVM() as vm:
 
 ## Disk isolation
 
+The examples in this section assume `image` is a `BootImage` created from the [custom images guide](/smolvm/guides/custom-images).
+
 ### Isolated mode (default)
 
-SmolVM defaults to `disk_mode="isolated"`, creating a per-VM rootfs clone:
+SmolVM defaults to `disk_mode="isolated"`, creating a per-VM disk from the base image:
 
 ```python  theme={null}
-from smolvm import VMConfig
+from smolvm import SmolVM
 
-# Each VM gets its own disk copy
-config = VMConfig(disk_mode="isolated")
+vm = SmolVM.from_image(
+    image,
+    disk_mode="isolated",
+)
 ```
 
 **Benefits**:
 
-* Complete filesystem isolation
-* No state leakage between VMs
-* Safe for untrusted code
+- Complete filesystem isolation
+- No state leakage between VMs
+- No writes to the original image artifact
+- Safe for untrusted code
 
 **Trade-offs**:
 
-* Additional disk space per VM
-* Slight creation overhead for copying rootfs
+- Additional disk space per VM
+- Creation overhead for copying or materializing the managed disk
+
+You can resize an isolated custom-image disk without mutating the original image:
+
+```python  theme={null}
+vm = SmolVM.from_image(
+    image,
+    disk_size_mb=4096,
+    grow_filesystem=True,
+)
+```
+
+`grow_filesystem=True` currently supports raw ext4 images. For qcow2 images, SmolVM can resize the virtual disk, but the guest filesystem must be grown inside the guest.
 
 ### Shared mode
 
 For trusted workloads that need persistent storage:
 
 ```python  theme={null}
-config = VMConfig(disk_mode="shared")
+vm = SmolVM.from_image(
+    image,
+    disk_mode="shared",
+)
 ```
 
 <Warning>
-  Shared mode means all VMs boot from the same rootfs. Use only for trusted workloads where you need state persistence.
+  Shared mode means VMs boot directly from the same root filesystem image. Writes can mutate the base image, and concurrent writers can corrupt it. Use shared mode only for trusted workloads where you intentionally want that behavior.
 </Warning>
 
 ### Disk retention
@@ -179,11 +196,13 @@ config = VMConfig(disk_mode="shared")
 Control whether isolated disks are kept after VM deletion:
 
 ```python  theme={null}
-config = VMConfig(
+vm = SmolVM.from_image(
+    image,
     disk_mode="isolated",
-    retain_disk_on_delete=True  # Keep disk for later reuse
 )
 ```
+
+Use `retain_disk_on_delete=True` on `VMConfig` when you need a lower-level retained-disk workflow. For most custom images, prefer isolated disks and snapshots for repeatable recovery.
 
 ## Environment variables
 
