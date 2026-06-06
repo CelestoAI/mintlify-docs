@@ -1,6 +1,6 @@
 ---
 title: "Kernel helpers"
-description: "ensure_base_kernel_for_backend reference: resolve and cache the SmolVM base kernel for a backend and architecture."
+description: "ensure_base_kernel_for_backend reference for resolving, downloading, and caching the SmolVM base kernel matching a chosen backend and CPU architecture."
 ---
 
 Use `ensure_base_kernel_for_backend(...)` when you bring your own root filesystem but want SmolVM's verified base kernel. The helper picks the right kernel artifact for the backend, downloads it on first use, verifies it, and returns the local path.

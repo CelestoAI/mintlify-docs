@@ -1,6 +1,6 @@
 ---
 title: "BootImage and boot helpers"
-description: "BootImage, DirectKernelBoot, and FirmwareBoot reference: describe custom SmolVM disk images and the boot path SmolVM should use."
+description: "BootImage, DirectKernelBoot, and FirmwareBoot reference for describing custom SmolVM disk images and the kernel or firmware boot path the VM should use."
 ---
 
 Use `BootImage` to tell SmolVM which disk image to boot and how to boot it. It is a description only: SmolVM creates the VM, networking, and per-VM disk later when you pass the image to [`SmolVM.from_image()`](/smolvm/api/smolvm#from-image).
