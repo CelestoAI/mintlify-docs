@@ -131,6 +131,135 @@ Reconnect to an existing VM by ID. Pass `ssh_password=` for Windows guests that 
 
 * `VMNotFoundError`: If no VM with this ID exists.
 
+### from\_image
+
+```python  theme={null}
+@classmethod
+SmolVM.from_image(
+    image: BootImage,
+    *,
+    vm_id: str | None = None,
+    name_prefix: str = "sbx",
+    data_dir: Path | None = None,
+    socket_dir: Path | None = None,
+    backend: str | None = None,
+    arch: str | None = None,
+    vcpus: int = 1,
+    memory_mb: int = 512,
+    guest_os: GuestOS | str = GuestOS.ALPINE,
+    network: Literal["tap", "slirp"] | None = None,
+    port_forwards: list[PortForwardConfig | dict] | None = None,
+    vsock: VsockConfig | dict | None = None,
+    comm_channel: Literal["ssh", "vsock"] | None = None,
+    disk_mode: Literal["isolated", "shared"] = "isolated",
+    ssh_user: str = "root",
+    ssh_key_path: str | None = None,
+    ssh_password: str | None = None,
+    internet_settings: InternetSettings | dict | None = None,
+    mounts: list[str] | None = None,
+    writable_mounts: bool = False,
+    callbacks: list[Callback] | None = None,
+) -> SmolVM
+```
+
+Launch a VM from a custom [`BootImage`](/smolvm/guides/custom-images#describe-a-bootable-image) without writing a `VMConfig` by hand. The image supplies the rootfs, kernel, and boot arguments; `from_image` resolves the backend, architecture, and any missing base kernel, then applies the per-VM runtime knobs you pass in.
+
+Use this when you have built a custom image (for example with `DockerRootfsBuilder`) and want a one-line launcher that still lets you tune memory, networking, port forwards, vsock, and the host-to-guest control channel.
+
+<ParamField path="image" type="BootImage" required>
+  Image to boot. Direct-kernel images may omit `kernel_path` — SmolVM downloads the matching base kernel automatically. Custom images without an SSH server are preserved (`image.ssh_capable=False` keeps SmolVM from generating SSH keys).
+</ParamField>
+
+<ParamField path="vm_id" type="str | None" default="None">
+  Custom VM identifier. Defaults to an auto-generated name using `name_prefix`.
+</ParamField>
+
+<ParamField path="name_prefix" type="str" default="sbx">
+  Prefix used when SmolVM generates a `vm_id`.
+</ParamField>
+
+<ParamField path="backend" type="str | None" default="None">
+  Runtime backend (`"firecracker"`, `"qemu"`, or `"libkrun"`). Defaults to the backend recorded on the image, otherwise normal auto-selection. Firmware-boot images require `"qemu"`.
+</ParamField>
+
+<ParamField path="arch" type="str | None" default="None">
+  Guest architecture (`"amd64"` or `"arm64"`). Defaults to the image's recorded arch, otherwise the host arch.
+</ParamField>
+
+<ParamField path="vcpus" type="int" default="1">
+  Number of guest vCPUs.
+</ParamField>
+
+<ParamField path="memory_mb" type="int" default="512">
+  Guest memory in MiB.
+</ParamField>
+
+<ParamField path="guest_os" type="GuestOS | str" default="GuestOS.ALPINE">
+  Guest OS hint used by SmolVM's lifecycle helpers (`"alpine"`, `"ubuntu"`, or `"windows"`).
+</ParamField>
+
+<ParamField path="network" type='Literal["tap", "slirp"] | None' default="None">
+  QEMU network mode. Use `"slirp"` to enable user-mode networking with `port_forwards`. Ignored for non-QEMU backends.
+</ParamField>
+
+<ParamField path="port_forwards" type="list[PortForwardConfig | dict] | None" default="None">
+  Host-to-guest port forwards. Only valid with `backend="qemu"` and `network="slirp"`.
+</ParamField>
+
+<ParamField path="vsock" type="VsockConfig | dict | None" default="None">
+  Vsock configuration for host-to-guest control or custom services.
+</ParamField>
+
+<ParamField path="comm_channel" type='Literal["ssh", "vsock"] | None' default="None">
+  Host-to-guest control channel for `run()` and file transfers. See [control channel](/smolvm/concepts/control-channel).
+</ParamField>
+
+<ParamField path="disk_mode" type='Literal["isolated", "shared"]' default="isolated">
+  Whether each VM gets its own per-VM disk overlay (`"isolated"`) or shares the base image (`"shared"`).
+</ParamField>
+
+<ParamField path="ssh_user" type="str" default="root">
+  SSH user for `run()`. Ignored when the image is not SSH-capable.
+</ParamField>
+
+<ParamField path="ssh_key_path" type="str | None" default="None">
+  SSH private key path.
+</ParamField>
+
+<ParamField path="ssh_password" type="str | None" default="None">
+  SSH password. Use this for images that ship password-only SSH.
+</ParamField>
+
+<ResponseField name="return" type="SmolVM">
+  A SmolVM instance bound to the new VM. Call `start()` (or use the context manager) to boot it.
+</ResponseField>
+
+#### Raises
+
+* `ValueError`: If the requested backend, arch, network mode, or `port_forwards` are incompatible with the image (for example, `port_forwards` outside QEMU slirp, or a firmware image on Firecracker).
+* `SmolVMError`: If you pass disk resize options — those are not implemented yet.
+
+#### Example
+
+```python  theme={null}
+from smolvm import SmolVM, DirectKernelBoot, DockerRootfsBuilder
+
+builder = DockerRootfsBuilder(
+    name="my-app",
+    dockerfile="FROM alpine:3.20\nRUN apk add --no-cache python3\n",
+)
+
+image = builder.ensure(
+    backend="qemu",
+    arch="host",
+    boot=DirectKernelBoot(root="/dev/vda", init="/sbin/init"),
+)
+
+with SmolVM.from_image(image, memory_mb=1024, vcpus=2) as vm:
+    result = vm.run("python3 --version")
+    print(result.stdout.strip())
+```
+
 ### from\_snapshot
 
 ```python  theme={null}

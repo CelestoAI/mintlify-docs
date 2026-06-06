@@ -307,6 +307,43 @@ image = BootImage(
 
 Firmware images must not set `kernel_path`, `initrd_path`, or `boot_args`, and only `qemu` is supported as the backend.
 
+## Launch a BootImage with `SmolVM.from_image()`
+
+Once you have a `BootImage`, the easiest way to boot it is `SmolVM.from_image()`. It builds the right `VMConfig` for you, downloads the matching base kernel when the image doesn't carry one, and lets you set per-VM knobs like memory and networking without touching backend internals.
+
+Use it when you want a one-line launcher for a custom image while still controlling vCPUs, memory, networking, port forwards, vsock, and the host-to-guest control channel.
+
+```python  theme={null}
+from smolvm import SmolVM, DirectKernelBoot, DockerRootfsBuilder
+
+builder = DockerRootfsBuilder(
+    name="my-app",
+    dockerfile="""
+        FROM alpine:3.20
+        RUN apk add --no-cache python3
+    """,
+)
+
+image = builder.ensure(
+    backend="qemu",
+    arch="host",
+    boot=DirectKernelBoot(root="/dev/vda", init="/sbin/init"),
+)
+
+with SmolVM.from_image(image, vcpus=2, memory_mb=1024) as vm:
+    result = vm.run("python3 --version")
+    print(result.stdout.strip())
+```
+
+A few things to know:
+
+* `from_image()` resolves the backend and architecture from the image's metadata when you don't pass them, and only fetches a base kernel for direct-kernel images that omit `kernel_path`.
+* Custom images without an SSH server keep working — SmolVM checks `image.ssh_capable` and skips SSH key setup when it's `False`. Use a vsock-based [control channel](/smolvm/concepts/control-channel) for those guests.
+* `port_forwards` require `backend="qemu"` and `network="slirp"`. Other combinations raise a clear error before the VM starts.
+* Firmware images (qcow2 cloud images, Windows guests, anything booted through OVMF) must run on QEMU; passing `backend="firecracker"` raises early.
+
+See the full parameter list in the [`SmolVM.from_image()` reference](/smolvm/api/smolvm#from-image).
+
 ## Image caching
 
 `ImageBuilder` caches built images to avoid rebuilding. The first build downloads base images and runs Docker. Subsequent calls with the same name return cached paths instantly:
