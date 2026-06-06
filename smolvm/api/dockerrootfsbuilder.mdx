@@ -1,0 +1,113 @@
+---
+title: "DockerRootfsBuilder"
+description: "DockerRootfsBuilder reference: build and cache raw ext4 root filesystems from Dockerfiles and return BootImage metadata for SmolVM.from_image."
+---
+
+Use `DockerRootfsBuilder` when you want a Dockerfile to be the source of truth for a custom SmolVM image. It builds a raw ext4 root filesystem, caches it by build inputs, and returns a [`BootImage`](/smolvm/api/bootimage).
+
+<Warning>
+  `DockerRootfsBuilder` does not install SSH or the SmolVM guest agent. Add your own guest control service, or use `ImageBuilder` when you need `vm.run(...)` immediately.
+</Warning>
+
+## Constructor
+
+```python
+from smolvm import DockerRootfsBuilder
+
+builder = DockerRootfsBuilder(
+    name="worker-rootfs",
+    dockerfile="""
+        FROM alpine:3.20
+        RUN apk add --no-cache python3
+        COPY init /init
+        RUN chmod +x /init
+    """,
+    context={"init": "#!/bin/sh\nwhile true; do sleep 3600; done\n"},
+    rootfs_size_mb=512,
+)
+```
+
+<ParamField path="name" type="str" required>
+  Cache directory name. Letters, numbers, `.`, `_`, and `-` are allowed.
+</ParamField>
+
+<ParamField path="dockerfile" type="str" required>
+  Dockerfile text. Blank Dockerfiles are rejected.
+</ParamField>
+
+<ParamField path="context" type="dict[str, Path | str | bytes] | None" default="None">
+  Files to copy into the temporary Docker build context. Keys must be safe relative paths.
+</ParamField>
+
+<ParamField path="rootfs_size_mb" type="int" default="512">
+  Size of the generated raw ext4 root filesystem. Must be greater than `0`.
+</ParamField>
+
+<ParamField path="cache_dir" type="Path | None" default="~/.smolvm/images/">
+  Cache root for built custom images.
+</ParamField>
+
+<ParamField path="fingerprint_inputs" type="dict[str, Any] | None" default="None">
+  Extra JSON-serializable values mixed into the cache key.
+</ParamField>
+
+<ParamField path="build_args" type="dict[str, str] | None" default="None">
+  Docker build arguments passed as `--build-arg`.
+</ParamField>
+
+<ParamField path="docker_platform" type="str | None" default="None">
+  Docker target platform override. When omitted, SmolVM selects `linux/amd64` or `linux/arm64` from the requested architecture.
+</ParamField>
+
+<ParamField path="ssh_capable" type="bool" default="False">
+  Whether the image starts SSH and accepts the credentials you pass to SmolVM.
+</ParamField>
+
+## ensure
+
+```python
+from smolvm import DirectKernelBoot, SmolVM
+
+image = builder.ensure(
+    backend="qemu",
+    arch="host",
+    boot=DirectKernelBoot(root="/dev/vda", init="/init"),
+)
+
+with SmolVM.from_image(image, memory_mb=1024) as vm:
+    print(vm.vm_id)
+```
+
+<ParamField path="backend" type="str" required>
+  Backend to prepare the image for. Public docs focus on `"firecracker"` and `"qemu"`.
+</ParamField>
+
+<ParamField path="arch" type='Literal["host", "amd64", "arm64", "x86_64", "aarch64"] | str' default="host">
+  Guest architecture. Use `"host"` to match the current machine.
+</ParamField>
+
+<ParamField path="boot" type="DirectKernelBoot | None" default="None">
+  Boot profile to render later for the selected backend.
+</ParamField>
+
+<ParamField path="boot_args" type="str | None" default="None">
+  Explicit kernel boot arguments. Mutually exclusive with `boot`.
+</ParamField>
+
+<ResponseField name="return" type="BootImage">
+  A `BootImage` with `rootfs_format="raw-ext4"`, the built rootfs path, the matching SmolVM base kernel, backend, arch, and `ssh_capable` flag.
+</ResponseField>
+
+## Cache behavior
+
+The cache key includes the Dockerfile, build context, build args, target architecture, rootfs size, Docker platform, and `fingerprint_inputs`. It does not include the backend or kernel identity, so Firecracker and QEMU can reuse the same rootfs when the architecture matches.
+
+## Context safety
+
+`DockerRootfsBuilder` validates context paths before running Docker:
+
+* Context keys must be relative paths.
+* `..` traversal is rejected.
+* A context entry named `Dockerfile` is reserved.
+* Missing files passed as `Path` values raise an error before the build starts.
+

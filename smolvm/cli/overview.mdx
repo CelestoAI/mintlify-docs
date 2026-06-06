@@ -39,11 +39,11 @@ pip install 'smolvm[dashboard]'
 
 ## Snapshot commands
 
-The `smolvm snapshot` command has its own subcommands for managing Firecracker VM snapshots:
+The `smolvm snapshot` command has subcommands for saving and restoring sandbox state:
 
 | Command | Description |
 | --- | --- |
-| `smolvm snapshot create` | Create a full snapshot from a running or paused VM |
+| `smolvm snapshot create` | Create a snapshot from a running or paused VM |
 | `smolvm snapshot restore` | Restore a snapshot back into its original VM |
 | `smolvm snapshot list` | List all snapshots |
 | `smolvm snapshot delete` | Delete a snapshot and its files |

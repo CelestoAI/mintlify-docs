@@ -28,7 +28,7 @@ SmolVM resolves the control channel in this order:
 | Windows guest | SSH |
 
 <Note>
-  vsock currently requires the QEMU backend on a Linux host with `vhost_vsock` loaded, and a sandbox image that ships the SmolVM guest agent. Both locally built images and the SmolVM-published images include it.
+  vsock currently requires the QEMU backend on a Linux host with `vhost_vsock` loaded, and a sandbox image that ships the SmolVM guest agent. Images built with `ImageBuilder` and SmolVM-published images include it. Images built with `DockerRootfsBuilder` need you to add the guest agent yourself.
 </Note>
 
 ## Why vsock is faster
@@ -105,7 +105,7 @@ If vsock isn't supported on your platform, SmolVM uses SSH automatically — no 
 
 <AccordionGroup>
   <Accordion title="comm_channel='vsock' raises on a Linux host">
-    Make sure the `vhost_vsock` kernel module is loaded and the image you booted contains the SmolVM guest agent. Locally built images and current published images include it. If you're running a pinned older release of SmolVM, upgrade so it pulls images that bake the guest agent in.
+    Make sure the `vhost_vsock` kernel module is loaded and the image you booted contains the SmolVM guest agent. Images built with `ImageBuilder` and current published images include it. If you're booting a `DockerRootfsBuilder` image, add the guest agent yourself or use SSH instead. If you're running a pinned older release of SmolVM, upgrade so it pulls images that bake the guest agent in.
 
     ```bash  theme={null}
     sudo modprobe vhost_vsock

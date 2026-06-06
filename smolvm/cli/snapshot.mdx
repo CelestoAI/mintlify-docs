@@ -1,6 +1,6 @@
 ---
 title: "smolvm snapshot"
-description: "Use smolvm snapshot to create, restore, list, and delete Firecracker microVM snapshots, capturing CPU, memory, and disk state for fast resume workflows."
+description: "Use smolvm snapshot to create, restore, list, and delete SmolVM snapshots for checkpointing and retry workflows."
 ---
 
 ## Synopsis
@@ -11,20 +11,20 @@ smolvm snapshot {create,restore,delete,list} [OPTIONS]
 
 ## Description
 
-The `snapshot` command manages Firecracker VM snapshots. You can save the full state of a running VM, restore it later, list existing snapshots, and delete ones you no longer need.
+The `snapshot` command saves a sandbox so you can restore it later. Use it to checkpoint an agent, keep a configured environment, or retry a risky step from a known state.
 
 <Note>
-  Snapshots require the **Firecracker** backend. They are not available on QEMU.
+  Snapshots work on Firecracker and QEMU for Linux guests with isolated disks. Windows guests, workspace mounts, and extra drives are not supported yet. QEMU snapshots require a qcow2 per-VM disk.
 </Note>
 
 ## Subcommands
 
 ### create
 
-Save the full state of a running or paused VM.
+Save a running or paused VM.
 
 ```bash  theme={null}
-smolvm snapshot create <vm_id> [--snapshot-id <id>] [--snapshot-type {full,diff}] [--resume-source] [--json]
+smolvm snapshot create <vm_id> [--snapshot-id <id>] [--snapshot-type {full,diff,disk}] [--resume-source] [--json]
 ```
 
 <ParamField path="vm_id" type="string" required>
@@ -32,11 +32,17 @@ smolvm snapshot create <vm_id> [--snapshot-id <id>] [--snapshot-type {full,diff}
 </ParamField>
 
 <ParamField path="--snapshot-id" type="string">
-  A custom identifier for the snapshot. If omitted, SmolVM generates one automatically (for example, `snap-my-vm-1717012345`). Must contain only lowercase letters, numbers, and hyphens.
+  A custom identifier for the snapshot. If omitted, SmolVM generates one automatically (for example, `snap-my-vm-1717012345`). Must contain only lowercase letters, numbers, hyphens, and underscores.
 </ParamField>
 
 <ParamField path="--snapshot-type" type="string" default="full">
-  How much of the disk to store. `full` (default) saves a complete, self-contained copy that always restores on its own. `diff` saves only what changed since the base image to use much less space, but the snapshot needs that base image to still be present at restore time. See [snapshot types](/smolvm/features/snapshots#choose-a-snapshot-type) for guidance.
+  How much state to store:
+
+  * `full` saves a complete disk copy plus memory and CPU state.
+  * `diff` saves a smaller disk artifact. QEMU diff snapshots need their backing image at restore time.
+  * `disk` is disk-only on QEMU and restores with a cold boot.
+
+  See [snapshot types](/smolvm/features/snapshots#choose-a-snapshot-type) for guidance.
 </ParamField>
 
 <ParamField path="--resume-source" type="flag">
@@ -57,6 +63,12 @@ To create a space-saving diff snapshot:
 
 ```bash  theme={null}
 smolvm snapshot create my-vm --snapshot-type diff
+```
+
+To create a QEMU disk-only snapshot:
+
+```bash  theme={null}
+smolvm snapshot create my-vm --snapshot-type disk
 ```
 
 **Example output:**
@@ -118,7 +130,7 @@ smolvm snapshot delete <snapshot_id> [--json]
 </ParamField>
 
 <Warning>
-  Deletion is permanent. The snapshot's state, memory dump, and disk copy cannot be recovered.
+  Deletion is permanent. SmolVM removes the saved files for that snapshot, including any disk, VM state, and memory artifacts that snapshot type created.
 </Warning>
 
 **Example:**
@@ -187,9 +199,11 @@ smolvm snapshot create my-vm --snapshot-id test-snap --json
       "restored": false,
       "restored_vm_id": null,
       "created_at": "2026-04-03T12:30:00+00:00",
-      "snapshot_path": "/home/user/.local/state/smolvm/snapshots/test-snap/vmstate.bin",
-      "mem_file_path": "/home/user/.local/state/smolvm/snapshots/test-snap/mem.bin",
-      "disk_path": "/home/user/.local/state/smolvm/snapshots/test-snap/disk.ext4"
+      "artifacts": {
+        "state_path": "/home/user/.local/state/smolvm/snapshots/test-snap/vmstate.bin",
+        "memory_path": "/home/user/.local/state/smolvm/snapshots/test-snap/mem.bin",
+        "disk_path": "/home/user/.local/state/smolvm/snapshots/test-snap/disk.ext4"
+      }
     }
   }
 }

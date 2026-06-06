@@ -1,48 +1,56 @@
 ---
 title: "SnapshotInfo"
-description: "SnapshotInfo reference: read snapshot metadata including snapshot_id, vm_id, creation timestamp, file paths, and restore status for SmolVM snapshots."
+description: "SnapshotInfo reference: read snapshot metadata including ID, backend, artifacts, source VM config, creation time, type, and restore status."
 ---
 
-## Overview
-
-The `SnapshotInfo` model holds all metadata about a saved VM snapshot. It is returned when you create a snapshot and can be retrieved from the snapshot list.
+`SnapshotInfo` tells you what SmolVM saved for a snapshot and how it can be restored. You receive it from `vm.snapshot(...)` and from snapshot list operations.
 
 ## Fields
 
 <ResponseField name="snapshot_id" type="string" required>
-  Unique identifier for the snapshot. Must contain only lowercase letters, numbers, and hyphens. If not provided during creation, SmolVM generates one automatically.
+  Unique snapshot identifier. If you do not provide one, SmolVM generates it.
 </ResponseField>
 
 <ResponseField name="vm_id" type="string" required>
-  The identifier of the source VM that was snapshotted.
+  Source VM identifier.
 </ResponseField>
 
-<ResponseField name="snapshot_path" type="Path" required>
-  Path to the saved VM state file (`vmstate.bin`).
+<ResponseField name="backend" type='Literal["firecracker", "qemu", "libkrun"]' required>
+  Backend used by the source VM. Public docs focus on Firecracker and QEMU.
 </ResponseField>
 
-<ResponseField name="mem_file_path" type="Path" required>
-  Path to the saved memory dump (`mem.bin`).
-</ResponseField>
+<ResponseField name="artifacts" type="SnapshotArtifacts" required>
+  Files SmolVM wrote for the snapshot.
 
-<ResponseField name="disk_path" type="Path" required>
-  Path to the saved root filesystem copy (`disk.ext4`).
+  <Expandable title="Artifact fields">
+    <ResponseField name="state_path" type="Path | None">
+      Separate VM state file. Present for Firecracker snapshots. QEMU stores full and diff snapshot state inside the qcow2 disk artifact, so this is `None` for QEMU snapshots.
+    </ResponseField>
+
+    <ResponseField name="memory_path" type="Path | None">
+      Separate memory dump file. Present for Firecracker snapshots. QEMU stores full and diff snapshot memory inside the qcow2 disk artifact, so this is `None` for QEMU snapshots.
+    </ResponseField>
+
+    <ResponseField name="disk_path" type="Path" required>
+      Saved disk artifact. Firecracker writes `disk.ext4`; QEMU writes `disk.qcow2`.
+    </ResponseField>
+  </Expandable>
 </ResponseField>
 
 <ResponseField name="vm_config" type="VMConfig" required>
-  The full VM configuration at the time of the snapshot. Used during restore to recreate the VM with the same settings.
+  VM configuration captured at snapshot time. SmolVM uses it during restore.
 </ResponseField>
 
 <ResponseField name="network_config" type="NetworkConfig" required>
-  The network configuration at the time of the snapshot. Used during restore to reattach the VM to its original network identity.
+  Network configuration captured at snapshot time. SmolVM uses it to restore the VM's network identity.
 </ResponseField>
 
 <ResponseField name="created_at" type="datetime" required>
-  UTC timestamp of when the snapshot was created.
+  UTC timestamp for when the snapshot was created.
 </ResponseField>
 
 <ResponseField name="snapshot_type" type="SnapshotType" default="SnapshotType.FULL">
-  How much of the disk was stored. `SnapshotType.FULL` is a complete, self-contained copy of the disk that always restores on its own. `SnapshotType.DIFF` is a space-saving snapshot that stores only what changed since the base image and needs that base image to still be present at restore time. Snapshots created before this field existed read back as `FULL`. See the [Snapshots feature page](/smolvm/features/snapshots#choose-a-snapshot-type) for when to use each.
+  What was saved: `FULL`, `DIFF`, or `DISK`. `DISK` is disk-only on QEMU and restores with a cold boot. On Firecracker, SmolVM still captures memory and VM state for every snapshot type.
 </ResponseField>
 
 <ResponseField name="restored" type="bool" default="false">
@@ -50,55 +58,54 @@ The `SnapshotInfo` model holds all metadata about a saved VM snapshot. It is ret
 </ResponseField>
 
 <ResponseField name="restored_vm_id" type="string | None" default="None">
-  The VM ID of the most recently restored instance, if any.
+  VM ID of the most recently restored instance, if any.
 </ResponseField>
 
 ## Usage
 
 ### Creating a snapshot
 
-```python  theme={null}
+```python
 from smolvm import SmolVM
 
 vm = SmolVM()
 vm.start()
 
 snapshot = vm.snapshot(snapshot_id="my-checkpoint")
-print(f"ID: {snapshot.snapshot_id}")
-print(f"Source VM: {snapshot.vm_id}")
-print(f"Created: {snapshot.created_at}")
-print(f"Disk path: {snapshot.disk_path}")
+print(snapshot.snapshot_id)
+print(snapshot.backend)
+print(snapshot.artifacts.disk_path)
 
 vm.close()
 ```
 
 ### Listing snapshots
 
-```python  theme={null}
+```python
 from smolvm import SmolVMManager
 
 with SmolVMManager() as sdk:
     snapshots = sdk.list_snapshots()
     for snap in snapshots:
         status = "restored" if snap.restored else "available"
-        print(f"{snap.snapshot_id} ({status}) — from {snap.vm_id}")
+        print(f"{snap.snapshot_id} ({status}) from {snap.vm_id}")
 ```
 
 ### Restoring from a snapshot
 
-```python  theme={null}
+```python
 from smolvm import SmolVM
 
 vm = SmolVM.from_snapshot("my-checkpoint", resume_vm=True)
-print(f"Restored into: {vm.vm_id}")
-print(f"Status: {vm.status}")
+print(vm.vm_id)
+print(vm.status)
 
 vm.close()
 ```
 
 ## Related
 
-* [`SmolVM.snapshot()`](/smolvm/api/smolvm) — Create a snapshot from a running VM
-* [`SmolVM.from_snapshot()`](/smolvm/api/smolvm) — Restore a VM from a snapshot
+* [`SmolVM.snapshot()`](/smolvm/api/smolvm#snapshot) — Create a snapshot from a running VM
+* [`SmolVM.from_snapshot()`](/smolvm/api/smolvm#from-snapshot) — Restore a VM from a snapshot
 * [Snapshots guide](/smolvm/features/snapshots) — Step-by-step guide to using snapshots
 * [Exceptions](/smolvm/api/exceptions) — `SnapshotAlreadyExistsError` and `SnapshotNotFoundError`

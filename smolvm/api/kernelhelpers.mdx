@@ -1,0 +1,45 @@
+---
+title: "Kernel helpers"
+description: "ensure_base_kernel_for_backend reference: resolve and cache the SmolVM base kernel for a backend and architecture."
+---
+
+Use `ensure_base_kernel_for_backend(...)` when you bring your own root filesystem but want SmolVM's verified base kernel. The helper picks the right kernel artifact for the backend, downloads it on first use, verifies it, and returns the local path.
+
+## ensure_base_kernel_for_backend
+
+```python
+from smolvm import ensure_base_kernel_for_backend
+
+kernel = ensure_base_kernel_for_backend("qemu", arch="host")
+print(kernel)
+```
+
+<ParamField path="backend" type="str | None" default="None">
+  Backend that will boot the kernel. Use `"firecracker"` or `"qemu"` for documented SmolVM backends. When omitted, SmolVM uses normal backend selection.
+</ParamField>
+
+<ParamField path="arch" type='Literal["host", "amd64", "arm64", "x86_64", "aarch64"] | str' default="host">
+  Architecture for the kernel. Use `"host"` to match the current machine.
+</ParamField>
+
+<ParamField path="cache_dir" type="Path | None" default="~/.smolvm/images/">
+  Cache directory for downloaded kernel files.
+</ParamField>
+
+<ResponseField name="return" type="Path">
+  Local path to the verified SmolVM base kernel.
+</ResponseField>
+
+## What it selects
+
+SmolVM publishes the same kernel build in different container formats:
+
+| Backend | Kernel artifact |
+| --- | --- |
+| Firecracker | ELF kernel |
+| QEMU | Image/bzImage kernel |
+
+<Note>
+  The source currently also accepts `libkrun` in this helper. The public docs focus on Firecracker and QEMU because those are the supported paths for most users.
+</Note>
+

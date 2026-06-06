@@ -296,41 +296,41 @@ qemu-system-aarch64 \
 
 ## Disk Management
 
-SmolVM supports two disk modes:
+SmolVM gives each sandbox its own writable disk by default. That keeps one sandbox's changes from affecting the image you built or another sandbox that starts from the same image.
 
 ### Isolated Mode (Default)
 
-Each VM gets a private copy of the rootfs:
+In isolated mode, SmolVM creates a per-VM disk under the local state directory:
 
 ```
 ~/.local/state/smolvm/disks/
-├── vm-abc123.ext4  (copy of base rootfs)
-├── vm-def456.ext4  (another copy)
-└── vm-ghi789.ext4  (another copy)
+├── vm-abc123.ext4
+├── vm-def456.qcow2
+└── vm-ghi789.ext4
 ```
 
-**Workflow** (vm.py:274-300):
+SmolVM chooses the disk strategy from the backend and root filesystem format:
 
-1. On `create()`, check if `data_dir/disks/<vm_id>.ext4` exists
-2. If not, `shutil.copy2(config.rootfs_path, instance_disk_path)`
-3. Update `config.rootfs_path` to point to the isolated copy
-4. Firecracker/QEMU mounts this copy (writable)
-5. On `delete()`, remove the copy (unless `retain_disk_on_delete=True`)
+* **Firecracker** uses a private raw ext4 disk copied from the base rootfs.
+* **QEMU with qcow2** creates a thin per-VM qcow2 disk backed by the base image.
+* **QEMU with raw ext4** normally creates a qcow2 overlay. When `grow_filesystem=True`, SmolVM uses a raw per-VM disk so host-side ext4 growth can run safely.
+
+When you set `disk_size_mib`, SmolVM grows the per-VM disk before boot. For raw ext4 images, `grow_filesystem=True` also expands the filesystem with `e2fsck` and `resize2fs`. For qcow2 images, SmolVM can grow the virtual disk size, and the guest remains responsible for growing its partition or filesystem.
 
 **Benefits**:
 
 * Complete isolation between VMs
-* No state pollution across VM instances
+* Base images stay unchanged during resize and boot
 * Safe for concurrent VMs
 
 **Tradeoffs**:
 
-* Disk usage: N × rootfs size
-* Copy overhead: \~100-200ms on first boot
+* Raw ext4 disks use one copy per VM
+* qcow2 overlays depend on their backing image while the VM exists
 
 ### Shared Mode
 
-All VMs mount the same rootfs image:
+In shared mode, SmolVM boots directly from `rootfs_path`:
 
 ```python  theme={null}
 from smolvm import VMConfig
@@ -343,20 +343,21 @@ config = VMConfig(
 
 **Workflow**:
 
-1. Firecracker/QEMU mounts `config.rootfs_path` directly (writable)
-2. All changes persist in the base image
-3. Multiple VMs share the same filesystem state
+1. Firecracker or QEMU mounts `config.rootfs_path` directly.
+2. Changes persist in the base image.
+3. SmolVM leaves the disk size unchanged.
 
 **Use cases**:
 
-* Read-only workloads (mount as read-only externally)
-* Persistent development environment
+* Persistent development images
 * Lower disk usage
+* Read-only workloads when the host enforces read-only access
 
 **Risks**:
 
 * Cross-VM contamination
 * Concurrent writes can corrupt filesystem
+* Disk resizing is disabled because the base artifact is shared
 
 ## Backend Abstraction
 

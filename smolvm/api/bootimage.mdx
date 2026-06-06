@@ -1,0 +1,164 @@
+---
+title: "BootImage and boot helpers"
+description: "BootImage, DirectKernelBoot, and FirmwareBoot reference: describe custom SmolVM disk images and the boot path SmolVM should use."
+---
+
+Use `BootImage` to tell SmolVM which disk image to boot and how to boot it. It is a description only: SmolVM creates the VM, networking, and per-VM disk later when you pass the image to [`SmolVM.from_image()`](/smolvm/api/smolvm#from-image).
+
+## BootImage
+
+```python
+from pathlib import Path
+
+from smolvm import BootImage, DirectKernelBoot
+
+image = BootImage(
+    name="alpine-tools",
+    rootfs_path=Path("/var/images/alpine-tools.ext4"),
+    rootfs_format="raw-ext4",
+    boot=DirectKernelBoot(root="/dev/vda", init="/init"),
+    backend="qemu",
+    arch="amd64",
+)
+```
+
+<ParamField path="name" type="str" required>
+  Human-readable image name. Blank names are rejected.
+</ParamField>
+
+<ParamField path="rootfs_path" type="Path" required>
+  Path to the root filesystem disk image. The file must exist.
+</ParamField>
+
+<ParamField path="rootfs_format" type='Literal["raw-ext4", "qcow2"]' required>
+  Disk image format. Use `"raw-ext4"` for raw ext4 filesystems and `"qcow2"` for QEMU qcow2 disks.
+</ParamField>
+
+<ParamField path="kernel_path" type="Path | None" default="None">
+  Kernel image path for direct-kernel boot. Direct-kernel images may omit this; `SmolVM.from_image(...)` resolves SmolVM's cached base kernel for the selected backend.
+</ParamField>
+
+<ParamField path="initrd_path" type="Path | None" default="None">
+  Optional initrd image path for direct-kernel boot.
+</ParamField>
+
+<ParamField path="boot" type="DirectKernelBoot | FirmwareBoot | None" default="None">
+  Boot helper. Use `DirectKernelBoot` for Linux images loaded with `-kernel`, or `FirmwareBoot` for QEMU images that boot through firmware.
+</ParamField>
+
+<ParamField path="boot_args" type="str | None" default="None">
+  Explicit kernel command line for direct-kernel images. Mutually exclusive with `boot`.
+</ParamField>
+
+<ParamField path="backend" type='Literal["firecracker", "qemu", "libkrun"] | None' default="None">
+  Backend this image is built for. Public docs focus on Firecracker and QEMU; `libkrun` is accepted by the source but is less documented.
+</ParamField>
+
+<ParamField path="arch" type='Literal["amd64", "arm64"] | None' default="None">
+  Guest CPU architecture. Leave unset when `SmolVM.from_image(...)` should use the host architecture.
+</ParamField>
+
+<ParamField path="ssh_capable" type="bool" default="False">
+  Whether the image starts SSH and accepts the credentials you pass to SmolVM. Set this to `True` only when command helpers such as `vm.run(...)` can connect.
+</ParamField>
+
+## Validation rules
+
+`BootImage` validates the boot contract before you launch:
+
+* Artifact paths must exist and point to files.
+* Direct-kernel images need either `boot` or `boot_args`.
+* `boot` and `boot_args` are mutually exclusive.
+* Firmware images must use `backend="qemu"` when a backend is set.
+* Firmware images must not set `kernel_path`, `initrd_path`, or `boot_args`.
+
+## Properties and methods
+
+<ResponseField name="boot_mode" type='Literal["direct_kernel", "firmware"]'>
+  VM boot mode inferred from the boot helper.
+</ResponseField>
+
+```python
+print(image.boot_mode)
+print(image.render_boot_args(backend="qemu", arch="amd64"))
+```
+
+<ParamField path="render_boot_args(backend, arch)" type="method">
+  Returns the kernel command line for direct-kernel images. Firmware images return an empty string because their boot arguments live inside the disk image.
+</ParamField>
+
+## DirectKernelBoot
+
+Use `DirectKernelBoot` when SmolVM should load a Linux kernel directly.
+
+```python
+from smolvm import DirectKernelBoot
+
+boot = DirectKernelBoot(
+    root="/dev/vda",
+    init="/init",
+    quiet=False,
+    extra_args=("acpi=off",),
+)
+
+print(boot.render(backend="qemu", arch="host"))
+```
+
+<ParamField path="root" type="str" default="/dev/vda">
+  Root device passed to the kernel.
+</ParamField>
+
+<ParamField path="init" type="str | None" default="/init">
+  Init program path. Set `None` when the image should use its default init.
+</ParamField>
+
+<ParamField path="rw" type="bool" default="True">
+  Mount the root filesystem read-write. When `False`, renders `ro`.
+</ParamField>
+
+<ParamField path="console" type='Literal["serial", "none"]' default="serial">
+  Serial console setting. QEMU on arm64 uses `ttyAMA0`; other documented paths use `ttyS0`.
+</ParamField>
+
+<ParamField path="panic" type="int" default="1">
+  Kernel panic reboot delay.
+</ParamField>
+
+<ParamField path="reboot" type="str" default="k">
+  Kernel reboot mode.
+</ParamField>
+
+<ParamField path="safe_trims" type="bool" default="True">
+  Add SmolVM's safe boot defaults such as `tsc=reliable` and `no_timer_check`.
+</ParamField>
+
+<ParamField path="quiet" type="bool | None" default="None">
+  Controls the `quiet` boot flag. Leave unset for the default behavior, or set `SMOLVM_VERBOSE_BOOT=1` to drop `quiet` while debugging.
+</ParamField>
+
+<ParamField path="extra_args" type="tuple[str, ...]" default="()">
+  Extra kernel arguments. Each entry must be one token with no spaces.
+</ParamField>
+
+## FirmwareBoot
+
+Use `FirmwareBoot` for QEMU images that already contain their own bootloader, such as cloud images or Windows qcow2 disks.
+
+```python
+from pathlib import Path
+
+from smolvm import BootImage, FirmwareBoot
+
+image = BootImage(
+    name="ubuntu-cloud",
+    rootfs_path=Path("/var/images/ubuntu.qcow2"),
+    rootfs_format="qcow2",
+    boot=FirmwareBoot(),
+    backend="qemu",
+)
+```
+
+<Note>
+  Firmware images boot through QEMU firmware. They do not use `kernel_path`, `initrd_path`, or `boot_args`.
+</Note>
+

@@ -169,7 +169,7 @@ Launch a VM from a custom [`BootImage`](/smolvm/guides/custom-images#describe-a-
 Use this when you have built a custom image (for example with `DockerRootfsBuilder`) and want a one-line launcher that still lets you tune memory, networking, port forwards, vsock, and the host-to-guest control channel.
 
 <ParamField path="image" type="BootImage" required>
-  Image to boot. Direct-kernel images may omit `kernel_path` — SmolVM downloads the matching base kernel automatically. Custom images without an SSH server are preserved (`image.ssh_capable=False` keeps SmolVM from generating SSH keys).
+  Image to boot. Direct-kernel images may omit `kernel_path` — SmolVM downloads the matching base kernel automatically. Custom images without an SSH server can still boot, but command helpers such as `vm.run(...)` require an SSH-capable image or guest agent.
 </ParamField>
 
 <ParamField path="vm_id" type="str | None" default="None">
@@ -182,6 +182,8 @@ Use this when you have built a custom image (for example with `DockerRootfsBuild
 
 <ParamField path="backend" type="str | None" default="None">
   Runtime backend (`"firecracker"`, `"qemu"`, or `"libkrun"`). Defaults to the backend recorded on the image, otherwise normal auto-selection. Firmware-boot images require `"qemu"`.
+
+  SmolVM's public guides focus on Firecracker and QEMU because they have the broadest current support.
 </ParamField>
 
 <ParamField path="arch" type="str | None" default="None">
@@ -256,18 +258,25 @@ from smolvm import SmolVM, DirectKernelBoot, DockerRootfsBuilder
 
 builder = DockerRootfsBuilder(
     name="my-app",
-    dockerfile="FROM alpine:3.20\nRUN apk add --no-cache python3\n",
+    dockerfile="""
+        FROM alpine:3.20
+        RUN apk add --no-cache python3
+        COPY init /init
+        RUN chmod +x /init
+    """,
+    context={
+        "init": "#!/bin/sh\nwhile true; do sleep 3600; done\n",
+    },
 )
 
 image = builder.ensure(
     backend="qemu",
     arch="host",
-    boot=DirectKernelBoot(root="/dev/vda", init="/sbin/init"),
+    boot=DirectKernelBoot(root="/dev/vda", init="/init"),
 )
 
 with SmolVM.from_image(image, memory_mb=1024, vcpus=2) as vm:
-    result = vm.run("python3 --version")
-    print(result.stdout.strip())
+    print(f"Started {vm.vm_id}")
 ```
 
 ### from\_snapshot
@@ -415,14 +424,25 @@ def snapshot(
     self,
     snapshot_id: str | None = None,
     *,
+    snapshot_type: SnapshotType | str = SnapshotType.FULL,
     resume_source: bool = False,
 ) -> SnapshotInfo
 ```
 
-Create a full snapshot of the VM. The VM must be running or paused. If running, SmolVM pauses it during snapshot creation.
+Create a snapshot of the VM. The VM must be running or paused. If running, SmolVM pauses it during snapshot creation unless `resume_source=True` is set.
 
 <ParamField path="snapshot_id" type="str | None" default="None">
-  Custom snapshot identifier. If omitted, SmolVM generates one automatically (for example, `snap-my-vm-1717012345`). Must contain only lowercase letters, numbers, and hyphens.
+  Custom snapshot identifier. If omitted, SmolVM generates one automatically (for example, `snap-my-vm-1717012345`). Must contain only lowercase letters, numbers, hyphens, and underscores.
+</ParamField>
+
+<ParamField path="snapshot_type" type="SnapshotType | str" default="SnapshotType.FULL">
+  What to save:
+
+  * `"full"` — complete disk copy plus memory and CPU state.
+  * `"diff"` — smaller disk artifact. QEMU diff snapshots need their backing image at restore time.
+  * `"disk"` — disk-only on QEMU; restores as a cold boot.
+
+  On Firecracker, SmolVM captures memory and VM state for every snapshot type.
 </ParamField>
 
 <ParamField path="resume_source" type="bool" default="False">
@@ -436,7 +456,7 @@ Create a full snapshot of the VM. The VM must be running or paused. If running, 
 #### Raises
 
 * `SnapshotAlreadyExistsError`: If a snapshot with this ID already exists.
-* `SmolVMError`: If the VM is not in a snapshotable state, or if the backend is not Firecracker.
+* `SmolVMError`: If the VM is not in a snapshotable state, uses a Windows guest, uses shared disk mode, has extra drives, has workspace mounts, or is a QEMU raw disk created for filesystem growth.
 
 ## Command Execution Methods
 

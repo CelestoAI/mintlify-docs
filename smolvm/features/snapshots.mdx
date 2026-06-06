@@ -1,14 +1,14 @@
 ---
 title: "Snapshot and restore SmolVM sandboxes"
-description: "Snapshot a running SmolVM sandbox — capturing memory, CPU, and disk state — so you can restore it instantly to checkpoint agents or retry failed steps."
+description: "Snapshot a running SmolVM sandbox so you can checkpoint agents, keep configured environments, or retry failed steps."
 ---
 
-Snapshots let you freeze a running sandbox and bring it back exactly where you left off. This is useful when you want to save a configured environment, retry a failed step, or checkpoint an agent's progress before a risky operation.
+Snapshots let you save a sandbox and bring it back later. This is useful when you want to keep a configured environment, retry a failed step, or checkpoint an agent's progress before a risky operation.
 
-A snapshot captures the full state of the VM: CPU registers, memory contents, and the root filesystem disk. When you restore a snapshot, the sandbox boots into the exact same state it was in when the snapshot was created.
+A full snapshot captures the VM's CPU state, memory, and disk. When you restore it, the sandbox resumes where it was when you created the snapshot.
 
 <Note>
-  Snapshots are available on the **Firecracker** backend (Linux only). The QEMU backend does not currently support SmolVM snapshots.
+  Snapshots are available on Firecracker and QEMU for Linux guests that use isolated disks. Windows guests, workspace mounts, and extra drives are not supported yet. QEMU snapshots require a qcow2 per-VM disk, so raw QEMU disks created for `grow_filesystem=True` cannot be snapshotted.
 </Note>
 
 ## When to use snapshots
@@ -73,14 +73,14 @@ To create a snapshot, the VM must be running or paused. SmolVM pauses the VM dur
 
 When you create a snapshot, you can pick how much of the VM to store:
 
-- **`full`** (default) — A complete, self-contained copy of the disk plus the guest's memory and CPU state. Restores on its own to the exact running state, even if the original base image is gone. Use this when you want to resume the sandbox exactly where you left off.
-- **`diff`** — Stores only the disk data that changed since the shared base image, so it takes far less space. Use this in production systems that take many snapshots and keep their base images in place. A diff snapshot needs its base image to still be present to restore.
-- **`disk`** — Self-contained like `full`, but stores **only the disk** — it skips the guest's memory (RAM/vmstate) entirely. Restoring boots the sandbox fresh from that disk instead of resuming the running state. Use this when you only need the filesystem state and a cold boot is acceptable — for example, suspending and resuming sandboxes across hosts, or taking frequent snapshots without blocking the VM.
+- **`full`** (default) — Saves a complete, self-contained disk copy plus the guest's memory and CPU state. Use this when you want to resume the sandbox exactly where you left off.
+- **`diff`** — Saves a smaller disk artifact. On QEMU, the snapshot state is stored inside the qcow2 artifact and the backing image must still exist at restore time. On Firecracker, SmolVM still captures memory and VM state in full, and uses a copy-on-write disk copy when the host filesystem supports it.
+- **`disk`** — On QEMU, saves only the disk and skips the memory dump. Restoring boots the sandbox fresh from that disk instead of resuming the exact running process state. Use this when you only need filesystem state and a cold boot is acceptable.
 
-On the Firecracker backend, the VM state and memory files are always captured in full — `diff` only changes how the disk is stored, so a diff snapshot still restores on its own as long as the base image is available.
+On Firecracker, VM state and memory files are captured for every snapshot type. This means `disk` is mainly useful on QEMU today.
 
 <Note>
-  `disk` snapshots are much faster and use far less space than `full` because they skip the RAM dump. They are the right choice for sandbox suspend/restore workflows where you don't need to resume the exact running process state. Taking a `disk` snapshot does not block the QEMU monitor, so it's also safer to use under load.
+  QEMU `disk` snapshots are much faster and use less space than `full` because they skip the RAM dump. They are the right choice for suspend/restore workflows where you only need the filesystem state.
 </Note>
 
 <Tabs>
@@ -115,7 +115,7 @@ On the Firecracker backend, the VM state and memory files are always captured in
     # Space-saving snapshot
     smolvm snapshot create my-vm --snapshot-type diff
 
-    # Disk-only snapshot — fast, no RAM dump, restores as a cold boot
+    # QEMU disk-only snapshot — fast, no RAM dump, restores as a cold boot
     smolvm snapshot create my-vm --snapshot-type disk
 
     # Full snapshot (default — same as omitting the flag)
@@ -124,12 +124,12 @@ On the Firecracker backend, the VM state and memory files are always captured in
   </Tab>
 </Tabs>
 
-Take a `disk` snapshot when you want to save the filesystem state quickly and don't need to resume the running process state:
+Take a QEMU `disk` snapshot when you want to save the filesystem state quickly and don't need to resume the running process state:
 
 ```python  theme={null}
 from smolvm import SmolVM, SnapshotType
 
-vm = SmolVM()
+vm = SmolVM(backend="qemu")
 vm.start()
 vm.run("apk add python3")
 
@@ -145,7 +145,7 @@ result = vm.run("python3 --version")  # python3 is already installed
 ```
 
 <Note>
-  If the base image for a diff snapshot is missing at restore time, SmolVM raises a clear error pointing to the missing path and suggesting you take a `full` snapshot instead. To stay safe, only delete a base image once you've removed every diff snapshot that depends on it — or take a `full` snapshot first.
+  If the backing image for a QEMU diff snapshot is missing at restore time, SmolVM raises a clear error pointing to the missing path and suggesting you take a `full` snapshot instead. To stay safe, keep backing images in place while their diff snapshots exist.
 </Note>
 
 ## Restore a snapshot
@@ -248,7 +248,7 @@ Deleting a snapshot removes the saved state files and metadata. You cannot delet
 </Tabs>
 
 <Warning>
-  Deleting a snapshot is permanent. The saved VM state, memory dump, and disk copy are removed and cannot be recovered.
+  Deleting a snapshot is permanent. SmolVM removes the saved files for that snapshot, including any disk, VM state, and memory artifacts that snapshot type created.
 </Warning>
 
 ## Full example: checkpoint and retry
@@ -286,7 +286,7 @@ vm.close()
 
 ## Snapshot ID rules
 
-Snapshot IDs must contain only lowercase letters, numbers, and hyphens. SmolVM validates this on creation and raises an error for invalid IDs.
+Snapshot IDs must contain only lowercase letters, numbers, hyphens, and underscores. SmolVM validates this on creation and raises an error for invalid IDs.
 
 Valid examples: `my-checkpoint`, `snap-agent-001`, `pre-deploy-v2`
 
