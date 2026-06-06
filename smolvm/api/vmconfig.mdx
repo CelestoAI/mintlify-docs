@@ -57,6 +57,15 @@ All VMConfig instances are immutable (frozen) after creation.
   Path to the root filesystem image. The path must exist and point to a valid file.
 </ParamField>
 
+<ParamField path="rootfs_format" type='Literal["raw-ext4", "qcow2"] | None' default="None">
+  Declared format of `rootfs_path`. New configs should set this explicitly:
+
+  * `"raw-ext4"` — a raw ext4 filesystem image (the default for `ImageBuilder` and `DockerRootfsBuilder`).
+  * `"qcow2"` — a QEMU qcow2 disk image (used by Ubuntu and Windows cloud images).
+
+  When omitted, SmolVM falls back to the filename suffix (`.qcow2` ⇒ `qcow2`, anything else ⇒ `raw-ext4`). Setting this correctly matters because SmolVM uses it to pick the right QEMU drive format, backing-file format, and disk-resize strategy.
+</ParamField>
+
 <ParamField path="boot_args" type="str" default="console=ttyS0 reboot=k panic=1 pci=off">
   Kernel boot arguments. For SSH-capable VMs built with ImageBuilder, include `init=/init`.
 </ParamField>
@@ -81,6 +90,14 @@ All VMConfig instances are immutable (frozen) after creation.
 
   * `"isolated"`: Clone rootfs per VM for sandbox isolation. Each VM gets its own copy.
   * `"shared"`: Boot directly from `rootfs_path`. Multiple VMs can share the same disk image.
+</ParamField>
+
+<ParamField path="disk_size_mib" type="int | None" default="None">
+  Target size in MiB for the per-VM disk. SmolVM only grows the disk — pick a value at least as large as the current rootfs size, otherwise creation fails with a clear error. Requires `disk_mode="isolated"`; shared base images are never resized. Works for both `raw-ext4` and `qcow2` rootfs formats.
+</ParamField>
+
+<ParamField path="grow_filesystem" type="bool" default="False">
+  Grow the guest filesystem to fill the resized disk during VM creation. Only supported for `rootfs_format="raw-ext4"` images and requires `e2fsprogs` (`e2fsck`, `resize2fs`) on the host. For qcow2 images, leave this `False` and grow the partition or filesystem from inside the guest instead.
 </ParamField>
 
 <ParamField path="retain_disk_on_delete" type="bool" default="False">
@@ -364,11 +381,14 @@ with SmolVM(config) as vm:
 | `boot_mode`                | `Literal`               | `"direct_kernel"`                          | `"direct_kernel"`, `"firmware"`      |
 | `kernel_path`              | `Path \| None`          | Required for direct_kernel                 | Must exist as file                   |
 | `rootfs_path`              | `Path`                  | Required                                   | Must exist as file                   |
+| `rootfs_format`            | `Literal \| None`       | `None`                                     | `"raw-ext4"`, `"qcow2"`              |
 | `extra_drives`             | `list[Path]`            | `[]`                                       | Each must exist as file              |
 | `boot_args`                | `str`                   | `"console=ttyS0 reboot=k panic=1 pci=off"` | Any string                           |
 | `backend`                  | `str \| None`           | `None`                                     | `"firecracker"`, `"qemu"`, `None`    |
 | `qemu_network`             | `Literal`               | `"slirp"`                                  | `"slirp"`, `"tap"`                   |
 | `disk_mode`                | `Literal`               | `"isolated"`                               | `"isolated"`, `"shared"`             |
+| `disk_size_mib`            | `int \| None`           | `None`                                     | `>= 1` when set                      |
+| `grow_filesystem`          | `bool`                  | `False`                                    | Requires `rootfs_format="raw-ext4"`  |
 | `retain_disk_on_delete`    | `bool`                  | `False`                                    | `True`, `False`                      |
 | `env_vars`                 | `dict[str, str]`        | `{}`                                       | Keys must be valid shell identifiers |
 | `network_rate_limit_mbps`  | `int \| None`           | `None`                                     | >= 1 when set                        |

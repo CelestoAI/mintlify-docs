@@ -152,6 +152,8 @@ SmolVM.from_image(
     vsock: VsockConfig | dict | None = None,
     comm_channel: Literal["ssh", "vsock"] | None = None,
     disk_mode: Literal["isolated", "shared"] = "isolated",
+    disk_size_mb: int | None = None,
+    grow_filesystem: bool = False,
     ssh_user: str = "root",
     ssh_key_path: str | None = None,
     ssh_password: str | None = None,
@@ -218,6 +220,14 @@ Use this when you have built a custom image (for example with `DockerRootfsBuild
   Whether each VM gets its own per-VM disk overlay (`"isolated"`) or shares the base image (`"shared"`).
 </ParamField>
 
+<ParamField path="disk_size_mb" type="int | None" default="None">
+  Target size in MiB for the per-VM disk. SmolVM only grows the disk — pick a value at least as large as the image's current size. Requires `disk_mode="isolated"` (the default); shared base images are never resized. Works for both `raw-ext4` and `qcow2` rootfs formats.
+</ParamField>
+
+<ParamField path="grow_filesystem" type="bool" default="False">
+  After resizing the disk, grow the guest filesystem to fill it. Only supported for `raw-ext4` rootfs images and requires `e2fsprogs` (`e2fsck`, `resize2fs`) on the host. Leave `False` for qcow2 images and grow the filesystem from inside the guest instead.
+</ParamField>
+
 <ParamField path="ssh_user" type="str" default="root">
   SSH user for `run()`. Ignored when the image is not SSH-capable.
 </ParamField>
@@ -237,7 +247,7 @@ Use this when you have built a custom image (for example with `DockerRootfsBuild
 #### Raises
 
 * `ValueError`: If the requested backend, arch, network mode, or `port_forwards` are incompatible with the image (for example, `port_forwards` outside QEMU slirp, or a firmware image on Firecracker).
-* `SmolVMError`: If you pass disk resize options — those are not implemented yet.
+* `SmolVMError`: If a disk resize is requested but cannot be honored — for example, `disk_mode="shared"`, `grow_filesystem=True` on a qcow2 image, a `disk_size_mb` smaller than the current disk, or `e2fsprogs` missing on the host.
 
 #### Example
 
