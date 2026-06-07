@@ -30,20 +30,20 @@ Create a computer, run work inside it, then stop it. Start the same computer lat
 from celesto import Celesto
 
 
-with Celesto() as client:
-    computer = client.computers.create(template_id="coding-agent")
-    computer_id = computer["id"]
+client = Celesto()
+computer = client.computers.create(template_id="coding-agent")
+computer_id = computer["id"]
 
-    client.computers.exec(
-        computer_id,
-        "mkdir -p /workspace && echo ready > /workspace/status.txt",
-    )
-    client.computers.stop(computer_id)
+client.computers.exec(
+    computer_id,
+    "mkdir -p /workspace && echo ready > /workspace/status.txt",
+)
+client.computers.stop(computer_id)
 
-    # Later, start the same computer and read the file.
-    client.computers.start(computer_id)
-    result = client.computers.exec(computer_id, "cat /workspace/status.txt")
-    print(result["stdout"].strip())
+# Later, start the same computer and read the file.
+client.computers.start(computer_id)
+result = client.computers.exec(computer_id, "cat /workspace/status.txt")
+print(result["stdout"].strip())
 ```
 
 ```ts TypeScript
@@ -120,7 +120,7 @@ resumed = await client.resume(
 
 | Need | Pattern |
 |---|---|
-| Clean environment every time | Create a computer and delete it in `finally`. |
+| Clean environment every time | Create a computer and delete it after the task. |
 | Continue work later | Stop the computer and save its ID. |
 | Agent session handoff | Save session state and resume it later. |
 | Preview finished | Unpublish ports and delete the computer. |

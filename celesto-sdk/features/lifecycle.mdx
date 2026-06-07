@@ -33,13 +33,13 @@ Use this pattern when you want to keep the workspace between runs, then remove i
 from celesto import Celesto
 
 
-with Celesto() as client:
-    computer = client.computers.create()
-    computer_id = computer["id"]
+client = Celesto()
+computer = client.computers.create()
+computer_id = computer["id"]
 
-    client.computers.stop(computer_id)
-    client.computers.start(computer_id)
-    client.computers.delete(computer_id)
+client.computers.stop(computer_id)
+client.computers.start(computer_id)
+client.computers.delete(computer_id)
 ```
 
 ```ts TypeScript
