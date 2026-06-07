@@ -428,6 +428,64 @@ The response includes:
   Total number of computers in the list.
 </ResponseField>
 
+### Publish a port
+
+Publishing a port gives your computer a public HTTPS URL that anyone with the link can reach. Use it when something running inside the sandbox — a web app, an API server, a Jupyter notebook — needs to be reachable from outside the computer.
+
+The current release supports publishing port `8000`. If your app listens on a different port inside the computer, run it on `8000` (or proxy to it) before you publish.
+
+<Note>
+  Port publishing is currently available in the Python SDK and CLI only.
+</Note>
+
+```python Python
+# Publish port 8000 and get a public URL
+published = client.computers.publish_port(computer["id"])
+print(published["url"])     # e.g., "https://p-abc123.celesto.ai"
+print(published["status"])  # "publishing" or "published"
+
+# List every public URL attached to a computer
+for p in client.computers.list_published_ports(computer["id"]):
+    print(f"{p['port']} -> {p['url']} ({p['status']})")
+
+# Stop exposing the port
+client.computers.unpublish_port(computer["id"])
+```
+
+<ParamField body="computer_id" type="string" required>
+  Computer ID or name.
+</ParamField>
+
+<ParamField body="port" type="integer" default="8000">
+  Port inside the computer to expose. The current release supports `8000`.
+</ParamField>
+
+Each published port includes:
+
+<ResponseField name="id" type="string">
+  Unique identifier for the published port.
+</ResponseField>
+
+<ResponseField name="computer_id" type="string" required>
+  ID of the computer the port belongs to.
+</ResponseField>
+
+<ResponseField name="port" type="integer" required>
+  Port number inside the computer that is exposed.
+</ResponseField>
+
+<ResponseField name="url" type="string">
+  Public HTTPS URL that maps to the port. Available once `status` is `published`.
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  One of: `publishing`, `published`, `unpublishing`, `unpublished`, `error`.
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  ISO 8601 timestamp of when the port was published.
+</ResponseField>
+
 ### Lifecycle
 
 Stop, start, and delete computers as needed:
@@ -492,6 +550,9 @@ The `celesto` CLI groups commands by area: `celesto auth` for sign-in and `celes
 | `celesto computer stop <name>` | Stop a computer |
 | `celesto computer start <name>` | Start a stopped computer |
 | `celesto computer delete <name> [--force]` | Delete a computer |
+| `celesto computer port publish <name> [--port N]` | Expose a port on the public internet (defaults to `8000`) |
+| `celesto computer port list <name>` | List published ports for a computer |
+| `celesto computer port unpublish <name> [--port N]` | Stop exposing a port (defaults to `8000`) |
 
 You can use either the computer name or ID for any command that takes a computer identifier.
 
@@ -535,6 +596,17 @@ Override the template's defaults at create time:
 
 ```bash
 celesto computer create --template coding-agent --cpus 2 --memory 2048 --disk-size-mb 15360
+```
+
+Expose a web service running inside the computer and share the public URL:
+
+```bash
+# Start a web server inside the computer on port 8000, then:
+celesto computer port publish einstein
+# Prints: https://p-abc123.celesto.ai
+
+celesto computer port list einstein
+celesto computer port unpublish einstein
 ```
 
 ## Deployment API
