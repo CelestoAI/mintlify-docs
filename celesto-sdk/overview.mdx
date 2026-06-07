@@ -85,7 +85,7 @@ The CLI resolves the API key in this order: `--api-key` flag, `CELESTO_API_KEY` 
 
 ## Quick example
 
-Pick a template that matches what you want your computer to do, then create, run a command, and clean up.
+Create a computer, run one command, and delete it when you're done. By default, Celesto gives you a `scratch` computer — a minimal Ubuntu sandbox with no extra tools preinstalled.
 
 <CodeGroup>
 
@@ -93,7 +93,7 @@ Pick a template that matches what you want your computer to do, then create, run
 from celesto import Celesto
 
 with Celesto() as client:
-    computer = client.computers.create(template_id="coding-agent")
+    computer = client.computers.create()
     print(f"Computer ready: {computer['name']}")
 
     result = client.computers.exec(computer["id"], "uname -a")
@@ -107,7 +107,7 @@ import { Celesto } from "@celestoai/sdk";
 
 const client = new Celesto({ token: process.env.CELESTO_API_KEY });
 
-const computer = await client.computers.create({ templateId: "coding-agent" });
+const computer = await client.computers.create();
 console.log(`Computer ready: ${computer.name}`);
 
 const result = await client.computers.exec(computer.id, "uname -a");
@@ -118,41 +118,42 @@ await client.computers.delete(computer.id);
 
 </CodeGroup>
 
+If your agent needs common coding tools already installed, see [Use a template](#use-a-template).
+
 ## Computers API
 
 The Computers API lets you create, manage, and interact with sandboxed virtual machines.
 
 ### Create a computer
 
-The simplest way to create a computer is to pick a **template**. A template is a ready-made setup with the tools your agent needs already installed and sensible defaults for CPU, memory, and disk. Pass a `template_id` (Python) or `templateId` (JavaScript) when you create the computer:
+Call `create()` with no arguments to get a fresh `scratch` computer with the default size. Use this when you just need a clean Ubuntu sandbox to run commands in.
 
 <CodeGroup>
 
 ```python Python
-computer = client.computers.create(template_id="coding-agent")
+computer = client.computers.create()
 print(computer["name"])     # e.g., "einstein"
 print(computer["id"])       # e.g., "cmp_abc123"
 print(computer["status"])   # "creating" or "running"
-print(computer["template_id"])  # "coding-agent"
+print(computer["template_id"])  # "scratch"
 ```
 
 ```ts JavaScript
-const computer = await client.computers.create({ templateId: "coding-agent" });
+const computer = await client.computers.create();
 console.log(computer.name);       // e.g., "einstein"
 console.log(computer.id);         // e.g., "cmp_abc123"
 console.log(computer.status);     // "creating" or "running"
-console.log(computer.templateId); // "coding-agent"
+console.log(computer.templateId); // "scratch"
 ```
 
 </CodeGroup>
 
-You can override the template's defaults by passing any of `cpus`, `memory`, or disk size. Omit a field to inherit the template's default for it.
+Override the default size by passing any of `cpus`, `memory`, or disk size. Omit a field to keep its default.
 
 <CodeGroup>
 
 ```python Python
 computer = client.computers.create(
-    template_id="coding-agent",
     cpus=2,
     memory=2048,
     disk_size_mb=15360,
@@ -161,7 +162,6 @@ computer = client.computers.create(
 
 ```ts JavaScript
 const computer = await client.computers.create({
-  templateId: "coding-agent",
   cpus: 2,
   memory: 2048,
   diskSizeMb: 15360,
@@ -169,14 +169,6 @@ const computer = await client.computers.create({
 ```
 
 </CodeGroup>
-
-<ParamField body="template_id" type="string">
-  Sandbox template id, such as `scratch`, `coding-agent`, or `browser-agent`. Determines the preinstalled tooling and default resources. In JavaScript, use `templateId`.
-</ParamField>
-
-<ParamField body="template_version" type="string">
-  Optional immutable template version. Pin this when you want repeatable builds that won't change as the template evolves. In JavaScript, use `templateVersion`.
-</ParamField>
 
 <ParamField body="cpus" type="integer">
   Number of virtual CPUs. Range: 1-16. Defaults to the template's value.
@@ -188,6 +180,14 @@ const computer = await client.computers.create({
 
 <ParamField body="disk_size_mb" type="integer">
   Disk size in MB. Range: 512-51200. Defaults to the template's value. In JavaScript, use `diskSizeMb`.
+</ParamField>
+
+<ParamField body="template_id" type="string" default="scratch">
+  Sandbox template id. Defaults to `scratch` (a minimal Ubuntu computer). Pass another id, such as `coding-agent`, to get a computer with extra tools preinstalled. In JavaScript, use `templateId`. See [Use a template](#use-a-template).
+</ParamField>
+
+<ParamField body="template_version" type="string">
+  Optional immutable template version. Pin this when you want repeatable builds that won't change as the template evolves. In JavaScript, use `templateVersion`.
 </ParamField>
 
 <ParamField body="image" type="string">
@@ -257,6 +257,26 @@ The response includes these fields:
     </ResponseField>
   </Expandable>
 </ResponseField>
+
+### Use a template
+
+A template is a ready-made computer image with extra tools already installed and sensible defaults for CPU, memory, and disk. Use one when the default `scratch` computer doesn't have what your agent needs out of the box.
+
+For example, `coding-agent` includes common tools for coding tasks. Pass `template_id` (Python) or `templateId` (JavaScript) to pick a template:
+
+<CodeGroup>
+
+```python Python
+computer = client.computers.create(template_id="coding-agent")
+```
+
+```ts JavaScript
+const computer = await client.computers.create({ templateId: "coding-agent" });
+```
+
+</CodeGroup>
+
+You can still override the template's defaults by passing `cpus`, `memory`, or `disk_size_mb` alongside `template_id`.
 
 ### List available templates
 

@@ -1,5 +1,5 @@
 ---
-title: OpenAI Agents SDK
+title: Sandbox an OpenAI agent with Celesto or SmolVM
 description: "Give an OpenAI agent its own sandboxed computer. Use a hosted Celesto computer or a local SmolVM as the workspace for a SandboxAgent."
 ---
 
@@ -91,18 +91,30 @@ Use `CelestoSandboxClient` when you want OpenAI to spin up a fresh Celesto compu
 
 ### Client options
 
-Pass a `CelestoSandboxClientOptions` to control how the computer is created.
+Pass a `CelestoSandboxClientOptions` to control how the computer is created. Every field is optional. Omit a field to inherit the template's default.
 
-<ParamField body="cpus" type="integer" default="1">
-  Number of virtual CPUs for the new computer. Range: 1-16.
+<ParamField body="template_id" type="string" default="scratch">
+  Sandbox template to create the computer from. Defaults to `scratch` (a minimal Ubuntu computer). Pass `coding-agent` when your agent needs common coding tools preinstalled. See [Use a template](/celesto-sdk/overview#use-a-template).
 </ParamField>
 
-<ParamField body="memory" type="integer" default="1024">
-  Memory in MB for the new computer. Range: 512-32768.
+<ParamField body="template_version" type="string">
+  Pin an immutable template version for reproducible runs.
 </ParamField>
 
-<ParamField body="image" type="string" default="ubuntu-desktop-24.04">
-  OS image to boot. Match this to the [Computers API images](/celesto-sdk/overview#create-a-computer).
+<ParamField body="cpus" type="integer">
+  Number of virtual CPUs for the new computer. Range: 1-16. Defaults to the template's value.
+</ParamField>
+
+<ParamField body="memory" type="integer">
+  Memory in MB for the new computer. Range: 512-32768. Defaults to the template's value.
+</ParamField>
+
+<ParamField body="disk_size_mb" type="integer">
+  Disk size in MB. Range: 512-51200. Defaults to the template's value.
+</ParamField>
+
+<ParamField body="image" type="string">
+  Legacy OS image selector. Prefer `template_id` for new code.
 </ParamField>
 
 <ParamField body="computer_id" type="string">
@@ -112,6 +124,10 @@ Pass a `CelestoSandboxClientOptions` to control how the computer is created.
 <ParamField body="delete_on_close" type="boolean">
   Whether to delete the computer when the session closes. Defaults to `true` if the client created the computer, and `false` if you passed in an existing `computer_id`.
 </ParamField>
+
+<Tip>
+  Need preinstalled coding tools? Create the session with `options=CelestoSandboxClientOptions(template_id="coding-agent")`.
+</Tip>
 
 ### Authenticate the client
 
