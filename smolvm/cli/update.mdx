@@ -1,0 +1,109 @@
+---
+title: "smolvm update"
+description: "Upgrade SmolVM to the latest stable release with one command. Check for updates without installing, or pipe machine-readable JSON output into scripts."
+---
+
+`smolvm update` upgrades your installed SmolVM to the latest stable release from PyPI. You don't need to remember whether you installed SmolVM with `pip` or as a `uv` tool — the command detects how you installed it and runs the matching upgrade for you.
+
+Run it any time you want to pick up the newest release, or use `--check` first to see whether an update is available before installing it.
+
+## Synopsis
+
+```bash  theme={null}
+smolvm update [OPTIONS]
+```
+
+## Options
+
+<ParamField path="--check" type="flag" default="false">
+  Report whether an update is available without installing it. Exits successfully whether you're up to date or behind.
+</ParamField>
+
+<ParamField path="--json" type="flag" default="false">
+  Emit machine-readable JSON instead of formatted text. Useful for scripts and automation.
+</ParamField>
+
+## Examples
+
+### Check for an update
+
+See whether a newer release is available without changing anything:
+
+```bash  theme={null}
+smolvm update --check
+```
+
+**Example output when an update is available:**
+
+```
+Update available: 0.0.14 → 0.0.15. Run smolvm update to install.
+```
+
+**Example output when you're already up to date:**
+
+```
+smolvm 0.0.15 is up to date.
+```
+
+### Upgrade to the latest release
+
+Run the upgrade. SmolVM picks the right package manager based on how it was installed:
+
+```bash  theme={null}
+smolvm update
+```
+
+If you installed SmolVM with `uv tool install smolvm`, this runs `uv tool upgrade smolvm`. Otherwise it runs `pip install --upgrade smolvm`. Output from the underlying package manager streams live to your terminal.
+
+### JSON output for automation
+
+Get a structured response you can parse from a script:
+
+```bash  theme={null}
+smolvm update --json
+```
+
+The response includes the previous version, the version now installed, whether an upgrade happened, and the raw output from the underlying package manager:
+
+```json  theme={null}
+{
+  "command": "update",
+  "exit_code": 0,
+  "data": {
+    "previous": "0.0.14",
+    "current": "0.0.15",
+    "upgraded": true,
+    "pip_output": "..."
+  }
+}
+```
+
+Combine `--check` and `--json` to script update detection:
+
+```bash  theme={null}
+smolvm update --check --json | jq '.data.update_available'
+```
+
+The check response includes `current`, `latest`, and an `update_available` boolean.
+
+## How install detection works
+
+`smolvm update` looks for `smolvm` in the list returned by `uv tool list`. If it's there, the upgrade goes through `uv`. Otherwise it falls back to `pip install --upgrade smolvm` running under the same Python interpreter that started the CLI.
+
+If the upgrade fails (for example, because the network is unreachable), SmolVM prints a recovery command you can run manually:
+
+```bash  theme={null}
+pip install --upgrade smolvm
+```
+
+## Exit codes
+
+| Code | Description                                                       |
+| ---- | ----------------------------------------------------------------- |
+| `0`  | Success — already up to date, update available (with `--check`), or upgrade completed |
+| `1`  | Upgrade failed, or the installed version could not be determined  |
+
+## Related commands
+
+* [`smolvm prune`](/smolvm/cli/prune) — reclaim disk space from older releases after an upgrade
+* [`smolvm doctor`](/smolvm/cli/doctor) — verify your install after an upgrade

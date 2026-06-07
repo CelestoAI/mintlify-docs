@@ -197,6 +197,7 @@
               "smolvm/cli/ssh",
               "smolvm/cli/stop",
               "smolvm/cli/ui",
+              "smolvm/cli/update",
               "smolvm/cli/windows"
             ]
           },
