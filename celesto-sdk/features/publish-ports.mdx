@@ -24,7 +24,7 @@ Publish a port when you need to:
 
 ## Publish a service
 
-The following example starts a simple HTTP server on port `8000`, publishes the port, prints the public URL, lists published ports, and then removes the published port during cleanup.
+The following example starts a simple HTTP server on port `8000`, publishes the port, prints the public URL, lists published ports, and then removes the published port.
 
 <Steps>
   <Step title="Start a service and publish its port">
@@ -37,51 +37,28 @@ The following example starts a simple HTTP server on port `8000`, publishes the 
 
 
     client = Celesto()
-
     computer = client.computers.create(template_id="coding-agent")
     computer_id = computer["id"]
 
-    try:
-        # Start a simple HTTP server inside the computer.
-        # The server listens on port 8000.
-        client.computers.exec(
-            computer_id,
-            "cd /tmp && python3 -m http.server 8000 > /tmp/server.log 2>&1 &",
-        )
+    client.computers.exec(computer_id, "python3 -m http.server 8000 &")
 
-        # Publish the default service port.
-        published_port = client.computers.publish_port(computer_id)
+    published_port = client.computers.publish_port(computer_id)
+    print(published_port["url"])
 
-        # Open this URL in a browser to access the service.
-        print(published_port["url"])
+    published_ports = client.computers.list_published_ports(computer_id)
+    print(published_ports)
 
-        # Optional: inspect all published ports for this computer.
-        published_ports = client.computers.list_published_ports(computer_id)
-        print(published_ports)
-
-    finally:
-        # Always unpublish ports when the preview is no longer needed.
-        client.computers.unpublish_port(computer_id)
-
-        # Delete the computer when the workflow is complete.
-        client.computers.delete(computer_id)
+    client.computers.unpublish_port(computer_id)
+    client.computers.delete(computer_id)
     ```
 
     ```bash CLI
-    # Create a computer from the coding-agent template.
     celesto computer create --template coding-agent
-
-    # Start a simple HTTP server on port 8000.
-    celesto computer run einstein "cd /tmp && python3 -m http.server 8000 > /tmp/server.log 2>&1 &"
-
-    # Publish the service port and print the HTTPS URL.
+    celesto computer run einstein "python3 -m http.server 8000 &"
     celesto computer port publish einstein
-
-    # List published ports for the computer.
     celesto computer port list einstein
-
-    # Remove the public URL when you are done.
     celesto computer port unpublish einstein
+    celesto computer delete einstein
     ```
 
     </CodeGroup>
