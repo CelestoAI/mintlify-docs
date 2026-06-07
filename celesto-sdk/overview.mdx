@@ -1,6 +1,6 @@
 ---
-title: Celesto SDK
-description: "Python and JavaScript client for creating sandboxed computers, running commands, and managing deployments on the Celesto platform."
+title: Celesto SDK for sandboxed computers and agents
+description: "Use the Celesto Python and JavaScript SDKs to create sandboxed computers, run commands, list templates, and deploy AI agents from your code."
 ---
 
 The Celesto SDK lets you create sandboxed computers, run commands inside them, and manage the full lifecycle from your code or the command line. You can use it to spin up isolated environments for AI agents, run untrusted code safely, or automate development workflows. The SDK is available for both Python and JavaScript/TypeScript.
@@ -60,13 +60,15 @@ const client = new Celesto({ token: "your-api-key" });
 
 ## Quick example
 
+Pick a template that matches what you want your computer to do, then create, run a command, and clean up.
+
 <CodeGroup>
 
 ```python Python
 from celesto import Celesto
 
 with Celesto() as client:
-    computer = client.computers.create(cpus=2, memory=2048)
+    computer = client.computers.create(template_id="coding-agent")
     print(f"Computer ready: {computer['name']}")
 
     result = client.computers.exec(computer["id"], "uname -a")
@@ -80,7 +82,7 @@ import { Celesto } from "@celestoai/sdk";
 
 const client = new Celesto({ token: process.env.CELESTO_API_KEY });
 
-const computer = await client.computers.create({ cpus: 2, memory: 2048 });
+const computer = await client.computers.create({ templateId: "coding-agent" });
 console.log(`Computer ready: ${computer.name}`);
 
 const result = await client.computers.exec(computer.id, "uname -a");
@@ -97,34 +99,74 @@ The Computers API lets you create, manage, and interact with sandboxed virtual m
 
 ### Create a computer
 
+The simplest way to create a computer is to pick a **template**. A template is a ready-made setup with the tools your agent needs already installed and sensible defaults for CPU, memory, and disk. Pass a `template_id` (Python) or `templateId` (JavaScript) when you create the computer:
+
 <CodeGroup>
 
 ```python Python
-computer = client.computers.create(cpus=2, memory=2048)
-print(computer["name"])   # e.g., "einstein"
-print(computer["id"])     # e.g., "cmp_abc123"
-print(computer["status"]) # "creating" or "running"
+computer = client.computers.create(template_id="coding-agent")
+print(computer["name"])     # e.g., "einstein"
+print(computer["id"])       # e.g., "cmp_abc123"
+print(computer["status"])   # "creating" or "running"
+print(computer["template_id"])  # "coding-agent"
 ```
 
 ```ts JavaScript
-const computer = await client.computers.create({ cpus: 2, memory: 2048 });
-console.log(computer.name);   // e.g., "einstein"
-console.log(computer.id);     // e.g., "cmp_abc123"
-console.log(computer.status); // "creating" or "running"
+const computer = await client.computers.create({ templateId: "coding-agent" });
+console.log(computer.name);       // e.g., "einstein"
+console.log(computer.id);         // e.g., "cmp_abc123"
+console.log(computer.status);     // "creating" or "running"
+console.log(computer.templateId); // "coding-agent"
 ```
 
 </CodeGroup>
 
-<ParamField body="cpus" type="integer" default="1">
-  Number of virtual CPUs. Range: 1-16.
+You can override the template's defaults by passing any of `cpus`, `memory`, or disk size. Omit a field to inherit the template's default for it.
+
+<CodeGroup>
+
+```python Python
+computer = client.computers.create(
+    template_id="coding-agent",
+    cpus=2,
+    memory=2048,
+    disk_size_mb=15360,
+)
+```
+
+```ts JavaScript
+const computer = await client.computers.create({
+  templateId: "coding-agent",
+  cpus: 2,
+  memory: 2048,
+  diskSizeMb: 15360,
+});
+```
+
+</CodeGroup>
+
+<ParamField body="template_id" type="string">
+  Sandbox template id, such as `scratch`, `coding-agent`, or `browser-agent`. Determines the preinstalled tooling and default resources. In JavaScript, use `templateId`.
 </ParamField>
 
-<ParamField body="memory" type="integer" default="1024">
-  Memory in MB. Range: 512-32768.
+<ParamField body="template_version" type="string">
+  Optional immutable template version. Pin this when you want repeatable builds that won't change as the template evolves. In JavaScript, use `templateVersion`.
 </ParamField>
 
-<ParamField body="image" type="string" default="ubuntu-desktop-24.04">
-  OS image to use for the computer.
+<ParamField body="cpus" type="integer">
+  Number of virtual CPUs. Range: 1-16. Defaults to the template's value.
+</ParamField>
+
+<ParamField body="memory" type="integer">
+  Memory in MB. Range: 512-32768. Defaults to the template's value.
+</ParamField>
+
+<ParamField body="disk_size_mb" type="integer">
+  Disk size in MB. Range: 512-51200. Defaults to the template's value. In JavaScript, use `diskSizeMb`.
+</ParamField>
+
+<ParamField body="image" type="string">
+  Legacy OS image selector. Prefer `template_id` for new code.
 </ParamField>
 
 The response includes these fields:
@@ -138,7 +180,7 @@ The response includes these fields:
 </ResponseField>
 
 <ResponseField name="status" type="string" required>
-  Current status. One of: `creating`, `running`, `stopping`, `stopped`, `starting`, `deleting`, `deleted`, `error`.
+  Current status. One of: `creating`, `running`, `stopping`, `stopped`, `starting`, `restoring`, `restorable`, `deleting`, `deleted`, `error`.
 </ResponseField>
 
 <ResponseField name="vcpus" type="integer" required>
@@ -149,8 +191,20 @@ The response includes these fields:
   Memory allocated in MB.
 </ResponseField>
 
+<ResponseField name="disk_size_mb" type="integer" required>
+  Disk allocated in MB.
+</ResponseField>
+
 <ResponseField name="image" type="string" required>
   OS image used.
+</ResponseField>
+
+<ResponseField name="template_id" type="string" required>
+  Sandbox template the computer was created from (e.g., `coding-agent`).
+</ResponseField>
+
+<ResponseField name="template_version" type="string">
+  Pinned template version, if one was provided at create time.
 </ResponseField>
 
 <ResponseField name="created_at" type="string" required>
@@ -177,6 +231,61 @@ The response includes these fields:
       URL for browser-based access to the computer.
     </ResponseField>
   </Expandable>
+</ResponseField>
+
+### List available templates
+
+Browse the templates you can pass to `create()`. Each one reports a friendly name, a description, and the CPU, memory, and disk it uses by default.
+
+<CodeGroup>
+
+```python Python
+templates = client.computers.list_templates()
+for t in templates:
+    print(f"{t['id']}: {t['display_name']} ({t['default_vcpus']} vCPU, {t['default_ram_mb']} MB RAM)")
+```
+
+```ts JavaScript
+const templates = await client.computers.listTemplates();
+for (const t of templates) {
+  console.log(`${t.id}: ${t.displayName} (${t.defaultVcpus} vCPU, ${t.defaultRamMb} MB RAM)`);
+}
+```
+
+</CodeGroup>
+
+Each template includes:
+
+<ResponseField name="id" type="string" required>
+  Template identifier to pass as `template_id` / `templateId` when creating a computer.
+</ResponseField>
+
+<ResponseField name="display_name" type="string" required>
+  Human-readable template name. In JavaScript, this is `displayName`.
+</ResponseField>
+
+<ResponseField name="description" type="string" required>
+  Short summary of what the template includes.
+</ResponseField>
+
+<ResponseField name="default_vcpus" type="integer" required>
+  Default vCPU count if you don't override it. In JavaScript, this is `defaultVcpus`.
+</ResponseField>
+
+<ResponseField name="default_ram_mb" type="integer" required>
+  Default memory in MB. In JavaScript, this is `defaultRamMb`.
+</ResponseField>
+
+<ResponseField name="default_disk_size_mb" type="integer" required>
+  Default disk size in MB. In JavaScript, this is `defaultDiskSizeMb`.
+</ResponseField>
+
+<ResponseField name="version" type="string">
+  Current template version. Pass it as `template_version` / `templateVersion` to pin the template.
+</ResponseField>
+
+<ResponseField name="experimental" type="boolean" required>
+  `true` if the template is still in preview and may change.
 </ResponseField>
 
 ### Execute commands
@@ -327,7 +436,8 @@ The `celesto` CLI focuses on computer management. All commands live under `celes
 
 | Command | Description |
 |---|---|
-| `celesto computer create [--cpus N] [--memory MB]` | Create a computer |
+| `celesto computer create [--template ID] [--cpus N] [--memory MB] [--disk-size-mb MB]` | Create a computer from a template |
+| `celesto computer templates` | List available sandbox templates |
 | `celesto computer list` | List all computers |
 | `celesto computer run <name> "command"` | Execute a command (auto-resumes stopped computers) |
 | `celesto computer ssh <name>` | Interactive terminal (auto-resumes stopped computers) |
@@ -355,21 +465,28 @@ All commands support `--json` (`-j`) for machine-readable output, which is usefu
 
 ```bash
 celesto computer list --json
-celesto computer create --cpus 2 --memory 2048 --json
+celesto computer create --template coding-agent --json
 celesto computer run einstein "uname -a" --json
 ```
 
 ### Examples
 
-Create a computer and run a command:
+Browse templates, create a computer, and run a command:
 
 ```bash
 export CELESTO_API_KEY="your-api-key"
 
-celesto computer create --cpus 2 --memory 2048
+celesto computer templates
+celesto computer create --template coding-agent
 celesto computer run einstein "ls -la"
 celesto computer ssh einstein
 celesto computer delete einstein
+```
+
+Override the template's defaults at create time:
+
+```bash
+celesto computer create --template coding-agent --cpus 2 --memory 2048 --disk-size-mb 15360
 ```
 
 ## Deployment API
