@@ -1,32 +1,76 @@
 ---
-title: Configure computer resources
+title: Choose computer size
 sidebarTitle: VM resources
-description: "Choose CPU, memory, disk size, and templates when launching Celesto computers so your AI agents have enough resources for their workload."
+description: "Choose CPU, memory, disk size, and templates for Celesto computers so agents have enough room to run."
 ---
 
-Celesto computers can be sized for the job they need to run. Use small defaults for quick scripts, then increase CPU, memory, or disk size when an agent compiles code, installs packages, processes large files, or hosts a heavier service.
+You can choose how much CPU, memory, and storage a Celesto computer gets before it starts. Start with the default size for small jobs, then choose more resources when your agent builds code, installs packages, opens large files, or runs a web app.
 
-## Resource options
+## Start with a template
+
+A template is a ready-made starting setup for a computer. It includes an operating system, useful tools, and default resource sizes.
+
+Use `coding-agent` when your workflow needs common coding tools. Use the template defaults when you are running quick scripts or trying Celesto for the first time.
+
+<CodeGroup>
+
+```python Python
+from celesto import Celesto
+
+
+client = Celesto()
+templates = client.computers.list_templates()
+
+for template in templates:
+    print(
+        f"{template['id']}: "
+        f"{template['default_vcpus']} CPU, "
+        f"{template['default_ram_mb']} MB memory"
+    )
+```
+
+```ts TypeScript
+import { Celesto } from "@celestoai/sdk";
+
+const client = new Celesto({ token: process.env.CELESTO_API_KEY });
+const templates = await client.computers.listTemplates();
+
+for (const template of templates) {
+  console.log(
+    `${template.id}: ${template.defaultVcpus} CPU, ${template.defaultRamMb} MB memory`,
+  );
+}
+```
+
+```bash CLI
+celesto computer templates
+```
+
+</CodeGroup>
+
+## Choose what to change
+
+Change one setting at a time when the default size is too small. MB means megabytes, a common unit for memory and disk size.
 
 <ParamField body="cpus" type="integer">
-  Number of virtual CPUs, which are the processor cores available to the computer. Range: 1-16. Defaults to the template's value.
+  CPU cores for the computer. CPU cores run code and build commands. Range: 1-16.
 </ParamField>
 
 <ParamField body="memory" type="integer">
-  Memory in MB. Range: 512-32768. Defaults to the template's value.
+  Working space for running programs. More memory helps with notebooks, large files, package installs, and heavier services. Range: 512-32768 MB.
 </ParamField>
 
 <ParamField body="disk_size_mb" type="integer">
-  Disk size in MB. Range: 512-51200. Defaults to the template's value.
+  File storage inside the computer. More disk space helps with repositories, build output, downloaded files, and generated artifacts. Range: 512-51200 MB.
 </ParamField>
 
 <ParamField body="template_id" type="string" default="scratch">
-  Sandbox template ID. Pass `coding-agent` when your agent needs common coding tools already installed.
+  Ready-made starting setup for the computer. Use `coding-agent` when your agent needs coding tools already installed.
 </ParamField>
 
 ## Create a larger computer
 
-Use this when a job needs more room than the template default provides.
+Create a larger computer when the default template does not have enough room for the job. This example creates a `coding-agent` computer with 2 CPUs, 4096 MB of memory, and 20480 MB of disk space.
 
 <CodeGroup>
 
@@ -43,8 +87,8 @@ computer = client.computers.create(
 )
 
 print(computer["name"])
-print(f"{computer['vcpus']} vCPU")
-print(f"{computer['ram_mb']} MB RAM")
+print(f"{computer['vcpus']} CPU")
+print(f"{computer['ram_mb']} MB memory")
 print(f"{computer['disk_size_mb']} MB disk")
 
 client.computers.delete(computer["id"])
@@ -62,19 +106,15 @@ const computer = await client.computers.create({
 });
 
 console.log(computer.name);
-console.log(`${computer.vcpus} vCPU`);
-console.log(`${computer.ramMb} MB RAM`);
+console.log(`${computer.vcpus} CPU`);
+console.log(`${computer.ramMb} MB memory`);
 console.log(`${computer.diskSizeMb} MB disk`);
 
 await client.computers.delete(computer.id);
 ```
 
 ```bash CLI
-celesto computer create \
-  --template coding-agent \
-  --cpus 2 \
-  --memory 4096 \
-  --disk-size-mb 20480
+celesto computer create --template coding-agent --cpus 2 --memory 4096 --disk-size-mb 20480
 ```
 
 </CodeGroup>
@@ -83,56 +123,18 @@ celesto computer create \
   The response shows the CPU, memory, and disk size assigned to the new computer.
 </Check>
 
-## Start with the template defaults
+## Pick a starting size
 
-Templates include default resources for common workloads. List templates before choosing overrides.
+Use the smallest computer that can finish the job. Increase the setting that matches the problem you see.
 
-<CodeGroup>
-
-```python Python
-from celesto import Celesto
-
-
-client = Celesto()
-templates = client.computers.list_templates()
-
-for template in templates:
-    print(
-        f"{template['id']}: "
-        f"{template['default_vcpus']} vCPU, "
-        f"{template['default_ram_mb']} MB RAM"
-    )
-```
-
-```ts TypeScript
-import { Celesto } from "@celestoai/sdk";
-
-const client = new Celesto({ token: process.env.CELESTO_API_KEY });
-const templates = await client.computers.listTemplates();
-
-for (const template of templates) {
-  console.log(
-    `${template.id}: ${template.defaultVcpus} vCPU, ${template.defaultRamMb} MB RAM`,
-  );
-}
-```
-
-```bash CLI
-celesto computer templates
-```
-
-</CodeGroup>
-
-## Sizing guide
-
-| Workload | Suggested starting point |
+| Workload | Start with |
 |---|---|
 | Quick shell commands | Template defaults |
-| Coding agent with package installs | `coding-agent`, 2 vCPU, 4096 MB memory |
+| Coding agent with package installs | `coding-agent`, 2 CPUs, 4096 MB memory |
 | Large repository builds | More CPU and disk |
 | Data processing or notebooks | More memory and disk |
-| Hosted preview app | Enough memory for the app plus port publishing |
+| Hosted preview app | Enough memory for the app, plus port publishing |
 
 <Tip>
-  Choose the smallest resource size that reliably completes the task, then increase one setting at a time when you hit a clear bottleneck.
+  Increase CPU for slow builds, memory for programs that crash or slow down under load, and disk size when the computer runs out of file storage.
 </Tip>

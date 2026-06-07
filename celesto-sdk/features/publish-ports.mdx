@@ -4,9 +4,11 @@ sidebarTitle: Publish ports
 description: "Expose a web server, API, notebook, or preview app running inside a Celesto computer through a public HTTPS URL with the Python SDK or CLI."
 ---
 
-Services inside a Celesto computer are private by default. This isolation is useful for running agents, notebooks, APIs, and preview apps safely, but it also means you cannot open a browser or send a webhook to a service unless you expose it first. 
+Services inside a Celesto computer are private by default. This isolation is useful for running agents, notebooks, APIs, and preview apps safely, but it also means you cannot open a browser or send a webhook to a service unless you expose it first.
 
 Port publishing creates a public HTTPS URL that forwards traffic to a port inside the computer, so you can preview, test, and share running services without deploying them elsewhere.
+
+A port is the numbered address a service listens on. For example, a local development server might listen on port `8000`.
 
 
 ## When to publish a port
@@ -102,7 +104,7 @@ celesto computer port unpublish einstein
 ```
 
 <Tip>
-  For short-lived previews, unpublish the port in the same cleanup block that deletes the computer.
+  For short-lived previews, unpublish the port before deleting the computer.
 </Tip>
 
 ## Troubleshooting
