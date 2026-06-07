@@ -1,761 +1,98 @@
 ---
 title: Celesto SDK for sandboxed computers and agents
-description: "Use the Celesto Python and JavaScript SDKs to create sandboxed computers, run commands, publish ports, and deploy AI agents from your code."
+sidebarTitle: Overview
+description: "Use the Celesto SDK to create sandboxed computers, run commands, publish ports, and deploy AI agents from Python or JavaScript."
 ---
 
-The Celesto SDK lets you create sandboxed computers, run commands inside them, and manage the full lifecycle from your code or the command line. You can use it to spin up isolated environments for AI agents, run untrusted code safely, or automate development workflows. The SDK is available for both Python and JavaScript/TypeScript.
+The Celesto SDK lets you create a safe computer for your code or agent, run work inside it, and clean it up when you are done. You can use Celesto from Python, JavaScript, or the `celesto` command line tool.
 
-## Installation
+Use this section when you want to:
 
-<CodeGroup>
+- Run generated code in an isolated computer.
+- Give an AI agent a workspace with files, shell commands, and optional public ports.
+- Deploy an agent to Celesto's managed infrastructure.
+- Connect end-user data sources through Gatekeeper.
 
-```bash Python
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/celesto-sdk/quickstart">
+    Install the SDK, create your first computer, run a command, and delete it.
+  </Card>
+  <Card title="Authentication" icon="key" href="/celesto-sdk/authentication">
+    Save your API key for the CLI or pass it to the SDK from your environment.
+  </Card>
+  <Card title="Sandboxed computers" icon="server" href="/celesto-sdk/computers">
+    Create computers, use templates, run commands, manage ports, and control lifecycle.
+  </Card>
+  <Card title="CLI reference" icon="terminal" href="/celesto-sdk/cli">
+    Use `celesto auth` and `celesto computer` commands from your terminal.
+  </Card>
+  <Card title="Deployments" icon="cloud-upload" href="/celesto-sdk/deployments">
+    Package and deploy Python agents to Celesto's managed infrastructure.
+  </Card>
+  <Card title="OpenAI Agents" icon="robot" href="/celesto-sdk/openai-agents">
+    Give an OpenAI `SandboxAgent` a hosted Celesto computer or local SmolVM.
+  </Card>
+  <Card title="Gatekeeper" icon="shield-check" href="/celesto-sdk/gatekeeper">
+    Connect your users to providers like Google Drive with delegated OAuth access.
+  </Card>
+  <Card title="Errors" icon="triangle-alert" href="/celesto-sdk/errors">
+    Handle authentication, validation, rate limit, server, and network errors.
+  </Card>
+</CardGroup>
+
+## Choose your SDK
+
+Pages with SDK examples use Mintlify's `View` component. Pick Python or JavaScript from the selector at the top of the page, and the examples and table of contents update for that language.
+
+<View title="Python" icon="python">
+
+Use the Python SDK when you are building agents, automation scripts, or backend services in Python. Python examples use `snake_case` parameters such as `template_id` and `disk_size_mb`.
+
+```bash
 pip install celesto
 ```
 
-```bash JavaScript
+Start with the [Python quickstart](/celesto-sdk/quickstart), then read [Sandboxed computers](/celesto-sdk/computers) when you need templates, command execution, ports, or lifecycle control.
+
+</View>
+
+<View title="JavaScript" icon="js">
+
+Use the JavaScript SDK when you are building Node.js services, TypeScript workers, or web tooling. JavaScript examples use `camelCase` parameters such as `templateId` and `diskSizeMb`.
+
+```bash
 npm install @celestoai/sdk
 ```
 
-</CodeGroup>
-
-## Authentication
-
-Get your API key from [celesto.ai](https://celesto.ai) under **Settings > Security**.
-
-### Sign in once from the CLI
-
-If you use the `celesto` CLI, save your key one time and reuse it for every command:
-
-```bash
-celesto auth login
-```
-
-The command prompts for your API key and stores it in your operating system's secure credential store (Keychain on macOS, Credential Manager on Windows, Secret Service on Linux). Future CLI commands pick it up automatically — you do not need to export an environment variable.
-
-Manage the saved key with:
-
-```bash
-celesto auth status   # Check whether a key is saved
-celesto auth logout   # Remove the saved key
-```
-
-<Tip>
-  The saved key is scoped to the Celesto API URL. If you point the CLI at a different environment with `--base-url` or `CELESTO_BASE_URL`, sign in again for that URL.
-</Tip>
-
-### Use an environment variable
-
-Set `CELESTO_API_KEY` to authenticate the SDK or override the CLI's saved key:
-
-<CodeGroup>
-
-```python Python
-import os
-os.environ["CELESTO_API_KEY"] = "your-api-key"
-```
-
-```bash JavaScript
-export CELESTO_API_KEY="your-api-key"
-```
-
-</CodeGroup>
-
-### Pass the key in code
-
-You can also pass the key when you create the client:
-
-<CodeGroup>
-
-```python Python
-from celesto import Celesto
-
-client = Celesto(api_key="your-api-key")
-```
-
-```ts JavaScript
-import { Celesto } from "@celestoai/sdk";
-
-const client = new Celesto({ token: "your-api-key" });
-```
-
-</CodeGroup>
-
-The CLI resolves the API key in this order: `--api-key` flag, `CELESTO_API_KEY` environment variable, a `.env` file in the current directory, then the key saved by `celesto auth login`.
-
-## Quick example
-
-Create a computer, run one command, and delete it when you're done. By default, Celesto gives you a `scratch` computer — a minimal Ubuntu sandbox with no extra tools preinstalled.
-
-<CodeGroup>
-
-```python Python
-from celesto import Celesto
-
-with Celesto() as client:
-    computer = client.computers.create()
-    print(f"Computer ready: {computer['name']}")
-
-    result = client.computers.exec(computer["id"], "uname -a")
-    print(result["stdout"])
-
-    client.computers.delete(computer["id"])
-```
-
-```ts JavaScript
-import { Celesto } from "@celestoai/sdk";
-
-const client = new Celesto({ token: process.env.CELESTO_API_KEY });
-
-const computer = await client.computers.create();
-console.log(`Computer ready: ${computer.name}`);
-
-const result = await client.computers.exec(computer.id, "uname -a");
-console.log(result.stdout);
-
-await client.computers.delete(computer.id);
-```
-
-</CodeGroup>
-
-If your agent needs common coding tools already installed, see [Use a template](#use-a-template).
-
-## Computers API
-
-The Computers API lets you create, manage, and interact with sandboxed virtual machines.
-
-### Create a computer
-
-Call `create()` with no arguments to get a fresh `scratch` computer with the default size. Use this when you just need a clean Ubuntu sandbox to run commands in.
-
-<CodeGroup>
-
-```python Python
-computer = client.computers.create()
-print(computer["name"])     # e.g., "einstein"
-print(computer["id"])       # e.g., "cmp_abc123"
-print(computer["status"])   # "creating" or "running"
-print(computer["template_id"])  # "scratch"
-```
-
-```ts JavaScript
-const computer = await client.computers.create();
-console.log(computer.name);       // e.g., "einstein"
-console.log(computer.id);         // e.g., "cmp_abc123"
-console.log(computer.status);     // "creating" or "running"
-console.log(computer.templateId); // "scratch"
-```
-
-</CodeGroup>
-
-Override the default size by passing any of `cpus`, `memory`, or disk size. Omit a field to keep its default.
-
-<CodeGroup>
-
-```python Python
-computer = client.computers.create(
-    cpus=2,
-    memory=2048,
-    disk_size_mb=15360,
-)
-```
-
-```ts JavaScript
-const computer = await client.computers.create({
-  cpus: 2,
-  memory: 2048,
-  diskSizeMb: 15360,
-});
-```
-
-</CodeGroup>
-
-<ParamField body="cpus" type="integer">
-  Number of virtual CPUs. Range: 1-16. Defaults to the template's value.
-</ParamField>
-
-<ParamField body="memory" type="integer">
-  Memory in MB. Range: 512-32768. Defaults to the template's value.
-</ParamField>
-
-<ParamField body="disk_size_mb" type="integer">
-  Disk size in MB. Range: 512-51200. Defaults to the template's value. In JavaScript, use `diskSizeMb`.
-</ParamField>
-
-<ParamField body="template_id" type="string" default="scratch">
-  Sandbox template id. Defaults to `scratch` (a minimal Ubuntu computer). Pass another id, such as `coding-agent`, to get a computer with extra tools preinstalled. In JavaScript, use `templateId`. See [Use a template](#use-a-template).
-</ParamField>
-
-<ParamField body="template_version" type="string">
-  Optional immutable template version. Pin this when you want repeatable builds that won't change as the template evolves. In JavaScript, use `templateVersion`.
-</ParamField>
-
-<ParamField body="image" type="string">
-  Legacy OS image selector. Prefer `template_id` for new code.
-</ParamField>
-
-The response includes these fields:
-
-<ResponseField name="id" type="string" required>
-  Unique identifier for the computer (e.g., `cmp_abc123`).
-</ResponseField>
-
-<ResponseField name="name" type="string" required>
-  Auto-generated display name for the computer (e.g., `einstein`).
-</ResponseField>
-
-<ResponseField name="status" type="string" required>
-  Current status. One of: `creating`, `running`, `stopping`, `stopped`, `starting`, `restoring`, `restorable`, `deleting`, `deleted`, `error`.
-</ResponseField>
-
-<ResponseField name="vcpus" type="integer" required>
-  Number of virtual CPUs allocated.
-</ResponseField>
-
-<ResponseField name="ram_mb" type="integer" required>
-  Memory allocated in MB.
-</ResponseField>
-
-<ResponseField name="disk_size_mb" type="integer" required>
-  Disk allocated in MB.
-</ResponseField>
-
-<ResponseField name="image" type="string" required>
-  OS image used.
-</ResponseField>
-
-<ResponseField name="template_id" type="string" required>
-  Sandbox template the computer was created from (e.g., `coding-agent`).
-</ResponseField>
-
-<ResponseField name="template_version" type="string">
-  Pinned template version, if one was provided at create time.
-</ResponseField>
-
-<ResponseField name="created_at" type="string" required>
-  ISO 8601 timestamp of when the computer was created.
-</ResponseField>
-
-<ResponseField name="stopped_at" type="string">
-  ISO 8601 timestamp of when the computer was stopped. Only present if the computer has been stopped.
-</ResponseField>
-
-<ResponseField name="last_error" type="string">
-  Description of the most recent error, if the computer is in `error` status.
-</ResponseField>
-
-<ResponseField name="connection" type="object">
-  Connection details for accessing a running computer.
-
-  <Expandable title="Connection properties">
-    <ResponseField name="ssh" type="string">
-      SSH connection string for terminal access.
-    </ResponseField>
-
-    <ResponseField name="access_url" type="string">
-      URL for browser-based access to the computer.
-    </ResponseField>
-  </Expandable>
-</ResponseField>
-
-### Use a template
-
-A template is a ready-made computer image with extra tools already installed and sensible defaults for CPU, memory, and disk. Use one when the default `scratch` computer doesn't have what your agent needs out of the box.
-
-For example, `coding-agent` includes common tools for coding tasks. Pass `template_id` (Python) or `templateId` (JavaScript) to pick a template:
-
-<CodeGroup>
-
-```python Python
-computer = client.computers.create(template_id="coding-agent")
-```
-
-```ts JavaScript
-const computer = await client.computers.create({ templateId: "coding-agent" });
-```
-
-</CodeGroup>
-
-You can still override the template's defaults by passing `cpus`, `memory`, or `disk_size_mb` alongside `template_id`.
-
-### List available templates
-
-Browse the templates you can pass to `create()`. Each one reports a friendly name, a description, and the CPU, memory, and disk it uses by default.
-
-<CodeGroup>
-
-```python Python
-templates = client.computers.list_templates()
-for t in templates:
-    print(f"{t['id']}: {t['display_name']} ({t['default_vcpus']} vCPU, {t['default_ram_mb']} MB RAM)")
-```
-
-```ts JavaScript
-const templates = await client.computers.listTemplates();
-for (const t of templates) {
-  console.log(`${t.id}: ${t.displayName} (${t.defaultVcpus} vCPU, ${t.defaultRamMb} MB RAM)`);
-}
-```
-
-</CodeGroup>
-
-Each template includes:
-
-<ResponseField name="id" type="string" required>
-  Template identifier to pass as `template_id` / `templateId` when creating a computer.
-</ResponseField>
-
-<ResponseField name="display_name" type="string" required>
-  Human-readable template name. In JavaScript, this is `displayName`.
-</ResponseField>
-
-<ResponseField name="description" type="string" required>
-  Short summary of what the template includes.
-</ResponseField>
-
-<ResponseField name="default_vcpus" type="integer" required>
-  Default vCPU count if you don't override it. In JavaScript, this is `defaultVcpus`.
-</ResponseField>
-
-<ResponseField name="default_ram_mb" type="integer" required>
-  Default memory in MB. In JavaScript, this is `defaultRamMb`.
-</ResponseField>
-
-<ResponseField name="default_disk_size_mb" type="integer" required>
-  Default disk size in MB. In JavaScript, this is `defaultDiskSizeMb`.
-</ResponseField>
-
-<ResponseField name="version" type="string">
-  Current template version. Pass it as `template_version` / `templateVersion` to pin the template.
-</ResponseField>
-
-<ResponseField name="experimental" type="boolean" required>
-  `true` if the template is still in preview and may change.
-</ResponseField>
-
-### Execute commands
-
-Run a shell command on a computer:
-
-<CodeGroup>
-
-```python Python
-result = client.computers.exec(computer["id"], "ls -la /home")
-print(result["stdout"])
-print(result["exit_code"])
-```
-
-```ts JavaScript
-const result = await client.computers.exec(computer.id, "ls -la /home");
-console.log(result.stdout);
-console.log(result.exitCode);
-```
-
-</CodeGroup>
-
-<ParamField body="computer_id" type="string" required>
-  Computer ID or name.
-</ParamField>
-
-<ParamField body="command" type="string" required>
-  Shell command to execute.
-</ParamField>
-
-<ParamField body="timeout" type="integer" default="30">
-  Timeout in seconds. Range: 1-300.
-</ParamField>
-
-The response includes:
-
-<ResponseField name="exit_code" type="integer" required>
-  Exit code of the command. `0` means success.
-</ResponseField>
-
-<ResponseField name="stdout" type="string" required>
-  Standard output from the command.
-</ResponseField>
-
-<ResponseField name="stderr" type="string" required>
-  Standard error output from the command.
-</ResponseField>
-
-### Get a computer
-
-Retrieve details of a specific computer:
-
-<CodeGroup>
-
-```python Python
-info = client.computers.get(computer["id"])
-print(f"{info['name']}: {info['status']}")
-```
-
-```ts JavaScript
-const info = await client.computers.get(computer.id);
-console.log(`${info.name}: ${info.status}`);
-```
-
-</CodeGroup>
-
-### List computers
-
-<CodeGroup>
-
-```python Python
-result = client.computers.list()
-for vm in result["computers"]:
-    print(f"{vm['name']}: {vm['status']}")
-print(f"Total: {result['count']}")
-```
-
-```ts JavaScript
-const result = await client.computers.list();
-for (const vm of result.computers) {
-  console.log(`${vm.name}: ${vm.status}`);
-}
-console.log(`Total: ${result.count}`);
-```
-
-</CodeGroup>
-
-The response includes:
-
-<ResponseField name="computers" type="array" required>
-  List of computer objects, each with the same fields as the create response.
-</ResponseField>
-
-<ResponseField name="count" type="integer" required>
-  Total number of computers in the list.
-</ResponseField>
-
-### Publish a port
-
-Publishing a port gives your computer a public HTTPS URL that anyone with the link can reach. Use it when something running inside the sandbox — a web app, an API server, a Jupyter notebook — needs to be reachable from outside the computer.
-
-The current release supports publishing port `8000`. If your app listens on a different port inside the computer, run it on `8000` (or proxy to it) before you publish.
-
-<Note>
-  Port publishing is currently available in the Python SDK and CLI only.
-</Note>
-
-```python Python
-# Publish port 8000 and get a public URL
-published = client.computers.publish_port(computer["id"])
-print(published["url"])     # e.g., "https://p-abc123.celesto.ai"
-print(published["status"])  # "publishing" or "published"
-
-# List every public URL attached to a computer
-for p in client.computers.list_published_ports(computer["id"]):
-    print(f"{p['port']} -> {p['url']} ({p['status']})")
-
-# Stop exposing the port
-client.computers.unpublish_port(computer["id"])
-```
-
-<ParamField body="computer_id" type="string" required>
-  Computer ID or name.
-</ParamField>
-
-<ParamField body="port" type="integer" default="8000">
-  Port inside the computer to expose. The current release supports `8000`.
-</ParamField>
-
-Each published port includes:
-
-<ResponseField name="id" type="string">
-  Unique identifier for the published port.
-</ResponseField>
-
-<ResponseField name="computer_id" type="string" required>
-  ID of the computer the port belongs to.
-</ResponseField>
-
-<ResponseField name="port" type="integer" required>
-  Port number inside the computer that is exposed.
-</ResponseField>
-
-<ResponseField name="url" type="string">
-  Public HTTPS URL that maps to the port. Available once `status` is `published`.
-</ResponseField>
-
-<ResponseField name="status" type="string" required>
-  One of: `publishing`, `published`, `unpublishing`, `unpublished`, `error`.
-</ResponseField>
-
-<ResponseField name="created_at" type="string">
-  ISO 8601 timestamp of when the port was published.
-</ResponseField>
-
-### Lifecycle
-
-Stop, start, and delete computers as needed:
-
-<CodeGroup>
-
-```python Python
-client.computers.stop(computer_id)
-client.computers.start(computer_id)
-client.computers.delete(computer_id)
-```
-
-```ts JavaScript
-await client.computers.stop(computerId);
-await client.computers.start(computerId);
-await client.computers.delete(computerId);
-```
-
-</CodeGroup>
-
-### Terminal connection (JavaScript only)
-
-The JavaScript SDK provides a `getTerminalConnection` method that returns the URL, headers, and first message you need to open an interactive WebSocket terminal session. Bring your own WebSocket library — the SDK has zero runtime dependencies, so you can use [`ws`](https://www.npmjs.com/package/ws), Node's built-in WebSocket (Node 22+), or any other client.
-
-```ts
-import WebSocket from "ws";
-
-const conn = await client.computers.getTerminalConnection("my-computer");
-const ws = new WebSocket(conn.url, { headers: conn.headers });
-ws.on("open", () => ws.send(conn.firstMessage));
-ws.on("message", (data) => process.stdout.write(data));
-```
-
-The method accepts either a computer ID (e.g., `cmp_abc123`) or a human-readable name. It resolves the name to the canonical ID before the handshake.
-
-<ResponseField name="url" type="string" required>
-  The `wss://` URL for the WebSocket connection.
-</ResponseField>
-
-<ResponseField name="headers" type="object" required>
-  Headers to include in the WebSocket handshake, including the `Authorization` header.
-</ResponseField>
-
-<ResponseField name="firstMessage" type="string" required>
-  JSON string to send as the first message after connecting.
-</ResponseField>
-
-## CLI reference
-
-The `celesto` CLI groups commands by area: `celesto auth` for sign-in and `celesto computer` for sandbox management.
-
-| Command | Description |
-|---|---|
-| `celesto auth login [--api-key KEY] [--base-url URL]` | Save your API key in the OS credential store |
-| `celesto auth status [--base-url URL]` | Show whether a key is saved for the given API URL |
-| `celesto auth logout [--base-url URL]` | Remove the saved API key |
-| `celesto computer create [--template ID] [--cpus N] [--memory MB] [--disk-size-mb MB]` | Create a computer from a template |
-| `celesto computer templates` | List available sandbox templates |
-| `celesto computer list` | List all computers |
-| `celesto computer run <name> "command"` | Execute a command (auto-resumes stopped computers) |
-| `celesto computer ssh <name>` | Interactive terminal (auto-resumes stopped computers) |
-| `celesto computer stop <name>` | Stop a computer |
-| `celesto computer start <name>` | Start a stopped computer |
-| `celesto computer delete <name> [--force]` | Delete a computer |
-| `celesto computer port publish <name> [--port N]` | Expose a port on the public internet (defaults to `8000`) |
-| `celesto computer port list <name>` | List published ports for a computer |
-| `celesto computer port unpublish <name> [--port N]` | Stop exposing a port (defaults to `8000`) |
-
-You can use either the computer name or ID for any command that takes a computer identifier.
-
-### Auto-resume
-
-The `run` and `ssh` commands automatically resume a stopped computer before executing. If you run a command or open a terminal session on a stopped computer, the CLI starts it, waits for it to become available, and then proceeds. You do not need to call `start` manually first.
-
-```bash
-# This works even if "einstein" is stopped
-celesto computer run einstein "uname -a"
-
-# Opens a terminal, resuming the computer if needed
-celesto computer ssh einstein
-```
-
-### JSON output
-
-All commands support `--json` (`-j`) for machine-readable output, which is useful for scripting and AI agent integrations:
-
-```bash
-celesto computer list --json
-celesto computer create --template coding-agent --json
-celesto computer run einstein "uname -a" --json
-```
-
-### Examples
-
-Browse templates, create a computer, and run a command:
-
-```bash
-export CELESTO_API_KEY="your-api-key"
-
-celesto computer templates
-celesto computer create --template coding-agent
-celesto computer run einstein "ls -la"
-celesto computer ssh einstein
-celesto computer delete einstein
-```
-
-Override the template's defaults at create time:
-
-```bash
-celesto computer create --template coding-agent --cpus 2 --memory 2048 --disk-size-mb 15360
-```
-
-Expose a web service running inside the computer and share the public URL:
-
-```bash
-# Start a web server inside the computer on port 8000, then:
-celesto computer port publish einstein
-# Prints: https://p-abc123.celesto.ai
-
-celesto computer port list einstein
-celesto computer port unpublish einstein
-```
-
-## Deployment API
-
-The Deployment API lets you package and deploy AI agents to Celesto's managed infrastructure.
-
-### Deploy an agent
-
-<Note>
-  The Deployment API is currently available in the Python SDK only.
-</Note>
-
-```python
-from pathlib import Path
-
-result = client.deployment.deploy(
-    folder=Path("./my-agent"),
-    name="weather-agent-v1",
-    description="Weather assistant",
-    envs={"OPENAI_API_KEY": "sk-..."}
-)
-
-print(f"Deployment ID: {result['id']}")
-print(f"Status: {result['status']}")
-```
-
-<ParamField body="folder" type="Path" required>
-  Path to the directory containing your agent code.
-</ParamField>
-
-<ParamField body="name" type="string" required>
-  Unique name for the deployment.
-</ParamField>
-
-<ParamField body="description" type="string">
-  Human-readable description of the deployment.
-</ParamField>
-
-<ParamField body="envs" type="object">
-  Environment variables as key-value pairs.
-</ParamField>
-
-<ParamField body="project_name" type="string">
-  Project name to scope the deployment. Defaults to your first project.
-</ParamField>
-
-The response includes:
-
-<ResponseField name="id" type="string" required>
-  Unique deployment identifier.
-</ResponseField>
-
-<ResponseField name="status" type="string" required>
-  Deployment status: `BUILDING`, `READY`, or `FAILED`.
-</ResponseField>
-
-<ResponseField name="url" type="string">
-  Endpoint URL, available when status is `READY`.
-</ResponseField>
-
-<ResponseField name="message" type="string">
-  Additional information about the deployment result.
-</ResponseField>
-
-### List deployments
-
-```python
-deployments = client.deployment.list()
-for dep in deployments:
-    print(f"{dep['name']}: {dep['status']}")
-```
-
-Each deployment object in the list includes:
-
-<ResponseField name="id" type="string" required>
-  Unique deployment identifier.
-</ResponseField>
-
-<ResponseField name="name" type="string" required>
-  Deployment name.
-</ResponseField>
-
-<ResponseField name="description" type="string">
-  Human-readable description, if provided during deploy.
-</ResponseField>
-
-<ResponseField name="status" type="string" required>
-  Deployment status: `READY`, `BUILDING`, `FAILED`, or `STOPPED`.
-</ResponseField>
-
-<ResponseField name="created_at" type="string">
-  ISO 8601 timestamp of when the deployment was created.
-</ResponseField>
-
-<ResponseField name="updated_at" type="string">
-  ISO 8601 timestamp of the most recent update.
-</ResponseField>
-
-## Error handling
-
-Both SDKs provide typed errors so you can handle different failure modes.
-
-<Tabs>
-  <Tab title="Python">
-    ```python
-    from celesto.sdk.exceptions import (
-        CelestoAuthenticationError,
-        CelestoValidationError,
-        CelestoNotFoundError,
-        CelestoRateLimitError,
-        CelestoServerError,
-        CelestoNetworkError,
-    )
-    ```
-
-    | Exception | When it occurs |
-    |---|---|
-    | `CelestoAuthenticationError` | Invalid or missing API key (401/403) |
-    | `CelestoValidationError` | Invalid parameters (400/422) |
-    | `CelestoNotFoundError` | Resource not found (404) |
-    | `CelestoRateLimitError` | Too many requests (429) |
-    | `CelestoServerError` | Server-side error (5xx) |
-    | `CelestoNetworkError` | Connection failures or timeouts |
-  </Tab>
-  <Tab title="JavaScript">
-    ```ts
-    import { CelestoError, CelestoApiError, CelestoNetworkError } from "@celestoai/sdk";
-
-    try {
-      await client.computers.get("missing-name");
-    } catch (err) {
-      if (err instanceof CelestoApiError) {
-        console.error(`API ${err.status}:`, err.data);
-      } else if (err instanceof CelestoNetworkError) {
-        console.error("Network error:", err.cause);
-      } else if (err instanceof CelestoError) {
-        console.error("SDK error:", err.message);
-      }
-    }
-    ```
-
-    | Error class | Extends | When it occurs |
-    |---|---|---|
-    | `CelestoApiError` | `CelestoError` | Any non-2xx HTTP response. Inspect `.status` (HTTP code), `.data` (parsed body), and `.requestId`. |
-    | `CelestoNetworkError` | `CelestoError` | DNS failures, timeouts, or connection errors. Inspect `.cause` for the underlying `Error`. |
-    | `CelestoError` | `Error` | Base class. Catch this to handle any SDK error. |
-
-    <Note>
-      Network failures from `fetch()` (DNS, offline, timeout) are wrapped as `CelestoNetworkError` instead of leaking raw `TypeError`. Catch `CelestoError` to handle both API and network errors with one branch.
-    </Note>
-  </Tab>
-</Tabs>
+Start with the [JavaScript quickstart](/celesto-sdk/quickstart), then read [Sandboxed computers](/celesto-sdk/computers) when you need templates, command execution, lifecycle control, or terminal connections.
+
+</View>
+
+## How the SDK fits together
+
+<Steps>
+  <Step title="Authenticate">
+    Create an API key in Celesto, then save it once with the CLI or set `CELESTO_API_KEY` for SDK code.
+
+    <Check>
+      Your SDK client and CLI commands can call the Celesto API.
+    </Check>
+  </Step>
+  <Step title="Create a computer">
+    Start with the default `scratch` computer, or use the `coding-agent` template when your agent needs common coding tools.
+
+    <Check>
+      You have an isolated Linux computer with an ID and a status.
+    </Check>
+  </Step>
+  <Step title="Run work">
+    Execute shell commands, inspect output, publish a supported port, or connect a terminal.
+
+    <Check>
+      Your code or agent runs inside the sandbox instead of on your host machine.
+    </Check>
+  </Step>
+  <Step title="Clean up or deploy">
+    Delete temporary computers when you are done, or package agent code with the Deployment API when you are ready to run it on Celesto.
+  </Step>
+</Steps>

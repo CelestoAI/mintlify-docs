@@ -1,0 +1,109 @@
+---
+title: Handle Celesto SDK errors
+sidebarTitle: Error handling
+description: "Handle Celesto SDK authentication, validation, not found, rate limit, server, and network errors in Python and JavaScript."
+---
+
+Celesto SDKs raise typed errors so your application can respond clearly to missing credentials, invalid parameters, missing resources, rate limits, server errors, and network failures.
+
+<View title="Python" icon="python">
+
+## Import error classes
+
+```python errors.py
+from celesto.sdk.exceptions import (
+    CelestoAuthenticationError,
+    CelestoValidationError,
+    CelestoNotFoundError,
+    CelestoRateLimitError,
+    CelestoServerError,
+    CelestoNetworkError,
+)
+```
+
+## Catch common failures
+
+```python handle_errors.py
+from celesto import Celesto
+from celesto.sdk.exceptions import (
+    CelestoAuthenticationError,
+    CelestoNetworkError,
+    CelestoNotFoundError,
+    CelestoRateLimitError,
+    CelestoServerError,
+    CelestoValidationError,
+)
+
+
+client = Celesto()
+
+try:
+    computer = client.computers.get("missing-computer")
+    print(computer["name"])
+except CelestoAuthenticationError:
+    print("Check CELESTO_API_KEY.")
+except CelestoValidationError as error:
+    print(f"Fix the request: {error}")
+except CelestoNotFoundError:
+    print("The computer does not exist.")
+except CelestoRateLimitError:
+    print("Retry after the rate limit resets.")
+except CelestoServerError:
+    print("Celesto returned a server error.")
+except CelestoNetworkError as error:
+    print(f"Network failure: {error}")
+```
+
+| Exception | When it occurs |
+|---|---|
+| `CelestoAuthenticationError` | Invalid or missing API key |
+| `CelestoValidationError` | Invalid parameters |
+| `CelestoNotFoundError` | Resource not found |
+| `CelestoRateLimitError` | Too many requests |
+| `CelestoServerError` | Server-side error |
+| `CelestoNetworkError` | Connection failures or timeouts |
+
+</View>
+
+<View title="JavaScript" icon="js">
+
+## Import error classes
+
+```ts errors.ts
+import { CelestoApiError, CelestoError, CelestoNetworkError } from "@celestoai/sdk";
+```
+
+## Catch common failures
+
+```ts handle-errors.ts
+import { Celesto, CelestoApiError, CelestoError, CelestoNetworkError } from "@celestoai/sdk";
+
+const client = new Celesto({ token: process.env.CELESTO_API_KEY });
+
+try {
+  const computer = await client.computers.get("missing-computer");
+  console.log(computer.name);
+} catch (error) {
+  if (error instanceof CelestoApiError) {
+    console.error(`API ${error.status}:`, error.data);
+  } else if (error instanceof CelestoNetworkError) {
+    console.error("Network failure:", error.cause);
+  } else if (error instanceof CelestoError) {
+    console.error("SDK error:", error.message);
+  } else {
+    throw error;
+  }
+}
+```
+
+| Error class | Extends | When it occurs |
+|---|---|---|
+| `CelestoApiError` | `CelestoError` | Any non-2xx HTTP response. Inspect `.status`, `.data`, and `.requestId`. |
+| `CelestoNetworkError` | `CelestoError` | DNS failures, timeouts, or connection errors. Inspect `.cause`. |
+| `CelestoError` | `Error` | Base class. Catch this to handle any SDK error. |
+
+<Note>
+  Network failures from `fetch()` are wrapped as `CelestoNetworkError`. Catch `CelestoError` to handle both API and network errors with one branch.
+</Note>
+
+</View>

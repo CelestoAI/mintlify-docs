@@ -1,0 +1,83 @@
+---
+title: Celesto CLI reference
+sidebarTitle: CLI reference
+description: "Use the celesto CLI to authenticate, create computers, run commands, publish ports, and manage sandbox lifecycle from the terminal."
+---
+
+The `celesto` CLI lets you manage Celesto from your terminal. Use it for one-off sandbox work, scripts, and debugging SDK workflows.
+
+## Authentication commands
+
+| Command | Description |
+|---|---|
+| `celesto auth login [--api-key KEY] [--base-url URL]` | Save your API key in the operating system credential store |
+| `celesto auth status [--base-url URL]` | Show whether a key is saved for the given API URL |
+| `celesto auth logout [--base-url URL]` | Remove the saved API key |
+
+## Computer commands
+
+| Command | Description |
+|---|---|
+| `celesto computer create [--template ID] [--cpus N] [--memory MB] [--disk-size-mb MB]` | Create a computer from a template |
+| `celesto computer templates` | List available sandbox templates |
+| `celesto computer list` | List all computers |
+| `celesto computer run <name> "command"` | Execute a command and auto-resume stopped computers |
+| `celesto computer ssh <name>` | Open an interactive terminal and auto-resume stopped computers |
+| `celesto computer stop <name>` | Stop a computer |
+| `celesto computer start <name>` | Start a stopped computer |
+| `celesto computer delete <name> [--force]` | Delete a computer |
+
+## Port commands
+
+| Command | Description |
+|---|---|
+| `celesto computer port publish <name> [--port N]` | Expose a port on the public internet. Defaults to `8000` |
+| `celesto computer port list <name>` | List published ports for a computer |
+| `celesto computer port unpublish <name> [--port N]` | Stop exposing a port. Defaults to `8000` |
+
+## Auto-resume stopped computers
+
+The `run` and `ssh` commands automatically resume a stopped computer before executing. You can run a command or open a terminal session without calling `start` first.
+
+```bash
+celesto computer run einstein "uname -a"
+celesto computer ssh einstein
+```
+
+## JSON output
+
+All commands support `--json` or `-j` for machine-readable output:
+
+```bash
+celesto computer list --json
+celesto computer create --template coding-agent --json
+celesto computer run einstein "uname -a" --json
+```
+
+## Common workflows
+
+Browse templates, create a computer, run a command, and delete it:
+
+```bash
+export CELESTO_API_KEY="your-api-key"
+
+celesto computer templates
+celesto computer create --template coding-agent
+celesto computer run einstein "ls -la"
+celesto computer ssh einstein
+celesto computer delete einstein
+```
+
+Override the template's defaults at create time:
+
+```bash
+celesto computer create --template coding-agent --cpus 2 --memory 2048 --disk-size-mb 15360
+```
+
+Expose a web service running inside the computer:
+
+```bash
+celesto computer port publish einstein
+celesto computer port list einstein
+celesto computer port unpublish einstein
+```

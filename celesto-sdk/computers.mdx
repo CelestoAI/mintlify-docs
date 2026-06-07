@@ -1,0 +1,434 @@
+---
+title: Create and manage sandboxed computers
+sidebarTitle: Sandboxed computers
+description: "Use the Celesto Computers API to create sandboxed computers, choose templates, run commands, publish ports, and manage lifecycle."
+---
+
+The Computers API gives your code or agent an isolated Linux computer. You create a computer, run work inside it, and then stop, start, or delete it when your workflow is done.
+
+## Computer lifecycle
+
+<Steps>
+  <Step title="Create">
+    Create a new computer from `scratch` or a template such as `coding-agent`.
+  </Step>
+  <Step title="Run">
+    Execute shell commands, inspect output, and publish supported ports when a service needs a public URL.
+  </Step>
+  <Step title="Manage">
+    Get details, list computers, stop and start long-lived computers, or delete temporary computers.
+  </Step>
+</Steps>
+
+<View title="Python" icon="python">
+
+## Create a computer
+
+Call `create()` with no arguments to get a fresh `scratch` computer, which is a minimal Ubuntu sandbox.
+
+```python create_computer.py
+from celesto import Celesto
+
+
+with Celesto() as client:
+    computer = client.computers.create()
+    print(computer["name"])
+    print(computer["id"])
+    print(computer["status"])
+    client.computers.delete(computer["id"])
+```
+
+Override CPU, memory, or disk size when the default size is too small:
+
+```python create_sized_computer.py
+from celesto import Celesto
+
+
+with Celesto() as client:
+    computer = client.computers.create(
+        cpus=2,
+        memory=2048,
+        disk_size_mb=15360,
+    )
+    try:
+        print(f"{computer['name']} has {computer['vcpus']} vCPUs")
+    finally:
+        client.computers.delete(computer["id"])
+```
+
+<ParamField body="cpus" type="integer">
+  Number of virtual CPUs. Range: 1-16. Defaults to the template's value.
+</ParamField>
+
+<ParamField body="memory" type="integer">
+  Memory in MB. Range: 512-32768. Defaults to the template's value.
+</ParamField>
+
+<ParamField body="disk_size_mb" type="integer">
+  Disk size in MB. Range: 512-51200. Defaults to the template's value.
+</ParamField>
+
+<ParamField body="template_id" type="string" default="scratch">
+  Sandbox template ID. Pass `coding-agent` when your agent needs common coding tools already installed.
+</ParamField>
+
+<ParamField body="template_version" type="string">
+  Optional immutable template version. Pin this when you want repeatable builds as a template changes over time.
+</ParamField>
+
+<ParamField body="image" type="string">
+  Legacy OS image selector. Prefer `template_id` for new code.
+</ParamField>
+
+## Use a template
+
+A template is a ready-made computer image with extra tools and default CPU, memory, and disk settings. Use `coding-agent` for common coding workflows:
+
+```python create_from_template.py
+from celesto import Celesto
+
+
+with Celesto() as client:
+    computer = client.computers.create(template_id="coding-agent")
+    try:
+        result = client.computers.exec(computer["id"], "python3 --version")
+        print(result["stdout"].strip())
+    finally:
+        client.computers.delete(computer["id"])
+```
+
+## List templates
+
+```python list_templates.py
+from celesto import Celesto
+
+
+with Celesto() as client:
+    templates = client.computers.list_templates()
+    for template in templates:
+        print(
+            f"{template['id']}: {template['display_name']} "
+            f"({template['default_vcpus']} vCPU, {template['default_ram_mb']} MB RAM)"
+        )
+```
+
+## Run commands
+
+```python run_command.py
+from celesto import Celesto
+
+
+with Celesto() as client:
+    computer = client.computers.create(template_id="scratch")
+    try:
+        result = client.computers.exec(computer["id"], "ls -la /home")
+        print(result["stdout"])
+        print(result["exit_code"])
+    finally:
+        client.computers.delete(computer["id"])
+```
+
+<ResponseField name="exit_code" type="integer" required>
+  Exit code of the command. `0` means success.
+</ResponseField>
+
+<ResponseField name="stdout" type="string" required>
+  Standard output from the command.
+</ResponseField>
+
+<ResponseField name="stderr" type="string" required>
+  Standard error output from the command.
+</ResponseField>
+
+## Get and list computers
+
+```python list_computers.py
+from celesto import Celesto
+
+
+with Celesto() as client:
+    result = client.computers.list()
+    for computer in result["computers"]:
+        info = client.computers.get(computer["id"])
+        print(f"{info['name']}: {info['status']}")
+    print(f"Total: {result['count']}")
+```
+
+## Publish a port
+
+Publishing a port gives your computer a public HTTPS URL. Use it when an app, API server, or notebook running inside the computer needs to be reachable from outside the sandbox.
+
+<Note>
+  Port publishing is currently available in the Python SDK and CLI. The current release supports publishing port `8000`.
+</Note>
+
+```python publish_port.py
+from celesto import Celesto
+
+
+with Celesto() as client:
+    computer = client.computers.create(template_id="coding-agent")
+    try:
+        client.computers.exec(
+            computer["id"],
+            "cd /tmp && python3 -m http.server 8000 > /tmp/server.log 2>&1 &",
+        )
+        published = client.computers.publish_port(computer["id"])
+        print(published["url"])
+
+        for port in client.computers.list_published_ports(computer["id"]):
+            print(f"{port['port']} -> {port['url']} ({port['status']})")
+
+        client.computers.unpublish_port(computer["id"])
+    finally:
+        client.computers.delete(computer["id"])
+```
+
+## Stop, start, and delete
+
+```python lifecycle.py
+from celesto import Celesto
+
+
+with Celesto() as client:
+    computer = client.computers.create()
+    computer_id = computer["id"]
+
+    client.computers.stop(computer_id)
+    client.computers.start(computer_id)
+    client.computers.delete(computer_id)
+```
+
+</View>
+
+<View title="JavaScript" icon="js">
+
+## Create a computer
+
+Call `create()` with no arguments to get a fresh `scratch` computer, which is a minimal Ubuntu sandbox.
+
+```js create-computer.mjs
+import { Celesto } from "@celestoai/sdk";
+
+const client = new Celesto({ token: process.env.CELESTO_API_KEY });
+const computer = await client.computers.create();
+console.log(computer.name);
+console.log(computer.id);
+console.log(computer.status);
+await client.computers.delete(computer.id);
+```
+
+Override CPU, memory, or disk size when the default size is too small:
+
+```js create-sized-computer.mjs
+import { Celesto } from "@celestoai/sdk";
+
+const client = new Celesto({ token: process.env.CELESTO_API_KEY });
+const computer = await client.computers.create({
+  cpus: 2,
+  memory: 2048,
+  diskSizeMb: 15360,
+});
+
+try {
+  console.log(`${computer.name} has ${computer.vcpus} vCPUs`);
+} finally {
+  await client.computers.delete(computer.id);
+}
+```
+
+<ParamField body="cpus" type="integer">
+  Number of virtual CPUs. Range: 1-16. Defaults to the template's value.
+</ParamField>
+
+<ParamField body="memory" type="integer">
+  Memory in MB. Range: 512-32768. Defaults to the template's value.
+</ParamField>
+
+<ParamField body="diskSizeMb" type="integer">
+  Disk size in MB. Range: 512-51200. Defaults to the template's value.
+</ParamField>
+
+<ParamField body="templateId" type="string" default="scratch">
+  Sandbox template ID. Pass `coding-agent` when your agent needs common coding tools already installed.
+</ParamField>
+
+<ParamField body="templateVersion" type="string">
+  Optional immutable template version. Pin this when you want repeatable builds as a template changes over time.
+</ParamField>
+
+<ParamField body="image" type="string">
+  Legacy OS image selector. Prefer `templateId` for new code.
+</ParamField>
+
+## Use a template
+
+A template is a ready-made computer image with extra tools and default CPU, memory, and disk settings. Use `coding-agent` for common coding workflows:
+
+```js create-from-template.mjs
+import { Celesto } from "@celestoai/sdk";
+
+const client = new Celesto({ token: process.env.CELESTO_API_KEY });
+const computer = await client.computers.create({ templateId: "coding-agent" });
+
+try {
+  const result = await client.computers.exec(computer.id, "python3 --version");
+  console.log(result.stdout.trim());
+} finally {
+  await client.computers.delete(computer.id);
+}
+```
+
+## List templates
+
+```js list-templates.mjs
+import { Celesto } from "@celestoai/sdk";
+
+const client = new Celesto({ token: process.env.CELESTO_API_KEY });
+const templates = await client.computers.listTemplates();
+
+for (const template of templates) {
+  console.log(
+    `${template.id}: ${template.displayName} ` +
+      `(${template.defaultVcpus} vCPU, ${template.defaultRamMb} MB RAM)`,
+  );
+}
+```
+
+## Run commands
+
+```js run-command.mjs
+import { Celesto } from "@celestoai/sdk";
+
+const client = new Celesto({ token: process.env.CELESTO_API_KEY });
+const computer = await client.computers.create({ templateId: "scratch" });
+
+try {
+  const result = await client.computers.exec(computer.id, "ls -la /home");
+  console.log(result.stdout);
+  console.log(result.exitCode);
+} finally {
+  await client.computers.delete(computer.id);
+}
+```
+
+<ResponseField name="exitCode" type="integer" required>
+  Exit code of the command. `0` means success.
+</ResponseField>
+
+<ResponseField name="stdout" type="string" required>
+  Standard output from the command.
+</ResponseField>
+
+<ResponseField name="stderr" type="string" required>
+  Standard error output from the command.
+</ResponseField>
+
+## Get and list computers
+
+```js list-computers.mjs
+import { Celesto } from "@celestoai/sdk";
+
+const client = new Celesto({ token: process.env.CELESTO_API_KEY });
+const result = await client.computers.list();
+
+for (const computer of result.computers) {
+  const info = await client.computers.get(computer.id);
+  console.log(`${info.name}: ${info.status}`);
+}
+
+console.log(`Total: ${result.count}`);
+```
+
+## Publish a port
+
+<Note>
+  Port publishing is currently available in the Python SDK and CLI. Use the [CLI port commands](/celesto-sdk/cli#port-commands) from JavaScript projects when you need to expose a service today.
+</Note>
+
+## Stop, start, and delete
+
+```js lifecycle.mjs
+import { Celesto } from "@celestoai/sdk";
+
+const client = new Celesto({ token: process.env.CELESTO_API_KEY });
+const computer = await client.computers.create();
+const computerId = computer.id;
+
+await client.computers.stop(computerId);
+await client.computers.start(computerId);
+await client.computers.delete(computerId);
+```
+
+## Open a terminal connection
+
+The JavaScript SDK provides a `getTerminalConnection` method that returns the URL, headers, and first message for an interactive WebSocket terminal session.
+
+```js terminal.mjs
+import WebSocket from "ws";
+import { Celesto } from "@celestoai/sdk";
+
+const client = new Celesto({ token: process.env.CELESTO_API_KEY });
+const computer = await client.computers.create({ templateId: "scratch" });
+
+try {
+  const conn = await client.computers.getTerminalConnection(computer.id);
+  const ws = new WebSocket(conn.url, { headers: conn.headers });
+
+  ws.on("open", () => ws.send(conn.firstMessage));
+  ws.on("message", (data) => process.stdout.write(data));
+} catch (error) {
+  await client.computers.delete(computer.id);
+  throw error;
+}
+```
+
+</View>
+
+## Computer response fields
+
+<ResponseField name="id" type="string" required>
+  Unique identifier for the computer, such as `cmp_abc123`.
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Auto-generated display name for the computer, such as `einstein`.
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  Current status. One of: `creating`, `running`, `stopping`, `stopped`, `starting`, `restoring`, `restorable`, `deleting`, `deleted`, or `error`.
+</ResponseField>
+
+<ResponseField name="vcpus" type="integer" required>
+  Number of virtual CPUs allocated.
+</ResponseField>
+
+<ResponseField name="ram_mb" type="integer" required>
+  Memory allocated in MB.
+</ResponseField>
+
+<ResponseField name="disk_size_mb" type="integer" required>
+  Disk allocated in MB.
+</ResponseField>
+
+<ResponseField name="template_id" type="string" required>
+  Sandbox template the computer was created from.
+</ResponseField>
+
+<ResponseField name="template_version" type="string">
+  Pinned template version, if one was provided at create time.
+</ResponseField>
+
+<ResponseField name="connection" type="object">
+  Connection details for accessing a running computer.
+
+  <Expandable title="Connection properties">
+    <ResponseField name="ssh" type="string">
+      SSH connection string for terminal access.
+    </ResponseField>
+
+    <ResponseField name="access_url" type="string">
+      URL for browser-based access to the computer.
+    </ResponseField>
+  </Expandable>
+</ResponseField>

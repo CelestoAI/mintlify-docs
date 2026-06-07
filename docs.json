@@ -145,11 +145,27 @@
         "tab": "Celesto Platform",
         "groups": [
           {
-            "group": "Celesto Platform",
+            "group": "Start Here",
             "pages": [
               "celesto-sdk/overview",
+              "celesto-sdk/quickstart",
+              "celesto-sdk/authentication"
+            ]
+          },
+          {
+            "group": "Sandboxed Computers",
+            "pages": [
+              "celesto-sdk/computers",
+              "celesto-sdk/cli"
+            ]
+          },
+          {
+            "group": "Agents and Integrations",
+            "pages": [
+              "celesto-sdk/deployments",
               "celesto-sdk/openai-agents",
-              "celesto-sdk/gatekeeper"
+              "celesto-sdk/gatekeeper",
+              "celesto-sdk/errors"
             ]
           }
         ]

@@ -1,0 +1,108 @@
+---
+title: Authenticate the Celesto SDK and CLI
+sidebarTitle: Authentication
+description: "Authenticate Celesto SDK calls with CELESTO_API_KEY, direct client credentials, or the saved CLI login."
+---
+
+Celesto uses an API key to identify your project and authorize SDK or CLI requests. You can save the key once for CLI commands, set it in your environment for SDK code, or pass it directly when you create a client.
+
+## Save your key for the CLI
+
+If you use the `celesto` CLI, save your key one time and reuse it for every command:
+
+```bash
+celesto auth login
+```
+
+The command prompts for your API key and stores it in your operating system's secure credential store: Keychain on macOS, Credential Manager on Windows, or Secret Service on Linux.
+
+Manage the saved key with:
+
+```bash
+celesto auth status
+celesto auth logout
+```
+
+<Tip>
+  The saved key is scoped to the Celesto API URL. If you point the CLI at a different environment with `--base-url` or `CELESTO_BASE_URL`, sign in again for that URL.
+</Tip>
+
+## API key lookup order
+
+The CLI resolves the API key in this order:
+
+1. `--api-key` flag
+2. `CELESTO_API_KEY` environment variable
+3. `.env` file in the current directory
+4. Key saved by `celesto auth login`
+
+<View title="Python" icon="python">
+
+## Use an environment variable
+
+```bash
+export CELESTO_API_KEY="your-api-key"
+```
+
+Create the client:
+
+```python auth.py
+from celesto import Celesto
+
+
+client = Celesto()
+print(client.computers.list()["count"])
+```
+
+## Pass the key in code
+
+Pass `api_key` when you need to select credentials explicitly:
+
+```python auth_explicit.py
+import os
+
+from celesto import Celesto
+
+
+client = Celesto(api_key=os.environ["CELESTO_API_KEY"])
+print(client.computers.list()["count"])
+```
+
+</View>
+
+<View title="JavaScript" icon="js">
+
+## Use an environment variable
+
+```bash
+export CELESTO_API_KEY="your-api-key"
+```
+
+Create the client:
+
+```js auth.mjs
+import { Celesto } from "@celestoai/sdk";
+
+const client = new Celesto({ token: process.env.CELESTO_API_KEY });
+const result = await client.computers.list();
+console.log(result.count);
+```
+
+## Pass the key in code
+
+Pass `token` when you need to select credentials explicitly:
+
+```js auth-explicit.mjs
+import { Celesto } from "@celestoai/sdk";
+
+const token = process.env.CELESTO_API_KEY;
+if (!token) {
+  throw new Error("Set CELESTO_API_KEY before running this script.");
+}
+
+const client = new Celesto({ token });
+const result = await client.computers.list();
+console.log(result.count);
+```
+
+</View>

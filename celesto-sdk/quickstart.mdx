@@ -1,0 +1,109 @@
+---
+title: Get started with the Celesto SDK
+sidebarTitle: Quickstart
+description: "Install the Celesto SDK, authenticate with an API key, create your first sandboxed computer, run a command, and clean it up."
+---
+
+This quickstart creates one sandboxed computer, runs `uname -a`, prints the output, and deletes the computer. You can use the language selector to switch the whole example between Python and JavaScript.
+
+## Before you start
+
+Get an API key from [celesto.ai](https://celesto.ai) under **Settings > Security**. Set it as `CELESTO_API_KEY` before you run the examples.
+
+<View title="Python" icon="python">
+
+## Install the Python SDK
+
+```bash
+pip install celesto
+```
+
+## Run your first computer
+
+Create `quickstart.py`:
+
+```python quickstart.py
+import os
+
+from celesto import Celesto
+
+
+if not os.environ.get("CELESTO_API_KEY"):
+    raise RuntimeError("Set CELESTO_API_KEY before running this script.")
+
+with Celesto() as client:
+    computer = client.computers.create(template_id="scratch")
+    print(f"Computer ready: {computer['name']}")
+
+    try:
+        result = client.computers.exec(computer["id"], "uname -a")
+        print(result["stdout"].strip())
+    finally:
+        client.computers.delete(computer["id"])
+```
+
+Run it:
+
+```bash
+export CELESTO_API_KEY="your-api-key"
+python quickstart.py
+```
+
+<Check>
+  The script prints the computer name, prints Linux system information, and deletes the computer.
+</Check>
+
+## Next step
+
+Learn how to [create computers with templates](/celesto-sdk/computers#use-a-template) when your agent needs coding tools already installed.
+
+</View>
+
+<View title="JavaScript" icon="js">
+
+## Install the JavaScript SDK
+
+```bash
+npm install @celestoai/sdk
+```
+
+## Run your first computer
+
+Create `quickstart.mjs`:
+
+```js quickstart.mjs
+import { Celesto } from "@celestoai/sdk";
+
+const token = process.env.CELESTO_API_KEY;
+if (!token) {
+  throw new Error("Set CELESTO_API_KEY before running this script.");
+}
+
+const client = new Celesto({ token });
+const computer = await client.computers.create({ templateId: "scratch" });
+console.log(`Computer ready: ${computer.name}`);
+
+try {
+  const result = await client.computers.exec(computer.id, "uname -a");
+  console.log(result.stdout.trim());
+} finally {
+  await client.computers.delete(computer.id);
+}
+```
+
+Run it:
+
+```bash
+export CELESTO_API_KEY="your-api-key"
+node quickstart.mjs
+```
+
+<Check>
+  The script prints the computer name, prints Linux system information, and deletes the computer.
+</Check>
+
+## Next step
+
+Learn how to [create computers with templates](/celesto-sdk/computers#use-a-template) when your agent needs coding tools already installed.
+
+</View>
