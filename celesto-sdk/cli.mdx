@@ -35,6 +35,24 @@ The `celesto` CLI lets you manage Celesto from your terminal. Use it for one-off
 | `celesto computer port list <name>` | List published ports for a computer |
 | `celesto computer port unpublish <name> [--port N]` | Stop exposing a port. Defaults to `8000` |
 
+## Update command
+
+| Command | Description |
+|---|---|
+| `celesto update` | Upgrade the `celesto` package in your current Python environment |
+
+Run `celesto update` to get the latest release without remembering which package manager you used to install it. The command upgrades `celesto` using `pip` when it is available, and falls back to `uv` when you installed Celesto with `uv` or are running inside a `uv run` environment.
+
+```bash
+celesto update
+```
+
+If neither `pip` nor `uv` is available, the command prints the exact command to run yourself, for example:
+
+```bash
+uv pip install --python /path/to/python --upgrade celesto
+```
+
 ## Auto-resume stopped computers
 
 The `run` and `ssh` commands automatically resume a stopped computer before executing. You can run a command or open a terminal session without calling `start` first.
