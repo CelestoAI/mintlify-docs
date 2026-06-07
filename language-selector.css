@@ -9,6 +9,11 @@
   background: transparent;
 }
 
+#sdk-language-selector-slot:empty {
+  display: none !important;
+  margin: 0 !important;
+}
+
 html[data-current-path^="/celesto-sdk/"] #table-of-contents #multi-view-dropdown {
   display: none !important;
 }

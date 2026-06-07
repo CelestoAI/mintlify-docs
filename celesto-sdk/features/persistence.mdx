@@ -1,0 +1,126 @@
+---
+title: Keep sandbox state between sessions
+sidebarTitle: Persistent state
+description: "Use stopped computers, existing computer IDs, and resumable agent sessions to keep files, installed packages, and workspace state across Celesto runs."
+---
+
+A Celesto computer can keep useful work between sessions. State means the files, installed packages, and workspace changes that remain with a computer after one run ends.
+
+## What stays with a computer
+
+Computers that keep state are useful when your workflow needs to keep:
+
+- Files created by an agent.
+- Installed packages and build artifacts.
+- Repository checkouts or generated source code.
+- Published service setup that you plan to start again.
+- Agent workspace context for a later job.
+
+<Warning>
+  Delete temporary computers after you finish with their state. Deleting a computer removes its workspace and resources.
+</Warning>
+
+## Keep a computer for later
+
+Create a computer, run work inside it, then stop it. Start the same computer later to continue from the saved workspace.
+
+<CodeGroup>
+
+```python Python
+from celesto import Celesto
+
+
+with Celesto() as client:
+    computer = client.computers.create(template_id="coding-agent")
+    computer_id = computer["id"]
+
+    client.computers.exec(
+        computer_id,
+        "mkdir -p /workspace && echo ready > /workspace/status.txt",
+    )
+    client.computers.stop(computer_id)
+
+    # Later, start the same computer and read the file.
+    client.computers.start(computer_id)
+    result = client.computers.exec(computer_id, "cat /workspace/status.txt")
+    print(result["stdout"].strip())
+```
+
+```ts TypeScript
+import { Celesto } from "@celestoai/sdk";
+
+const client = new Celesto({ token: process.env.CELESTO_API_KEY });
+const computer = await client.computers.create({ templateId: "coding-agent" });
+const computerId = computer.id;
+
+await client.computers.exec(
+  computerId,
+  "mkdir -p /workspace && echo ready > /workspace/status.txt",
+);
+await client.computers.stop(computerId);
+
+// Later, start the same computer and read the file.
+await client.computers.start(computerId);
+const result = await client.computers.exec(
+  computerId,
+  "cat /workspace/status.txt",
+);
+console.log(result.stdout.trim());
+```
+
+```bash CLI
+celesto computer create --template coding-agent
+celesto computer run einstein "mkdir -p /workspace && echo ready > /workspace/status.txt"
+celesto computer stop einstein
+
+# Later
+celesto computer start einstein
+celesto computer run einstein "cat /workspace/status.txt"
+```
+
+</CodeGroup>
+
+## Reuse a computer in an agent session
+
+Hosted OpenAI sandbox sessions can attach to an existing Celesto computer. Use this when you want a new process to continue work in the same workspace.
+
+```python
+from celesto.integrations.openai_agents import (
+    CelestoSandboxClient,
+    CelestoSandboxClientOptions,
+)
+
+client = CelestoSandboxClient()
+session = await client.create(
+    options=CelestoSandboxClientOptions(
+        computer_id="cmp_existing",
+        delete_on_close=False,
+    )
+)
+```
+
+## Resume a saved agent session
+
+For OpenAI `SandboxAgent` workflows, save the session state and resume it later.
+
+```python
+state = session.state.model_dump()
+# Save `state` in your database or job record.
+
+resumed = await client.resume(
+    client.deserialize_session_state(state)
+)
+```
+
+<Check>
+  The resumed session keeps the same sandbox identity and workspace context.
+</Check>
+
+## Pick disposable or persistent
+
+| Need | Pattern |
+|---|---|
+| Clean environment every time | Create a computer and delete it in `finally`. |
+| Continue work later | Stop the computer and save its ID. |
+| Agent session handoff | Save session state and resume it later. |
+| Preview finished | Unpublish ports and delete the computer. |

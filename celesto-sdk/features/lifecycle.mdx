@@ -1,0 +1,107 @@
+---
+title: Manage Celesto computer sessions
+sidebarTitle: VM lifecycle
+description: "Start, stop, resume, and delete Celesto computers so sandboxed work can run only when you need it and keep state when you want it."
+---
+
+A Celesto computer can be temporary or long-lived. Create a fresh computer for throwaway work, stop it to save the workspace between sessions, start it again when work continues, and delete it after the workspace is finished.
+
+## Session states
+
+Celesto computer responses include a `status` field so your code can decide what to do next.
+
+| Status | Meaning |
+|---|---|
+| `creating` | Celesto is provisioning the computer. |
+| `running` | The computer can run commands and accept terminal connections. |
+| `stopping` | Celesto is stopping the running computer. |
+| `stopped` | The workspace is saved and can be started again. |
+| `starting` | Celesto is starting a stopped computer. |
+| `restoring` | Celesto is restoring saved computer state. |
+| `restorable` | Saved state is available for restore. |
+| `deleting` | Celesto is deleting the computer and its resources. |
+| `deleted` | The computer has been deleted. |
+| `error` | The computer failed to reach a usable state. |
+
+## Start, stop, and delete a computer
+
+Use this pattern when you want to keep the workspace between runs, then remove it after the work is complete.
+
+<CodeGroup>
+
+```python Python
+from celesto import Celesto
+
+
+with Celesto() as client:
+    computer = client.computers.create()
+    computer_id = computer["id"]
+
+    client.computers.stop(computer_id)
+    client.computers.start(computer_id)
+    client.computers.delete(computer_id)
+```
+
+```ts TypeScript
+import { Celesto } from "@celestoai/sdk";
+
+const client = new Celesto({ token: process.env.CELESTO_API_KEY });
+const computer = await client.computers.create();
+const computerId = computer.id;
+
+await client.computers.stop(computerId);
+await client.computers.start(computerId);
+await client.computers.delete(computerId);
+```
+
+```bash CLI
+celesto computer create --template coding-agent
+celesto computer stop einstein
+celesto computer start einstein
+celesto computer delete einstein
+```
+
+</CodeGroup>
+
+<Check>
+  The same computer can stop, start again, and then be deleted when the workspace is finished.
+</Check>
+
+## Auto-resume from the CLI
+
+The CLI starts a stopped computer automatically for commands that need a running machine.
+
+```bash
+celesto computer run einstein "uname -a"
+celesto computer ssh einstein
+```
+
+<Check>
+  You can stop a computer between work sessions, then let the CLI start it for the next command.
+</Check>
+
+## Save and resume agent sessions
+
+For OpenAI `SandboxAgent` workflows, you can save the hosted Celesto sandbox session state and resume it later. Session state means the saved details that let Celesto reconnect the same agent identity to the same sandbox.
+
+```python
+state = session.state.model_dump()
+# Save `state` in your database or job record.
+
+resumed = await client.resume(
+    client.deserialize_session_state(state)
+)
+```
+
+<Tip>
+  Use `delete_on_close=False` when you plan to resume an OpenAI sandbox session. See [Sandbox an OpenAI agent with Celesto or SmolVM](/celesto-sdk/openai-agents#resume-a-session-later).
+</Tip>
+
+## Choose the right session pattern
+
+| Pattern | Use it when |
+|---|---|
+| Create, run, delete | You need a clean temporary sandbox for one task. |
+| Create, stop, start | You want to keep files and installed packages between sessions. |
+| Existing computer ID | You want an agent or job to reattach to a known computer. |
+| Saved OpenAI session state | You want to resume an agent session with the same sandbox identity. |

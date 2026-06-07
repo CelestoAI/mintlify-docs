@@ -153,10 +153,13 @@
             ]
           },
           {
-            "group": "Sandboxed Computers",
+            "group": "Features",
             "pages": [
               "celesto-sdk/computers",
-              "celesto-sdk/cli"
+              "celesto-sdk/features/publish-ports",
+              "celesto-sdk/features/lifecycle",
+              "celesto-sdk/features/resources",
+              "celesto-sdk/features/persistence"
             ]
           },
           {
@@ -173,6 +176,12 @@
       {
         "tab": "API Reference",
         "groups": [
+          {
+            "group": "Celesto CLI",
+            "pages": [
+              "celesto-sdk/cli"
+            ]
+          },
           {
             "group": "SmolVM API",
             "pages": [

@@ -1,0 +1,138 @@
+---
+title: Configure computer resources
+sidebarTitle: VM resources
+description: "Choose CPU, memory, disk size, and templates for Celesto computers so agents have enough resources for their workload."
+---
+
+Celesto computers can be sized for the job they need to run. Use small defaults for quick scripts, then increase CPU, memory, or disk size when an agent compiles code, installs packages, processes large files, or hosts a heavier service.
+
+## Resource options
+
+<ParamField body="cpus" type="integer">
+  Number of virtual CPUs, which are the processor cores available to the computer. Range: 1-16. Defaults to the template's value.
+</ParamField>
+
+<ParamField body="memory" type="integer">
+  Memory in MB. Range: 512-32768. Defaults to the template's value.
+</ParamField>
+
+<ParamField body="disk_size_mb" type="integer">
+  Disk size in MB. Range: 512-51200. Defaults to the template's value.
+</ParamField>
+
+<ParamField body="template_id" type="string" default="scratch">
+  Sandbox template ID. Pass `coding-agent` when your agent needs common coding tools already installed.
+</ParamField>
+
+## Create a larger computer
+
+Use this when a job needs more room than the template default provides.
+
+<CodeGroup>
+
+```python Python
+from celesto import Celesto
+
+
+with Celesto() as client:
+    computer = client.computers.create(
+        template_id="coding-agent",
+        cpus=2,
+        memory=4096,
+        disk_size_mb=20480,
+    )
+    try:
+        print(computer["name"])
+        print(f"{computer['vcpus']} vCPU")
+        print(f"{computer['ram_mb']} MB RAM")
+        print(f"{computer['disk_size_mb']} MB disk")
+    finally:
+        client.computers.delete(computer["id"])
+```
+
+```ts TypeScript
+import { Celesto } from "@celestoai/sdk";
+
+const client = new Celesto({ token: process.env.CELESTO_API_KEY });
+const computer = await client.computers.create({
+  templateId: "coding-agent",
+  cpus: 2,
+  memory: 4096,
+  diskSizeMb: 20480,
+});
+
+try {
+  console.log(computer.name);
+  console.log(`${computer.vcpus} vCPU`);
+  console.log(`${computer.ramMb} MB RAM`);
+  console.log(`${computer.diskSizeMb} MB disk`);
+} finally {
+  await client.computers.delete(computer.id);
+}
+```
+
+```bash CLI
+celesto computer create \
+  --template coding-agent \
+  --cpus 2 \
+  --memory 4096 \
+  --disk-size-mb 20480
+```
+
+</CodeGroup>
+
+<Check>
+  The response shows the CPU, memory, and disk size assigned to the new computer.
+</Check>
+
+## Start with the template defaults
+
+Templates include default resources for common workloads. List templates before choosing overrides.
+
+<CodeGroup>
+
+```python Python
+from celesto import Celesto
+
+
+with Celesto() as client:
+    for template in client.computers.list_templates():
+        print(
+            f"{template['id']}: "
+            f"{template['default_vcpus']} vCPU, "
+            f"{template['default_ram_mb']} MB RAM"
+        )
+```
+
+```ts TypeScript
+import { Celesto } from "@celestoai/sdk";
+
+const client = new Celesto({ token: process.env.CELESTO_API_KEY });
+const templates = await client.computers.listTemplates();
+
+for (const template of templates) {
+  console.log(
+    `${template.id}: ${template.defaultVcpus} vCPU, ${template.defaultRamMb} MB RAM`,
+  );
+}
+```
+
+```bash CLI
+celesto computer templates
+```
+
+</CodeGroup>
+
+## Sizing guide
+
+| Workload | Suggested starting point |
+|---|---|
+| Quick shell commands | Template defaults |
+| Coding agent with package installs | `coding-agent`, 2 vCPU, 4096 MB memory |
+| Large repository builds | More CPU and disk |
+| Data processing or notebooks | More memory and disk |
+| Hosted preview app | Enough memory for the app plus port publishing |
+
+<Tip>
+  Choose the smallest resource size that reliably completes the task, then increase one setting at a time when you hit a clear bottleneck.
+</Tip>

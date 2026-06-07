@@ -1,10 +1,21 @@
 (function () {
   var SLOT_ID = "sdk-language-selector-slot";
   var SDK_PATH_PREFIX = "/celesto-sdk/";
+  var SDK_LANGUAGE_SELECTOR_PATHS = {
+    "/celesto-sdk/overview": true,
+    "/celesto-sdk/quickstart": true,
+    "/celesto-sdk/authentication": true,
+    "/celesto-sdk/computers": true,
+    "/celesto-sdk/errors": true,
+  };
   var scheduled = false;
 
   function shouldPromote() {
-    return window.location.pathname.indexOf(SDK_PATH_PREFIX) === 0;
+    var pathname = window.location.pathname.replace(/\/$/, "");
+    return (
+      pathname.indexOf(SDK_PATH_PREFIX) === 0 &&
+      SDK_LANGUAGE_SELECTOR_PATHS[pathname] === true
+    );
   }
 
   function isResponsiveDuplicate(dropdown) {
@@ -81,12 +92,14 @@
       return;
     }
 
-    var slot = getOrCreateSlot(header, content);
-    var dropdown = getDropdown(slot);
+    var existingSlot = document.getElementById(SLOT_ID);
+    var dropdown = getDropdown(existingSlot);
     if (!dropdown) {
+      removeSlot();
       return;
     }
 
+    var slot = existingSlot || getOrCreateSlot(header, content);
     if (dropdown.parentNode !== slot) {
       slot.appendChild(dropdown);
     }

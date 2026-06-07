@@ -1,0 +1,87 @@
+---
+title: Publish ports from a sandboxed computer
+sidebarTitle: Publish ports
+description: "Expose a web server, API, notebook, or preview app running inside a Celesto computer through a public HTTPS URL."
+---
+
+Publishing a port gives software running inside a Celesto computer a public URL. A port is the numbered network address a service listens on, such as `8000` for a local web server.
+
+## When to publish a port
+
+Publish a port when you want to:
+
+- Preview an app an agent generated.
+- Share a local API running inside the computer.
+- Receive webhooks during a test run.
+- Inspect a notebook, dashboard, or development server.
+
+<Note>
+  Port publishing is currently available in the Python SDK and CLI. TypeScript projects can use the same CLI commands today.
+</Note>
+
+## Publish a service
+
+This example starts a simple HTTP server on port `8000`, publishes it, prints the public URL, and then removes the published port.
+
+<Steps>
+  <Step title="Run the publish workflow">
+    Start a service, publish it, list the published port, and clean up the URL.
+
+    <CodeGroup>
+
+    ```python Python
+    from celesto import Celesto
+
+
+    with Celesto() as client:
+        computer = client.computers.create(template_id="coding-agent")
+        try:
+            client.computers.exec(
+                computer["id"],
+                "cd /tmp && python3 -m http.server 8000 > /tmp/server.log 2>&1 &",
+            )
+
+            published = client.computers.publish_port(computer["id"])
+            print(published["url"])
+
+            for port in client.computers.list_published_ports(computer["id"]):
+                print(f"{port['port']} -> {port['url']} ({port['status']})")
+
+            client.computers.unpublish_port(computer["id"])
+        finally:
+            client.computers.delete(computer["id"])
+    ```
+
+    ```bash CLI
+    celesto computer create --template coding-agent
+    celesto computer run einstein "cd /tmp && python3 -m http.server 8000 > /tmp/server.log 2>&1 &"
+    celesto computer port publish einstein
+    celesto computer port list einstein
+    celesto computer port unpublish einstein
+    ```
+
+    </CodeGroup>
+
+    <Check>
+      The publish command returns an HTTPS URL that forwards traffic to port `8000` inside the computer.
+    </Check>
+  </Step>
+</Steps>
+
+## Published port fields
+
+<ResponseField name="port" type="integer">
+  Port inside the computer that receives forwarded traffic.
+</ResponseField>
+
+<ResponseField name="url" type="string">
+  Public HTTPS URL for the published service.
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Current published-port state.
+</ResponseField>
+
+<Tip>
+  For short-lived previews, put port unpublishing in the same cleanup block that deletes the computer.
+</Tip>
