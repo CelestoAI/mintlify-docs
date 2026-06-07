@@ -39,11 +39,11 @@
           {
             "group": "Features",
             "pages": [
+              "smolvm/features/callbacks",
               "smolvm/features/coding-agents",
               "smolvm/features/host-mounts",
               "smolvm/features/network-controls",
               "smolvm/features/port-forwarding",
-              "smolvm/features/callbacks",
               "smolvm/features/snapshots"
             ]
           },
