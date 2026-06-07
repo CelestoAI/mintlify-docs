@@ -24,7 +24,7 @@ Install the SDK:
 pip install celesto
 ```
 
-```bash JavaScript
+```bash TypeScript
 npm install @celestoai/sdk
 ```
 
@@ -242,7 +242,7 @@ run().catch(console.error);
 ## SDK methods
 
 <Note>
-  Python uses snake_case parameters (e.g., `project_name`, `page_size`). JavaScript uses camelCase (e.g., `projectName`, `pageSize`).
+  Python uses snake_case parameters (e.g., `project_name`, `page_size`). TypeScript uses camelCase (e.g., `projectName`, `pageSize`).
 </Note>
 
 ### `connect`
@@ -260,7 +260,7 @@ connect(
 ) -> dict
 ```
 
-```ts JavaScript
+```ts TypeScript
 connect(payload: {
   subject: string;
   projectName: string;
@@ -302,7 +302,7 @@ list_connections(
 ) -> dict
 ```
 
-```ts JavaScript
+```ts TypeScript
 listConnections(params: {
   projectName: string;
   statusFilter?: string;
@@ -331,7 +331,7 @@ Signature:
 get_connection(connection_id: str) -> dict
 ```
 
-```ts JavaScript
+```ts TypeScript
 getConnection(connectionId: string): Promise<GatekeeperConnection>
 ```
 
@@ -362,7 +362,7 @@ list_drive_files(
 ) -> dict
 ```
 
-```ts JavaScript
+```ts TypeScript
 listDriveFiles(params: {
   projectName: string;
   subject: string;
@@ -425,7 +425,7 @@ Signature:
 get_access_rules(connection_id: str) -> dict
 ```
 
-```ts JavaScript
+```ts TypeScript
 getAccessRules(connectionId: string): Promise<GatekeeperAccessRules>
 ```
 
@@ -471,7 +471,7 @@ update_access_rules(
 ) -> dict
 ```
 
-```ts JavaScript
+```ts TypeScript
 updateAccessRules(params: {
   subject: string;
   projectName: string;
@@ -521,7 +521,7 @@ Signature:
 clear_access_rules(connection_id: str) -> dict
 ```
 
-```ts JavaScript
+```ts TypeScript
 clearAccessRules(connectionId: string): Promise<GatekeeperAccessRules>
 ```
 
@@ -547,7 +547,7 @@ revoke_connection(
 ) -> dict
 ```
 
-```ts JavaScript
+```ts TypeScript
 revokeConnection(params: {
   subject: string;
   projectName: string;

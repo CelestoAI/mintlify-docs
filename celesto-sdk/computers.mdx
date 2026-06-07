@@ -201,13 +201,13 @@ with Celesto() as client:
 
 </View>
 
-<View title="JavaScript" icon="js">
+<View title="TypeScript" icon="js">
 
 ## Create a computer
 
 Call `create()` with no arguments to get a fresh `scratch` computer, which is a minimal Ubuntu sandbox.
 
-```js create-computer.mjs
+```ts create-computer.ts
 import { Celesto } from "@celestoai/sdk";
 
 const client = new Celesto({ token: process.env.CELESTO_API_KEY });
@@ -220,7 +220,7 @@ await client.computers.delete(computer.id);
 
 Override CPU, memory, or disk size when the default size is too small:
 
-```js create-sized-computer.mjs
+```ts create-sized-computer.ts
 import { Celesto } from "@celestoai/sdk";
 
 const client = new Celesto({ token: process.env.CELESTO_API_KEY });
@@ -265,7 +265,7 @@ try {
 
 A template is a ready-made computer image with extra tools and default CPU, memory, and disk settings. Use `coding-agent` for common coding workflows:
 
-```js create-from-template.mjs
+```ts create-from-template.ts
 import { Celesto } from "@celestoai/sdk";
 
 const client = new Celesto({ token: process.env.CELESTO_API_KEY });
@@ -281,7 +281,7 @@ try {
 
 ## List templates
 
-```js list-templates.mjs
+```ts list-templates.ts
 import { Celesto } from "@celestoai/sdk";
 
 const client = new Celesto({ token: process.env.CELESTO_API_KEY });
@@ -297,7 +297,7 @@ for (const template of templates) {
 
 ## Run commands
 
-```js run-command.mjs
+```ts run-command.ts
 import { Celesto } from "@celestoai/sdk";
 
 const client = new Celesto({ token: process.env.CELESTO_API_KEY });
@@ -326,7 +326,7 @@ try {
 
 ## Get and list computers
 
-```js list-computers.mjs
+```ts list-computers.ts
 import { Celesto } from "@celestoai/sdk";
 
 const client = new Celesto({ token: process.env.CELESTO_API_KEY });
@@ -343,12 +343,12 @@ console.log(`Total: ${result.count}`);
 ## Publish a port
 
 <Note>
-  Port publishing is currently available in the Python SDK and CLI. Use the [CLI port commands](/celesto-sdk/cli#port-commands) from JavaScript projects when you need to expose a service today.
+  Port publishing is currently available in the Python SDK and CLI. Use the [CLI port commands](/celesto-sdk/cli#port-commands) from TypeScript projects when you need to expose a service today.
 </Note>
 
 ## Stop, start, and delete
 
-```js lifecycle.mjs
+```ts lifecycle.ts
 import { Celesto } from "@celestoai/sdk";
 
 const client = new Celesto({ token: process.env.CELESTO_API_KEY });
@@ -362,9 +362,9 @@ await client.computers.delete(computerId);
 
 ## Open a terminal connection
 
-The JavaScript SDK provides a `getTerminalConnection` method that returns the URL, headers, and first message for an interactive WebSocket terminal session.
+The TypeScript SDK provides a `getTerminalConnection` method that returns the URL, headers, and first message for an interactive WebSocket terminal session.
 
-```js terminal.mjs
+```ts terminal.ts
 import WebSocket from "ws";
 import { Celesto } from "@celestoai/sdk";
 

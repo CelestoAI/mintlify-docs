@@ -70,7 +70,7 @@ print(client.computers.list()["count"])
 
 </View>
 
-<View title="JavaScript" icon="js">
+<View title="TypeScript" icon="js">
 
 ## Use an environment variable
 
@@ -80,7 +80,7 @@ export CELESTO_API_KEY="your-api-key"
 
 Create the client:
 
-```js auth.mjs
+```ts auth.ts
 import { Celesto } from "@celestoai/sdk";
 
 const client = new Celesto({ token: process.env.CELESTO_API_KEY });
@@ -92,7 +92,7 @@ console.log(result.count);
 
 Pass `token` when you need to select credentials explicitly:
 
-```js auth-explicit.mjs
+```ts auth-explicit.ts
 import { Celesto } from "@celestoai/sdk";
 
 const token = process.env.CELESTO_API_KEY;

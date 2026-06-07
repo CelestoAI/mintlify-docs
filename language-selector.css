@@ -1,0 +1,60 @@
+#sdk-language-selector-slot {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  max-width: 100%;
+  margin: 1.125rem 0 1.5rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+html[data-current-path^="/celesto-sdk/"] #table-of-contents #multi-view-dropdown {
+  display: none !important;
+}
+
+#sdk-language-selector-slot #multi-view-dropdown {
+  width: 12.5rem !important;
+  max-width: min(12.5rem, calc(100vw - 3rem)) !important;
+  margin-bottom: 0 !important;
+  z-index: 30;
+}
+
+#multi-view-dropdown[data-sdk-language-selector-extra="true"] {
+  display: none !important;
+}
+
+#sdk-language-selector-slot .multi-view-dropdown-trigger {
+  min-height: 2.5rem;
+  padding: 0.375rem 0.625rem !important;
+  border-color: rgba(255, 255, 255, 0.09) !important;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+html.dark #sdk-language-selector-slot .multi-view-dropdown-trigger {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+html:not(.dark) #sdk-language-selector-slot .multi-view-dropdown-trigger {
+  border-color: rgba(17, 24, 39, 0.1) !important;
+  background: rgba(255, 255, 255, 0.86);
+}
+
+#sdk-language-selector-slot .multi-view-dropdown-trigger span {
+  font-size: 0.9375rem !important;
+  line-height: 1.25rem !important;
+}
+
+@media (max-width: 768px) {
+  #sdk-language-selector-slot {
+    display: flex;
+    width: 100%;
+    margin-top: 1.25rem;
+  }
+
+  #sdk-language-selector-slot #multi-view-dropdown {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}

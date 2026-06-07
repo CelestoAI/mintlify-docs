@@ -4,7 +4,7 @@ sidebarTitle: Quickstart
 description: "Install the Celesto SDK, authenticate with an API key, create your first sandboxed computer, run a command, and clean it up."
 ---
 
-This quickstart creates one sandboxed computer, runs `uname -a`, prints the output, and deletes the computer. You can use the language selector to switch the whole example between Python and JavaScript.
+This quickstart creates one sandboxed computer, runs `uname -a`, prints the output, and deletes the computer. You can use the language selector to switch the whole example between Python and TypeScript.
 
 ## Before you start
 
@@ -59,19 +59,20 @@ Learn how to [create computers with templates](/celesto-sdk/computers#use-a-temp
 
 </View>
 
-<View title="JavaScript" icon="js">
+<View title="TypeScript" icon="js">
 
-## Install the JavaScript SDK
+## Install the TypeScript SDK
 
 ```bash
 npm install @celestoai/sdk
+npm install --save-dev tsx typescript
 ```
 
 ## Run your first computer
 
-Create `quickstart.mjs`:
+Create `quickstart.ts`:
 
-```js quickstart.mjs
+```ts quickstart.ts
 import { Celesto } from "@celestoai/sdk";
 
 const token = process.env.CELESTO_API_KEY;
@@ -95,7 +96,7 @@ Run it:
 
 ```bash
 export CELESTO_API_KEY="your-api-key"
-node quickstart.mjs
+npx tsx quickstart.ts
 ```
 
 <Check>
