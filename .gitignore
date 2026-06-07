@@ -108,3 +108,4 @@ temp/
 *.sw?
 
 demo.py
+.gstack/
