@@ -58,3 +58,5 @@ Do not include private repository file paths, directory structures, code snippet
 
 ## Output quality bar
 The updated docs should help a first-time reader glance at the page, understand the product direction, and find the right next example or workflow without confusion.
+
+Please follow the @./WRITING_GUIDE.md for in depth guide on writing technical documentation.
