@@ -21,7 +21,32 @@ npm install @celestoai/sdk
 
 ## Authentication
 
-Set your API key as an environment variable or pass it directly:
+Get your API key from [celesto.ai](https://celesto.ai) under **Settings > Security**.
+
+### Sign in once from the CLI
+
+If you use the `celesto` CLI, save your key one time and reuse it for every command:
+
+```bash
+celesto auth login
+```
+
+The command prompts for your API key and stores it in your operating system's secure credential store (Keychain on macOS, Credential Manager on Windows, Secret Service on Linux). Future CLI commands pick it up automatically — you do not need to export an environment variable.
+
+Manage the saved key with:
+
+```bash
+celesto auth status   # Check whether a key is saved
+celesto auth logout   # Remove the saved key
+```
+
+<Tip>
+  The saved key is scoped to the Celesto API URL. If you point the CLI at a different environment with `--base-url` or `CELESTO_BASE_URL`, sign in again for that URL.
+</Tip>
+
+### Use an environment variable
+
+Set `CELESTO_API_KEY` to authenticate the SDK or override the CLI's saved key:
 
 <CodeGroup>
 
@@ -35,6 +60,8 @@ export CELESTO_API_KEY="your-api-key"
 ```
 
 </CodeGroup>
+
+### Pass the key in code
 
 You can also pass the key when you create the client:
 
@@ -54,9 +81,7 @@ const client = new Celesto({ token: "your-api-key" });
 
 </CodeGroup>
 
-<Tip>
-  Get your API key from [celesto.ai](https://celesto.ai) under **Settings > Security**.
-</Tip>
+The CLI resolves the API key in this order: `--api-key` flag, `CELESTO_API_KEY` environment variable, a `.env` file in the current directory, then the key saved by `celesto auth login`.
 
 ## Quick example
 
@@ -432,10 +457,13 @@ The method accepts either a computer ID (e.g., `cmp_abc123`) or a human-readable
 
 ## CLI reference
 
-The `celesto` CLI focuses on computer management. All commands live under `celesto computer`.
+The `celesto` CLI groups commands by area: `celesto auth` for sign-in and `celesto computer` for sandbox management.
 
 | Command | Description |
 |---|---|
+| `celesto auth login [--api-key KEY] [--base-url URL]` | Save your API key in the OS credential store |
+| `celesto auth status [--base-url URL]` | Show whether a key is saved for the given API URL |
+| `celesto auth logout [--base-url URL]` | Remove the saved API key |
 | `celesto computer create [--template ID] [--cpus N] [--memory MB] [--disk-size-mb MB]` | Create a computer from a template |
 | `celesto computer templates` | List available sandbox templates |
 | `celesto computer list` | List all computers |
