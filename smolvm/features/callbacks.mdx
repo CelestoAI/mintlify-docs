@@ -49,7 +49,7 @@ with SmolVM(callbacks=[SafetyGuard()]) as vm:
 
 A blocked command does not tear down the sandbox or the SSH session — the next allowed `run()` call uses the same connection.
 
-## Block prompt injection with a classifier
+### Example: Block prompt injection with a classifier
 
 You can use the same `on_pre_run` hook to plug in an ML classifier and block commands that look like prompt injection or jailbreak attempts. This is useful when an LLM-driven agent generates shell commands from untrusted input (web pages, user messages, tool output) and you want to stop a malicious instruction before it ever reaches the sandbox.
 
