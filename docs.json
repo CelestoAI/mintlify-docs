@@ -163,6 +163,12 @@
             ]
           },
           {
+            "group": "Guides",
+            "pages": [
+              "celesto-sdk/guides/publish-github-app"
+            ]
+          },
+          {
             "group": "Agents and Integrations",
             "pages": [
               "celesto-sdk/deployments",
