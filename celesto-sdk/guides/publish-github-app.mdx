@@ -1,0 +1,132 @@
+---
+title: Run a GitHub app on a Celesto computer
+sidebarTitle: Publish a GitHub app
+description: "Clone a GitHub web app onto a Celesto computer, install dependencies, run it on port 8000, and share a public HTTPS preview URL."
+---
+
+This guide walks you through taking any GitHub repository that runs as a web app, starting it on a Celesto computer, and getting a public URL that anyone (including you, your team, or an agent) can open in a browser.
+
+Use this when you want a quick way to:
+
+- Preview a Vite, React, or Node app without deploying it to a hosting provider.
+- Share a work-in-progress build with someone for review.
+- Let an AI agent spin up a repo and verify it actually runs.
+
+By the end, you will have a public HTTPS URL pointing at port `8000` on a Celesto computer running your app.
+
+## Before you start
+
+You need:
+
+- The [Celesto CLI installed](/celesto-sdk/quickstart) and authenticated.
+- The GitHub URL of a repo that runs as a web app (for example, a Vite or Node project).
+- The repo's install and start commands. If you don't know them, the project's `README.md` usually tells you.
+
+Confirm you are logged in:
+
+```bash
+celesto auth status
+```
+
+## Step 1: Create a computer
+
+Create a `coding-agent` computer. This template comes with Node, npm, and git already installed, which is what most web apps need.
+
+```bash
+celesto computer create --template coding-agent --json
+```
+
+Save the `name` from the output. The rest of this guide uses `einstein` as an example name — replace it with your computer's name.
+
+## Step 2: Clone and install the app
+
+Clone the repo into a fresh directory on the computer and install its dependencies.
+
+```bash
+celesto computer run einstein "rm -rf /my-app && git clone https://github.com/<owner>/<repo> /my-app && cd /my-app && npm install" --timeout 300
+```
+
+<Tip>
+  Pick a directory name that matches your project. The `rm -rf` at the start makes the command safe to re-run if something fails partway through.
+</Tip>
+
+## Step 3: Start the app on port 8000
+
+Bind the app to `0.0.0.0:8000` so Celesto can forward traffic to it. The exact command depends on the framework — these are the common ones:
+
+<CodeGroup>
+
+```bash Vite / React
+celesto computer run einstein "cd /my-app && setsid -f sh -c 'npm run dev -- --host 0.0.0.0 --port 8000 > /tmp/app.log 2>&1 < /dev/null'" --timeout 60
+```
+
+```bash Node / Express
+celesto computer run einstein "cd /my-app && setsid -f sh -c 'PORT=8000 npm start > /tmp/app.log 2>&1 < /dev/null'" --timeout 60
+```
+
+</CodeGroup>
+
+`setsid -f` detaches the server from the shell session so it keeps running after the command returns.
+
+<Note>
+  If your app needs environment variables (API keys, database URLs, and so on), set them in the same command, for example: `setsid -f sh -c 'OPENAI_API_KEY=sk-... npm run dev -- --host 0.0.0.0 --port 8000 > /tmp/app.log 2>&1 < /dev/null'`.
+</Note>
+
+## Step 4: Verify the app is running
+
+Before exposing the app publicly, confirm it is actually serving traffic inside the computer.
+
+```bash
+celesto computer run einstein "curl -I --max-time 5 http://127.0.0.1:8000"
+```
+
+You should see an `HTTP/1.1 200 OK` response. If you don't, check the log:
+
+```bash
+celesto computer run einstein "tail -50 /tmp/app.log"
+```
+
+## Step 5: Publish port 8000
+
+Expose port `8000` to the public internet.
+
+```bash
+celesto computer port publish einstein --port 8000 --json
+```
+
+The response includes a `url` field — that's your public HTTPS link. Open it in a browser to confirm the app loads.
+
+You can also list everything currently published for the computer:
+
+```bash
+celesto computer port list einstein --json
+```
+
+## Step 6: Clean up when you're done
+
+Public URLs are meant for short-lived previews. Unpublish the port and delete the computer when you no longer need them.
+
+```bash
+celesto computer port unpublish einstein --port 8000
+celesto computer delete einstein
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="The public URL returns 502 or won't load">
+    The app probably isn't listening on `0.0.0.0:8000`. Re-run the verification curl from Step 4 and check `/tmp/app.log` for errors. Many frameworks default to `localhost` only — pass `--host 0.0.0.0` or the equivalent flag.
+  </Accordion>
+  <Accordion title="`celesto auth status` says I'm not logged in">
+    Run `celesto auth login` and try again. If you're running inside a sandboxed environment, your OS keychain may not be visible — re-run the CLI command from your normal shell.
+  </Accordion>
+  <Accordion title="`npm install` fails or times out">
+    Increase `--timeout` on the `celesto computer run` call. Large dependency trees can take several minutes on first install.
+  </Accordion>
+</AccordionGroup>
+
+## Related
+
+- [Publish ports](/celesto-sdk/features/publish-ports) — the underlying primitive for exposing services from a computer.
+- [Computers](/celesto-sdk/computers) — full reference for creating and managing computers.
+- [CLI reference](/celesto-sdk/cli) — every `celesto` command and flag.
