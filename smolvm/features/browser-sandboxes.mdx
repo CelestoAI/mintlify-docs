@@ -1,0 +1,146 @@
+---
+title: "Browser sandboxes"
+sidebarTitle: "Browser Sandboxes"
+description: "Run a real browser inside an isolated SmolVM sandbox for agents, Playwright automation, live viewing, and computer-use workflows."
+---
+
+SmolVM can start a real browser in a throwaway computer for your agent. The agent can open websites, click buttons, fill forms, take screenshots, and download files while your own browser and files stay separate.
+
+Use browser sandboxes when an agent needs to work through a website instead of an API. This is useful for web research, scraping pages with JavaScript, testing web apps, filling forms, and building computer-use workflows where a model sees the screen and sends back actions.
+
+## What you can do
+
+- **Automate a real Chromium browser** with Playwright or any tool that connects over <Tooltip tip="Chrome DevTools Protocol, a local connection address used by Playwright and browser automation tools">CDP</Tooltip>.
+- **Watch or take over a live run** through `viewer_url` when the agent gets stuck on login, file upload, or a surprising page state.
+- **Connect computer-use agents** through `display_url`, a <Tooltip tip="Virtual Network Computing, a standard way for tools and viewers to control a remote screen">VNC</Tooltip> address for screen-based tools.
+- **Keep browser state separate** with `profile_id`, so cookies and local storage belong to the sandbox profile instead of your host browser.
+- **Collect evidence** with screenshots, downloads, logs, and optional video recordings.
+
+## Choose a mode
+
+| Need | Use | Returned URLs |
+| --- | --- | --- |
+| Fast browser automation | `SmolVM.browser(headless=True)` | `cdp_url` |
+| Browser automation with a live screen | `SmolVM.browser(headless=False)` | `cdp_url`, `viewer_url`, `display_url` |
+| Full desktop screen control | `SmolVM.desktop()` | `viewer_url`, `display_url` |
+
+Headless browser mode has the smallest browser surface because it only exposes the browser automation endpoint. Visible browser mode starts the live viewer and VNC display as well. Use desktop mode when your agent needs the whole desktop, not just Chromium.
+
+## Start a browser sandbox
+
+<Tabs>
+  <Tab title="Python">
+    ```python browser_sandbox.py
+    from smolvm import SmolVM
+
+    with SmolVM.browser(
+        headless=False,
+        viewport={"width": 1440, "height": 900},
+    ) as browser:
+        print(browser.cdp_url)
+        print(browser.viewer_url)
+        print(browser.display_url)
+    ```
+  </Tab>
+  <Tab title="CLI">
+    ```bash
+    smolvm browser start --live
+    smolvm browser list
+    smolvm browser open <session_id>
+    smolvm browser stop <session_id>
+    ```
+  </Tab>
+</Tabs>
+
+`cdp_url` is for automation libraries. `viewer_url` opens in your browser so a person can watch or interact with the run. `display_url` is for VNC-compatible tools and computer-use agents.
+
+## Automate with Playwright
+
+Use `connect_playwright()` when you want Python code to drive the sandbox browser.
+
+```python playwright_browser.py
+from smolvm import SmolVM
+
+with SmolVM.browser(headless=True) as sandbox:
+    browser = sandbox.connect_playwright()
+    page = browser.new_page()
+    page.goto("https://example.com")
+    print(page.title())
+    browser.close()
+```
+
+<Note>
+  Install Playwright in your local Python environment before using `connect_playwright()`: `pip install playwright`.
+</Note>
+
+## Watch or take over
+
+Visible browser mode gives you a live web viewer:
+
+```python live_view.py
+from smolvm import SmolVM
+
+with SmolVM.browser(headless=False) as browser:
+    browser.open_viewer()
+    print(browser.viewer_url)
+```
+
+Open `viewer_url` when you want to watch the agent work, debug a failing flow, or take over for a sensitive step such as login. Give `display_url` to tools that expect a VNC display.
+
+This is especially useful for computer-use agents. The model can use screenshots and UI actions, while you keep a human-readable view into what is happening.
+
+## Keep browser state between runs
+
+Use `profile_id` when a workflow needs cookies, local storage, or login state again later. Each profile gets its own sandbox browser state.
+
+```python browser_profile.py
+from smolvm import SmolVM
+
+with SmolVM.browser(profile_id="vendor-portal") as browser:
+    print(browser.cdp_url)
+```
+
+Use separate profile IDs for separate accounts or customers. That keeps sessions easier to reason about and avoids mixing credentials across workflows.
+
+## Collect screenshots and artifacts
+
+Browser sandboxes can save screenshots and collect session files before the sandbox stops.
+
+```python browser_artifacts.py
+from smolvm import SmolVM
+
+with SmolVM.browser(
+    headless=False,
+    record_video=True,
+    allow_downloads=True,
+) as browser:
+    playwright_browser = browser.connect_playwright()
+    page = playwright_browser.new_page()
+    page.goto("https://example.com")
+
+    browser.screenshot("example.png")
+    artifacts = browser.collect_artifacts()
+    print(artifacts)
+
+    playwright_browser.close()
+```
+
+Call `collect_artifacts()` before leaving the `with` block when you want logs, downloads, and recordings from that run.
+
+## Keep agents safe
+
+Browser sandboxes are designed for untrusted web pages and agent-generated actions, but you still decide what the agent is allowed to do.
+
+- Use a fresh sandbox for untrusted tasks.
+- Use separate `profile_id` values for separate sites, accounts, or customers.
+- Pass only the environment variables the browser task needs.
+- Watch the live viewer before approving high-impact actions.
+- Treat page text, screenshots, downloads, and prompts from websites as untrusted input.
+
+For broader agent safety patterns, see [Run callbacks and safety hooks](/smolvm/features/callbacks) and [Security model](/smolvm/concepts/security).
+
+## Related
+
+- [Browser and desktop sandboxes](/smolvm/api/browsersession) for the full Python API
+- [Browser and desktop options](/smolvm/api/browsersessionconfig) for viewport, profile, recording, and resource options
+- [AI agent integration](/smolvm/guides/ai-agent-integration) for framework examples

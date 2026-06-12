@@ -40,6 +40,7 @@
             "group": "Features",
             "pages": [
               "smolvm/features/callbacks",
+              "smolvm/features/browser-sandboxes",
               "smolvm/features/coding-agents",
               "smolvm/features/host-mounts",
               "smolvm/features/network-controls",
