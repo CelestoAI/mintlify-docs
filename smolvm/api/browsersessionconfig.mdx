@@ -1,150 +1,165 @@
 ---
-title: "BrowserSessionConfig"
-description: "BrowserSessionConfig reference: set viewport size, choose Firecracker or QEMU backend, enable video recording, and tune memory and disk resources."
+title: "Browser and desktop options"
+description: "Options for SmolVM.browser() and SmolVM.desktop(), including viewport size, profiles, recording, resources, and shared folders."
 ---
 
 ## Overview
 
-`BrowserSessionConfig` controls how a browser session is created. Use it to set the viewport size, choose a backend, enable video recording, or allocate more memory and disk for browser-heavy workloads.
+You can tune browser and desktop sandboxes for the task your agent needs to complete. Start with the defaults, then adjust the screen size, memory, disk, profile, or recording options when your workflow needs them.
 
-If you create a `BrowserSession` without a config, SmolVM uses sensible defaults that work for most use cases.
+Pass these options directly to `SmolVM.browser()` or `SmolVM.desktop()`.
 
 ## Import
 
 ```python
-from smolvm import BrowserSessionConfig
+from smolvm import BrowserViewport, SmolVM
 ```
 
-## Fields
+## Common options
 
-<ParamField path="backend" type="str | None" default="None">
-  Runtime backend. Options: `"firecracker"`, `"qemu"`, or `None` (auto-detect). Firecracker is used on Linux with KVM, QEMU elsewhere.
+<ParamField path="backend" type="str" default="auto">
+  Runtime backend. Options are `"firecracker"`, `"qemu"`, `"libkrun"`, and `"auto"`.
 </ParamField>
 
-<ParamField path="browser" type="str" default="chromium">
-  Browser engine to use. Currently `"chromium"` is the only supported value.
+<ParamField path="session_id" type="str | None" default="None">
+  Existing sandbox ID to reconnect to. Omit it to create a new sandbox.
 </ParamField>
 
-<ParamField path="mode" type="str" default="headless">
-  Browser launch mode. Options: `"headless"` or `"headed"`. Headed mode enables the noVNC live-view.
+<ParamField path="profile_id" type="str | None" default="None">
+  Browser profile name. Reuse the same ID to keep browser state such as cookies and local storage across persistent browser sessions.
 </ParamField>
 
-<ParamField path="profile" type="str | None" default="None">
-  Persistent browser profile name. When set, browser state (cookies, localStorage) persists across sessions that share the same profile name.
+<ParamField path="persistent" type="bool" default="False">
+  Keep the sandbox record after the current Python process exits. This lets another process reconnect with `session_id`.
 </ParamField>
 
-<ParamField path="viewport" type="BrowserViewport | None" default="None">
-  Browser window dimensions. Defaults to 1280x720 if omitted.
+<ParamField path="timeout_minutes" type="int" default="30">
+  Maximum session lifetime in minutes.
 </ParamField>
 
-<ParamField path="enable_video_recording" type="bool" default="False">
-  Record a video of the browser session. Recordings can be retrieved with `collect_artifacts()`.
+<ParamField path="memory_mb" type="int" default="2048">
+  Guest memory in MiB.
 </ParamField>
 
-<ParamField path="enable_downloads" type="bool" default="True">
-  Allow file downloads inside the browser.
-</ParamField>
-
-<ParamField path="mem_size_mib" type="int" default="1024">
-  Guest memory in MiB. Browser sessions default to 1024 MiB, which is higher than a basic sandbox.
-</ParamField>
-
-<ParamField path="disk_size_mib" type="int" default="512">
+<ParamField path="disk_size_mb" type="int" default="4096">
   Root filesystem size in MiB.
+</ParamField>
+
+<ParamField path="boot_timeout" type="float" default="90.0">
+  Maximum seconds to wait for the sandbox and display services to become ready.
+</ParamField>
+
+<ParamField path="env_vars" type="dict[str, str] | None" default="None">
+  Environment variables to set inside the sandbox.
+</ParamField>
+
+<ParamField path="workspace_mounts" type="list[WorkspaceMount] | None" default="None">
+  Folders to share with the sandbox.
+</ParamField>
+
+## Advanced local options
+
+<ParamField path="data_dir" type="Path | None" default="None">
+  Local directory for sandbox state. Omit it to use SmolVM's default state directory.
+</ParamField>
+
+<ParamField path="socket_dir" type="Path | None" default="None">
+  Local directory for runtime sockets. Omit it to use SmolVM's default socket directory.
+</ParamField>
+
+<ParamField path="ssh_key_path" type="str | None" default="None">
+  SSH private key path used for setup and file transfer inside the sandbox.
+</ParamField>
+
+<ParamField path="on_progress" type="Callable[[str], None] | None" default="None">
+  Callback that receives progress messages while the sandbox starts.
+</ParamField>
+
+## Browser-only option
+
+<ParamField path="headless" type="bool" default="True">
+  `SmolVM.browser()` only. Use `True` for CDP-only browser automation. Use `False` to also start `viewer_url` and `display_url`.
+</ParamField>
+
+<Tip>
+  CDP means Chrome DevTools Protocol, the browser connection used by Playwright and similar automation tools.
+</Tip>
+
+## Display and artifact options
+
+<ParamField path="viewport" type="BrowserViewport | dict | None" default="None">
+  Browser or desktop screen size. You can pass `BrowserViewport(width=1440, height=900)` or `{"width": 1440, "height": 900}`.
+</ParamField>
+
+<ParamField path="viewport_width" type="int" default="1280">
+  Screen width in pixels when `viewport` is omitted.
+</ParamField>
+
+<ParamField path="viewport_height" type="int" default="720">
+  Screen height in pixels when `viewport` is omitted.
+</ParamField>
+
+<ParamField path="record_video" type="bool" default="False">
+  Record the visible session. Retrieve recordings with `collect_artifacts()` before the sandbox stops.
+</ParamField>
+
+<ParamField path="allow_downloads" type="bool" default="True">
+  Allow Chromium downloads inside the browser sandbox.
 </ParamField>
 
 ## BrowserViewport
 
-Controls the browser window dimensions.
+`BrowserViewport` is a small helper for screen dimensions.
 
 ```python
 from smolvm import BrowserViewport
 ```
 
 <ParamField path="width" type="int" default="1280">
-  Viewport width in pixels.
+  Screen width in pixels.
 </ParamField>
 
 <ParamField path="height" type="int" default="720">
-  Viewport height in pixels.
+  Screen height in pixels.
 </ParamField>
 
 ## Examples
 
-### Default configuration
+### Larger visible browser
 
-```python
-from smolvm import BrowserSession
+```python larger_browser.py
+from smolvm import BrowserViewport, SmolVM
 
-# Uses sensible defaults: 1280x720, headless, 1024 MiB RAM
-with BrowserSession() as session:
-    browser = session.connect_playwright()
-    # ...
-```
-
-### High-resolution viewport
-
-```python
-from smolvm import BrowserSession, BrowserSessionConfig, BrowserViewport
-
-config = BrowserSessionConfig(
-    viewport=BrowserViewport(width=1920, height=1080),
-    mem_size_mib=2048,
-)
-
-with BrowserSession(config=config) as session:
-    browser = session.connect_playwright()
-    page = browser.new_page()
-    page.goto("https://example.com")
-```
-
-### Video recording
-
-```python
-from smolvm import BrowserSession, BrowserSessionConfig
-
-config = BrowserSessionConfig(
-    enable_video_recording=True,
-    mode="headed",
-)
-
-with BrowserSession(config=config) as session:
-    browser = session.connect_playwright()
-    page = browser.new_page()
-    page.goto("https://example.com")
-    page.click("text=More information")
-    browser.close()
-
-    # Retrieve the recording
-    artifacts = session.collect_artifacts()
-    print(f"Artifacts saved to {artifacts}")
+with SmolVM.browser(
+    headless=False,
+    viewport=BrowserViewport(width=1440, height=900),
+    memory_mb=3072,
+) as browser:
+    print(browser.viewer_url)
 ```
 
 ### Persistent browser profile
 
-```python
-from smolvm import BrowserSession, BrowserSessionConfig
+```python browser_profile.py
+from smolvm import SmolVM
 
-config = BrowserSessionConfig(profile="my-profile")
+with SmolVM.browser(profile_id="daily-reports", persistent=True) as browser:
+    print(browser.cdp_url)
+```
 
-# First session: log in to a website
-with BrowserSession(config=config) as session:
-    browser = session.connect_playwright()
-    page = browser.new_page()
-    page.goto("https://example.com/login")
-    # ... log in
-    browser.close()
+Use the same `profile_id` again when you want Chromium to reuse saved browser state.
 
-# Second session with same profile: still logged in
-with BrowserSession(config=config) as session:
-    browser = session.connect_playwright()
-    page = browser.new_page()
-    page.goto("https://example.com/dashboard")
-    # Cookies and localStorage persist from the previous session
-    browser.close()
+### Full desktop with a larger screen
+
+```python desktop_viewport.py
+from smolvm import SmolVM
+
+with SmolVM.desktop(viewport={"width": 1440, "height": 900}) as desktop:
+    print(desktop.viewer_url)
+    print(desktop.display_url)
 ```
 
 ## Related
 
-* [BrowserSession](/smolvm/api/browsersession) - Launch and control browser sessions
-* [BrowserSessionInfo](/smolvm/api/browsersessioninfo) - Runtime information for a browser session
+* [Browser and desktop sandboxes](/smolvm/api/browsersession) - Start browser and desktop modes
+* [Display sandbox object](/smolvm/api/browsersessioninfo) - Read returned URLs and lifecycle state

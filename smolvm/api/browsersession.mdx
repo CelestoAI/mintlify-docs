@@ -1,304 +1,247 @@
 ---
-title: "BrowserSession"
-description: "BrowserSession reference: launch a Chromium browser inside a SmolVM sandbox, drive it with Playwright, capture screenshots, and stream live with noVNC."
+title: "Browser and desktop sandboxes"
+description: "Start browser and desktop sandboxes with SmolVM.browser() and SmolVM.desktop(), then connect automation tools or open a live viewer."
 ---
 
 ## Overview
 
-`BrowserSession` gives you a real Chromium browser running inside a SmolVM sandbox. You can automate it with Playwright, take screenshots, transfer files, or watch the session live through noVNC — all without installing a browser on your host.
+SmolVM can start a browser or a full desktop inside a disposable sandbox. You can give an agent a connection address for automation, open a web viewer to watch the screen, or connect a desktop-control tool.
 
-Use browser sessions when your agent or script needs to interact with websites, fill out forms, capture screenshots, or perform computer-use tasks.
+Use `SmolVM.browser()` when your agent needs Chromium for web tasks. Use `SmolVM.desktop()` when your agent needs the whole desktop environment, such as a window manager, visible apps, or a VNC-compatible computer-use driver. VNC means Virtual Network Computing, a standard way for tools to view and control a remote screen.
 
 ## Import
 
 ```python
-from smolvm import BrowserSession
+from smolvm import SmolVM
 ```
 
-## Constructor
+## Choose a mode
 
-```python  theme={null}
-BrowserSession(
-    config: BrowserSessionConfig | None = None,
-    *,
-    session_id: str | None = None,
-)
+| Factory | Best for | URLs returned |
+| --- | --- | --- |
+| `SmolVM.browser(headless=True)` | Browser automation with Playwright or another automation client | `cdp_url` |
+| `SmolVM.browser(headless=False)` | Browser automation plus a visible screen | `cdp_url`, `viewer_url`, `display_url` |
+| `SmolVM.desktop()` | Full desktop computer-use agents | `viewer_url`, `display_url` |
+
+<Tip>
+  <Tooltip tip="Chrome DevTools Protocol, a local connection address used by Playwright and browser automation tools">CDP</Tooltip> is for browser automation. <Tooltip tip="Virtual Network Computing, a standard way for tools and viewers to control a remote screen">VNC</Tooltip> is for screen viewing and desktop control.
+</Tip>
+
+## Start a headless browser
+
+Headless browser mode gives automation tools a Chromium connection address. It is the smallest browser mode because it does not start the live screen viewer.
+
+```python browser_headless.py
+from smolvm import SmolVM
+
+with SmolVM.browser(headless=True) as browser:
+    print(browser.cdp_url)
 ```
 
-<ParamField path="config" type="BrowserSessionConfig | None" default="None">
-  Configuration for a new browser session. Mutually exclusive with `session_id`. If omitted (and `session_id` is omitted), SmolVM creates a session with sensible defaults.
-</ParamField>
+<ResponseField name="cdp_url" type="str">
+  Local browser automation URL for Playwright or another browser automation client.
+</ResponseField>
 
-<ParamField path="session_id" type="str | None" default="None">
-  ID of an existing session to reconnect to. Mutually exclusive with `config`.
-</ParamField>
+## Start a visible browser
 
-### Raises
+Visible browser mode gives you both automation and a live screen. Use it when you want an agent to drive Chromium while a person can watch what happens.
 
-* `ValueError`: If both `config` and `session_id` are provided.
+```python browser_visible.py
+from smolvm import SmolVM
+
+with SmolVM.browser(headless=False) as browser:
+    print(browser.cdp_url)
+    print(browser.viewer_url)
+    print(browser.display_url)
+```
+
+<ResponseField name="viewer_url" type="str">
+  Web URL you can open in your own browser to watch or interact with the sandbox screen.
+</ResponseField>
+
+<ResponseField name="display_url" type="str">
+  VNC URL for desktop viewers and computer-use agents that need direct screen control.
+</ResponseField>
+
+## Start a full desktop
+
+Desktop mode starts the full display environment instead of only Chromium. Use it for agents that need desktop apps, window focus, or a VNC-compatible driver such as a computer-use agent driver.
+
+```python desktop.py
+from smolvm import SmolVM
+
+with SmolVM.desktop() as desktop:
+    print(desktop.viewer_url)
+    print(desktop.display_url)
+```
+
+<Note>
+  Desktop sandboxes focus on screen access. They return `None` for `cdp_url`; use `SmolVM.browser()` when you need a browser automation address.
+</Note>
 
 ## Class methods
 
-### from\_id
-
-Reconnect to an existing browser session by its ID.
+### SmolVM.browser
 
 ```python  theme={null}
 @classmethod
-BrowserSession.from_id(session_id: str) -> BrowserSession
+SmolVM.browser(
+    *,
+    headless: bool = True,
+    session_id: str | None = None,
+    backend: Literal["firecracker", "qemu", "libkrun", "auto"] = "auto",
+    profile_id: str | None = None,
+    persistent: bool = False,
+    timeout_minutes: int = 30,
+    viewport: BrowserViewport | dict[str, Any] | None = None,
+    viewport_width: int = 1280,
+    viewport_height: int = 720,
+    record_video: bool = False,
+    allow_downloads: bool = True,
+    env_vars: dict[str, str] | None = None,
+    workspace_mounts: list[WorkspaceMount] | None = None,
+    memory_mb: int = 2048,
+    disk_size_mb: int = 4096,
+    data_dir: Path | None = None,
+    socket_dir: Path | None = None,
+    ssh_key_path: str | None = None,
+    boot_timeout: float = 90.0,
+    on_progress: Callable[[str], None] | None = None,
+) -> DisplaySandboxProtocol
 ```
 
-<ParamField path="session_id" type="str" required>
-  The session identifier returned when the session was first created.
+Starts a Chromium browser sandbox and returns it when it is ready.
+
+<ParamField path="headless" type="bool" default="True">
+  Use `True` for browser automation only. Use `False` to also start the visible viewer and VNC display endpoint.
 </ParamField>
 
-<ResponseField name="return" type="BrowserSession">
-  A BrowserSession instance connected to the existing session.
-</ResponseField>
+<ParamField path="session_id" type="str | None" default="None">
+  Existing browser sandbox ID to reconnect to. Omit it to create a new sandbox.
+</ParamField>
 
-## Lifecycle methods
+<ParamField path="backend" type="str" default="auto">
+  Runtime backend. Options are `"firecracker"`, `"qemu"`, `"libkrun"`, and `"auto"`.
+</ParamField>
 
-### start
+<ParamField path="profile_id" type="str | None" default="None">
+  Browser profile name. Reuse a profile ID to keep browser state such as cookies and local storage across persistent sessions.
+</ParamField>
 
-Boot the sandbox, launch the browser, and expose the Chrome DevTools Protocol (CDP) endpoint on localhost.
+<ParamField path="persistent" type="bool" default="False">
+  Keep the sandbox record after the current Python process exits. Use this when another script needs to reconnect later with `session_id`.
+</ParamField>
+
+<ParamField path="timeout_minutes" type="int" default="30">
+  Maximum session lifetime in minutes.
+</ParamField>
+
+<ParamField path="viewport" type="BrowserViewport | dict | None" default="None">
+  Browser or desktop screen size. You can pass `BrowserViewport(width=1440, height=900)` or `{"width": 1440, "height": 900}`.
+</ParamField>
+
+<ParamField path="viewport_width" type="int" default="1280">
+  Screen width in pixels when `viewport` is omitted.
+</ParamField>
+
+<ParamField path="viewport_height" type="int" default="720">
+  Screen height in pixels when `viewport` is omitted.
+</ParamField>
+
+<ParamField path="record_video" type="bool" default="False">
+  Record the visible session. Retrieve recordings with `collect_artifacts()` before the sandbox stops.
+</ParamField>
+
+<ParamField path="allow_downloads" type="bool" default="True">
+  Allow Chromium downloads inside the sandbox.
+</ParamField>
+
+<ParamField path="env_vars" type="dict[str, str] | None" default="None">
+  Environment variables to set inside the sandbox.
+</ParamField>
+
+<ParamField path="workspace_mounts" type="list[WorkspaceMount] | None" default="None">
+  Folders to share with the sandbox.
+</ParamField>
+
+<ParamField path="memory_mb" type="int" default="2048">
+  Guest memory in MiB.
+</ParamField>
+
+<ParamField path="disk_size_mb" type="int" default="4096">
+  Root filesystem size in MiB.
+</ParamField>
+
+<ParamField path="boot_timeout" type="float" default="90.0">
+  Maximum seconds to wait for the sandbox, display services, and browser to become ready.
+</ParamField>
+
+<ParamField path="data_dir" type="Path | None" default="None">
+  Local directory for sandbox state. Omit it to use SmolVM's default state directory.
+</ParamField>
+
+<ParamField path="socket_dir" type="Path | None" default="None">
+  Local directory for runtime sockets. Omit it to use SmolVM's default socket directory.
+</ParamField>
+
+<ParamField path="ssh_key_path" type="str | None" default="None">
+  SSH private key path used for setup and file transfer inside the sandbox.
+</ParamField>
+
+<ParamField path="on_progress" type="Callable[[str], None] | None" default="None">
+  Callback that receives progress messages while the sandbox starts.
+</ParamField>
+
+### SmolVM.desktop
 
 ```python  theme={null}
-def start(self) -> BrowserSession
+@classmethod
+SmolVM.desktop(
+    *,
+    session_id: str | None = None,
+    backend: Literal["firecracker", "qemu", "libkrun", "auto"] = "auto",
+    profile_id: str | None = None,
+    persistent: bool = False,
+    timeout_minutes: int = 30,
+    viewport: BrowserViewport | dict[str, Any] | None = None,
+    viewport_width: int = 1280,
+    viewport_height: int = 720,
+    record_video: bool = False,
+    allow_downloads: bool = True,
+    env_vars: dict[str, str] | None = None,
+    workspace_mounts: list[WorkspaceMount] | None = None,
+    memory_mb: int = 2048,
+    disk_size_mb: int = 4096,
+    data_dir: Path | None = None,
+    socket_dir: Path | None = None,
+    ssh_key_path: str | None = None,
+    boot_timeout: float = 90.0,
+    on_progress: Callable[[str], None] | None = None,
+) -> DisplaySandboxProtocol
 ```
 
-<ResponseField name="return" type="BrowserSession">
-  Returns `self` for method chaining.
-</ResponseField>
+Starts a full desktop sandbox and returns it when the viewer and VNC display endpoint are ready. It accepts the same resource, viewport, persistence, and artifact options as `SmolVM.browser()`.
 
-After `start()` completes you can access the CDP URL from the session's `info` property and connect Playwright or any other CDP client.
+## Use Playwright with browser mode
 
-### stop
+```python playwright_browser.py
+from smolvm import SmolVM
 
-Stop the browser and shut down the underlying sandbox. The session can be restarted later.
-
-```python  theme={null}
-def stop(self) -> BrowserSession
-```
-
-<ResponseField name="return" type="BrowserSession">
-  Returns `self` for method chaining.
-</ResponseField>
-
-### delete
-
-Permanently remove the session and its sandbox.
-
-```python  theme={null}
-def delete(self) -> None
-```
-
-## Browser automation
-
-### connect\_playwright
-
-Connect a Playwright `Browser` instance to the running browser session over CDP.
-
-```python  theme={null}
-def connect_playwright(self) -> Browser
-```
-
-<ResponseField name="return" type="Browser">
-  A Playwright `Browser` object you can use to create pages, navigate, click, and extract content.
-</ResponseField>
-
-<Note>
-  You need `playwright` installed locally. Install it with `pip install playwright`.
-</Note>
-
-**Example:**
-
-```python
-from smolvm import BrowserSession
-
-with BrowserSession() as session:
-    browser = session.connect_playwright()
+with SmolVM.browser(headless=True) as sandbox:
+    browser = sandbox.connect_playwright()
     page = browser.new_page()
     page.goto("https://example.com")
     print(page.title())
     browser.close()
 ```
 
-### screenshot
-
-Capture a screenshot of the current browser viewport and save it to a local file.
-
-```python  theme={null}
-def screenshot(self, destination: str | Path) -> Path
-```
-
-<ParamField path="destination" type="str | Path" required>
-  Local file path where the screenshot will be saved (PNG format).
-</ParamField>
-
-<ResponseField name="return" type="Path">
-  The path to the saved screenshot.
-</ResponseField>
-
-### open\_live\_view
-
-Open the noVNC live-view URL in your default web browser. This lets you watch the browser session in real time.
-
-```python  theme={null}
-def open_live_view(self) -> None
-```
-
-<Tip>
-  Live view is useful for debugging agent workflows. You can watch what the agent sees and does inside the browser.
-</Tip>
-
-## File transfer
-
-### push\_file
-
-Copy a local file into the browser session's sandbox.
-
-```python  theme={null}
-def push_file(self, local_path: str | Path, remote_path: str) -> None
-```
-
-<ParamField path="local_path" type="str | Path" required>
-  Path to the file on your host machine.
-</ParamField>
-
-<ParamField path="remote_path" type="str" required>
-  Destination path inside the sandbox.
-</ParamField>
-
-### pull\_file
-
-Copy a file from the sandbox to your host machine.
-
-```python  theme={null}
-def pull_file(self, remote_path: str, local_path: str | Path) -> None
-```
-
-<ParamField path="remote_path" type="str" required>
-  Path to the file inside the sandbox.
-</ParamField>
-
-<ParamField path="local_path" type="str | Path" required>
-  Destination path on your host machine.
-</ParamField>
-
-## Diagnostics
-
-### collect\_artifacts
-
-Package guest logs, downloads, and recordings into a tar archive.
-
-```python  theme={null}
-def collect_artifacts(self) -> Path
-```
-
-<ResponseField name="return" type="Path">
-  Path to the tar archive on your host.
-</ResponseField>
-
-### logs
-
-Retrieve combined host and guest logs for the session.
-
-```python  theme={null}
-def logs(self, tail: int | None = None) -> str
-```
-
-<ParamField path="tail" type="int | None" default="None">
-  Return only the last N lines. If omitted, returns all available logs.
-</ParamField>
-
-<ResponseField name="return" type="str">
-  Combined log output.
-</ResponseField>
-
-## Context manager
-
-BrowserSession supports the `with` statement for automatic lifecycle management:
-
-```python  theme={null}
-with BrowserSession() as session:
-    browser = session.connect_playwright()
-    page = browser.new_page()
-    page.goto("https://example.com")
-    # session automatically stops and deletes on exit
-```
-
-On entry (`__enter__`): starts the session if it was newly created.
-
-On exit (`__exit__`): stops and deletes the session, releasing all resources.
-
-## Usage examples
-
-### Basic browser session
-
-```python
-from smolvm import BrowserSession
-
-with BrowserSession() as session:
-    browser = session.connect_playwright()
-    page = browser.new_page()
-    page.goto("https://news.ycombinator.com")
-    titles = page.query_selector_all(".titleline > a")
-    for t in titles[:5]:
-        print(t.text_content())
-    browser.close()
-```
-
-### Take a screenshot
-
-```python
-from smolvm import BrowserSession
-
-with BrowserSession() as session:
-    browser = session.connect_playwright()
-    page = browser.new_page()
-    page.goto("https://example.com")
-    session.screenshot("example.png")
-    browser.close()
-```
-
-### Custom browser configuration
-
-```python
-from smolvm import BrowserSession, BrowserSessionConfig, BrowserViewport
-
-config = BrowserSessionConfig(
-    viewport=BrowserViewport(width=1920, height=1080),
-    mem_size_mib=2048,
-    enable_video_recording=True,
-)
-
-with BrowserSession(config=config) as session:
-    browser = session.connect_playwright()
-    page = browser.new_page()
-    page.goto("https://example.com")
-    browser.close()
-```
-
-### Reconnect to an existing session
-
-```python
-from smolvm import BrowserSession
-
-# First, create and keep a session running
-session = BrowserSession()
-session.start()
-session_id = session.info.session_id
-
-# Later, reconnect from another script
-restored = BrowserSession.from_id(session_id)
-browser = restored.connect_playwright()
-# ...
-restored.stop()
-restored.delete()
-```
+<Note>
+  Install Playwright in your local Python environment before using `connect_playwright()`: `pip install playwright`.
+</Note>
 
 ## Related
 
-* [BrowserSessionConfig](/smolvm/api/browsersessionconfig) - Configure browser session options
+* [Browser and desktop options](/smolvm/api/browsersessionconfig) - Configure viewport, resources, profiles, and recording
+* [Display sandbox object](/smolvm/api/browsersessioninfo) - Read returned URLs and lifecycle state
 * [SmolVM](/smolvm/api/smolvm) - General sandbox management
-* [AI agent integration](/smolvm/guides/ai-agent-integration) - Use browser sessions with agent frameworks
+* [AI agent integration](/smolvm/guides/ai-agent-integration) - Use SmolVM with agent frameworks
