@@ -1,22 +1,18 @@
 ---
-title: "BrowserSessionInfo"
-description: "BrowserSessionInfo reference: read the runtime CDP endpoint, live-view URL, debug port, and session ID for an active SmolVM browser session."
+title: "Display sandbox object"
+description: "Reference for the object returned by SmolVM.browser() and SmolVM.desktop(), including URLs, IDs, lifecycle methods, and browser helpers."
 ---
 
 ## Overview
 
-`BrowserSessionInfo` contains runtime details about a browser session, including the CDP endpoint URL, the live-view URL, and the debug port. You typically access this through the `info` property on a running `BrowserSession`.
+`SmolVM.browser()` and `SmolVM.desktop()` return a sandbox object that is ready to use. Read its URLs to connect tools, use its lifecycle methods to stop it, and use browser helpers when the sandbox runs Chromium.
 
-## Import
+The same object works as a context manager, so the sandbox stops when the `with` block exits.
 
-```python
-from smolvm import BrowserSessionInfo
-```
-
-## Fields
+## URLs and identifiers
 
 <ResponseField name="session_id" type="str">
-  Unique identifier for the browser session.
+  Stable browser or desktop sandbox ID.
 </ResponseField>
 
 <ResponseField name="vm_id" type="str">
@@ -24,52 +20,140 @@ from smolvm import BrowserSessionInfo
 </ResponseField>
 
 <ResponseField name="cdp_url" type="str | None">
-  Chrome DevTools Protocol WebSocket URL. Connect Playwright or any CDP client to this endpoint. Available after the session starts.
+  Browser automation URL for Playwright or another Chrome DevTools Protocol client. Available in browser mode.
 </ResponseField>
 
-<ResponseField name="live_url" type="str | None">
-  noVNC live-view URL. Open this in a browser to watch the session in real time. Only available when the session is started in headed mode.
+<ResponseField name="browser_cdp_url" type="str | None">
+  Alias for `cdp_url`.
 </ResponseField>
 
-<ResponseField name="debug_port" type="int | None">
-  Localhost port exposing the CDP endpoint on the host.
+<ResponseField name="viewer_url" type="str | None">
+  Web URL you can open in your own browser to watch or interact with the screen. Available for visible browser and desktop modes.
 </ResponseField>
 
-<ResponseField name="state" type="BrowserSessionState">
-  Current session lifecycle state.
+<ResponseField name="display_url" type="str | None">
+  VNC URL for desktop viewers and computer-use agents. VNC means Virtual Network Computing, a standard way to view and control a remote screen. Available for visible browser and desktop modes.
 </ResponseField>
 
-## BrowserSessionState
+<ResponseField name="artifacts_dir" type="Path | None">
+  Local folder where collected logs, downloads, recordings, and other session artifacts are stored.
+</ResponseField>
 
-Enum representing the lifecycle state of a browser session.
+<ResponseField name="status" type="str">
+  Current lifecycle state for the sandbox, such as `created`, `starting`, `ready`, `stopping`, or `error`.
+</ResponseField>
 
-| Value | Description |
-| --- | --- |
-| `CREATED` | Session object exists but has not been started |
-| `STARTING` | Session is booting the sandbox and launching the browser |
-| `RUNNING` | Browser is running and ready for connections |
-| `STOPPING` | Session is shutting down |
-| `STOPPED` | Session has been stopped |
-| `ERROR` | Session encountered an error |
+## Lifecycle methods
+
+### stop
+
+```python  theme={null}
+def stop() -> DisplaySandboxProtocol
+```
+
+Stops the sandbox and releases its VM resources.
+
+### delete
+
+```python  theme={null}
+def delete() -> None
+```
+
+Alias for `stop()`. Use it when you want the same naming style as regular `SmolVM` sandboxes.
+
+### close
+
+```python  theme={null}
+def close() -> None
+```
+
+Releases local client resources, such as an open Playwright connection, while leaving a persistent sandbox record available for reconnect.
+
+### open_viewer
+
+```python  theme={null}
+def open_viewer() -> bool
+```
+
+Opens `viewer_url` in your default browser and returns whether the local browser accepted the request.
+
+## Browser helpers
+
+These helpers are available when the object came from `SmolVM.browser()`.
+
+### connect_playwright
+
+```python  theme={null}
+def connect_playwright() -> Browser
+```
+
+Connects Playwright to the running Chromium browser over `cdp_url`.
+
+<Note>
+  Install Playwright locally before calling this method: `pip install playwright`.
+</Note>
+
+### screenshot
+
+```python  theme={null}
+def screenshot(destination: str | Path, *, full_page: bool = True) -> Path
+```
+
+Captures the current browser page and saves a PNG on your machine.
+
+<ParamField path="destination" type="str | Path" required>
+  Local file path for the screenshot.
+</ParamField>
+
+<ParamField path="full_page" type="bool" default="True">
+  Capture the full page when possible.
+</ParamField>
+
+### push_file
+
+```python  theme={null}
+def push_file(local_path: str | Path, guest_path: str) -> None
+```
+
+Copies a file from your machine into the sandbox.
+
+### pull_file
+
+```python  theme={null}
+def pull_file(guest_path: str, local_path: str | Path) -> Path
+```
+
+Copies a file from the sandbox to your machine.
+
+### collect_artifacts
+
+```python  theme={null}
+def collect_artifacts() -> Path | None
+```
+
+Collects guest logs, downloads, and recordings into `artifacts_dir`. Returns the archive path when artifacts are available.
+
+### logs
+
+```python  theme={null}
+def logs(tail: int = 100) -> str
+```
+
+Returns recent host and guest logs for the sandbox.
 
 ## Example
 
-```python
-from smolvm import BrowserSession
+```python display_sandbox.py
+from smolvm import SmolVM
 
-session = BrowserSession()
-session.start()
-
-info = session.info
-print(f"Session: {info.session_id}")
-print(f"CDP URL: {info.cdp_url}")
-print(f"State: {info.state}")
-
-session.stop()
-session.delete()
+with SmolVM.browser(headless=False) as browser:
+    print(browser.session_id)
+    print(browser.cdp_url)
+    print(browser.viewer_url)
+    print(browser.display_url)
 ```
 
 ## Related
 
-* [BrowserSession](/smolvm/api/browsersession) - Launch and control browser sessions
-* [BrowserSessionConfig](/smolvm/api/browsersessionconfig) - Configure session options
+* [Browser and desktop sandboxes](/smolvm/api/browsersession) - Start browser and desktop modes
+* [Browser and desktop options](/smolvm/api/browsersessionconfig) - Configure viewport, resources, profiles, and recording

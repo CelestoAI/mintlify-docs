@@ -58,23 +58,23 @@ smolvm snapshot restore my-checkpoint --resume
 
 ## Browser commands
 
-The `smolvm browser` command has its own subcommands for managing disposable browser sessions:
+The `smolvm browser` command has its own subcommands for managing disposable browser sandboxes:
 
 | Command | Description |
 | --- | --- |
-| `smolvm browser start` | Create and start a browser session |
-| `smolvm browser list` | List browser sessions |
-| `smolvm browser stop` | Stop and delete a browser session |
-| `smolvm browser open` | Open a live session in your default browser |
-| `smolvm browser logs` | Print browser session logs |
+| `smolvm browser start` | Create and start a browser sandbox |
+| `smolvm browser list` | List browser sandboxes |
+| `smolvm browser stop` | Stop and delete a browser sandbox |
+| `smolvm browser open` | Open the viewer in your default browser |
+| `smolvm browser logs` | Print browser sandbox logs |
 
-Start a disposable browser session with live view:
+Start a disposable browser sandbox with a viewer:
 
 ```bash
 smolvm browser start --live --json
 ```
 
-The JSON response includes the `session_id` plus local browser URLs. Use the session ID with other browser commands:
+The JSON response includes the `session_id`, `viewer_url`, `display_url`, and browser automation URLs when available. Use the session ID with other browser commands:
 
 ```bash
 smolvm browser list

@@ -259,57 +259,61 @@ print(result["messages"][-1].content)
   See the full working example in [`examples/agent_tools/langchain_tool.py`](https://github.com/celestoai/smolvm/blob/main/examples/agent_tools/langchain_tool.py).
 </Tip>
 
-## Browser sessions
+## Browser and desktop sandboxes
 
-SmolVM includes a built-in `BrowserSession` class that launches a Chromium browser inside a microVM. Use it for web scraping, testing, and computer-use agents.
+SmolVM can give your agent a browser or a full desktop inside a disposable sandbox. Use browser mode for websites and Playwright automation. Use desktop mode when the agent needs a visible screen that a computer-use driver can control. VNC means Virtual Network Computing, a standard way to view and control a remote screen.
 
-```python
-from smolvm import BrowserSession, BrowserSessionConfig
+```python browser_agent.py
+from smolvm import SmolVM
 
-with BrowserSession(
-    BrowserSessionConfig(
-        mode="live",
-        record_video=True,
-        viewport={"width": 1440, "height": 900},
-    )
-) as session:
-    print(f"Session: {session.session_id}")
-    print(f"CDP URL: {session.cdp_url}")
-    print(f"Live URL: {session.live_url}")
+with SmolVM.browser(
+    headless=False,
+    record_video=True,
+    viewport={"width": 1440, "height": 900},
+) as browser_sandbox:
+    print(f"Session: {browser_sandbox.session_id}")
+    print(f"CDP URL: {browser_sandbox.cdp_url}")
+    print(f"Viewer URL: {browser_sandbox.viewer_url}")
+    print(f"Display URL: {browser_sandbox.display_url}")
 
-    browser = session.connect_playwright()
+    browser = browser_sandbox.connect_playwright()
     context = browser.contexts[0] if browser.contexts else browser.new_context()
     page = context.pages[0] if context.pages else context.new_page()
     page.goto("https://example.com", wait_until="networkidle")
 
-    session.screenshot("screenshot.png")
+    browser_sandbox.screenshot("screenshot.png")
+    browser.close()
 ```
 
 <Tip>
-  See the full working example in [`examples/browser_session.py`](https://github.com/celestoai/smolvm/blob/main/examples/browser_session.py).
+  See the full working example in [`examples/browser_sandbox.py`](https://github.com/celestoai/smolvm/blob/main/examples/browser_sandbox.py).
 </Tip>
 
-### Browser session modes
+### Browser and desktop modes
 
 | Mode | Description |
 | --- | --- |
-| `headless` | No visual output. Good for automated scraping and testing. |
-| `live` | Exposes a noVNC live-view URL so you can watch the browser in real time. |
+| `SmolVM.browser(headless=True)` | Starts Chromium for automation and returns `cdp_url`. |
+| `SmolVM.browser(headless=False)` | Starts Chromium with `cdp_url`, `viewer_url`, and `display_url`. |
+| `SmolVM.desktop()` | Starts a full desktop with `viewer_url` and `display_url`. |
+
+`cdp_url` is the browser automation address used by Playwright and other Chrome DevTools Protocol clients. `viewer_url` opens in your browser so you can watch the screen. `display_url` is the VNC address for desktop viewers and computer-use agents.
 
 ### Computer-use with OpenAI
 
-Combine `BrowserSession` with OpenAI's [computer-use API](https://platform.openai.com/docs/guides/tools/computer-use) for autonomous web browsing agents. The model sees the browser through screenshots and sends back click, type, and scroll instructions.
+Combine a visible browser or desktop sandbox with OpenAI's [computer-use API](https://platform.openai.com/docs/guides/tools/computer-use) for autonomous browsing and desktop workflows. The model sees screenshots and sends back click, type, and scroll instructions.
 
-```python
+```python computer_use_browser.py
 from openai import OpenAI
-from smolvm import BrowserSession, BrowserSessionConfig
+from smolvm import SmolVM
 
 client = OpenAI()
 
-with BrowserSession(
-    BrowserSessionConfig(mode="live", viewport={"width": 1440, "height": 900})
-) as session:
-    browser = session.connect_playwright()
+with SmolVM.browser(
+    headless=False,
+    viewport={"width": 1440, "height": 900},
+) as browser_sandbox:
+    browser = browser_sandbox.connect_playwright()
     context = browser.contexts[0] if browser.contexts else browser.new_context()
     page = context.pages[0] if context.pages else context.new_page()
     page.goto("https://example.com", wait_until="domcontentloaded")
@@ -322,8 +326,10 @@ with BrowserSession(
 
     for item in response.output:
         if item.type == "computer_call":
-            # Execute browser actions based on the model's instructions
+            # Execute browser actions based on the model's instructions.
             pass
+
+    browser.close()
 ```
 
 <Tip>

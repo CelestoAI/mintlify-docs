@@ -279,6 +279,79 @@ with SmolVM.from_image(image, memory_mb=1024, vcpus=2) as vm:
     print(f"Started {vm.vm_id}")
 ```
 
+### browser
+
+```python  theme={null}
+@classmethod
+SmolVM.browser(
+    *,
+    headless: bool = True,
+    session_id: str | None = None,
+    backend: Literal["firecracker", "qemu", "libkrun", "auto"] = "auto",
+    profile_id: str | None = None,
+    persistent: bool = False,
+    timeout_minutes: int = 30,
+    viewport: BrowserViewport | dict[str, Any] | None = None,
+    viewport_width: int = 1280,
+    viewport_height: int = 720,
+    record_video: bool = False,
+    allow_downloads: bool = True,
+    env_vars: dict[str, str] | None = None,
+    workspace_mounts: list[WorkspaceMount] | None = None,
+    memory_mb: int = 2048,
+    disk_size_mb: int = 4096,
+    data_dir: Path | None = None,
+    socket_dir: Path | None = None,
+    ssh_key_path: str | None = None,
+    boot_timeout: float = 90.0,
+    on_progress: Callable[[str], None] | None = None,
+) -> DisplaySandboxProtocol
+```
+
+Start a Chromium browser inside a disposable sandbox. Use `headless=True` for a Chrome DevTools Protocol automation URL, or `headless=False` to also get a live viewer and VNC display URL. VNC means Virtual Network Computing, a standard way to view and control a remote screen.
+
+<ResponseField name="return" type="DisplaySandboxProtocol">
+  A started browser sandbox with `cdp_url`, and with `viewer_url` plus `display_url` when `headless=False`.
+</ResponseField>
+
+See [Browser and desktop sandboxes](/smolvm/api/browsersession) for the full option list and examples.
+
+### desktop
+
+```python  theme={null}
+@classmethod
+SmolVM.desktop(
+    *,
+    session_id: str | None = None,
+    backend: Literal["firecracker", "qemu", "libkrun", "auto"] = "auto",
+    profile_id: str | None = None,
+    persistent: bool = False,
+    timeout_minutes: int = 30,
+    viewport: BrowserViewport | dict[str, Any] | None = None,
+    viewport_width: int = 1280,
+    viewport_height: int = 720,
+    record_video: bool = False,
+    allow_downloads: bool = True,
+    env_vars: dict[str, str] | None = None,
+    workspace_mounts: list[WorkspaceMount] | None = None,
+    memory_mb: int = 2048,
+    disk_size_mb: int = 4096,
+    data_dir: Path | None = None,
+    socket_dir: Path | None = None,
+    ssh_key_path: str | None = None,
+    boot_timeout: float = 90.0,
+    on_progress: Callable[[str], None] | None = None,
+) -> DisplaySandboxProtocol
+```
+
+Start a full desktop display inside a disposable sandbox. Use `viewer_url` to open the desktop in your browser, or `display_url` for a VNC-compatible computer-use agent.
+
+<ResponseField name="return" type="DisplaySandboxProtocol">
+  A started desktop sandbox with `viewer_url` and `display_url`.
+</ResponseField>
+
+See [Browser and desktop sandboxes](/smolvm/api/browsersession) for desktop examples.
+
 ### from\_snapshot
 
 ```python  theme={null}
