@@ -120,7 +120,7 @@ python my_agent.py
 
 ## QEMU
 
-QEMU is the compatibility backend. It is the default on macOS, works on Linux, and is required for Windows guests.
+QEMU is a mature, full-featured virtualizer that works across platforms. On macOS it uses Apple's Hypervisor Framework (HVF) for near-native performance. It is also available on Linux for environments without KVM, and is the only backend for [Windows guests](/smolvm/guides/windows-guests).
 
 On Linux x86_64 direct-kernel guests, QEMU now uses its faster `microvm` machine model by default. You can still force the older `q35` model when you need broader device compatibility.
 

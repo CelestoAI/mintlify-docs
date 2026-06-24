@@ -368,8 +368,8 @@ SmolVM abstracts the runtime backend behind one SDK and CLI. Most users leave th
 * **Platform**: Linux only (requires KVM)
 * **Hypervisor**: Firecracker microVM monitor
 * **Networking**: TAP devices + nftables NAT
-* **Control**: Native Firecracker API socket helper from `smolvm-core`
-* **Control channel**: SSH or vsock on recent Linux images
+* **Control**: A Rust based Firecracker API socket helper from `smolvm-core`
+* **Control channel**: SSH or vsock
 
 ### QEMU Backend
 
@@ -377,8 +377,8 @@ SmolVM abstracts the runtime backend behind one SDK and CLI. Most users leave th
 * **Hypervisor**: QEMU full system emulator
 * **Networking**: User-mode networking (`slirp`) or TAP mode on Linux
 * **Machine model**: `auto` uses QEMU `microvm` for supported Linux x86_64 direct-kernel guests
-* **Control**: Native QMP helper from `smolvm-core`
-* **Control channel**: SSH or vsock on Linux hosts with recent images
+* **Control**: Rust based QMP client from `smolvm-core`
+* **Control channel**: SSH or vsock 
 
 ### libkrun Backend
 
