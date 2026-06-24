@@ -81,6 +81,26 @@
         ]
       },
       {
+        "tab": "SmolFS",
+        "groups": [
+          {
+            "group": "Start Here",
+            "pages": [
+              "smolfs/overview",
+              "smolfs/installation",
+              "smolfs/quickstart"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "smolfs/cli",
+              "smolfs/sdk"
+            ]
+          }
+        ]
+      },
+      {
         "tab": "Agents",
         "groups": [
           {

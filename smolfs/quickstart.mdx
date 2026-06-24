@@ -1,0 +1,84 @@
+---
+title: "Create your first SmolFS workspace"
+sidebarTitle: "Quickstart"
+description: "Create a local SmolFS workspace, write a file, close it, and open it again."
+---
+
+By the end of this guide, you will have a local workspace folder that keeps a file after you close and reopen it.
+
+## What you need
+
+- SmolFS installed from [Installation](/smolfs/installation).
+- A Linux or macOS machine with local mount support.
+
+## Create and reopen a workspace
+
+<Steps>
+  <Step title="Check SmolFS">
+    ```bash
+    smolfs doctor
+    ```
+
+    If the storage backend is missing, run:
+
+    ```bash
+    smolfs doctor --install
+    ```
+  </Step>
+  <Step title="Create a local volume">
+    ```bash
+    smolfs init demo --dev
+    ```
+
+    A volume is a named workspace. `--dev` keeps the backing data on this machine, which is the easiest way to try SmolFS.
+  </Step>
+  <Step title="Open the workspace as a folder">
+    ```bash
+    smolfs mount demo ./workspace
+    ```
+
+    SmolFS creates `./workspace` if it does not already exist.
+  </Step>
+  <Step title="Write and save a file">
+    ```bash
+    echo hello > ./workspace/hello.txt
+    smolfs flush demo
+    ```
+
+    `flush` asks SmolFS to save important recent writes.
+  </Step>
+  <Step title="Close and reopen the workspace">
+    ```bash
+    smolfs unmount demo
+    smolfs mount demo ./workspace
+    cat ./workspace/hello.txt
+    ```
+
+    You should see:
+
+    ```text
+    hello
+    ```
+  </Step>
+</Steps>
+
+## Clean up
+
+Unmount the workspace when you are done:
+
+```bash
+smolfs unmount demo
+```
+
+If you already used the name `demo`, pick another volume name such as `agent-demo-1`. Volume names can use letters, numbers, `.`, `_`, and `-`.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="CLI reference" icon="terminal" href="/smolfs/cli">
+    See the current command list and the most useful flags.
+  </Card>
+  <Card title="SDK examples" icon="code" href="/smolfs/sdk">
+    Use the same flow from Python or TypeScript.
+  </Card>
+</CardGroup>

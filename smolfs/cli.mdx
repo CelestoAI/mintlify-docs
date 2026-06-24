@@ -1,0 +1,58 @@
+---
+title: "SmolFS CLI"
+sidebarTitle: "CLI"
+description: "Use the SmolFS command line to check your machine, create volumes, open workspace folders, save writes, and close them."
+---
+
+The `smolfs` command manages SmolFS workspaces from your terminal. Use it to check the machine, create a volume, open it as a folder, save writes, inspect state, and close it.
+
+## Common flow
+
+```bash
+smolfs doctor
+smolfs init demo --dev
+smolfs mount demo ./workspace
+echo hello > ./workspace/hello.txt
+smolfs flush demo
+smolfs unmount demo
+```
+
+## Commands
+
+| Command | What it does | Useful flags |
+| --- | --- | --- |
+| `smolfs doctor` | Checks the storage backend, mount support, and local config. | `--install`, `--json` |
+| `smolfs init NAME --dev` | Creates a local development volume. | `--dev` |
+| `smolfs init NAME --metadata URL --storage TYPE --bucket BUCKET` | Creates a cloud-backed volume with explicit storage settings. | `--metadata`, `--store`, `--storage`, `--bucket` |
+| `smolfs mount NAME PATH` | Opens a volume as a local folder. | `--foreground`, `--check-storage` |
+| `smolfs status [NAME]` | Shows known volumes and current mountpoints. | `--json` |
+| `smolfs flush NAME` | Saves recent writes for a mounted volume. | none |
+| `smolfs unmount NAME` | Closes a mounted volume. | `--force` |
+| `smolfs umount NAME` | Short alias for `smolfs unmount NAME`. | `--force` |
+
+## Local volumes
+
+Use `--dev` for the first run:
+
+```bash
+smolfs init demo --dev
+```
+
+Local volumes keep their backing data under `SMOLFS_HOME`, or `~/.smolfs` when `SMOLFS_HOME` is not set.
+
+## Cloud volumes
+
+Cloud volumes need a metadata URL and object storage settings:
+
+```bash
+smolfs init agent-workspace \
+  --metadata redis://localhost:6379/1 \
+  --storage s3 \
+  --bucket https://my-bucket.s3.us-east-2.amazonaws.com
+```
+
+Keep storage credentials in the environment used by SmolFS. Avoid putting access keys in commands, logs, or docs.
+
+<Note>
+  Cloud setup is still changing quickly. Treat this as the shape of the current CLI, not a full production guide.
+</Note>

@@ -1,0 +1,87 @@
+---
+title: "Install SmolFS"
+sidebarTitle: "Installation"
+description: "Install the SmolFS CLI, check local mount support, and add Python or TypeScript bindings for agent code."
+---
+
+Install SmolFS on the machine where your agent needs a durable workspace folder. Start with the command line tool, then add a Python or TypeScript package only if your agent runner should manage SmolFS from code.
+
+## Install the CLI
+
+Run the installer:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/CelestoAI/smolfs/main/scripts/install.sh | sh
+```
+
+The installer downloads the latest stable CLI release for Linux or macOS and installs SmolFS' managed storage backend.
+
+<Check>
+  When installation finishes, `smolfs` should be available from your shell. If the installer prints a PATH hint, add that directory to your PATH and open a new terminal.
+</Check>
+
+## Check the machine
+
+Run `doctor` before creating a workspace:
+
+```bash
+smolfs doctor
+```
+
+`doctor` checks the local storage backend and mount support, which means the operating system feature that lets SmolFS show a workspace as a folder.
+
+If the storage backend is missing, install it:
+
+```bash
+smolfs doctor --install
+```
+
+## Install SDKs
+
+The SDKs still need the CLI storage backend on the machine that opens workspaces.
+
+<Tabs>
+  <Tab title="Python">
+    Install the Python package in a project:
+
+    ```bash
+    uv add smolfs
+    ```
+
+    SmolFS requires Python 3.9 or newer.
+  </Tab>
+  <Tab title="TypeScript">
+    Install the Node.js package:
+
+    ```bash
+    npm install @celestoai/smolfs
+    ```
+
+    SmolFS requires Node.js 18 or newer.
+  </Tab>
+</Tabs>
+
+## Source fallback
+
+Use the source checkout when a release asset is not available for your platform or you are changing SmolFS itself:
+
+```bash
+git clone https://github.com/CelestoAI/smolfs.git
+cd smolfs
+cargo build -p smolfs-cli
+./target/debug/smolfs doctor
+```
+
+## Installer options
+
+Use these only when you need a non-default install:
+
+| Variable | What it does |
+| --- | --- |
+| `SMOLFS_VERSION=dev` | Installs the latest successful CLI build from `main`. |
+| `SMOLFS_INSTALL_BACKEND=0` | Installs the CLI without installing the managed storage backend. |
+| `SMOLFS_INSTALL_PYTHON=1` | Installs the Python SDK after installing the CLI. |
+| `SMOLFS_INSTALL_DIR=/path/bin` | Changes where the `smolfs` command is installed. |
+| `SMOLFS_HOME=/path/home` | Changes where SmolFS stores local config, volume records, logs, and local dev data. |
+
+Next, run the [quickstart](/smolfs/quickstart).

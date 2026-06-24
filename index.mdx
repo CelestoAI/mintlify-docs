@@ -1,7 +1,7 @@
 ---
 title: "Celesto AI: secure computers for AI agents"
 sidebarTitle: "Overview"
-description: "Celesto AI gives AI agents their own isolated computer to browse, code, and run untrusted commands — powered by SmolVM sandboxes and the Agentor framework."
+description: "Celesto AI gives AI agents isolated computers and durable workspaces to browse, code, save files, and run untrusted commands."
 ---
 
 ![Computer for AI Agents](/assets/celesto-cover.jpg)
@@ -14,9 +14,12 @@ Celesto gives AI agents their own computer. Spin up a sandbox in seconds, let yo
 
 ## Open-source projects
 
-<CardGroup cols={2}>
+<CardGroup cols={3}>
   <Card icon="computer" href="/smolvm/introduction" title="SmolVM">
     Open-source microVM sandbox with sub-second boot and hardware-level isolation.
+  </Card>
+  <Card icon="folder-open" href="/smolfs/overview" title="SmolFS">
+    Durable workspace folders that AI agents can close and reopen across runs.
   </Card>
   <Card icon="robot" href="/agentor/home" title="Agentor">
     Build production-ready AI agents with tool use, MCP, and agent-to-agent communication.
