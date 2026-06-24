@@ -1,154 +1,87 @@
 ---
-title: "smolvm list"
-description: "Use smolvm list to view your active sandboxes, filter by lifecycle status, and produce machine-readable JSON for scripts and automation pipelines."
+title: "smolvm sandbox list"
+description: "Use smolvm sandbox list to view running, stopped, paused, and errored sandboxes, filter by lifecycle state, and produce JSON for scripts."
 ---
+
+`smolvm sandbox list` shows the sandboxes on your machine. Use it to find a sandbox name, check whether one is still running, or feed sandbox data into a script.
 
 ## Synopsis
 
-```bash  theme={null}
-smolvm list [OPTIONS]
+```bash
+smolvm sandbox list [OPTIONS]
 ```
-
-## Description
-
-The `list` command shows you which VMs are currently running on your system. By default it displays only running VMs in a formatted table. You can also filter by status or get machine-readable JSON output for use in scripts.
-
-Before rendering the table, `list` does a quick liveness check on every VM marked `running` or `paused`. If the underlying process is gone — for example, because the host was rebooted or the process was killed — the VM is shown as `error` instead of falsely appearing healthy. Run [`smolvm delete <vm_id>`](/smolvm/cli/cleanup) (or `smolvm cleanup`) to clear those rows.
 
 ## Options
 
-<ParamField path="--all" type="flag" default="false">
-  Include all VMs regardless of status (running, stopped, created, and error states).
+<ParamField path="--all" type="flag">
+  Show every sandbox, including stopped, created, paused, and errored sandboxes.
 </ParamField>
 
 <ParamField path="--status" type="string">
-  Filter VMs by a specific status. Choices: `created`, `running`, `stopped`, `error`. Cannot be used together with `--all`.
+  Show only sandboxes in one lifecycle state. Use one of the states printed by `smolvm sandbox list --all`.
 </ParamField>
 
-<ParamField path="--json" type="flag" default="false">
-  Print VM data as JSON instead of a formatted table. Useful for scripting and automation.
+<ParamField path="--json" type="flag">
+  Print a JSON envelope instead of a table.
 </ParamField>
 
 <Note>
-  The `--all` and `--status` flags are mutually exclusive. Use one or the other, not both.
+  Use either `--all` or `--status`, not both.
 </Note>
 
 ## Examples
 
-### List running VMs
+### List running sandboxes
 
-Show all currently running VMs in a table:
-
-```bash  theme={null}
-smolvm list
+```bash
+smolvm sandbox list
 ```
 
-**Example output:**
+### List every sandbox
 
-```
-        SmolVM Instances
-┌──────────────┬─────────┬───────┐
-│ Name         │ Status  │   PID │
-├──────────────┼─────────┼───────┤
-│ my-agent     │ running │ 12345 │
-│ dev-sandbox  │ running │ 12400 │
-└──────────────┴─────────┴───────┘
-Total: 2 VM(s).
+```bash
+smolvm sandbox list --all
 ```
 
-### List all VMs
+### Filter by state
 
-Include VMs in any state — running, stopped, created, or error:
-
-```bash  theme={null}
-smolvm list --all
+```bash
+smolvm sandbox list --status stopped
 ```
 
-**Example output:**
+### Use JSON output
 
-```
-           SmolVM Instances
-┌──────────────┬─────────┬───────┐
-│ Name         │ Status  │   PID │
-├──────────────┼─────────┼───────┤
-│ my-agent     │ running │ 12345 │
-│ dev-sandbox  │ running │ 12400 │
-│ old-vm       │ stopped │     - │
-│ broken-vm    │ error   │     - │
-└──────────────┴─────────┴───────┘
-Total: 4 VM(s).
+```bash
+smolvm sandbox list --all --json
 ```
 
-### Filter by status
-
-Show only stopped VMs:
-
-```bash  theme={null}
-smolvm list --status stopped
-```
-
-### JSON output
-
-Get machine-readable output for scripting:
-
-```bash  theme={null}
-smolvm list --all --json
-```
-
-**Example output:**
-
-```json  theme={null}
-[
-  {
-    "vm_id": "my-agent",
-    "status": "running",
-    "ip_address": "172.16.0.2",
-    "ssh_port": 2222,
-    "pid": 12345
+```json
+{
+  "ok": true,
+  "command": "sandbox.list",
+  "exit_code": 0,
+  "data": {
+    "filters": {
+      "all": true,
+      "status": null
+    },
+    "vms": [
+      {
+        "name": "my-sandbox",
+        "status": "running",
+        "pid": 12345,
+        "ip_address": "172.16.0.2",
+        "ssh_port": 2222,
+        "warnings": []
+      }
+    ]
   },
-  {
-    "vm_id": "dev-sandbox",
-    "status": "running",
-    "ip_address": "172.16.0.3",
-    "ssh_port": 2223,
-    "pid": 12400
-  }
-]
+  "error": null
+}
 ```
-
-### Use with other tools
-
-Combine JSON output with tools like `jq` for automation:
-
-```bash  theme={null}
-# Get IDs of all running VMs
-smolvm list --json | jq -r '.[].vm_id'
-
-# Count VMs by status
-smolvm list --all --json | jq 'group_by(.status) | map({status: .[0].status, count: length})'
-```
-
-## Table columns
-
-The default table output shows the following columns:
-
-| Column   | Description                                     |
-| -------- | ----------------------------------------------- |
-| Name     | The VM identifier                               |
-| Status   | Current VM state (created, running, stopped, error) |
-| PID      | Process ID of the VM process, or `-` if not running |
-
-The JSON output includes additional fields: `ip_address` (guest IP) and `ssh_port` (SSH host port).
-
-## Exit codes
-
-| Code | Description                  |
-| ---- | ---------------------------- |
-| `0`  | Success                      |
-| `1`  | Error listing VMs            |
 
 ## Related commands
 
-* [`smolvm create`](/smolvm/cli/create) - Create a new VM
-* [`smolvm ssh`](/smolvm/cli/ssh) - SSH into an existing VM
-* [`smolvm cleanup`](/smolvm/cli/cleanup) - Clean up stale VMs
+* [`smolvm sandbox create`](/smolvm/cli/create) - Create a sandbox
+* [`smolvm sandbox info`](/smolvm/cli/overview) - Show details for one sandbox
+* [`smolvm sandbox delete`](/smolvm/cli/cleanup) - Delete one or more sandboxes

@@ -134,9 +134,9 @@ Use the SDK, which is the Python API, for Dockerfile-backed Linux images. Use th
 Create and inspect a built-in Ubuntu sandbox from the CLI:
 
 ```bash
-smolvm create --os ubuntu --name custom-ubuntu --disk-size 4096
-smolvm info custom-ubuntu
-smolvm delete custom-ubuntu
+smolvm sandbox create --os ubuntu --name custom-ubuntu --disk-size 4096
+smolvm sandbox info custom-ubuntu
+smolvm sandbox delete custom-ubuntu
 ```
 
 For Windows image building, start with the built-in help:

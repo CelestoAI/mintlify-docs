@@ -55,6 +55,7 @@
               "smolvm/guides/custom-images",
               "smolvm/guides/environment-variables",
               "smolvm/guides/ai-agent-integration",
+              "smolvm/guides/http-api-typescript-sdk",
               "smolvm/guides/vm-lifecycle",
               "smolvm/guides/windows-guests"
             ]
@@ -218,18 +219,21 @@
             "group": "SmolVM CLI",
             "pages": [
               "smolvm/cli/overview",
-              "smolvm/cli/cleanup",
               "smolvm/cli/create",
-              "smolvm/cli/doctor",
-              "smolvm/cli/env",
               "smolvm/cli/list",
-              "smolvm/cli/port",
-              "smolvm/cli/prune",
-              "smolvm/cli/snapshot",
+              "smolvm/cli/shell",
               "smolvm/cli/ssh",
               "smolvm/cli/stop",
+              "smolvm/cli/cleanup",
+              "smolvm/cli/file",
+              "smolvm/cli/env",
+              "smolvm/cli/port",
+              "smolvm/cli/snapshot",
+              "smolvm/cli/server",
               "smolvm/cli/ui",
+              "smolvm/cli/doctor",
               "smolvm/cli/update",
+              "smolvm/cli/prune",
               "smolvm/cli/windows"
             ]
           },

@@ -1,58 +1,56 @@
 ---
-title: "smolvm stop"
-description: "Use smolvm stop to shut down a running sandbox and release its TAP device, network rules, and processes — pair with snapshots to preserve state."
+title: "smolvm sandbox stop"
+description: "Use smolvm sandbox stop to shut down a running sandbox while keeping its record available for later inspection or restart."
 ---
+
+`smolvm sandbox stop` shuts down a running sandbox and releases its live resources. Use snapshots before stopping when you need to preserve memory state exactly.
 
 ## Synopsis
 
-```bash  theme={null}
-smolvm stop <vm_id>
+```bash
+smolvm sandbox stop <sandbox> [OPTIONS]
 ```
-
-## Description
-
-The `stop` command shuts down a running VM and releases its resources (TAP device, network rules, process). The VM state is removed, so you cannot restart it after stopping — use [snapshots](/smolvm/cli/snapshot) if you need to save and restore state.
 
 ## Arguments
 
-<ParamField path="vm_id" type="string" required>
-  The identifier of the VM to stop. This is the name you provided (or that was auto-generated) when creating the VM with `smolvm create`.
+<ParamField path="sandbox" type="string" required>
+  Name or ID of the sandbox to stop.
+</ParamField>
+
+## Options
+
+<ParamField path="--timeout" type="number" default="3.0">
+  Seconds to wait before forcing shutdown.
+</ParamField>
+
+<ParamField path="--json" type="flag">
+  Print a JSON envelope instead of formatted text.
 </ParamField>
 
 ## Examples
 
-### Stop a VM by name
+### Stop one sandbox
 
-```bash  theme={null}
-smolvm stop my-sandbox
+```bash
+smolvm sandbox stop my-sandbox
 ```
 
-### Create, use, and stop a VM
+### Stop with a longer graceful window
 
-```bash  theme={null}
-smolvm create --name dev-env
-smolvm ssh dev-env
-# ... work inside the VM ...
-smolvm stop dev-env
+```bash
+smolvm sandbox stop my-sandbox --timeout 10
 ```
 
-## What happens during stop
+### Create, use, and stop a sandbox
 
-1. SmolVM sends a shutdown signal to the VM process
-2. The TAP network device and NAT rules are removed
-3. The VM state is cleaned up from the local database
-4. Temporary disk images are deleted
-
-## Exit codes
-
-| Code | Description                      |
-| ---- | -------------------------------- |
-| `0`  | Success — VM stopped and cleaned up |
-| `1`  | Error — VM not found or stop failed |
+```bash
+smolvm sandbox create --name dev-env
+smolvm sandbox shell dev-env
+smolvm sandbox stop dev-env
+```
 
 ## Related commands
 
-* [`smolvm create`](/smolvm/cli/create) — Create a new VM
-* [`smolvm list`](/smolvm/cli/list) — See all running VMs
-* [`smolvm cleanup`](/smolvm/cli/cleanup) — Clean up all stale VMs
-* [`smolvm snapshot create`](/smolvm/cli/snapshot) — Save VM state before stopping
+* [`smolvm sandbox start`](/smolvm/cli/overview) - Start a stopped sandbox
+* [`smolvm sandbox snapshot create`](/smolvm/cli/snapshot) - Save sandbox state
+* [`smolvm sandbox delete`](/smolvm/cli/cleanup) - Delete sandbox resources

@@ -1,6 +1,6 @@
 ---
 title: "SmolVM architecture overview"
-description: "Architecture overview of SmolVM — how each sandbox boots a microVM, sets up isolated networking, runs your code over SSH, and tears itself down."
+description: "Architecture overview of SmolVM — how each sandbox boots a microVM, sets up isolated networking, runs your code over vsock or SSH, and tears itself down."
 ---
 
 When you run code through SmolVM, your commands execute inside a separate virtual machine — not on your host. This page explains the moving parts and why they are designed this way.
@@ -9,13 +9,13 @@ When you run code through SmolVM, your commands execute inside a separate virtua
 
 When you call `SmolVM()` and run a command, five things happen behind the scenes:
 
-1. **SmolVM builds or reuses a lightweight Linux image** — an Alpine-based filesystem with SSH pre-configured.
-2. **A microVM boots** using Firecracker (Linux) or QEMU (macOS).
+1. **SmolVM builds or reuses a lightweight Linux image** — a published preset such as Ubuntu, or a custom filesystem with your own tools.
+2. **A microVM boots** using Firecracker on Linux or QEMU on macOS and Linux.
 3. **A private network is created** so the sandbox can reach the internet but is isolated from other sandboxes.
 4. **SmolVM connects to the sandbox** — over SSH, or a faster [vsock channel](/smolvm/concepts/control-channel) when available — to execute your commands and return the output.
 5. **Everything is torn down** when you exit the `with` block.
 
-The whole cycle — boot, run, teardown — takes about 3.5 seconds on typical hardware.
+On the latest Linux benchmark timeline, the QEMU + vsock path reaches readiness in 413.1 ms and warm commands return in about 1 ms.
 
 ```python
 from smolvm import SmolVM
@@ -33,14 +33,14 @@ AI agents and applications often need to run code that comes from a language mod
 SmolVM uses **KVM-backed microVMs**, which provide hardware-level isolation:
 
 * **Stronger boundary** — each sandbox runs its own kernel, so a breakout would require a hypervisor exploit, not just a kernel vulnerability
-* **Fast startup** — microVMs boot in under a second, close to container speed
+* **Fast startup** — QEMU + vsock published Ubuntu sandboxes reach readiness in under half a second on the latest Linux benchmark
 * **Low overhead** — minimal memory footprint compared to traditional VMs
 
 ## Key components
 
 ### SDK (`SmolVM` class)
 
-The main interface you import in Python. It handles VM lifecycle (create, start, stop, delete), SSH-based command execution via `vm.run()`, auto-configuration so you can get started with zero config, and reconnection to existing sandboxes via `SmolVM.from_id()`.
+The main interface you import in Python. It handles VM lifecycle (create, start, stop, delete), command execution via `vm.run()`, auto-configuration so you can get started with zero config, and reconnection to existing sandboxes via `SmolVM.from_id()`.
 
 ### CLI (`smolvm` command)
 
@@ -75,19 +75,15 @@ with SmolVM(memory=2048, disk_size=4096) as vm:
 
 ## Performance
 
-Typical lifecycle timings (p50) on a standard Linux host:
+Latest QEMU published Ubuntu medians (p50) on a Linux KVM host:
 
 | Phase | Time |
 | --- | --- |
-| Create + Start | \~572ms |
-| SSH ready | \~2.1s |
-| Command execution | **\~43ms** |
-| Stop + Delete | \~751ms |
-| **Full lifecycle (boot, run, teardown)** | **\~3.5s** |
-
-<Note>
-  Measured on AMD Ryzen 7 7800X3D (8C/16T), Ubuntu Linux, KVM/Firecracker backend.
-</Note>
+| QEMU + vsock ready | **413.1 ms** |
+| QEMU + SSH ready | 1152.2 ms |
+| First command over vsock | 1.2 ms |
+| Warm command over vsock | **1.0 ms** |
+| Warm command over SSH | \~43 ms |
 
 ## Next steps
 

@@ -224,10 +224,10 @@ When validating the QEMU backend, doctor checks:
 [FAIL] firecracker: binary not found in PATH or ~/.smolvm/bin
 ```
 
-**Solution**: Run the system setup script or manually install Firecracker:
+**Solution**: Run the setup command or manually install Firecracker:
 
 ```bash  theme={null}
-sudo ./scripts/system-setup.sh --configure-runtime
+smolvm setup
 ```
 
 ### Missing network commands
@@ -248,4 +248,4 @@ sudo dnf install nftables
 
 ## Related Commands
 
-* [`smolvm cleanup`](/smolvm/cli/cleanup) - Clean up resources after diagnosing issues
+* [`smolvm sandbox delete`](/smolvm/cli/cleanup) - Delete sandboxes after diagnosing issues

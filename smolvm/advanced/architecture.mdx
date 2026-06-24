@@ -361,41 +361,49 @@ config = VMConfig(
 
 ## Backend Abstraction
 
-SmolVM abstracts two backends with a unified API:
+SmolVM abstracts the runtime backend behind one SDK and CLI. Most users leave the backend on `auto`, and SmolVM selects the right runtime for the host.
 
 ### Firecracker Backend
 
 * **Platform**: Linux only (requires KVM)
 * **Hypervisor**: Firecracker microVM monitor
 * **Networking**: TAP devices + nftables NAT
-* **Boot time**: \~2.1s to SSH ready
-* **API**: HTTP over Unix socket
+* **Control**: A Rust based Firecracker API socket helper from `smolvm-core`
+* **Control channel**: SSH or vsock
 
 ### QEMU Backend
 
 * **Platform**: macOS (HVF) and Linux (KVM)
 * **Hypervisor**: QEMU full system emulator
-* **Networking**: User-mode networking (slirp)
-* **Boot time**: \~3-5s to SSH ready
-* **API**: Process management (no API socket)
+* **Networking**: User-mode networking (`slirp`) or TAP mode on Linux
+* **Machine model**: `auto` uses QEMU `microvm` for supported Linux x86_64 direct-kernel guests
+* **Control**: Rust based QMP client from `smolvm-core`
+* **Control channel**: SSH or vsock 
+
+### libkrun Backend
+
+* **Platform**: macOS and Linux when libkrun is installed
+* **Hypervisor**: libkrun runtime
+* **Status**: Experimental
+* **Limitations**: Pause, resume, snapshots, and snapshot restore are not supported yet
 
 ### Backend Selection
 
 ```python  theme={null}
-from smolvm.backends import resolve_backend
+from smolvm import SmolVM
 
-# Auto-detect (Linux → firecracker, macOS → qemu)
-backend = resolve_backend(None)
+# Auto-selects Firecracker on Linux and QEMU on macOS.
+vm = SmolVM()
 
-# Explicit override
-backend = resolve_backend("qemu")
+# Explicit override.
+qemu_vm = SmolVM(backend="qemu")
 ```
 
 Backend resolution order:
 
 1. Explicit `backend` parameter
 2. `SMOLVM_BACKEND` environment variable
-3. Auto-detect: `Darwin` → `qemu`, `Linux` → `firecracker`
+3. Auto-detect: `Darwin` -> `qemu`, `Linux` -> `firecracker`
 
 ## Security Considerations
 

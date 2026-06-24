@@ -1,0 +1,210 @@
+---
+title: "Use the SmolVM HTTP API and TypeScript SDK"
+sidebarTitle: "HTTP API and TypeScript SDK"
+description: "Start the local SmolVM HTTP API, create and manage sandboxes over REST, and use the generated TypeScript Smolvm client from a project that includes the SDK package."
+---
+
+SmolVM can run a local HTTP server so another process can create sandboxes and run commands without importing Python. This is useful for web apps, local tools, TypeScript services, and agent runtimes that already speak HTTP.
+
+## When to use the HTTP API
+
+Use the HTTP API when:
+
+- A JavaScript or TypeScript process needs to create and control sandboxes.
+- A local service needs a stable REST interface instead of Python objects.
+- You want to generate clients from the OpenAPI spec.
+- You want to keep one SmolVM server process alive while several tools make requests.
+
+For Python-only workflows, the [`SmolVM` class](/smolvm/api/smolvm) is still the shortest path.
+
+## Start the server
+
+Install the web dependencies:
+
+```bash
+pip install "smolvm[dashboard]"
+```
+
+Start the local server:
+
+```bash
+smolvm server start --host 127.0.0.1 --port 8000
+```
+
+You should see:
+
+```text
+SmolVM HTTP API listening on http://127.0.0.1:8000
+OpenAPI spec: http://127.0.0.1:8000/openapi.json
+```
+
+<Warning>
+  Keep the server bound to `127.0.0.1` unless you have added your own network controls. The local API can create sandboxes and run commands on your machine.
+</Warning>
+
+## Core endpoints
+
+| Method | Path | What it does |
+| --- | --- | --- |
+| `POST` | `/sandboxes` | Create, boot, and register a sandbox |
+| `GET` | `/sandboxes` | List sandboxes on the host |
+| `GET` | `/sandboxes/{id}` | Get one sandbox's state |
+| `POST` | `/sandboxes/{id}/exec` | Run a command inside a sandbox |
+| `DELETE` | `/sandboxes/{id}` | Stop and delete a sandbox |
+
+## Create a sandbox with curl
+
+```bash
+curl -s -X POST http://127.0.0.1:8000/sandboxes \
+  -H "Content-Type: application/json" \
+  -d '{"os":"ubuntu","memory":512,"disk_size":1024}'
+```
+
+Example response:
+
+```json
+{
+  "id": "vm-a1b2c3d4",
+  "status": "running"
+}
+```
+
+The request body mirrors the auto-config options of the Python `SmolVM(...)` constructor.
+
+<ParamField body="os" type='"alpine" | "ubuntu" | "windows"'>
+  Guest operating system. Omit it for the default Linux sandbox.
+</ParamField>
+
+<ParamField body="image" type="string">
+  Image reference to boot, such as an S3 image URI, `file://` URI, or local Windows `qcow2` path.
+</ParamField>
+
+<ParamField body="memory" type="integer">
+  Guest memory in MiB.
+</ParamField>
+
+<ParamField body="disk_size" type="integer">
+  Guest disk size in MiB.
+</ParamField>
+
+<ParamField body="backend" type='"firecracker" | "qemu" | "libkrun"'>
+  Runtime backend override.
+</ParamField>
+
+## Run a command
+
+```bash
+curl -s -X POST http://127.0.0.1:8000/sandboxes/vm-a1b2c3d4/exec \
+  -H "Content-Type: application/json" \
+  -d '{"command":"python3 --version","timeout":30,"shell":"login"}'
+```
+
+Example response:
+
+```json
+{
+  "exit_code": 0,
+  "stdout": "Python 3.12.3\n",
+  "stderr": ""
+}
+```
+
+<ParamField body="command" type="string" required>
+  Command to run inside the sandbox.
+</ParamField>
+
+<ParamField body="timeout" type="integer" default="30">
+  Maximum seconds to wait for the command.
+</ParamField>
+
+<ParamField body="shell" type='"login" | "raw"' default="login">
+  Use `login` for the guest login shell, or `raw` to run the command without shell wrapping.
+</ParamField>
+
+## Use the TypeScript client
+
+The SmolVM repository includes a generated TypeScript client and a small wrapper class named `Smolvm`. In a project where that TypeScript package is available, point it at the local server:
+
+```typescript smolvm-client.ts
+import { Smolvm } from "smolvm";
+
+const smolvm = new Smolvm({
+  baseUrl: "http://127.0.0.1:8000",
+});
+
+const sandbox = await smolvm.sandbox.create({
+  os: "ubuntu",
+  memory: 512,
+  disk_size: 1024,
+});
+
+const result = await smolvm.sandbox.exec(sandbox.id, {
+  command: "uname -a",
+  timeout: 30,
+  shell: "login",
+});
+
+console.log(result.stdout);
+
+await smolvm.sandbox.delete(sandbox.id);
+```
+
+The wrapper groups operations under `smolvm.sandbox`:
+
+| Method | HTTP call |
+| --- | --- |
+| `smolvm.sandbox.create(...)` | `POST /sandboxes` |
+| `smolvm.sandbox.list()` | `GET /sandboxes` |
+| `smolvm.sandbox.get(id)` | `GET /sandboxes/{id}` |
+| `smolvm.sandbox.exec(id, body)` | `POST /sandboxes/{id}/exec` |
+| `smolvm.sandbox.delete(id)` | `DELETE /sandboxes/{id}` |
+
+<Note>
+  The docs intentionally avoid an npm install command here. The release source includes the `ts/` package and generated client, but package publication should be verified before documenting a registry install path.
+</Note>
+
+## Generate clients from OpenAPI
+
+The server publishes its OpenAPI spec at:
+
+```text
+http://127.0.0.1:8000/openapi.json
+```
+
+Use that URL with your client generator of choice when you need another language or a custom TypeScript client.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="The server says dashboard dependencies are missing">
+    Install the web extra, then start the server again:
+
+    ```bash
+    pip install "smolvm[dashboard]"
+    smolvm server start --host 127.0.0.1 --port 8000
+    ```
+  </Accordion>
+
+  <Accordion title="The port is already in use">
+    Pick another port:
+
+    ```bash
+    smolvm server start --port 8001
+    ```
+  </Accordion>
+
+  <Accordion title="A command exits non-zero">
+    A command that runs and returns a non-zero exit code still produces a successful HTTP response. Check `exit_code`, `stdout`, and `stderr` in the response body.
+  </Accordion>
+</AccordionGroup>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="smolvm server" icon="server" href="/smolvm/cli/server">
+    CLI reference for the local API server
+  </Card>
+  <Card title="SmolVM Python API" icon="code" href="/smolvm/api/smolvm">
+    Use SmolVM directly from Python
+  </Card>
+</CardGroup>

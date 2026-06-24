@@ -57,13 +57,13 @@ To create a snapshot, the VM must be running or paused. SmolVM pauses the VM dur
 
   <Tab title="CLI">
     ```bash  theme={null}
-    smolvm snapshot create my-vm --snapshot-id my-checkpoint
+    smolvm sandbox snapshot create my-vm --snapshot-id my-checkpoint
     ```
 
     To keep the source VM running after the snapshot:
 
     ```bash  theme={null}
-    smolvm snapshot create my-vm --snapshot-id my-checkpoint --resume-source
+    smolvm sandbox snapshot create my-vm --snapshot-id my-checkpoint --resume-source
     ```
 
     If you skip `--snapshot-id`, SmolVM generates a unique name automatically.
@@ -76,12 +76,12 @@ When you create a snapshot, you can pick how much of the VM to store:
 
 - **`full`** (default) — Saves a complete, self-contained disk copy plus the guest's memory and CPU state. Use this when you want to resume the sandbox exactly where you left off.
 - **`diff`** — Saves a smaller disk artifact. On QEMU, the snapshot state is stored inside the qcow2 artifact and the backing image must still exist at restore time. On Firecracker, SmolVM still captures memory and VM state in full, and uses a copy-on-write disk copy when the host filesystem supports it.
-- **`disk`** — On QEMU, saves only the disk and skips the memory dump. Restoring boots the sandbox fresh from that disk instead of resuming the exact running process state. Use this when you only need filesystem state and a cold boot is acceptable.
+- **`disk`** — Saves only the disk and skips the memory dump. Restoring boots the sandbox fresh from that disk instead of resuming the exact running process state. Use this when you only need filesystem state and a cold boot is acceptable.
 
-On Firecracker, VM state and memory files are captured for every snapshot type. This means `disk` is mainly useful on QEMU today.
+On Firecracker, `full` and `diff` snapshots capture VM state and memory. `disk` snapshots copy only the managed disk, so they restore with a fresh boot.
 
 <Note>
-  QEMU `disk` snapshots are much faster and use less space than `full` because they skip the RAM dump. They are the right choice for suspend/restore workflows where you only need the filesystem state.
+  `disk` snapshots are much faster and use less space than `full` because they skip the RAM dump. They are the right choice for workflows where you only need the filesystem state.
 </Note>
 
 <Tabs>
@@ -114,13 +114,13 @@ On Firecracker, VM state and memory files are captured for every snapshot type. 
   <Tab title="CLI">
     ```bash  theme={null}
     # Space-saving snapshot
-    smolvm snapshot create my-vm --snapshot-type diff
+    smolvm sandbox snapshot create my-vm --snapshot-type diff
 
     # QEMU disk-only snapshot — fast, no RAM dump, restores as a cold boot
-    smolvm snapshot create my-vm --snapshot-type disk
+    smolvm sandbox snapshot create my-vm --snapshot-type disk
 
     # Full snapshot (default — same as omitting the flag)
-    smolvm snapshot create my-vm --snapshot-type full
+    smolvm sandbox snapshot create my-vm --snapshot-type full
     ```
   </Tab>
 </Tabs>
@@ -149,6 +149,28 @@ result = vm.run("python3 --version")  # python3 is already installed
   If the backing image for a QEMU diff snapshot is missing at restore time, SmolVM raises a clear error pointing to the missing path and suggesting you take a `full` snapshot instead. To stay safe, keep backing images in place while their diff snapshots exist.
 </Note>
 
+## How SmolVM prepares the guest
+
+Before SmolVM pauses a running sandbox, it asks the guest to save pending filesystem changes. Recent SmolVM images use the Rust guest agent over vsock for this sync step.
+
+The sync path matters because it happens before SmolVM creates snapshot files:
+
+<Steps>
+  <Step title="SmolVM reaches the guest">
+    SmolVM uses the selected control channel. On recent Linux images, this is usually vsock. On compatibility paths, it can be SSH.
+  </Step>
+  <Step title="The guest saves file changes">
+    The guest agent exposes a dedicated `/sync` endpoint. Older compatibility paths may use a raw command to ask the guest to flush files.
+  </Step>
+  <Step title="SmolVM pauses and captures state">
+    After sync succeeds, SmolVM pauses the sandbox and writes the snapshot artifacts for the selected snapshot type.
+  </Step>
+</Steps>
+
+<Tip>
+  If snapshot creation times out before a disk, memory, or state file appears, start by checking the control channel and guest-agent logs. The failure may be in guest sync rather than snapshot storage.
+</Tip>
+
 ## Restore a snapshot
 
 Restoring a snapshot recreates the original VM with the saved state. The restored VM starts in a paused state by default.
@@ -173,7 +195,7 @@ Restoring a snapshot recreates the original VM with the saved state. The restore
 
   <Tab title="CLI">
     ```bash  theme={null}
-    smolvm snapshot restore my-checkpoint --resume
+    smolvm sandbox snapshot restore my-checkpoint --resume
     ```
   </Tab>
 </Tabs>
@@ -189,7 +211,7 @@ A snapshot can only be restored once by default. If you need to restore the same
 
   <Tab title="CLI">
     ```bash  theme={null}
-    smolvm snapshot restore my-checkpoint --resume --force
+    smolvm sandbox snapshot restore my-checkpoint --resume --force
     ```
   </Tab>
 </Tabs>
@@ -216,13 +238,13 @@ A snapshot can only be restored once by default. If you need to restore the same
 
   <Tab title="CLI">
     ```bash  theme={null}
-    smolvm snapshot list
+    smolvm sandbox snapshot list
     ```
 
     Filter by VM:
 
     ```bash  theme={null}
-    smolvm snapshot list --vm-id my-vm
+    smolvm sandbox snapshot list --vm-id my-vm
     ```
   </Tab>
 </Tabs>
@@ -243,7 +265,7 @@ Deleting a snapshot removes the saved state files and metadata. You cannot delet
 
   <Tab title="CLI">
     ```bash  theme={null}
-    smolvm snapshot delete my-checkpoint
+    smolvm sandbox snapshot delete my-checkpoint
     ```
   </Tab>
 </Tabs>

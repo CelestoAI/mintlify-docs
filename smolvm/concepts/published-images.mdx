@@ -1,124 +1,151 @@
 ---
 title: "Published images"
-description: "How SmolVM boots from pre-built sandbox images so smolvm claude start launches in seconds — covers the universal kernel and published preset manifest."
+description: "How SmolVM boots from pre-built sandbox images so smolvm claude start launches in seconds."
 ---
 
-When you run `smolvm claude start` or `smolvm openclaw start`, SmolVM downloads a ready-to-boot sandbox image instead of building one from scratch on your machine. The first launch takes about 5–10 seconds. Earlier releases needed 60–120 seconds because every run reinstalled tools inside a fresh image.
+SmolVM can start from ready-made sandbox images instead of building an operating system image on your machine. This makes the first launch faster and keeps common presets consistent across hosts.
 
-This page explains what published images are, when SmolVM uses them, and how to opt out.
+## What SmolVM downloads
 
-## What changes for you
+Published images are release assets on the SmolVM GitHub repository. They include:
 
-* **Faster first launch.** Coding-agent presets come up in seconds.
-* **Same kernel on every host.** Every sandbox boots SmolVM's own Linux 6.12.85 kernel, so behavior is identical on macOS and Linux.
-* **Less disk churn.** Images are downloaded once, cached under `~/.smolvm/images/`, and reused.
+- A SmolVM-built Linux kernel in the format the selected backend needs
+- A compressed root filesystem for a preset or base operating system
+- SHA-256 checksums that SmolVM verifies before boot
+- A pinned Rust guest-agent binary for custom image builds from installed wheels
 
-You don't need to change any code. The fast path is on by default for the presets that ship with SmolVM.
+The image release tag uses a date-based format such as `images-2026.06.24.0`. This tag is separate from the Python package version, so SmolVM can publish rebuilt images without pretending the Python API changed.
+
+<Tooltip tip="CalVer means calendar versioning. The version includes the release date, which makes image rebuilds easier to track.">
+  CalVer
+</Tooltip>
 
 ## Which presets are published
 
-| Preset        | What it ships with                                  |
-| ------------- | --------------------------------------------------- |
-| `openclaw`    | OpenClaw gateway and runtime                        |
-| `claude-code` | Anthropic's Claude Code CLI                         |
-| `codex`       | OpenAI's Codex CLI                                  |
-| `hermes`      | Hermes coding agent                                 |
-| `pi`          | Pi coding agent                                     |
-| `ubuntu`      | Bare Ubuntu base image (no preset tools installed)  |
+| Preset | What it gives you |
+| --- | --- |
+| `codex` | OpenAI Codex CLI in a sandbox |
+| `claude-code` | Claude Code CLI in a sandbox |
+| `openclaw` | OpenClaw gateway and runtime |
+| `hermes` | Hermes coding agent |
+| `pi` | Pi coding agent |
+| `ubuntu` | A clean Ubuntu base image |
 
-Each preset is published for both `amd64` and `arm64` architectures. If you launch a preset that isn't on this list, SmolVM transparently falls back to the older install-at-boot flow — no error, just a slower first run.
+The public CLI command for `claude-code` is `smolvm claude start`.
 
-The `ubuntu` row powers the Firecracker path for `smolvm create --os ubuntu`. It boots a clean Ubuntu rootfs in seconds when you want `apt` and a familiar Linux environment without any preset tooling. The QEMU path keeps using its qcow2 cloud image.
+```bash
+smolvm codex start
+smolvm claude start
+smolvm sandbox create --os ubuntu
+```
 
-## How SmolVM picks a published image
-
-SmolVM resolves the right image for your host by combining three values:
-
-1. **Preset** — `openclaw`, `claude-code`, etc.
-2. **Architecture** — `amd64` or `arm64`, detected from your CPU.
-3. **VMM** — the virtual machine monitor that will run the image:
-   * **Linux** → Firecracker
-   * **macOS** → QEMU (using Apple's Hypervisor framework)
-
-If a matching row exists in the manifest, SmolVM downloads it and boots. If not, it falls back to building the image locally.
-
-<Note>
-  The VMM choice is made automatically. You don't need to set `SMOLVM_BACKEND` for the published path to work — SmolVM picks the right one for your operating system.
-</Note>
-
-## The universal kernel
-
-Every published image boots the same SmolVM-built Linux kernel. We build it in CI from upstream Linux source, tuned for sandboxes:
-
-* **Version** — Linux 6.12.85 LTS, with the long-term security patch line.
-* **Configured for microVMs** — slim driver set, no Bluetooth, no USB host stack, no sound.
-* **Cloud-init friendly** — supports the NoCloud seed disk that ships sandbox configuration.
-* **Verified on download** — every kernel artifact has a SHA-256 checksum in the manifest, and SmolVM rejects a download that doesn't match.
-
-Earlier releases pulled kernels from external mirrors. v0.0.14 retired those external sources, so every sandbox now boots a kernel SmolVM builds and tests in CI.
+Each manifest row is keyed by preset, CPU architecture, backend, and guest operating system. If SmolVM does not find a matching row, it uses the slower build or install path for that launch.
 
 ## How a published launch works
 
 <Steps>
-  <Step title="SmolVM looks up your image in the manifest">
-    The manifest is keyed by `(preset, architecture, vmm)`. If your host doesn't have a matching row, SmolVM falls back to building the image locally.
+  <Step title="SmolVM resolves the target image">
+    SmolVM combines the preset, host architecture, backend, and requested guest operating system. For example, a Linux Firecracker launch and a macOS QEMU launch can use different kernel artifacts.
   </Step>
-  <Step title="The compressed rootfs downloads to your cache">
-    Files land under `~/.smolvm/images/<version>/`. Each file is verified against a SHA-256 checksum from the manifest, so a corrupted download is caught before boot.
+  <Step title="SmolVM downloads verified assets">
+    Kernel and rootfs files come from the configured `images-YYYY.MM.DD.N` release tag. SmolVM verifies each file against the bundled SHA-256 checksum.
   </Step>
   <Step title="SmolVM decompresses the rootfs once">
-    The `.zst` archive is unpacked to `.ext4` and stamped with a sidecar checksum. On subsequent launches, SmolVM reuses the unpacked file — unless the manifest checksum changes, in which case it re-decompresses to pick up the fix.
+    Compressed `.zst` files stay in the cache. SmolVM creates a sibling `rootfs.ext4` file and stores a sidecar checksum so it knows when to refresh the decompressed copy.
   </Step>
-  <Step title="The sandbox boots with your SSH key injected">
-    SmolVM passes your public SSH key to the sandbox on the kernel command line. The sandbox's first-boot script writes it to `/root/.ssh/authorized_keys` before starting `sshd`. Nothing is baked into the image, so the same image is safe to share across users.
+  <Step title="SmolVM injects your access key at launch">
+    Published images do not bake in your SSH key. SmolVM passes your public key at launch so the same image can be shared safely across users.
   </Step>
 </Steps>
 
+## Kernel and rootfs formats
+
+SmolVM builds one kernel source tree into the formats each backend expects:
+
+| Backend | Kernel format |
+| --- | --- |
+| Firecracker | `vmlinux.<arch>.elf` |
+| QEMU | `vmlinux.<arch>.image` |
+| libkrun | ELF on Linux, Image on macOS |
+
+The rootfs is a Linux filesystem image. Published rootfs files are compressed as `.ext4.zst` and decompressed locally before boot.
+
+## Guest agent pins
+
+Recent images include `/usr/local/bin/smolvm-guest-agent`. The agent starts before networking and powers the fast vsock control channel for commands, file transfer, shell streams, and guest sync.
+
+When you build images from an installed Python wheel instead of a source checkout, SmolVM downloads the pinned guest-agent binary from the same image release tag and verifies its SHA-256 checksum.
+
+```text
+~/.smolvm/images/
+  _guest-agent/
+    images-2026.06.24.0/
+      arm64/
+        smolvm-guest-agent-linux-arm64
+```
+
+<Note>
+  If you set `SMOLVM_GUEST_AGENT_BINARY`, SmolVM uses that local binary for image builds. The binary must be a static Linux binary for the guest architecture.
+</Note>
+
 ## Cache layout
 
-Published images live under `~/.smolvm/images/`:
+Published images live under `~/.smolvm/images/`. The release URLs use the CalVer image tag, while the local cache directory includes the SmolVM package version.
 
-```
+```text
 ~/.smolvm/images/
-  0.0.14/
-    vmlinux-arm64-qemu.bin              # universal kernel
-    openclaw-arm64-rootfs.ext4.zst      # compressed rootfs
-    openclaw-arm64-rootfs.ext4          # decompressed, ready to boot
-    openclaw-arm64-rootfs.ext4.from-sha256
-    ...
+  codex-v0.0.24.post2-arm64-qemu/
+    kernel
+    rootfs.ext4.zst
+    rootfs.ext4
+    rootfs.ext4.from-sha256
+
+  base-kernel-v0.0.24.post2-arm64/
+    vmlinux.elf
+    vmlinux.image
 ```
 
-The `.from-sha256` sidecar tells SmolVM which checksum the decompressed file came from. If you upgrade and the manifest points at a new rootfs, SmolVM notices the mismatch and re-decompresses.
+The `.from-sha256` sidecar records which compressed rootfs produced the decompressed `rootfs.ext4`. If the manifest checksum changes, SmolVM refreshes the decompressed file.
 
-After a few upgrades the cache can grow to hundreds of megabytes. Run [`smolvm prune`](/smolvm/cli/prune) to remove caches from versions you're no longer using.
+Run `smolvm prune` to remove old cached images:
 
-## Opting out
-
-Set `SMOLVM_USE_PUBLISHED=0` to force the install-at-boot flow for every preset:
-
-```bash  theme={null}
-SMOLVM_USE_PUBLISHED=0 smolvm openclaw start
+```bash
+smolvm prune
 ```
 
-Use this when you want to test changes to a preset's install script, or when you need a custom rootfs that the published image doesn't include. For everyday use, leave it unset.
+## Opt out for image development
 
-<Tip>
-  Run `smolvm doctor` to confirm SmolVM picked the right VMM for your host before launching a preset.
-</Tip>
+Set `SMOLVM_USE_PUBLISHED=0` when you want to test a local image build or preset install script:
+
+```bash
+SMOLVM_USE_PUBLISHED=0 smolvm codex start
+```
+
+For everyday use, leave this unset so SmolVM can use the verified fast path.
+
+## Dashboard UI assets
+
+The dashboard has its own release asset named like `smolvm-dashboard-ui-<tag>.tar.gz`. The `smolvm ui` command downloads the newest stable dashboard asset into the local SmolVM data directory when the installed package does not already include a built UI.
+
+Use beta dashboard assets only when you want prerelease UI changes:
+
+```bash
+smolvm ui --allow-beta
+```
 
 ## Next steps
 
 <CardGroup cols={2}>
-  <Card title="Backends" icon="microchip" href="/smolvm/concepts/backends">
-    Choose between Firecracker and QEMU
+  <Card title="Runtime backends" icon="microchip" href="/smolvm/concepts/backends">
+    See which backend uses each image format
   </Card>
-  <Card title="Coding agents" icon="robot" href="/smolvm/features/coding-agents">
-    Launch Claude, Codex, Hermes, or Pi in a sandbox
+  <Card title="Control channel" icon="plug" href="/smolvm/concepts/control-channel">
+    Learn how the guest agent speeds up commands
   </Card>
   <Card title="smolvm prune" icon="broom" href="/smolvm/cli/prune">
-    Reclaim disk from old image caches
+    Reclaim disk from old caches
   </Card>
-  <Card title="Security model" icon="shield" href="/smolvm/concepts/security">
-    How SSH host keys and authorized_keys work in published images
+  <Card title="smolvm ui" icon="desktop" href="/smolvm/cli/ui">
+    Start the dashboard
   </Card>
 </CardGroup>

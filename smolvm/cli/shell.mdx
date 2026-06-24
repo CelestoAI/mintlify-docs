@@ -1,0 +1,57 @@
+---
+title: "smolvm sandbox shell"
+description: "Use smolvm sandbox shell to open the fastest interactive shell SmolVM can provide, with guest-agent terminal access on recent images and automatic start or resume."
+---
+
+`smolvm sandbox shell` opens an interactive shell inside a sandbox. On recent Linux images it uses the SmolVM guest agent for fast terminal access; when that is unavailable, use `smolvm sandbox ssh` for a regular SSH session.
+
+## Synopsis
+
+```bash
+smolvm sandbox shell <sandbox> [OPTIONS]
+```
+
+## Arguments
+
+<ParamField path="sandbox" type="string" required>
+  Name or ID of the sandbox to connect to.
+</ParamField>
+
+## Options
+
+<ParamField path="--boot-timeout" type="number" default="30">
+  Seconds to wait if SmolVM needs to start or resume the sandbox before connecting.
+</ParamField>
+
+## Examples
+
+### Open a shell
+
+```bash
+smolvm sandbox shell my-sandbox
+```
+
+### Create and connect
+
+```bash
+smolvm sandbox create --name dev-env --os ubuntu
+smolvm sandbox shell dev-env
+```
+
+### Allow more startup time
+
+```bash
+smolvm sandbox shell dev-env --boot-timeout 60
+```
+
+## How it behaves
+
+If the sandbox is stopped or newly created, SmolVM starts it first. If the sandbox is paused, SmolVM resumes it. If the guest agent supports terminal access, the shell opens over the guest-agent terminal stream.
+
+Use [`smolvm sandbox ssh`](/smolvm/cli/ssh) when you need SSH-specific behavior such as a custom user, custom key, or SSH tooling.
+
+## Related commands
+
+* [`smolvm sandbox ssh`](/smolvm/cli/ssh) - Open a real SSH session
+* [`smolvm sandbox create`](/smolvm/cli/create) - Create a sandbox
+* [Control channel](/smolvm/concepts/control-channel) - Learn how guest-agent communication works

@@ -1,0 +1,79 @@
+---
+title: "smolvm sandbox file"
+description: "Use smolvm sandbox file to upload files into a sandbox or download files back to your host over SSH or the SmolVM guest-agent channel."
+---
+
+`smolvm sandbox file` copies individual files between your host and a sandbox. Use it when you need to send a prompt, collect an artifact, or avoid sharing a whole folder.
+
+## Synopsis
+
+```bash
+smolvm sandbox file upload <sandbox> <local-path> <guest-path> [OPTIONS]
+smolvm sandbox file download <sandbox> <guest-path> <local-path> [OPTIONS]
+```
+
+## Shared options
+
+<ParamField path="--no-create-dirs" type="flag">
+  Require parent directories to already exist instead of creating them.
+</ParamField>
+
+<ParamField path="--ssh-key" type="string">
+  Path to an SSH private key when the command uses SSH.
+</ParamField>
+
+<ParamField path="--ssh-user" type="string" default="root">
+  SSH user when the command uses SSH.
+</ParamField>
+
+<ParamField path="--comm-channel" type="string">
+  Host-to-guest control channel. Use `ssh`, `vsock`, or omit it for auto-selection.
+</ParamField>
+
+<ParamField path="--json" type="flag">
+  Print a JSON envelope instead of formatted text.
+</ParamField>
+
+## Upload a file
+
+```bash
+smolvm sandbox file upload my-sandbox ./prompt.txt /workspace/prompt.txt
+```
+
+Force the guest-agent channel on a recent Linux sandbox:
+
+```bash
+smolvm sandbox file upload my-sandbox ./report.csv /workspace/report.csv --comm-channel vsock
+```
+
+## Download a file
+
+```bash
+smolvm sandbox file download my-sandbox /workspace/result.json ./result.json
+```
+
+## Use JSON output
+
+```bash
+smolvm sandbox file upload my-sandbox ./input.txt /tmp/input.txt --json
+```
+
+```json
+{
+  "ok": true,
+  "command": "sandbox.file.upload",
+  "exit_code": 0,
+  "data": {
+    "vm_id": "my-sandbox",
+    "local_path": "input.txt",
+    "guest_path": "/tmp/input.txt"
+  },
+  "error": null
+}
+```
+
+## Related commands
+
+* [Host mounts](/smolvm/features/host-mounts) - Share a whole folder
+* [`smolvm sandbox env`](/smolvm/cli/env) - Set config values
+* [Control channel](/smolvm/concepts/control-channel) - Learn how file transfer chooses SSH or vsock
