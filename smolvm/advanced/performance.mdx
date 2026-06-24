@@ -3,51 +3,60 @@ title: "Performance benchmarks"
 description: "SmolVM benchmark numbers for boot time, control-channel readiness, and command latency, plus tuning tips for fast agent workloads."
 ---
 
-SmolVM is optimized for low-latency agent workflows: a fresh sandbox is ready to run a command in about a second, and follow-up commands return in milliseconds.
+SmolVM is optimized for low-latency agent workflows: a fresh QEMU sandbox can be ready in under half a second on Linux, and follow-up commands return in milliseconds.
 
-## Benchmark results
+## Latest published Ubuntu medians
 
-Wall-clock timings on a standard Linux host (Alpine guest, 1 vCPU / 512 MB, KVM), measuring from `SmolVM(...)` to a command returning:
+These warm-cache medians come from the SmolVM benchmark timeline for the published Ubuntu image on June 23, 2026. "Total ready" measures the time until the sandbox control channel is ready. "First command" measures the first command after readiness. "Warm exec" measures repeated command latency.
 
-| Phase                                              | Time         |
-| -------------------------------------------------- | ------------ |
-| Create                                             | \~11ms       |
-| Launch                                             | \~53ms       |
-| First command (vsock, Linux + QEMU or Firecracker) | \~1.28s      |
-| First command (SSH fallback path)                  | \~1.67s      |
-| **Warm command (vsock)**                           | **\~1.3ms**  |
-| Warm command (SSH)                                 | \~43ms       |
-| Stop + delete                                      | \~751ms      |
-| **Create -> first command (QEMU + vsock default)** | **\~1.34s**  |
+| Backend | Transport | Total ready | First command | Warm exec | Context |
+| --- | --- | ---: | ---: | ---: | --- |
+| QEMU | SSH | 1152.2 ms | 12.0 ms | 42.7 ms | Published Ubuntu, local warm-cache run |
+| QEMU | vsock | 413.1 ms | 1.2 ms | 1.0 ms | 64.1% faster ready than QEMU SSH in this run |
+| Firecracker | SSH | 3506.4 ms | 53.9 ms | 42.9 ms | Host used the unprivileged networking fallback |
+| Firecracker | vsock | 2939.8 ms | 1.1 ms | 0.9 ms | Fallback networking; not a native TAP measurement |
 
 <Note>
-  Benchmarks measured on a 16-vCPU KVM host with the Alpine Linux guest. Numbers reflect the default boot profile after the boot-latency fixes shipped in mid-2026: a ~6x speed-up on QEMU defaults and a ~32x speed-up on warm commands once vsock is the working channel. See [Control channel](/smolvm/concepts/control-channel) for what vsock is and when it kicks in.
+  The QEMU rows are the best current headline numbers for Linux direct-kernel guests. The latest Firecracker run used SmolVM's fallback networking path because the benchmark process did not have root or `CAP_NET_ADMIN`, so treat those rows as fallback-path measurements rather than native TAP limits.
 </Note>
 
 ## Running your own benchmarks
 
-You can benchmark SmolVM on your hardware using the included benchmark script:
+Run the same transport benchmark on your hardware:
 
 ```bash
-uv run python scripts/benchmarks/bench.py --iterations 5
+uv run python scripts/benchmarks/ubuntu_transport.py \
+  --variants qemu-ssh,qemu-vsock \
+  --iterations 3 \
+  --warm-exec-runs 5 \
+  --rootfs-source published \
+  --output /tmp/smolvm-ubuntu-transport.json \
+  -v
 ```
 
-This creates, starts, measures, and deletes sandboxes through the public Python SDK. Use `--only cold-start,tti` to run a smaller benchmark set, or `--json --output /tmp/smolvm-bench.json` to save machine-readable results.
+Measure disk helper performance separately:
+
+```bash
+uv run python scripts/benchmarks/disk_io.py \
+  --iterations 3 \
+  --json \
+  --output /tmp/smolvm-disk-io.json
+```
 
 ## Performance characteristics
 
 ### Boot performance
 
 * **Sandbox creation**: SmolVM allocates names, IPs, disk metadata, and network rules in tens of milliseconds.
-* **Time to first command**: \~1.3s on the default QEMU + vsock path, \~1.7s on the SSH fallback path.
+* **Time to ready**: QEMU + vsock reaches readiness in 413.1 ms on the latest published Ubuntu run; QEMU + SSH reaches readiness in 1152.2 ms.
 * **QEMU microvm default**: On Linux x86_64 direct-kernel guests, QEMU uses the smaller `microvm` machine by default.
 * **Hardware virtualization**: SmolVM uses KVM on Linux and Hypervisor.framework on macOS for near-native performance.
 * **Safe boot trims**: The default `MICROVM_DIRECT` profile appends `tsc=reliable no_timer_check quiet` to the kernel command line. Set [`SMOLVM_VERBOSE_BOOT=1`](/smolvm/guides/environment-variables#host-side-variables-smolvm-reads) to drop `quiet` when debugging a stuck boot.
 
 ### Runtime performance
 
-* **Command execution**: \~1.3ms warm-command latency on vsock; \~43ms on SSH.
-* **File transfer**: Recent guest-agent images stream file content over vsock instead of going through `scp`.
+* **Command execution**: Warm-command latency is about 1.0 ms on vsock and about 43 ms on SSH.
+* **File transfer**: New guest-agent builds use the newer streaming file-transfer protocol. Only compare transfer numbers after the published image advertises those capabilities.
 * **Memory overhead**: Minimal host overhead beyond configured VM memory (default 512MB).
 * **CPU efficiency**: Hardware virtualization provides near-native CPU performance.
 
@@ -56,9 +65,18 @@ This creates, starts, measures, and deletes sandboxes through the public Python 
 The `smolvm-core` wheel gives SmolVM Rust-backed helpers for the host operations that happen around each sandbox:
 
 * **Networking**: TAP setup, route changes, and sysctls can use direct Linux calls when SmolVM has the right permissions.
-* **Disk I/O**: Image copies and zstd decompression preserve sparse regions so SmolVM avoids writing unused zero blocks.
+* **Disk I/O**: zstd decompression uses a native path, while sparse copy keeps the host's `cp` fast path when it is already best.
 * **QEMU control**: Pause, resume, and snapshot control use a native QMP client.
 * **Firecracker control**: Firecracker API socket requests use the native transport.
+
+Latest disk-helper validation:
+
+| Operation | Size | Native path | Forced-off path | Result |
+| --- | ---: | ---: | ---: | --- |
+| Sparse copy | 16 MiB | 10.5 ms (`cp`) | 10.2 ms (`cp`) | Unchanged; `cp` remains first |
+| Sparse copy | 128 MiB | 64.6 ms (`cp`) | 64.8 ms (`cp`) | Unchanged; `cp` remains first |
+| zstd decompress | 16 MiB | 13.5 ms | 40.6 ms | 66.8% faster |
+| zstd decompress | 128 MiB | 96.4 ms | 376.1 ms | 74.4% faster |
 
 Check your installed helper capabilities:
 
@@ -68,7 +86,7 @@ python -m smolvm_core
 
 ### Teardown performance
 
-* **Graceful Shutdown**: Firecracker VMs can be stopped in \~751ms
+* **Graceful shutdown**: SmolVM asks the backend to stop cleanly before removing local state.
 * **Resource Cleanup**: Network rules, TAP devices, and disk images are cleaned up automatically
 * **Fast Path for Ephemeral VMs**: SIGKILL-based teardown for sandbox VMs that don't need state preservation
 
@@ -88,7 +106,7 @@ with SmolVM() as vm:
     result3 = vm.run("cat output.txt")
 ```
 
-This amortizes the \~1.3s first-command cost across many operations — and on vsock every follow-up command returns in around a millisecond.
+This amortizes the fresh-sandbox ready time across many operations. On the latest QEMU + vsock Ubuntu run, readiness was 413.1 ms and follow-up commands returned in about a millisecond.
 
 ### 2. Use appropriate resource allocation
 

@@ -1,11 +1,11 @@
 ---
 title: "SmolVM Python class reference"
-description: "SmolVM class reference: the Python API for creating microVM sandboxes, running SSH commands, and managing the full sandbox lifecycle."
+description: "SmolVM class reference: the Python API for creating microVM sandboxes, running commands over the selected control channel, and managing the full sandbox lifecycle."
 ---
 
 ## Overview
 
-The `SmolVM` class provides a user-friendly interface for creating and managing microVMs. It supports automatic configuration, context manager usage, and SSH-based command execution.
+The `SmolVM` class provides a user-friendly interface for creating and managing microVMs. It supports automatic configuration, context manager usage, and command execution over the selected control channel.
 
 ## Constructor
 
@@ -30,7 +30,7 @@ SmolVM(
 ```
 
 <ParamField path="config" type="VMConfig | None" default="None">
-  VM configuration. Mutually exclusive with `vm_id`. If omitted (and `vm_id` is omitted), SmolVM auto-creates a default SSH-capable VM configuration.
+  VM configuration. Mutually exclusive with `vm_id`. If omitted (and `vm_id` is omitted), SmolVM auto-creates a default configuration that can run commands over vsock or SSH.
 </ParamField>
 
 <ParamField path="vm_id" type="str | None" default="None">
