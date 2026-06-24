@@ -17,6 +17,7 @@ Use the Python or TypeScript package when your agent runner should create, open,
   <Tab title="TypeScript">
     ```bash
     npm install @celestoai/smolfs
+    npm install --save-dev tsx typescript @types/node
     ```
   </Tab>
 </Tabs>
@@ -80,8 +81,20 @@ Use the Python or TypeScript package when your agent runner should create, open,
       process.exit(1);
     });
     ```
+
+    Run it:
+
+    ```bash
+    npx tsx quickstart-smolfs.ts
+    ```
   </Tab>
 </Tabs>
+
+Both examples print the SmolFS home path and then:
+
+```text
+hello from SmolFS
+```
 
 ## Current surface
 
