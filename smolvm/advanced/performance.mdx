@@ -3,9 +3,9 @@ title: "Performance benchmarks"
 description: "SmolVM benchmark numbers for boot time, control-channel readiness, and command latency, plus tuning tips for fast agent workloads."
 ---
 
-SmolVM is optimized for low-latency agent workflows: a fresh QEMU sandbox can be ready in under half a second on Linux, and follow-up commands return in milliseconds.
+SmolVM is optimized for low-latency agent workflows: fresh sandboxes can be ready quickly on Linux, and follow-up commands return in milliseconds.
 
-## Latest published Ubuntu medians
+## Latest QEMU published Ubuntu medians
 
 These warm-cache medians come from the SmolVM benchmark timeline for the published Ubuntu image on June 23, 2026. "Total ready" measures the time until the sandbox control channel is ready. "First command" measures the first command after readiness. "Warm exec" measures repeated command latency.
 
@@ -13,11 +13,9 @@ These warm-cache medians come from the SmolVM benchmark timeline for the publish
 | --- | --- | ---: | ---: | ---: | --- |
 | QEMU | SSH | 1152.2 ms | 12.0 ms | 42.7 ms | Published Ubuntu, local warm-cache run |
 | QEMU | vsock | 413.1 ms | 1.2 ms | 1.0 ms | 64.1% faster ready than QEMU SSH in this run |
-| Firecracker | SSH | 3506.4 ms | 53.9 ms | 42.9 ms | Host used the unprivileged networking fallback |
-| Firecracker | vsock | 2939.8 ms | 1.1 ms | 0.9 ms | Fallback networking; not a native TAP measurement |
 
 <Note>
-  The QEMU rows are the best current headline numbers for Linux direct-kernel guests. The latest Firecracker run used SmolVM's fallback networking path because the benchmark process did not have root or `CAP_NET_ADMIN`, so treat those rows as fallback-path measurements rather than native TAP limits.
+  The table above reports the current QEMU microvm benchmark lane. Keep backend-to-backend comparisons separate so each runtime is measured in its representative setup.
 </Note>
 
 ## Running your own benchmarks

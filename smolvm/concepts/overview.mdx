@@ -75,20 +75,15 @@ with SmolVM(memory=2048, disk_size=4096) as vm:
 
 ## Performance
 
-Latest published Ubuntu medians (p50) on a Linux KVM host:
+Latest QEMU published Ubuntu medians (p50) on a Linux KVM host:
 
 | Phase | Time |
 | --- | --- |
 | QEMU + vsock ready | **413.1 ms** |
 | QEMU + SSH ready | 1152.2 ms |
-| Firecracker + vsock ready, fallback networking | 2939.8 ms |
 | First command over vsock | 1.2 ms |
 | Warm command over vsock | **1.0 ms** |
 | Warm command over SSH | \~43 ms |
-
-<Note>
-  The Firecracker row comes from an unprivileged fallback-networking run. It is useful for reproducing the latest benchmark context, but it is not a native TAP performance ceiling.
-</Note>
 
 ## Next steps
 
