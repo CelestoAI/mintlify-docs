@@ -59,9 +59,9 @@ vm.unexpose_local(host_port=8080, guest_port=8080)
 If you already have a running sandbox, you can forward ports from your terminal — no Python required:
 
 ```bash
-smolvm port expose my-vm 8080:3000
-smolvm port list my-vm
-smolvm port close my-vm 8080:3000
+smolvm sandbox port expose my-vm 8080:3000
+smolvm sandbox port list my-vm
+smolvm sandbox port close my-vm 8080:3000
 ```
 
-CLI forwards are non-blocking and persist after the command exits. See [`smolvm port`](/smolvm/cli/port) for the full reference.
+CLI forwards are non-blocking and persist after the command exits. See [`smolvm sandbox port`](/smolvm/cli/port) for the full reference.

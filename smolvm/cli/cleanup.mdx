@@ -1,184 +1,83 @@
 ---
-title: "smolvm cleanup"
-description: "Use the smolvm cleanup command to remove stale auto-created VMs, free TAP devices, and reclaim host resources after crashed or abandoned sessions."
+title: "smolvm sandbox delete"
+description: "Use smolvm sandbox delete to remove one sandbox or clean up every sandbox on the host with a confirmation step."
 ---
+
+`smolvm sandbox delete` removes sandboxes and releases their stored resources. Use it for normal cleanup after a workflow, or with `--all` when you want to clear every sandbox on the host.
 
 ## Synopsis
 
-```bash  theme={null}
-smolvm cleanup [OPTIONS]
+```bash
+smolvm sandbox delete <sandbox...> [OPTIONS]
+smolvm sandbox delete --all [OPTIONS]
 ```
 
-## Description
+## Arguments
 
-The `cleanup` command removes stale or auto-created VMs and their associated resources. By default, it targets VMs with the `vm-` prefix and any VMs that have been reconciled as stale.
-
-<Warning>
-  Running cleanup as root is recommended to ensure proper cleanup of TAP devices and nftables rules.
-</Warning>
+<ParamField path="sandbox..." type="string">
+  One or more sandbox names or IDs to delete.
+</ParamField>
 
 ## Options
 
-<ParamField path="--all" type="flag" default="false">
-  Delete all VMs, not just stale or auto-created ones.
+<ParamField path="--all" type="flag">
+  Delete every sandbox on the host.
 </ParamField>
 
-<ParamField path="--prefix" type="string" default="vm-">
-  Auto-VM prefix to clean. Only VMs starting with this prefix (or marked as stale) will be targeted.
+<ParamField path="--force" type="flag">
+  Skip the confirmation prompt for `--all`. Required for `--all --json`.
 </ParamField>
 
-<ParamField path="--dry-run" type="flag" default="false">
-  Print targets without deleting. Useful for previewing what would be cleaned up.
+<ParamField path="--dry-run" type="flag">
+  Show what would be deleted without deleting anything.
 </ParamField>
 
-<ParamField path="--force, -f" type="flag" default="false">
-  Skip the confirmation prompt and delete the targeted VMs without asking. Required when running non-interactively (no TTY) or together with `--json`.
+<ParamField path="--json" type="flag">
+  Print a JSON envelope instead of formatted text.
 </ParamField>
 
-## Confirmation prompt
-
-Because cleanup permanently deletes VMs, the command lists the targeted IDs and asks you to confirm before doing anything:
-
-```
-This will permanently delete 3 VM(s): vm-abc123, vm-test-001, vm-demo
-This action cannot be undone.
-Continue? [y/N]
-```
-
-Type `y` or `yes` to proceed. Anything else — including pressing Enter — aborts cleanly with exit code `0` and no VMs are deleted.
-
-Use `--force` to skip the prompt in scripts or CI. Without `--force`, `smolvm cleanup` refuses to run in two cases to avoid silently destroying data:
-
-* You passed `--json` (machine-readable output, no interactive prompt possible).
-* Standard input is not a TTY (for example, piped or redirected).
-
-In either case, the command exits with `1` and prints an error telling you to add `--force`.
-
-`--dry-run` never deletes anything, so it does not prompt or require `--force`.
+<Warning>
+  `smolvm sandbox delete --all --force` deletes every sandbox on the host. Use `--dry-run` first when you are unsure.
+</Warning>
 
 ## Examples
 
-### Clean auto-created VMs (default prefix)
+### Delete one sandbox
 
-Remove VMs with IDs starting with `vm-` and any stale VMs:
-
-```bash  theme={null}
-smolvm cleanup
+```bash
+smolvm sandbox delete my-sandbox
 ```
 
-**Example output:**
+### Delete several sandboxes
 
-```
-Reconciled stale VMs: vm-abc123
-Targets (3):
-  - vm-abc123
-  - vm-test-001
-  - vm-demo
-This will permanently delete 3 VM(s): vm-abc123, vm-test-001, vm-demo
-This action cannot be undone.
-Continue? [y/N] y
-Deleted: vm-abc123
-Deleted: vm-test-001
-Deleted: vm-demo
-Cleanup complete.
+```bash
+smolvm sandbox delete test-a test-b old-agent
 ```
 
-### Skip the prompt in scripts
+### Preview full cleanup
 
-Use `--force` (or `-f`) when you are running cleanup non-interactively and have already decided to delete everything:
-
-```bash  theme={null}
-smolvm cleanup --force
+```bash
+smolvm sandbox delete --all --dry-run
 ```
 
-Combine `--force` with `--json` for automation pipelines:
+### Delete every sandbox
 
-```bash  theme={null}
-smolvm cleanup --json --force
+```bash
+smolvm sandbox delete --all --force
 ```
 
-### Preview cleanup targets
+### Use JSON in automation
 
-See what would be deleted without actually deleting:
-
-```bash  theme={null}
-smolvm cleanup --dry-run
+```bash
+smolvm sandbox delete --all --force --json
 ```
 
-**Example output:**
+## What gets cleaned up
 
-```
-Reconciled stale VMs: vm-old
-Targets (2):
-  - vm-old
-  - vm-test
-Dry run complete. No changes made.
-```
+For each target, SmolVM stops the sandbox if needed, removes its runtime state, releases network resources, and deletes the per-sandbox disk state it owns.
 
-### Clean VMs with custom prefix
+## Related commands
 
-Remove VMs starting with a custom prefix:
-
-```bash  theme={null}
-smolvm cleanup --prefix agent-
-```
-
-### Delete all VMs
-
-<Warning>
-  This will delete **all** VMs, including manually created ones.
-</Warning>
-
-```bash  theme={null}
-smolvm cleanup --all
-```
-
-**Example output:**
-
-```
-Targets (5):
-  - vm-auto-001
-  - my-persistent-vm
-  - dev-environment
-  - test-vm
-  - production-agent
-Deleted: vm-auto-001
-Deleted: my-persistent-vm
-Deleted: dev-environment
-Deleted: test-vm
-Deleted: production-agent
-Cleanup complete.
-```
-
-## Cleanup Process
-
-The cleanup command performs the following steps:
-
-1. **Reconciliation**: Identifies stale VMs (VMs with state entries but no running processes)
-2. **Target Selection**: Based on `--all` or `--prefix`, selects VMs to delete
-3. **Resource Cleanup**: For each target VM:
-   * Stops the VM process (if running)
-   * Removes TAP network devices
-   * Cleans up nftables rules
-   * Removes state database entries
-
-## Exit Codes
-
-| Code | Description                                                                                  |
-| ---- | -------------------------------------------------------------------------------------------- |
-| `0`  | Success — all targets cleaned, or user declined at the confirmation prompt                   |
-| `1`  | Partial failure, or refused to run unattended without `--force` (no TTY, or `--json` mode)   |
-
-## Standalone Command
-
-The cleanup command is also available as a standalone script:
-
-```bash  theme={null}
-smolvm-cleanup [OPTIONS]
-```
-
-This is functionally identical to `smolvm cleanup`.
-
-## Related Commands
-
-* [`smolvm doctor`](/smolvm/cli/doctor) - Diagnose system setup before cleanup
+* [`smolvm sandbox list`](/smolvm/cli/list) - Review targets before deleting
+* [`smolvm sandbox stop`](/smolvm/cli/stop) - Stop without deleting
+* [`smolvm prune`](/smolvm/cli/prune) - Remove old image caches

@@ -1,134 +1,120 @@
 ---
-title: "smolvm create"
-description: "Use smolvm create to spin up a new SSH-ready microVM sandbox from the command line, name it, and pick the OS or backend before connecting with SSH."
+title: "smolvm sandbox create"
+description: "Use smolvm sandbox create to start a new sandbox from the command line, name it, choose an operating system or image, share folders, and get JSON output for scripts."
 ---
+
+`smolvm sandbox create` starts a new sandbox and leaves it running. Give it a name when you want to use the same sandbox in later commands, or let SmolVM generate one for you.
 
 ## Synopsis
 
-```bash  theme={null}
-smolvm create [-n <name>] [--os <os>] [OPTIONS]
+```bash
+smolvm sandbox create [OPTIONS]
 ```
-
-## Description
-
-The `create` command spins up a new VM, waits for it to be SSH-ready, and leaves it running. You can give it a name or let SmolVM generate one automatically. Use `smolvm ssh` to connect to the VM afterwards.
 
 ## Options
 
 <ParamField path="--name, -n" type="string">
-  A unique identifier for the VM. If you skip this flag, SmolVM auto-generates a name like `vm-a1b2c3d4`. Use this name to reference the VM in other commands like `smolvm ssh` and `smolvm stop`.
+  Name for the sandbox. If you omit it, SmolVM creates a unique name.
 </ParamField>
 
-<ParamField path="--os" type="string" default="alpine">
-  Guest operating system. Choices: `alpine`, `ubuntu`. Alpine is smaller and boots faster. Ubuntu provides a more complete Linux environment with `apt`.
+<ParamField path="--os" type="string">
+  Guest operating system image. Supported values are `alpine`, `ubuntu`, and `windows`. Omit it for the default Linux image, or pair `windows` with `--image`.
 </ParamField>
 
-<ParamField path="--memory-mib" type="integer" default="512">
+<ParamField path="--image" type="string">
+  Image reference to boot. Use an S3 image URI, a `file://` URI, or a local `qcow2` path for Windows guests.
+</ParamField>
+
+<ParamField path="--memory" type="integer">
   Guest memory in MiB.
 </ParamField>
 
-<ParamField path="--disk-size-mib" type="integer" default="512">
-  Root filesystem size in MiB.
+<ParamField path="--disk-size" type="integer">
+  Guest disk size in MiB.
 </ParamField>
 
-<ParamField path="--backend" type="string" default="auto">
-  Backend override. Choices: `auto`, `firecracker`, `qemu`. The `auto` option selects the best backend for your platform.
+<ParamField path="--backend" type="string">
+  Runtime backend. Choices are `auto`, `firecracker`, `qemu`, and `libkrun`.
+</ParamField>
+
+<ParamField path="--qemu-machine" type="string" default="auto">
+  QEMU machine model. Choices are `auto`, `q35`, and `microvm`.
+</ParamField>
+
+<ParamField path="--comm-channel" type="string">
+  Host-to-guest control channel. Choices are `ssh` and `vsock`. Leave unset for auto-selection.
 </ParamField>
 
 <ParamField path="--mount" type="string">
-  Mount a host directory into the sandbox. Format: `HOST_PATH` or `HOST_PATH:GUEST_PATH`. Can be specified multiple times. Mounts are read-only by default.
+  Share a host folder with the sandbox. Use `HOST_PATH` or `HOST_PATH:GUEST_PATH`. You can pass this option more than once.
 </ParamField>
 
-<ParamField path="--writable-mounts" type="boolean" default="false">
-  Allow the sandbox to write back to all mounted host directories. Without this flag, mounts are read-only and guest writes stay inside the sandbox.
+<ParamField path="--writable-mounts" type="flag">
+  Allow writes to every shared folder from this command.
 </ParamField>
 
-<ParamField path="--boot-timeout" type="float" default="30">
-  Seconds to wait for VM boot and SSH readiness.
+<ParamField path="--boot-timeout" type="number" default="30">
+  Seconds to wait for the sandbox to become ready.
+</ParamField>
+
+<ParamField path="--json" type="flag">
+  Print a JSON envelope instead of formatted text.
 </ParamField>
 
 ## Examples
 
-### Create a VM with an auto-generated name
+### Create a default sandbox
 
-```bash  theme={null}
-smolvm create
+```bash
+smolvm sandbox create
 ```
 
-SmolVM picks a unique name for you (for example, `vm-a1b2c3d4`) and prints it after the VM is ready. You can then use that name with `smolvm ssh` and other commands.
+### Create a named Ubuntu sandbox
 
-**Example output:**
-
-```
-Created VM 'vm-a1b2c3d4'.
-  Backend: firecracker
-  IP address: 172.16.0.2
-  SSH port: -
-  Next: smolvm ssh vm-a1b2c3d4
+```bash
+smolvm sandbox create --name dev-env --os ubuntu --disk-size 4096
 ```
 
-### Create a VM with a custom name
+### Share a project folder
 
-```bash  theme={null}
-smolvm create -n my-agent
+```bash
+smolvm sandbox create \
+  --name code-review \
+  --mount ~/Projects/my-app:/workspace
 ```
 
-**Example output:**
+By default, shared folders are read-only. Add `--writable-mounts` only when the sandbox should edit host files directly.
 
-```
-Created VM 'my-agent'.
-  Backend: firecracker
-  IP address: 172.16.0.2
-  SSH port: 2222
-  Next: smolvm ssh my-agent
-```
+### Use QEMU microvm explicitly
 
-### Create a VM with more resources
-
-```bash  theme={null}
-smolvm create --name heavy-workload --memory-mib 2048 --disk-size-mib 4096
+```bash
+smolvm sandbox create \
+  --name qemu-fast-path \
+  --backend qemu \
+  --qemu-machine microvm
 ```
 
-### Create an Ubuntu VM
+### Create a Windows sandbox from a local image
 
-```bash  theme={null}
-smolvm create -n dev-env --os ubuntu
+```bash
+smolvm sandbox create \
+  --name win11-test \
+  --os windows \
+  --image ~/.smolvm/images/win11.qcow2
 ```
 
-Ubuntu VMs give you `apt` and a more familiar Linux environment. They take slightly longer to boot than Alpine.
+See [Windows sandboxes](/smolvm/guides/windows-guests) before running Windows guests.
 
-### Specify a backend
+## What happens
 
-```bash  theme={null}
-smolvm create -n dev-env --backend qemu
-```
-
-### Increase boot timeout for slower systems
-
-```bash  theme={null}
-smolvm create --boot-timeout 60
-```
-
-## What happens during create
-
-1. SmolVM configures a new VM with the specified settings (or defaults)
-2. If you did not provide `--name`, SmolVM generates a unique identifier
-3. The VM process starts with the selected backend
-4. SmolVM waits for the VM to boot and become SSH-ready
-5. Once ready, the VM stays running in the background
-
-After creation, you can connect with `smolvm ssh <name>` or use the Python SDK with `SmolVM.from_id("<name>")`.
-
-## Exit codes
-
-| Code | Description                                        |
-| ---- | -------------------------------------------------- |
-| `0`  | Success - VM created and SSH-ready                 |
-| `1`  | Error - VM creation or boot failed                 |
+1. SmolVM resolves the image, backend, and control channel.
+2. It creates a per-sandbox disk and network configuration.
+3. It starts the sandbox and waits for the guest to be ready.
+4. It prints the sandbox name and suggested next commands.
 
 ## Related commands
 
-* [`smolvm ssh`](/smolvm/cli/ssh) - Connect to the VM after creation
-* [`smolvm list`](/smolvm/cli/list) - See all running VMs
-* [`smolvm env`](/smolvm/cli/env) - Set environment variables on the VM
-* [`smolvm cleanup`](/smolvm/cli/cleanup) - Clean up VMs when done
+* [`smolvm sandbox shell`](/smolvm/cli/shell) - Open the fast shell
+* [`smolvm sandbox ssh`](/smolvm/cli/ssh) - Open an SSH session
+* [`smolvm sandbox list`](/smolvm/cli/list) - View sandboxes
+* [`smolvm sandbox delete`](/smolvm/cli/cleanup) - Delete one or more sandboxes

@@ -1,224 +1,119 @@
 ---
-title: "smolvm snapshot"
-description: "Use the smolvm snapshot CLI to create, restore, list, and delete SmolVM sandbox snapshots for checkpointing agents and retrying failed steps."
+title: "smolvm sandbox snapshot"
+description: "Use smolvm sandbox snapshot to save, restore, list, and delete sandbox checkpoints for retries, handoffs, and long-running agent workflows."
 ---
+
+`smolvm sandbox snapshot` saves sandbox state so you can return to it later. Use snapshots before risky commands, before handing a sandbox to an agent, or after installing expensive dependencies.
 
 ## Synopsis
 
-```bash  theme={null}
-smolvm snapshot {create,restore,delete,list} [OPTIONS]
+```bash
+smolvm sandbox snapshot create <sandbox> [OPTIONS]
+smolvm sandbox snapshot restore <snapshot> [OPTIONS]
+smolvm sandbox snapshot list [OPTIONS]
+smolvm sandbox snapshot delete <snapshot> [OPTIONS]
 ```
-
-## Description
-
-The `snapshot` command saves a sandbox so you can restore it later. Use it to checkpoint an agent, keep a configured environment, or retry a risky step from a known state.
 
 <Note>
-  Snapshots work on Firecracker and QEMU for Linux guests with isolated disks. Windows guests, workspace mounts, and extra drives are not supported yet. QEMU snapshots require a qcow2 per-VM disk.
+  Snapshots work on Firecracker and QEMU for Linux guests with isolated disks. Windows guests, workspace mounts, and extra drives are not supported yet.
 </Note>
 
-## Subcommands
+## create
 
-### create
+Save a running or paused sandbox.
 
-Save a running or paused VM.
-
-```bash  theme={null}
-smolvm snapshot create <vm_id> [--snapshot-id <id>] [--snapshot-type {full,diff,disk}] [--resume-source] [--json]
+```bash
+smolvm sandbox snapshot create <sandbox> \
+  [--snapshot-id <id>] \
+  [--snapshot-type full|diff|disk] \
+  [--resume-source] \
+  [--json]
 ```
 
-<ParamField path="vm_id" type="string" required>
-  The identifier of the VM to snapshot. The VM must be running or paused.
+<ParamField path="sandbox" type="string" required>
+  Name or ID of the sandbox to snapshot.
 </ParamField>
 
 <ParamField path="--snapshot-id" type="string">
-  A custom identifier for the snapshot. If omitted, SmolVM generates one automatically (for example, `snap-my-vm-1717012345`). Must contain only lowercase letters, numbers, hyphens, and underscores.
+  Custom snapshot ID. If omitted, SmolVM creates one.
 </ParamField>
 
 <ParamField path="--snapshot-type" type="string" default="full">
-  How much state to store:
-
-  * `full` saves a complete disk copy plus memory and CPU state.
-  * `diff` saves a smaller disk artifact. QEMU diff snapshots need their backing image at restore time.
-  * `disk` is disk-only on QEMU and restores with a cold boot.
-
-  See [snapshot types](/smolvm/features/snapshots#choose-a-snapshot-type) for guidance.
+  What to store. Use `full` for a complete checkpoint, `diff` for a smaller disk artifact, or `disk` for QEMU disk-only state.
 </ParamField>
 
 <ParamField path="--resume-source" type="flag">
-  Resume the source VM after the snapshot is created. Without this flag, the VM stays paused.
+  Resume the source sandbox after the snapshot is created.
 </ParamField>
 
-<ParamField path="--json" type="flag">
-  Output machine-readable JSON instead of human-friendly text.
-</ParamField>
-
-**Example:**
-
-```bash  theme={null}
-smolvm snapshot create my-vm --snapshot-id before-deploy --resume-source
+```bash
+smolvm sandbox snapshot create my-sandbox \
+  --snapshot-id before-deploy \
+  --resume-source
 ```
 
-To create a space-saving diff snapshot:
+Create a QEMU disk-only snapshot:
 
-```bash  theme={null}
-smolvm snapshot create my-vm --snapshot-type diff
+```bash
+smolvm sandbox snapshot create my-sandbox --snapshot-type disk
 ```
 
-To create a QEMU disk-only snapshot:
+## restore
 
-```bash  theme={null}
-smolvm snapshot create my-vm --snapshot-type disk
+Restore a snapshot back into its sandbox identity.
+
+```bash
+smolvm sandbox snapshot restore <snapshot> [--resume] [--force] [--json]
 ```
 
-**Example output:**
-
-```
-Created snapshot 'before-deploy' from VM 'my-vm'.
-```
-
-### restore
-
-Restore a snapshot back into its original VM identity.
-
-```bash  theme={null}
-smolvm snapshot restore <snapshot_id> [--resume] [--force] [--json]
-```
-
-<ParamField path="snapshot_id" type="string" required>
-  The identifier of the snapshot to restore.
+<ParamField path="snapshot" type="string" required>
+  Snapshot ID to restore.
 </ParamField>
 
 <ParamField path="--resume" type="flag">
-  Resume the restored VM immediately. Without this flag, the VM is restored in a paused state.
+  Resume the restored sandbox immediately.
 </ParamField>
 
 <ParamField path="--force" type="flag">
-  Allow restoring a snapshot that was already restored before. By default, a snapshot can only be restored once.
+  Restore a snapshot even if SmolVM has already marked it restored.
 </ParamField>
 
-<ParamField path="--json" type="flag">
-  Output machine-readable JSON instead of human-friendly text.
-</ParamField>
-
-**Example:**
-
-```bash  theme={null}
-smolvm snapshot restore before-deploy --resume
+```bash
+smolvm sandbox snapshot restore before-deploy --resume
 ```
 
-**Example output:**
+## list
 
-```
-Restored snapshot 'before-deploy' into VM 'my-vm'.
-```
+List snapshots, optionally filtered by source sandbox.
 
-### delete
-
-Delete a snapshot and its associated files.
-
-```bash  theme={null}
-smolvm snapshot delete <snapshot_id> [--json]
+```bash
+smolvm sandbox snapshot list [--vm-id <sandbox>] [--json]
 ```
 
-<ParamField path="snapshot_id" type="string" required>
-  The identifier of the snapshot to delete.
-</ParamField>
+```bash
+smolvm sandbox snapshot list --vm-id my-sandbox
+```
 
-<ParamField path="--json" type="flag">
-  Output machine-readable JSON instead of human-friendly text.
-</ParamField>
+## delete
+
+Delete a snapshot and its files.
+
+```bash
+smolvm sandbox snapshot delete <snapshot> [--json]
+```
 
 <Warning>
-  Deletion is permanent. SmolVM removes the saved files for that snapshot, including any disk, VM state, and memory artifacts that snapshot type created.
+  Deleting a snapshot removes its saved disk, memory, and state files.
 </Warning>
 
-**Example:**
+## Guest sync before disk snapshots
 
-```bash  theme={null}
-smolvm snapshot delete before-deploy
-```
+For disk snapshots, SmolVM asks the guest to flush filesystem state before it copies the disk. Recent images answer this through the SmolVM guest agent over the control channel, with SSH as a fallback where needed.
 
-### list
-
-List all snapshots, optionally filtered by source VM.
-
-```bash  theme={null}
-smolvm snapshot list [--vm-id <vm_id>] [--json]
-```
-
-<ParamField path="--vm-id" type="string">
-  Filter the list to show only snapshots created from this VM.
-</ParamField>
-
-<ParamField path="--json" type="flag">
-  Output machine-readable JSON instead of human-friendly text.
-</ParamField>
-
-**Example:**
-
-```bash  theme={null}
-smolvm snapshot list
-```
-
-**Example output:**
-
-```
-  Snapshot ID        VM ID     Backend       Type   Restored   Created At
-  before-deploy      my-vm     firecracker   full   No         2026-04-03T12:30:00
-  pre-experiment     agent-1   firecracker   diff   Yes        2026-04-03T11:15:00
-
-Total: 2 snapshot(s).
-```
-
-Filter by VM:
-
-```bash  theme={null}
-smolvm snapshot list --vm-id my-vm
-```
-
-## JSON output
-
-All subcommands support `--json` for scripting and automation. The JSON response includes snapshot metadata such as `snapshot_id`, `vm_id`, `restored`, `created_at`, and file paths.
-
-**Example:**
-
-```bash  theme={null}
-smolvm snapshot create my-vm --snapshot-id test-snap --json
-```
-
-```json  theme={null}
-{
-  "command": "snapshot.create",
-  "exit_code": 0,
-  "data": {
-    "snapshot": {
-      "snapshot_id": "test-snap",
-      "vm_id": "my-vm",
-      "snapshot_type": "full",
-      "restored": false,
-      "restored_vm_id": null,
-      "created_at": "2026-04-03T12:30:00+00:00",
-      "artifacts": {
-        "state_path": "/home/user/.local/state/smolvm/snapshots/test-snap/vmstate.bin",
-        "memory_path": "/home/user/.local/state/smolvm/snapshots/test-snap/mem.bin",
-        "disk_path": "/home/user/.local/state/smolvm/snapshots/test-snap/disk.ext4"
-      }
-    }
-  }
-}
-```
-
-## Exit codes
-
-| Code | Description |
-| ---- | --- |
-| `0` | Success |
-| `1` | Error (snapshot not found, VM not running, etc.) |
-| `2` | Usage error (missing subcommand or arguments) |
+If snapshot creation times out during guest sync, check [Control channel](/smolvm/concepts/control-channel) and [Troubleshooting](/smolvm/advanced/troubleshooting) before debugging storage or upload paths.
 
 ## Related commands
 
-* [`smolvm list`](/smolvm/cli/list) — See all running VMs
-* [`smolvm create`](/smolvm/cli/create) — Create a new VM to snapshot
-* [`smolvm ssh`](/smolvm/cli/ssh) — Connect to a restored VM
+* [`smolvm sandbox list`](/smolvm/cli/list) - Find sandbox names
+* [`smolvm sandbox shell`](/smolvm/cli/shell) - Inspect a restored sandbox
+* [Snapshot and restore sandboxes](/smolvm/features/snapshots) - Learn when to use each snapshot type

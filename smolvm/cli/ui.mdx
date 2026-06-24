@@ -3,6 +3,8 @@ title: "smolvm ui"
 description: "Use smolvm ui to start the local dashboard web server, where you can manage VMs, view logs, and monitor sandbox resources from your browser."
 ---
 
+Use `smolvm ui` to open a local browser dashboard for your sandboxes. You can inspect running sandboxes, view logs, and manage common actions without switching between terminal commands.
+
 ## Synopsis
 
 ```bash  theme={null}
@@ -16,6 +18,8 @@ The `ui` command starts a local web server that hosts the SmolVM dashboard inter
 <Note>
   The dashboard requires the `dashboard` extra to be installed: `pip install 'smolvm[dashboard]'`
 </Note>
+
+When SmolVM runs from an installed package and the dashboard build is not already present, the server downloads the newest stable dashboard asset from GitHub Releases. Dashboard assets are named like `smolvm-dashboard-ui-<tag>.tar.gz` and are cached under the local SmolVM data directory.
 
 ## Options
 
@@ -90,7 +94,7 @@ INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
 
 ### Enable beta features
 
-Use prerelease dashboard UI assets:
+Use prerelease dashboard UI assets when you want to test dashboard changes before the next stable release:
 
 ```bash  theme={null}
 smolvm ui --allow-beta
@@ -122,6 +126,18 @@ The SmolVM dashboard provides:
 * **Network Configuration**: Manage port forwarding and network settings
 * **Console Access**: Web-based terminal access to VMs
 * **Environment Variables**: GUI for managing VM environment variables
+
+## Dashboard release assets
+
+The dashboard UI is published separately from the Python server code. At startup, `smolvm ui` scans recent SmolVM releases, finds the newest dashboard bundle, downloads it, and extracts the `dist/` directory for static file serving.
+
+Stable releases are used by default. Pass `--allow-beta` to include prerelease dashboard bundles.
+
+You can override the static UI directory for local dashboard development:
+
+```bash
+SMOLVM_DASHBOARD_UI_DIST=/path/to/ui/dist smolvm ui
+```
 
 ## Environment Variables
 
@@ -243,4 +259,5 @@ WantedBy=multi-user.target
 ## Related Commands
 
 * [`smolvm doctor`](/smolvm/cli/doctor) - Verify system requirements before starting the UI
-* [`smolvm cleanup`](/smolvm/cli/cleanup) - Clean up VMs managed through the dashboard
+* [`smolvm sandbox delete`](/smolvm/cli/cleanup) - Delete sandboxes managed through the dashboard
+* [`smolvm server start`](/smolvm/cli/server) - Start the local HTTP API server

@@ -61,11 +61,11 @@ description: "Introduction to SmolVM — an open-source microVM sandbox with sub
       </Tab>
       <Tab title="CLI">
         ```bash
-        smolvm create --name my-sandbox
-        smolvm ssh my-sandbox
+        smolvm sandbox create --name my-sandbox
+        smolvm sandbox ssh my-sandbox
         echo 'Hello from the sandbox!'
         exit
-        smolvm stop my-sandbox
+        smolvm sandbox stop my-sandbox
         ```
       </Tab>
     </Tabs>
@@ -83,10 +83,10 @@ description: "Introduction to SmolVM — an open-source microVM sandbox with sub
 Create and manage sandboxes from the terminal:
 
 ```bash
-smolvm create --name my-sandbox
-smolvm ssh my-sandbox
-smolvm list
-smolvm stop my-sandbox
+smolvm sandbox create --name my-sandbox
+smolvm sandbox ssh my-sandbox
+smolvm sandbox list
+smolvm sandbox stop my-sandbox
 ```
 
 Run coding agents in an isolated sandbox:
@@ -100,16 +100,16 @@ smolvm pi start
 Mount host directories for read-only access:
 
 ```bash
-smolvm create --mount ~/Projects/my-app
-smolvm create --mount ~/Projects/my-app:/code --mount ~/data:/mnt/data
+smolvm sandbox create --mount ~/Projects/my-app
+smolvm sandbox create --mount ~/Projects/my-app:/code --mount ~/data:/mnt/data
 ```
 
 Save and restore VM state with snapshots:
 
 ```bash
-smolvm snapshot create my-sandbox
-smolvm snapshot list
-smolvm snapshot restore my-sandbox --snapshot-id snap_abc123
+smolvm sandbox snapshot create my-sandbox
+smolvm sandbox snapshot list
+smolvm sandbox snapshot restore snap_abc123 --resume
 ```
 
 Start a visible browser sandbox:

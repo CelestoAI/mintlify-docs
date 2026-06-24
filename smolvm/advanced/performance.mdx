@@ -13,41 +13,58 @@ Wall-clock timings on a standard Linux host (Alpine guest, 1 vCPU / 512 MB, KVM)
 | -------------------------------------------------- | ------------ |
 | Create                                             | \~11ms       |
 | Launch                                             | \~53ms       |
-| First command (vsock, default on Linux + QEMU)     | \~1.28s      |
-| First command (SSH path, e.g. Firecracker)         | \~1.67s      |
+| First command (vsock, Linux + QEMU or Firecracker) | \~1.28s      |
+| First command (SSH fallback path)                  | \~1.67s      |
 | **Warm command (vsock)**                           | **\~1.3ms**  |
 | Warm command (SSH)                                 | \~43ms       |
 | Stop + delete                                      | \~751ms      |
-| **Create → first command (QEMU + vsock default)**  | **\~1.34s**  |
+| **Create -> first command (QEMU + vsock default)** | **\~1.34s**  |
 
 <Note>
-  Benchmarks measured on a 16-vCPU KVM host with the Alpine Linux guest. Numbers reflect the default boot profile after the boot-latency fixes shipped in mid-2026: a ~6× speed-up on QEMU defaults and a ~32× speed-up on warm commands once vsock is the working channel. See [Control channel](/smolvm/concepts/control-channel) for what vsock is and when it kicks in.
+  Benchmarks measured on a 16-vCPU KVM host with the Alpine Linux guest. Numbers reflect the default boot profile after the boot-latency fixes shipped in mid-2026: a ~6x speed-up on QEMU defaults and a ~32x speed-up on warm commands once vsock is the working channel. See [Control channel](/smolvm/concepts/control-channel) for what vsock is and when it kicks in.
 </Note>
 
 ## Running your own benchmarks
 
 You can benchmark SmolVM on your hardware using the included benchmark script:
 
-```bash  theme={null}
-python scripts/benchmarks/bench_subprocess.py --vms 10 -v
+```bash
+uv run python scripts/benchmarks/bench.py --iterations 5
 ```
 
-This will create, start, run commands in, and teardown 10 VMs sequentially, reporting detailed timing metrics.
+This creates, starts, measures, and deletes sandboxes through the public Python SDK. Use `--only cold-start,tti` to run a smaller benchmark set, or `--json --output /tmp/smolvm-bench.json` to save machine-readable results.
 
 ## Performance characteristics
 
 ### Boot performance
 
-* **MicroVM creation**: SmolVM allocates IP addresses, TAP devices, and network rules in tens of milliseconds.
-* **Time to first command**: \~1.3s on the default QEMU + vsock path, \~1.7s on the SSH path (Firecracker today).
-* **Hardware virtualization**: Uses KVM on Linux and Hypervisor.framework on macOS for near-native performance.
-* **Safe boot trims**: The default `MICROVM_DIRECT` profile appends `tsc=reliable no_timer_check quiet` to the kernel cmdline. Set [`SMOLVM_VERBOSE_BOOT=1`](/smolvm/guides/environment-variables#host-side-variables-smolvm-reads) to drop `quiet` when debugging a stuck boot.
+* **Sandbox creation**: SmolVM allocates names, IPs, disk metadata, and network rules in tens of milliseconds.
+* **Time to first command**: \~1.3s on the default QEMU + vsock path, \~1.7s on the SSH fallback path.
+* **QEMU microvm default**: On Linux x86_64 direct-kernel guests, QEMU uses the smaller `microvm` machine by default.
+* **Hardware virtualization**: SmolVM uses KVM on Linux and Hypervisor.framework on macOS for near-native performance.
+* **Safe boot trims**: The default `MICROVM_DIRECT` profile appends `tsc=reliable no_timer_check quiet` to the kernel command line. Set [`SMOLVM_VERBOSE_BOOT=1`](/smolvm/guides/environment-variables#host-side-variables-smolvm-reads) to drop `quiet` when debugging a stuck boot.
 
 ### Runtime performance
 
 * **Command execution**: \~1.3ms warm-command latency on vsock; \~43ms on SSH.
+* **File transfer**: Recent guest-agent images stream file content over vsock instead of going through `scp`.
 * **Memory overhead**: Minimal host overhead beyond configured VM memory (default 512MB).
 * **CPU efficiency**: Hardware virtualization provides near-native CPU performance.
+
+### Native helper performance
+
+The `smolvm-core` wheel gives SmolVM Rust-backed helpers for the host operations that happen around each sandbox:
+
+* **Networking**: TAP setup, route changes, and sysctls can use direct Linux calls when SmolVM has the right permissions.
+* **Disk I/O**: Image copies and zstd decompression preserve sparse regions so SmolVM avoids writing unused zero blocks.
+* **QEMU control**: Pause, resume, and snapshot control use a native QMP client.
+* **Firecracker control**: Firecracker API socket requests use the native transport.
+
+Check your installed helper capabilities:
+
+```bash
+python -m smolvm_core
+```
 
 ### Teardown performance
 
@@ -78,19 +95,15 @@ This amortizes the \~1.3s first-command cost across many operations — and on v
 Configure CPU and memory based on your workload:
 
 ```python  theme={null}
-from smolvm import SmolVM, VMConfig
+from smolvm import SmolVM
 
 # Lightweight workload
-config = VMConfig(
-    vcpu_count=1,
-    memory=256,
-)
+with SmolVM(memory=256) as vm:
+    print(vm.run("echo small").stdout)
 
 # Heavy workload
-config = VMConfig(
-    vcpu_count=4,
-    memory=2048,
-)
+with SmolVM(memory=2048) as vm:
+    print(vm.run("python3 --version").stdout)
 ```
 
 <Warning>
@@ -143,16 +156,15 @@ Choose the appropriate disk mode for your use case:
 * ❌ Changes persist across VMs
 * ❌ Potential cross-VM contamination
 
-```python  theme={null}
-config = VMConfig(disk_mode="shared")  # For read-only workloads
-```
+Use shared mode only for custom `VMConfig` flows where the root filesystem image is read-only for your workload. Keep the default isolated mode for agent sandboxes and anything that writes to the guest disk.
 
 ### 5. Backend selection
 
 SmolVM supports multiple backends with different performance characteristics:
 
-* **Firecracker (Linux)**: Fastest boot times, lowest overhead, recommended for production
-* **QEMU (macOS/Linux)**: Broader compatibility, slightly higher overhead
+* **Firecracker (Linux)**: Low overhead and a narrow device model, recommended for Linux production.
+* **QEMU (macOS/Linux)**: Broad compatibility, Windows guest support, and a faster `microvm` path on Linux x86_64.
+* **libkrun**: Experimental runtime testing. It does not support snapshots yet.
 
 ```python  theme={null}
 from smolvm import SmolVM
@@ -169,7 +181,7 @@ vm = SmolVM(backend="qemu")         # macOS/Linux
 Use the CLI to list all running VMs and their status:
 
 ```bash  theme={null}
-smolvm list
+smolvm sandbox list
 ```
 
 Or check a specific VM from Python:
@@ -191,7 +203,7 @@ vm.close()
 Remove VMs marked as running but whose processes have died:
 
 ```bash  theme={null}
-smolvm cleanup --all
+smolvm sandbox delete --all --force
 ```
 
 ## Scalability considerations
@@ -258,5 +270,5 @@ with SmolVM() as vm:
     start = time.time()
     result = vm.run("echo pong")
     elapsed = (time.time() - start) * 1000
-    print(f"SSH roundtrip: {elapsed:.1f}ms")
+    print(f"Control-channel roundtrip: {elapsed:.1f}ms")
 ```

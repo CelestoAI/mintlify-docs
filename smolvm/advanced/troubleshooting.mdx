@@ -135,10 +135,10 @@ The `smolvm doctor` command validates:
 
     **Solution**:
 
-    1. Run the system setup script:
+    1. Run the setup command:
 
     ```bash  theme={null}
-    sudo ./scripts/system-setup.sh --configure-runtime
+    smolvm setup
     ```
 
     2. Or install manually using the HostManager:
@@ -163,10 +163,10 @@ The `smolvm doctor` command validates:
 
     **Solution**:
 
-    1. Run the network setup script:
+    1. Run the setup command:
 
     ```bash  theme={null}
-    sudo ./scripts/system-setup.sh --configure-runtime
+    smolvm setup
     ```
 
     2. Or configure manually:
@@ -228,13 +228,82 @@ The `smolvm doctor` command validates:
     cat ~/.local/state/smolvm/vm-xxxxx.log
     ```
 
-    5. Increase SSH timeout:
+    5. Increase the startup wait time:
 
     ```python  theme={null}
-    from smolvm import SmolVM, VMConfig
+    from smolvm import SmolVM
 
-    config = VMConfig(ssh_timeout=60.0)  # Increase from default 30s
-    vm = SmolVM(config)
+    vm = SmolVM()
+    vm.start(boot_timeout=120)
+    print(vm.run("echo ready").stdout)
+    vm.close()
+    ```
+  </Accordion>
+
+  <Accordion title="Guest agent or vsock command times out">
+    **Problem**: A command, file transfer, shell, or snapshot preflight waits for the guest agent and then times out.
+
+    **Solution**:
+
+    1. Check that the sandbox uses a recent SmolVM image:
+
+    ```bash
+    smolvm sandbox info my-vm
+    ```
+
+    2. On Linux QEMU hosts, verify the vsock device exists:
+
+    ```bash
+    sudo modprobe vhost_vsock
+    test -e /dev/vhost-vsock
+    ```
+
+    3. Try the SSH compatibility path for file or environment operations:
+
+    ```bash
+    smolvm sandbox env list my-vm --comm-channel ssh
+    smolvm sandbox file upload my-vm ./report.txt /tmp/report.txt --comm-channel ssh
+    ```
+
+    4. Inspect the sandbox log and guest-agent log output:
+
+    ```bash
+    cat ~/.local/state/smolvm/my-vm.log
+    ```
+
+    5. Recreate the sandbox with a current published image if the log says the guest agent is missing:
+
+    ```bash
+    smolvm sandbox delete my-vm
+    smolvm sandbox create --name my-vm
+    ```
+  </Accordion>
+
+  <Accordion title="Snapshot creation times out before any snapshot files appear">
+    **Problem**: Snapshot creation fails before SmolVM writes a disk, memory, or state artifact.
+
+    This usually means SmolVM could not finish the guest sync step. SmolVM asks the guest to save pending file changes before it pauses the sandbox.
+
+    **Solution**:
+
+    1. Confirm the sandbox can run a simple command:
+
+    ```bash
+    smolvm sandbox shell my-vm
+    ```
+
+    2. If the fast shell fails, test SSH directly:
+
+    ```bash
+    smolvm sandbox ssh my-vm
+    ```
+
+    3. Retry with a current image or recreate the sandbox. Recent images include the guest-agent `/sync` endpoint used before snapshot capture.
+
+    4. Include the VM log when reporting the issue:
+
+    ```bash
+    cat ~/.local/state/smolvm/my-vm.log
     ```
   </Accordion>
 
@@ -255,7 +324,7 @@ The `smolvm doctor` command validates:
     3. Clean up stale resources using the CLI:
 
     ```bash  theme={null}
-    smolvm cleanup --all
+    smolvm sandbox delete --all --force
     ```
 
     4. If persistent, manually remove the lock:
@@ -275,13 +344,13 @@ The `smolvm doctor` command validates:
     1. List all VMs:
 
     ```bash  theme={null}
-    smolvm list
+    smolvm sandbox list
     ```
 
     2. Clean up stopped or stale VMs:
 
     ```bash  theme={null}
-    smolvm cleanup --all
+    smolvm sandbox delete --all --force
     ```
 
     3. The IP pool supports 253 concurrent VMs (`172.16.0.2` through `172.16.0.254`). If you need more, consider implementing a custom IP allocator.
@@ -371,7 +440,7 @@ The `smolvm doctor` command validates:
     4. Run cleanup to remove all stale resources:
 
     ```bash  theme={null}
-    smolvm cleanup --all
+    smolvm sandbox delete --all --force
     ```
   </Accordion>
 
@@ -488,6 +557,7 @@ If you're still experiencing issues:
 
 * **IP Pool**: Maximum 253 concurrent VMs (172.16.0.2-254)
 * **SSH Port Pool**: Maximum 800 concurrent VMs (ports 2200-2999)
-* **Firecracker**: Linux only (requires KVM)
-* **QEMU**: Slower boot times compared to Firecracker
-* **SSH Trust Model**: Host keys not strictly verified by default (see SECURITY.md)
+* **Firecracker**: Linux only and requires KVM
+* **QEMU**: Required for macOS and Windows guests; Linux direct-kernel guests can use the faster `microvm` machine model
+* **libkrun**: Experimental and does not support pause, resume, snapshots, or snapshot restore yet
+* **Windows guests**: Use SSH for the control channel

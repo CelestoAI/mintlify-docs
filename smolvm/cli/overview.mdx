@@ -1,80 +1,91 @@
 ---
 title: "CLI overview"
-description: "Overview of the SmolVM command-line interface — install instructions, command list, and workflows for managing microVM sandboxes and browser sessions."
+description: "Overview of the SmolVM command-line interface for creating sandboxes, opening shells, managing snapshots, starting the HTTP server, and launching browser or desktop sessions."
 ---
 
-The SmolVM CLI lets you manage sandboxes, start browser sessions, and inspect the runtime from your terminal. Use it when you want to work with SmolVM outside of Python code.
+The SmolVM CLI lets you create and manage disposable computers from your terminal. Use it when you want to start a sandbox, open a shell, move files, expose a local port, or run the dashboard without writing Python code.
 
-## Installation
+## Install
 
-Install SmolVM via pip:
+Install the base CLI:
 
 ```bash
 pip install smolvm
 ```
 
-For dashboard support, install with the `dashboard` extra:
+Install the dashboard and HTTP server dependencies:
 
 ```bash
-pip install 'smolvm[dashboard]'
+pip install "smolvm[dashboard]"
 ```
 
-## Available commands
+## Command groups
 
-| Command | Description |
+| Command | What you can do |
 | --- | --- |
-| `smolvm setup` | One-time host setup (installs runtime dependencies) |
-| `smolvm create` | Create an SSH-ready VM (name is optional) |
-| `smolvm list` | List VMs and their current status |
-| `smolvm stop` | Stop a running VM and release its resources |
-| `smolvm ssh` | SSH into an existing VM (auto-starts if stopped) |
-| `smolvm browser` | Manage disposable browser sessions |
-| `smolvm snapshot` | Create, restore, list, and delete VM snapshots |
-| `smolvm cleanup` | Clean stale SmolVM resources and VMs |
-| `smolvm doctor` | Run host diagnostics for the selected backend |
-| `smolvm env` | Manage environment variables on a running VM |
-| `smolvm port` | Forward sandbox ports to localhost |
-| `smolvm windows` | Windows-guest helpers (build a Windows qcow2 from an ISO) |
-| `smolvm ui` | Start the SmolVM dashboard UI server |
+| `smolvm sandbox` | Create, inspect, start, stop, pause, resume, connect to, and delete sandboxes |
+| `smolvm sandbox snapshot` | Save and restore sandbox state |
+| `smolvm sandbox file` | Copy files into or out of a sandbox |
+| `smolvm sandbox env` | Set, remove, and list sandbox environment variables |
+| `smolvm sandbox port` | Share a sandbox port on `127.0.0.1` |
+| `smolvm browser` | Start browser and desktop-style browser sessions |
+| `smolvm windows` | Build a reusable Windows 11 `qcow2` image |
+| `smolvm server` | Start the local SmolVM HTTP API |
+| `smolvm ui` | Start the local dashboard |
+| `smolvm doctor` | Check whether your host can run SmolVM |
 | `smolvm update` | Upgrade SmolVM to the latest stable release |
+| `smolvm prune` | Remove old image cache entries |
 
-## Snapshot commands
+## Everyday sandbox workflow
 
-The `smolvm snapshot` command has subcommands for saving and restoring sandbox state:
-
-| Command | Description |
-| --- | --- |
-| `smolvm snapshot create` | Create a snapshot from a running or paused VM |
-| `smolvm snapshot restore` | Restore a snapshot back into its original VM |
-| `smolvm snapshot list` | List all snapshots |
-| `smolvm snapshot delete` | Delete a snapshot and its files |
-
-Create a snapshot and restore it later:
+Create a sandbox, open the fast shell, then stop it when you are done:
 
 ```bash
-smolvm snapshot create my-vm --snapshot-id my-checkpoint
-smolvm snapshot restore my-checkpoint --resume
+smolvm sandbox create --name my-sandbox
+smolvm sandbox shell my-sandbox
+smolvm sandbox stop my-sandbox
 ```
 
-## Browser commands
+Use SSH when you specifically need a real SSH session:
 
-The `smolvm browser` command has its own subcommands for managing disposable browser sandboxes:
+```bash
+smolvm sandbox ssh my-sandbox
+```
 
-| Command | Description |
-| --- | --- |
-| `smolvm browser start` | Create and start a browser sandbox |
-| `smolvm browser list` | List browser sandboxes |
-| `smolvm browser stop` | Stop and delete a browser sandbox |
-| `smolvm browser open` | Open the viewer in your default browser |
-| `smolvm browser logs` | Print browser sandbox logs |
+List your sandboxes:
 
-Start a disposable browser sandbox with a viewer:
+```bash
+smolvm sandbox list --all
+```
+
+## Snapshot workflow
+
+Create a checkpoint before a risky change, then restore it later:
+
+```bash
+smolvm sandbox snapshot create my-sandbox --snapshot-id before-change --resume-source
+smolvm sandbox snapshot restore before-change --resume
+```
+
+## File, env, and port workflow
+
+Copy files, set environment variables, and expose a sandbox service:
+
+```bash
+smolvm sandbox file upload my-sandbox ./prompt.txt /workspace/prompt.txt
+smolvm sandbox env set my-sandbox MODEL=gpt-4.1
+smolvm sandbox port expose my-sandbox 8080:3000
+```
+
+## Browser workflow
+
+Start a browser sandbox with a live viewer:
 
 ```bash
 smolvm browser start --live --json
 ```
 
-The JSON response includes the `session_id`, `viewer_url`, `display_url`, and browser automation URLs when available. Use the session ID with other browser commands:
+The JSON response includes the session ID and viewer URLs. Use the session ID with other browser commands:
 
 ```bash
 smolvm browser list
@@ -82,24 +93,15 @@ smolvm browser open <session_id>
 smolvm browser stop <session_id>
 ```
 
-## Windows commands
+## HTTP API workflow
 
-The `smolvm windows` command bundles helpers for Windows guests:
-
-| Command | Description |
-| --- | --- |
-| `smolvm windows build-image` | Build a Windows 11 qcow2 from a Windows ISO via unattended install |
-
-Build a Windows image once, then boot as many sandboxes as you want from it:
+Start the local API server when you want another process, script, or TypeScript client to manage SmolVM:
 
 ```bash
-smolvm windows build-image \
-  --iso ./Win11.iso \
-  --virtio-win-iso ./virtio-win.iso \
-  --output ~/.smolvm/images/win11.qcow2
+smolvm server start --host 127.0.0.1 --port 8000
 ```
 
-See [`smolvm windows`](/smolvm/cli/windows) for the full reference.
+See [HTTP API and TypeScript SDK](/smolvm/guides/http-api-typescript-sdk) for endpoint and client examples.
 
 ## Getting help
 
@@ -109,57 +111,33 @@ Display help for the main command:
 smolvm --help
 ```
 
-Display help for a specific subcommand:
+Display help for a subcommand:
 
 ```bash
-smolvm create --help
-smolvm browser start --help
+smolvm sandbox create --help
+smolvm sandbox snapshot create --help
+smolvm server start --help
 ```
-
-## Script aliases
-
-* `smolvm-cleanup`: Equivalent to `smolvm cleanup` (standalone cleanup command)
 
 ## Next steps
 
 <CardGroup cols={2}>
-  <Card title="List VMs" icon="list" href="/smolvm/cli/list">
-    View running VMs and their status
+  <Card title="Create a sandbox" icon="plus" href="/smolvm/cli/create">
+    Start a Linux or Windows sandbox from the CLI
   </Card>
-
-  <Card title="Create a VM" icon="plus" href="/smolvm/cli/create">
-    Spin up an SSH-ready VM
+  <Card title="Open a shell" icon="terminal" href="/smolvm/cli/shell">
+    Use the fast shell or an SSH session
   </Card>
-
-  <Card title="SSH into a VM" icon="terminal" href="/smolvm/cli/ssh">
-    Connect to a VM via SSH
+  <Card title="Copy files" icon="file-up" href="/smolvm/cli/file">
+    Move files into and out of a sandbox
   </Card>
-
-  <Card title="Cleanup" icon="broom" href="/smolvm/cli/cleanup">
-    Clean up stale VMs and resources
-  </Card>
-
-  <Card title="Doctor" icon="stethoscope" href="/smolvm/cli/doctor">
-    Diagnose system requirements
-  </Card>
-
-  <Card title="Environment" icon="gear" href="/smolvm/cli/env">
-    Manage VM environment variables
-  </Card>
-
-  <Card title="Port forwarding" icon="plug" href="/smolvm/cli/port">
-    Expose sandbox ports on localhost
-  </Card>
-
-  <Card title="Windows images" icon="window" href="/smolvm/cli/windows">
-    Build a Windows qcow2 from an ISO
-  </Card>
-
   <Card title="Snapshots" icon="camera" href="/smolvm/cli/snapshot">
-    Save and restore VM state
+    Save and restore sandbox state
   </Card>
-
-  <Card title="Dashboard UI" icon="window" href="/smolvm/cli/ui">
+  <Card title="HTTP API" icon="server" href="/smolvm/cli/server">
+    Run the local API server
+  </Card>
+  <Card title="Dashboard UI" icon="panel-top" href="/smolvm/cli/ui">
     Launch the dashboard interface
   </Card>
 </CardGroup>

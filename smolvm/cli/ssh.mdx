@@ -1,100 +1,62 @@
 ---
-title: "smolvm ssh"
-description: "Use smolvm ssh to open an interactive shell into a sandbox; if the VM is stopped or newly created, SmolVM auto-starts it and waits for SSH readiness."
+title: "smolvm sandbox ssh"
+description: "Use smolvm sandbox ssh to open a real SSH session into a sandbox when you need SSH behavior instead of the faster SmolVM shell."
 ---
+
+`smolvm sandbox ssh` opens an interactive SSH session to a sandbox. Use it when you need SSH-specific behavior, such as SSH agent forwarding, a custom key, or a user account other than `root`.
 
 ## Synopsis
 
-```bash  theme={null}
-smolvm ssh <vm_id> [OPTIONS]
+```bash
+smolvm sandbox ssh <sandbox> [OPTIONS]
 ```
-
-## Description
-
-The `ssh` command opens an interactive SSH session to an existing VM. If the VM is stopped or newly created, SmolVM automatically starts it and waits for SSH readiness before connecting.
 
 ## Arguments
 
-<ParamField path="vm_id" type="string" required>
-  The identifier of the VM to connect to. This is the name you provided when creating the VM with `smolvm create`.
+<ParamField path="sandbox" type="string" required>
+  Name or ID of the sandbox to connect to.
 </ParamField>
 
 ## Options
 
-<ParamField path="--ssh-key" type="string" default="~/.smolvm/keys/id_ed25519">
-  SSH private key path for authentication.
+<ParamField path="--ssh-key" type="string">
+  Path to the SSH private key.
 </ParamField>
 
 <ParamField path="--ssh-user" type="string" default="root">
-  SSH user to connect as.
+  SSH user inside the sandbox.
 </ParamField>
 
-<ParamField path="--boot-timeout" type="float" default="30">
-  Seconds to wait for VM boot and SSH readiness if the VM needs to be started.
+<ParamField path="--boot-timeout" type="number" default="30">
+  Seconds to wait if SmolVM needs to start the sandbox before connecting.
 </ParamField>
 
 ## Examples
 
-### Connect to a running VM
+### Connect to a sandbox
 
-```bash  theme={null}
-smolvm ssh my-agent
+```bash
+smolvm sandbox ssh my-sandbox
 ```
 
-### Connect with a custom SSH key
+### Use a custom key
 
-```bash  theme={null}
-smolvm ssh my-agent --ssh-key ~/.ssh/custom_key
+```bash
+smolvm sandbox ssh my-sandbox --ssh-key ~/.ssh/work_sandbox
 ```
 
-### Connect as a different user
+### Connect as another user
 
-```bash  theme={null}
-smolvm ssh my-agent --ssh-user ubuntu
+```bash
+smolvm sandbox ssh ubuntu-box --ssh-user ubuntu
 ```
 
-### Allow more time for boot
+## Shell versus SSH
 
-If a VM is stopped and needs to restart, increase the timeout:
-
-```bash  theme={null}
-smolvm ssh my-agent --boot-timeout 60
-```
-
-## Auto-start behavior
-
-The `ssh` command handles VMs in different states:
-
-| VM state  | Behavior                                         |
-| --------- | ------------------------------------------------ |
-| Running   | Connects immediately                             |
-| Created   | Starts the VM, waits for SSH readiness, connects |
-| Stopped   | Starts the VM, waits for SSH readiness, connects |
-| Error     | Prints an error and exits (recreate the VM)      |
-
-## Exit codes
-
-| Code | Description                                              |
-| ---- | -------------------------------------------------------- |
-| `0`  | SSH session ended normally                               |
-| `1`  | Error - connection failed, VM in error state, or SSH binary not found |
-
-<Tip>
-  If you get an "ssh binary not found" error, install the `openssh-client` package on your system.
-</Tip>
-
-## Crashed VMs
-
-If `smolvm list` says a VM is `running` but its process actually exited (for example, after a host reboot), `ssh` would normally fail with a misleading "Connection refused". SmolVM detects this case and prints a clearer message after the SSH attempt fails:
-
-```
-VM 'my-agent' is not running — its process has exited. Run 'smolvm delete my-agent' to clear it.
-```
-
-The original SSH exit code is preserved, so scripts that branch on the return value keep working. The same recovery message is raised by `smolvm pause` and `smolvm resume` when they hit a crashed VM.
+Use [`smolvm sandbox shell`](/smolvm/cli/shell) for the fastest interactive shell on recent Linux images. It uses the SmolVM guest agent when available. Use `smolvm sandbox ssh` when you specifically need SSH.
 
 ## Related commands
 
-* [`smolvm create`](/smolvm/cli/create) - Create a new VM to connect to
-* [`smolvm list`](/smolvm/cli/list) - See available VMs and their status
-* [`smolvm env`](/smolvm/cli/env) - Set environment variables before connecting
+* [`smolvm sandbox shell`](/smolvm/cli/shell) - Open the fast shell
+* [`smolvm sandbox create`](/smolvm/cli/create) - Create a sandbox
+* [`smolvm sandbox list`](/smolvm/cli/list) - Find sandbox names

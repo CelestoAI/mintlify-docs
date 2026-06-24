@@ -1,0 +1,88 @@
+---
+title: "smolvm server"
+description: "Use smolvm server start to run the local SmolVM HTTP API for scripts, service integrations, and the TypeScript SDK."
+---
+
+`smolvm server start` runs a local HTTP API that can create sandboxes, list them, delete them, and run commands inside them. Use it when another process needs to control SmolVM without importing the Python SDK.
+
+## Install dependencies
+
+The server uses the same web dependencies as the dashboard:
+
+```bash
+pip install "smolvm[dashboard]"
+```
+
+## Synopsis
+
+```bash
+smolvm server start [OPTIONS]
+```
+
+## Options
+
+<ParamField path="--host" type="string" default="127.0.0.1">
+  Address to bind.
+</ParamField>
+
+<ParamField path="--port" type="integer" default="8000">
+  Port to bind. Must be between `1` and `65535`.
+</ParamField>
+
+## Start the server
+
+```bash
+smolvm server start --host 127.0.0.1 --port 8000
+```
+
+The command prints the API URL and OpenAPI spec URL:
+
+```text
+SmolVM HTTP API listening on http://127.0.0.1:8000
+OpenAPI spec: http://127.0.0.1:8000/openapi.json
+```
+
+## Available endpoints
+
+| Method | Path | What it does |
+| --- | --- | --- |
+| `POST` | `/sandboxes` | Create and start a sandbox |
+| `GET` | `/sandboxes` | List sandboxes on the host |
+| `GET` | `/sandboxes/{id}` | Get one sandbox's state |
+| `POST` | `/sandboxes/{id}/exec` | Run a command inside a sandbox |
+| `DELETE` | `/sandboxes/{id}` | Delete a sandbox |
+
+## Try it with curl
+
+These examples use `jq` to read the sandbox ID from the JSON response.
+
+```bash
+curl -s http://127.0.0.1:8000/sandboxes
+```
+
+Create a sandbox and save the generated ID:
+
+```bash
+sandbox_id="$(
+  curl -s -X POST http://127.0.0.1:8000/sandboxes \
+    -H "Content-Type: application/json" \
+    -d '{"os":"ubuntu","memory":512}' \
+    | jq -r '.id'
+)"
+
+echo "$sandbox_id"
+```
+
+Run a command in that sandbox:
+
+```bash
+curl -s -X POST "http://127.0.0.1:8000/sandboxes/${sandbox_id}/exec" \
+  -H "Content-Type: application/json" \
+  -d '{"command":"uname -a","timeout":30,"shell":"login"}'
+```
+
+## Related
+
+* [HTTP API and TypeScript SDK](/smolvm/guides/http-api-typescript-sdk) - Build against the API
+* [`smolvm ui`](/smolvm/cli/ui) - Start the dashboard
+* [`smolvm sandbox create`](/smolvm/cli/create) - Create sandboxes from the CLI

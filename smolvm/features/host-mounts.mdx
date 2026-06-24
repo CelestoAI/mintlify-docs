@@ -12,15 +12,15 @@ By default, the host folder is read-only — the sandbox can read every file, bu
 Mount a directory when creating a sandbox:
 
 ```bash
-smolvm create --mount ~/Projects/my-app
-smolvm ssh my-sandbox
+smolvm sandbox create --mount ~/Projects/my-app
+smolvm sandbox ssh my-sandbox
 ls /workspace   # your host files appear here
 ```
 
 Mount multiple directories at custom paths:
 
 ```bash
-smolvm create --mount ~/Projects/my-app:/code --mount ~/data:/mnt/data
+smolvm sandbox create --mount ~/Projects/my-app:/code --mount ~/data:/mnt/data
 ```
 
 ## Python SDK
@@ -48,7 +48,7 @@ By default, mounts are read-only. Add `--writable-mounts` to let the sandbox wri
 ### CLI
 
 ```bash
-smolvm create --mount ~/Projects/my-app --writable-mounts
+smolvm sandbox create --mount ~/Projects/my-app --writable-mounts
 ```
 
 Any file the sandbox creates or modifies inside the mount point appears on your host immediately.

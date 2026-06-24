@@ -1,134 +1,168 @@
 ---
-title: "Control channel (SSH and vsock)"
-description: "How SmolVM talks to a sandbox to run commands and move files — using either SSH or a faster vsock channel that works before the network is up."
+title: "Control channel"
+description: "How SmolVM runs commands, copies files, and opens shells inside a sandbox over SSH or the faster vsock guest-agent channel."
 ---
 
-When you call `vm.run(...)` or `vm.put_file(...)`, SmolVM has to send that command into the sandbox and read the result back. The connection it uses for this is the **control channel**. SmolVM supports two: the long-standing **SSH** channel and a newer **vsock** channel that skips the network entirely. You usually don't need to choose — SmolVM picks the right one for you.
+SmolVM needs a way to talk to each sandbox after it starts. That connection is the control channel, and SmolVM chooses the fastest supported channel for you.
 
-## What this means for you
+## What you can do
 
-- **You don't have to change anything.** SmolVM auto-selects the best channel for your host and image.
-- **First command runs sooner.** On Linux QEMU hosts with a recent image, vsock is ready seconds after boot, before SSH is.
-- **No new ports or keys.** vsock is a host-to-guest socket — it does not use TCP, your network, or SSH keys.
-- **SSH still works the same.** `smolvm ssh` and `expose_local()` continue to use real SSH.
+The control channel powers:
 
-## When each channel is used
+- `vm.run(...)` in the Python SDK
+- `smolvm sandbox shell` for a fast interactive shell
+- `smolvm sandbox file upload` and `smolvm sandbox file download`
+- `smolvm sandbox env set`, `unset`, and `list`
+- Snapshot preflight work that asks the guest to save files before the VM pauses
 
-SmolVM resolves the control channel in this order:
+SmolVM supports two channels:
 
-1. **Explicit request** — `SmolVM(comm_channel="ssh" | "vsock")` or the `--comm-channel` CLI flag.
-2. **VM config** — a channel previously persisted on the sandbox.
-3. **Auto** — vsock on Linux + QEMU hosts when the guest agent answers; SSH everywhere else.
+| Channel | What it is | Best for |
+| --- | --- | --- |
+| SSH | A normal secure shell connection over the sandbox network | Maximum compatibility, Windows guests, manual SSH access |
+| vsock | A direct host-to-guest socket that skips TCP networking | Fast commands, file transfer, shell access, and guest sync on supported Linux guests |
 
-| Host / backend | Default channel |
+<Tooltip tip="vsock is a socket connection built into the virtual machine. It lets the host and guest talk without opening a TCP port.">
+  vsock
+</Tooltip>
+
+## Default channel selection
+
+SmolVM resolves the channel in this order:
+
+1. **Explicit request** - `SmolVM(comm_channel="ssh")` or `SmolVM(comm_channel="vsock")`
+2. **Saved VM config** - a channel stored with the sandbox
+3. **Automatic choice** - vsock where the host and guest support it, SSH elsewhere
+
+| Host and backend | Automatic channel |
 | --- | --- |
-| Linux + QEMU, recent image | vsock (falls back to SSH) |
-| Linux + Firecracker | SSH |
-| macOS + QEMU | SSH (vsock not available on macOS) |
+| Linux + QEMU + recent SmolVM image | vsock |
+| Linux + Firecracker + recent SmolVM image | vsock |
+| macOS + QEMU | SSH |
 | Windows guest | SSH |
 
 <Note>
-  vsock currently requires the QEMU backend on a Linux host with `vhost_vsock` loaded, and a sandbox image that ships the SmolVM guest agent. Images built with `ImageBuilder` and SmolVM-published images include it. Images built with `DockerRootfsBuilder` need you to add the guest agent yourself.
+  Recent SmolVM images start the Rust guest agent before networking and `sshd`. That lets vsock commands run before the sandbox network is ready.
 </Note>
 
-## Why vsock is faster
+## Use the Python SDK
 
-SSH on QEMU rides over the same NAT'd network your sandbox uses for the internet. The first command has to wait for:
+Leave `comm_channel` unset for the automatic path:
 
-1. The guest network coming up
-2. cloud-init finishing
-3. `sshd` accepting connections
-4. A TCP banner exchange
-
-vsock is a direct host-to-guest socket built into the hypervisor. The SmolVM guest agent listens on it from `/init`, before `sshd` even starts — so the first command can run as soon as the kernel is up.
-
-## SDK usage
-
-The `comm_channel` keyword is available on both `SmolVM(...)` and `SmolVM.from_id(...)`. Leave it unset to use auto-selection.
-
-```python  theme={null}
+```python
 from smolvm import SmolVM
 
-# Auto (recommended) — vsock when available, else SSH.
 with SmolVM() as vm:
-    print(vm.run("uname -a").stdout)
+    result = vm.run("echo ready")
+    print(result.stdout)
+```
 
-# Force vsock. Raises if the guest agent does not answer.
-with SmolVM(comm_channel="vsock") as vm:
-    print(vm.run("uname -a").stdout)
+Force SSH when you want the older network path:
 
-# Force SSH (the previous behavior).
+```python
+from smolvm import SmolVM
+
 with SmolVM(comm_channel="ssh") as vm:
-    print(vm.run("uname -a").stdout)
+    print(vm.run("whoami").stdout)
 ```
 
-Reconnecting to a running sandbox keeps the same kwarg:
+Force vsock when you want startup to fail if the guest agent is unavailable:
 
-```python  theme={null}
-vm = SmolVM.from_id("agent-001", comm_channel="vsock")
-vm.run("ls /workspace")
+```python
+from smolvm import SmolVM
+
+with SmolVM(comm_channel="vsock") as vm:
+    print(vm.run("cat /proc/uptime").stdout)
 ```
 
-<Note>
-  `comm_channel="vsock"` is strict — if the guest agent isn't reachable, SmolVM raises rather than silently falling back. Use the default (auto) if you want graceful fallback to SSH.
-</Note>
+<Warning>
+  An explicit `comm_channel="vsock"` request is strict. If the host, backend, or guest image cannot use vsock, SmolVM raises an error instead of falling back to SSH.
+</Warning>
 
-## CLI usage
+## Use the CLI
 
-The `--comm-channel` flag is available on `smolvm file upload`, `smolvm file download`, and the `smolvm env` subcommands:
+Open a fast shell:
 
-```bash  theme={null}
-# Upload a file over vsock (skips SSH entirely)
-smolvm file upload my-vm ./report.csv /workspace/report.csv --comm-channel vsock
-
-# Set env vars over the default (auto) channel
-smolvm env set my-vm OPENAI_API_KEY=sk-...
-
-# Force SSH for a one-off command
-smolvm env list my-vm --comm-channel ssh
+```bash
+smolvm sandbox shell my-vm
 ```
 
-`smolvm ssh` always opens a real interactive SSH session and does not accept `--comm-channel`.
+`smolvm sandbox shell` uses the vsock terminal stream when the sandbox supports it. If the fast shell feature is unavailable, it falls back to SSH for that session.
 
-## Platform support
+Move files over the selected channel:
 
-| Platform | vsock | SSH |
-| --- | --- | --- |
-| Linux + QEMU + recent SmolVM image | ✅ | ✅ |
-| Linux + Firecracker | ❌ (not wired yet) | ✅ |
-| macOS | ❌ (no `vhost-vsock`) | ✅ |
-| Windows guests | ❌ | ✅ |
+```bash
+smolvm sandbox file upload my-vm ./report.csv /workspace/report.csv
+smolvm sandbox file download my-vm /workspace/output.json ./output.json
+```
 
-If vsock isn't supported on your platform, SmolVM uses SSH automatically — no configuration needed.
+Pick a channel for file and environment operations:
+
+```bash
+smolvm sandbox file upload my-vm ./report.csv /workspace/report.csv --comm-channel vsock
+smolvm sandbox env list my-vm --comm-channel ssh
+```
+
+Open a real SSH session when you need SSH itself:
+
+```bash
+smolvm sandbox ssh my-vm
+```
+
+`smolvm sandbox ssh` always uses SSH. Port forwarding also uses SSH tunnels when the backend needs them.
+
+## Guest sync before snapshots
+
+Before SmolVM pauses a sandbox for a snapshot, it asks the guest to flush filesystem state. On recent images, the guest agent exposes a dedicated `/sync` endpoint over vsock. This gives SmolVM a direct "save files now" operation before it captures the disk.
+
+If the guest agent is older or unavailable, SmolVM can use the raw command path as a fallback for some operations. The raw path runs the command directly in the guest instead of wrapping it in a login shell.
+
+<Tip>
+  If snapshot creation times out before a disk artifact appears, check the control channel and guest agent first. The failure may be in guest sync, before SmolVM starts copying snapshot files.
+</Tip>
 
 ## Troubleshooting
 
 <AccordionGroup>
-  <Accordion title="comm_channel='vsock' raises on a Linux host">
-    Make sure the `vhost_vsock` kernel module is loaded and the image you booted contains the SmolVM guest agent. Images built with `ImageBuilder` and current published images include it. If you're booting a `DockerRootfsBuilder` image, add the guest agent yourself or use SSH instead. If you're running a pinned older release of SmolVM, upgrade so it pulls images that bake the guest agent in.
+  <Accordion title="vsock is unavailable on Linux">
+    For QEMU, make sure the host has the `vhost_vsock` driver loaded:
 
-    ```bash  theme={null}
+    ```bash
     sudo modprobe vhost_vsock
-    lsmod | grep vsock
+    test -e /dev/vhost-vsock
+    ```
+
+    For Firecracker, vsock is available on Linux through Firecracker's host-side Unix socket bridge. If a Firecracker sandbox still uses SSH, recreate it with a recent SmolVM image so the guest agent is present.
+  </Accordion>
+
+  <Accordion title="The guest agent does not answer">
+    Use a current published image or rebuild your custom image with the SmolVM guest agent. Published images and images built through `ImageBuilder` include `/usr/local/bin/smolvm-guest-agent`.
+
+    For a one-off compatibility check, force SSH:
+
+    ```bash
+    smolvm sandbox env list my-vm --comm-channel ssh
     ```
   </Accordion>
 
-  <Accordion title="I want to force the old SSH path everywhere">
-    Pass `comm_channel="ssh"` to `SmolVM(...)` (or `--comm-channel ssh` on the CLI) for the calls that should use SSH. There is no global override — the kwarg is per-VM by design.
-  </Accordion>
-
-  <Accordion title="vsock works but SSH still appears in logs">
-    Some operations always use SSH:
-
-    * `smolvm ssh` (interactive shell)
-    * `vm.expose_local(...)` (port forwarding rides the SSH tunnel)
-
-    This is expected. Control-plane traffic (run, file transfer, env vars) moves to vsock when available; the SSH tunnel stays for data-plane forwarding.
+  <Accordion title="The fast shell falls back to SSH">
+    This is expected when the sandbox image does not advertise terminal-stream support. `smolvm sandbox shell` tries the fast vsock terminal first, then opens SSH if that feature is missing.
   </Accordion>
 </AccordionGroup>
 
 ## Next steps
 
-- Compare the [Firecracker and QEMU backends](/smolvm/concepts/backends)
-- Read about the [networking layer](/smolvm/concepts/networking)
-- See the [SmolVM SDK reference](/smolvm/api/smolvm) for the full `comm_channel` parameter
+<CardGroup cols={2}>
+  <Card title="Runtime backends" icon="microchip" href="/smolvm/concepts/backends">
+    Compare Firecracker, QEMU, and libkrun
+  </Card>
+  <Card title="Snapshot and restore" icon="camera" href="/smolvm/features/snapshots">
+    See how guest sync fits into snapshots
+  </Card>
+  <Card title="smolvm sandbox shell" icon="terminal" href="/smolvm/cli/shell">
+    Open the fast interactive shell
+  </Card>
+  <Card title="Troubleshooting" icon="wrench" href="/smolvm/advanced/troubleshooting">
+    Fix startup and guest-agent failures
+  </Card>
+</CardGroup>
