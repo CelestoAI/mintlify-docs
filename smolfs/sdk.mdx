@@ -1,0 +1,101 @@
+---
+title: "SmolFS SDKs"
+sidebarTitle: "SDK"
+description: "Use SmolFS from Python or TypeScript when an agent runner should manage durable workspace folders from code."
+---
+
+Use the Python or TypeScript package when your agent runner should create, open, save, and close SmolFS workspaces from code. Install and check the command line tool first so the local storage backend is ready.
+
+## Install
+
+<Tabs>
+  <Tab title="Python">
+    ```bash
+    uv add smolfs
+    ```
+  </Tab>
+  <Tab title="TypeScript">
+    ```bash
+    npm install @celestoai/smolfs
+    ```
+  </Tab>
+</Tabs>
+
+## Local workspace example
+
+<Tabs>
+  <Tab title="Python">
+    ```python quickstart_smolfs.py
+    from pathlib import Path
+    from smolfs import SmolFS, doctor
+
+    report = doctor()
+    print("SmolFS home:", report["home"])
+
+    fs = SmolFS.from_env()
+    volume = fs.ensure_volume("demo", dev=True)
+    mount = fs.mount(volume.name, "./workspace")
+    workspace = Path(mount.mountpoint)
+
+    try:
+        (workspace / "hello.txt").write_text("hello from SmolFS\n")
+        fs.flush(volume.name)
+        print((workspace / "hello.txt").read_text().strip())
+    finally:
+        fs.unmount(volume.name)
+    ```
+
+    Run it:
+
+    ```bash
+    python3 quickstart_smolfs.py
+    ```
+  </Tab>
+  <Tab title="TypeScript">
+    ```typescript quickstart-smolfs.ts
+    import { SmolFS, doctor } from "@celestoai/smolfs";
+    import { readFile, writeFile } from "node:fs/promises";
+    import { join } from "node:path";
+
+    async function main() {
+      const report = doctor();
+      console.log("SmolFS home:", report.home);
+
+      const fs = SmolFS.fromEnv();
+      const volume = fs.ensureVolume({ name: "demo", dev: true });
+      const mount = fs.mount({ name: volume.name, path: "./workspace" });
+      const file = join(mount.mountpoint, "hello.txt");
+
+      try {
+        await writeFile(file, "hello from SmolFS\n");
+        fs.flush(volume.name);
+        console.log((await readFile(file, "utf8")).trim());
+      } finally {
+        fs.unmount(volume.name);
+      }
+    }
+
+    main().catch((error) => {
+      console.error(error);
+      process.exit(1);
+    });
+    ```
+  </Tab>
+</Tabs>
+
+## Current surface
+
+| Capability | Python | TypeScript |
+| --- | --- | --- |
+| Check local setup | `doctor()` | `doctor()` |
+| Create a client from the environment | `SmolFS.from_env()` | `SmolFS.fromEnv()` |
+| Create a new volume | `init(...)` | `init(...)` |
+| Create or reuse a volume | `ensure_volume(...)` | `ensureVolume(...)` |
+| Open a workspace folder | `mount(...)` | `mount(...)` |
+| Save recent writes | `flush(...)` | `flush(...)` |
+| Close a workspace folder | `unmount(...)` | `unmount(...)` |
+| Inspect volumes | `status(...)` | `status(...)` |
+
+<Note>
+  The SDKs are intentionally thin in this early release. Prefer the lifecycle shown above and expect details to move as SmolFS settles.
+</Note>

@@ -8,6 +8,10 @@ Snapshots let you save a sandbox and bring it back later. This is useful when yo
 
 A full snapshot captures the VM's CPU state, memory, and disk. When you restore it, the sandbox resumes where it was when you created the snapshot.
 
+<Tip>
+  If you only need a workspace folder that an agent can reopen across runs, use [SmolFS](/smolfs/overview). Snapshots are best when you need the whole sandbox state.
+</Tip>
+
 <Note>
   Snapshots are available on Firecracker and QEMU for Linux guests that use isolated disks. Windows guests, workspace mounts, and extra drives are not supported yet. QEMU snapshots require a qcow2 per-VM disk, so raw QEMU disks created for `grow_filesystem=True` cannot be snapshotted.
 </Note>

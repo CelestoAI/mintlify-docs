@@ -1,0 +1,52 @@
+---
+title: "SmolFS: durable workspace folders for AI agents"
+sidebarTitle: "Overview"
+description: "Learn what SmolFS does, when to use it, and where to start with the first open-source release."
+---
+
+SmolFS gives an AI agent a folder it can come back to later. Your agent can write files, stop, and then open the same workspace again from another process.
+
+<Info>
+  SmolFS is early. These docs cover the first stable path and keep the surface small while the project evolves.
+</Info>
+
+## What you can do
+
+<CardGroup cols={2}>
+  <Card title="Keep work across runs" icon="folder-sync" href="/smolfs/quickstart">
+    Save files in a workspace folder and reopen them after the agent process exits.
+  </Card>
+  <Card title="Try it locally" icon="hard-drive" href="/smolfs/quickstart">
+    Start with a local `--dev` volume before connecting shared storage.
+  </Card>
+  <Card title="Use one command flow" icon="terminal" href="/smolfs/cli">
+    Check the machine, create a workspace, open it, save changes, and close it from the CLI.
+  </Card>
+  <Card title="Wrap it in agent code" icon="code" href="/smolfs/sdk">
+    Use Python or TypeScript when your agent runner should manage the workspace directly.
+  </Card>
+</CardGroup>
+
+## Core idea
+
+A SmolFS volume is a named workspace. Mounting a volume makes that workspace appear as a normal local folder. After your code writes files there, you can flush important changes, unmount the folder, and mount it again later.
+
+For the first release, start with local development volumes:
+
+```bash
+smolfs init demo --dev
+smolfs mount demo ./workspace
+```
+
+Cloud-backed volumes are available, but they are intentionally documented lightly for now. Use them when you are ready to provide explicit metadata and object storage settings.
+
+## Start here
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/smolfs/installation">
+    Install the CLI, check your machine, and add an SDK if you need one.
+  </Card>
+  <Card title="Quickstart" icon="rocket" href="/smolfs/quickstart">
+    Create a local workspace, write a file, close it, and open it again.
+  </Card>
+</CardGroup>
