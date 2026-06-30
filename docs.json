@@ -292,9 +292,9 @@
         "href": "mailto:aniket@celesto.ai"
       },
       {
-        "label": "Slack",
-        "icon": "slack",
-        "href": "https://join.slack.com/t/celestoai/shared_invite/zt-3qc7h8gno-Nb5_PElEWHDNnGqdVzC~4Q"
+        "label": "Discord",
+        "icon": "discord",
+        "href": "https://discord.gg/KNb5UkrAmm"
       },
       {
         "label": "GitHub",
@@ -342,7 +342,7 @@
       "x": "https://x.com/celestoai",
       "github": "https://github.com/celestoai",
       "linkedin": "https://linkedin.com/company/celestoai",
-      "slack": "https://join.slack.com/t/celestoai/shared_invite/zt-3qc7h8gno-Nb5_PElEWHDNnGqdVzC~4Q"
+      "discord": "https://discord.gg/KNb5UkrAmm"
     }
   },
   "appearance": {
