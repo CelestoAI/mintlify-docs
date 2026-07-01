@@ -1,0 +1,137 @@
+---
+title: Petabyte-scale storage for AI agent sandboxes
+sidebarTitle: Petabyte storage
+description: "Use CelestoFS to give AI agent sandboxes a durable petabyte-scale filesystem for large files, repositories, build artifacts, and long-running workspace state."
+---
+
+Celesto sandboxes include a large durable filesystem for workspace data. Your agent can write files, clone repositories, install packages, and generate artifacts without being limited by the VM root disk size.
+
+The root disk is durable too. It holds the operating system, runtime, and system-level state. CelestoFS is a separate durable workspace filesystem for the files your agent actively works with.
+
+## What you get
+
+- A large durable workspace filesystem for agent files and generated data.
+- Durable root disk and workspace state across `stop` and `start`.
+- Normal file operations from inside the sandbox.
+- A filesystem name that appears as `celestofs` in `df -h`.
+- A root disk size that can stay small even when workspace data is large.
+
+<Warning>
+  Delete the computer when you no longer need its saved state. Deleting a computer removes its files, workspace data, and resources.
+</Warning>
+
+## Check the filesystem
+
+Run `df -h` inside a Celesto computer to see both storage surfaces.
+
+```bash CLI
+celesto computer create --template coding-agent --disk-size-mb 10240
+celesto computer run einstein "df -h / /home/ohm"
+```
+
+Example output:
+
+```text
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/root        10G  2.2G  7.8G  22% /
+celestofs       1.0P  161M  1.0P   1% /home/ohm
+```
+
+`/dev/root` is the VM root disk. `celestofs` is the large workspace filesystem.
+
+## Prove the workspace can exceed root disk size
+
+This test creates a 10 GiB sandbox, then writes 20 GiB of data into the workspace. It shows that large workspace data is not constrained by the root disk size.
+
+<Warning>
+  This test writes real data and can take several minutes. Run it only in a test computer, then delete the computer when you are done.
+</Warning>
+
+```bash CLI
+celesto computer create --template coding-agent --disk-size-mb 10240
+```
+
+Write 20 GiB under `/home/ohm`:
+
+```bash CLI
+celesto computer run einstein "python3 - <<'PY'
+from pathlib import Path
+import hashlib
+import os
+
+target_dir = Path('/home/ohm/storage-proof')
+target_dir.mkdir(parents=True, exist_ok=True)
+target = target_dir / 'twenty-gib.bin'
+
+with target.open('wb') as f:
+    for gib in range(20):
+        for block_index in range(1024):
+            seed = f'{gib}:{block_index}'.encode()
+            block = hashlib.sha256(seed).digest() * 32768
+            f.write(block)
+        f.flush()
+        os.fsync(f.fileno())
+        print(f'wrote {gib + 1} GiB', flush=True)
+
+print('final size bytes:', target.stat().st_size)
+PY"
+```
+
+Verify the file is larger than the 10 GiB root disk:
+
+```bash CLI
+celesto computer run einstein "du -h /home/ohm/storage-proof/twenty-gib.bin && df -h / /home/ohm"
+```
+
+You should see a 20 GiB file under `/home/ohm` while `/dev/root` remains a 10 GiB filesystem. That does not mean the root disk is temporary. It means workspace storage and root disk storage have different jobs.
+
+Clean up the proof data:
+
+```bash CLI
+celesto computer run einstein "rm -rf /home/ohm/storage-proof"
+celesto computer delete einstein
+```
+
+## What survives stop and start
+
+Files on the workspace survive stop and start:
+
+```bash CLI
+celesto computer run einstein "echo saved > /home/ohm/state.txt"
+celesto computer stop einstein
+
+celesto computer start einstein
+celesto computer run einstein "cat /home/ohm/state.txt"
+# saved
+```
+
+Deleting the computer removes the saved computer state:
+
+```bash CLI
+celesto computer delete einstein
+```
+
+## Choose the right storage surface
+
+Both root disk and CelestoFS are durable across normal computer lifecycle operations. Choose where to put data based on what the data is for.
+
+| Storage | What it is for | How to think about it |
+|---|---|---|
+| Root disk | Operating system, runtime, package manager internals, and system-level state. | Size it with `disk_size_mb` when system tools need more room. |
+| CelestoFS workspace | Agent work, repositories, generated files, datasets, build artifacts, and project state. | Use it for large durable workspace files. |
+
+For most agent work, write project data to `/home/ohm`. Increase root disk size when the OS, package manager, or system-level tooling needs more room.
+
+## Best practices
+
+- Write agent work under `/home/ohm` or the template workspace path.
+- Keep generated artifacts and repositories in the workspace, not under `/tmp`.
+- Stop a computer when you plan to resume it later.
+- Delete a computer when the saved computer state is no longer needed.
+- Use `df -h / /home/ohm` when debugging disk usage so you can see root disk and workspace storage separately.
+
+## How it works
+
+CelestoFS is mounted inside the sandbox so programs can use normal file operations from the guest. Celesto manages the storage lifecycle for you.
+
+You do not need to mount or configure anything yourself. Use the Celesto SDK or CLI, write files in the sandbox, and stop or start the computer when you want to resume the same work later.
