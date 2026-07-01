@@ -4,7 +4,9 @@ sidebarTitle: VM resources
 description: "Configure CPU, memory, disk size, and templates when creating a Celesto computer so coding agents have enough resources for builds, packages, and apps."
 ---
 
-You can choose how much CPU, memory, and storage a Celesto computer gets before it starts. Start with the default size for small jobs, then choose more resources when your agent builds code, installs packages, opens large files, or runs a web app.
+You can choose how much CPU, memory, and root disk space a Celesto computer gets before it starts. Start with the default size for small jobs, then choose more resources when your agent builds code, installs packages, opens large files, or runs a web app.
+
+Root disk and workspace storage are both durable, but they serve different jobs. Use `disk_size_mb` for operating system and runtime space. Use CelestoFS workspace storage for large project files, repositories, datasets, and artifacts. See [Petabyte-scale storage for AI agent sandboxes](/celesto-sdk/features/petabyte-storage).
 
 ## Start with a template
 
@@ -61,7 +63,7 @@ Change one setting at a time when the default size is too small. MB means megaby
 </ParamField>
 
 <ParamField body="disk_size_mb" type="integer">
-  File storage inside the computer. More disk space helps with repositories, build output, downloaded files, and generated artifacts. Range: 512-51200 MB.
+  Root disk storage inside the computer. More root disk helps when tools, package managers, or system-level build steps need more local runtime space. Range: 512-51200 MB. For large workspace files, use CelestoFS instead of increasing root disk size.
 </ParamField>
 
 <ParamField body="template_id" type="string" default="scratch">
@@ -131,10 +133,10 @@ Use the smallest computer that can finish the job. Increase the setting that mat
 |---|---|
 | Quick shell commands | Template defaults |
 | Coding agent with package installs | `coding-agent`, 2 CPUs, 4096 MB memory |
-| Large repository builds | More CPU and disk |
-| Data processing or notebooks | More memory and disk |
+| Large repository builds | More CPU, plus CelestoFS workspace storage |
+| Data processing or notebooks | More memory, plus CelestoFS workspace storage |
 | Hosted preview app | Enough memory for the app, plus port publishing |
 
 <Tip>
-  Increase CPU for slow builds, memory for programs that crash or slow down under load, and disk size when the computer runs out of file storage.
+  Increase CPU for slow builds, memory for programs that crash or slow down under load, and root disk when system tools run out of runtime space. Use CelestoFS for large workspace files.
 </Tip>

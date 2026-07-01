@@ -181,7 +181,8 @@
               "celesto-sdk/features/publish-ports",
               "celesto-sdk/features/lifecycle",
               "celesto-sdk/features/resources",
-              "celesto-sdk/features/persistence"
+              "celesto-sdk/features/persistence",
+              "celesto-sdk/features/petabyte-storage"
             ]
           },
           {
