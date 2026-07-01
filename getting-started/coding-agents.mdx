@@ -1,0 +1,50 @@
+---
+title: Coding agents
+sidebarTitle: Coding agents
+description: "Build coding agents on Celesto with sandboxed terminals, repositories, package installs, tests, preview apps, durable state, and large workspace storage."
+---
+
+Coding agents need a safe place to do messy work. They clone repositories, install dependencies, edit files, run tests, start preview apps, and keep intermediate state while they iterate.
+
+Celesto gives each coding agent its own sandboxed computer. The agent can use a terminal and files like a real developer machine, while your application stays isolated from untrusted commands.
+
+## A typical coding workflow
+
+<Steps>
+  <Step title="Create a coding computer">
+    Use the `coding-agent` template when the agent needs common development tools.
+  </Step>
+  <Step title="Clone or upload the project">
+    Put source code in the sandbox workspace so the agent can inspect and modify it.
+  </Step>
+  <Step title="Install dependencies and run checks">
+    Let the agent use package managers, test runners, linters, and build tools inside the sandbox.
+  </Step>
+  <Step title="Publish a preview">
+    If the agent starts a web app, publish the port so you can inspect the result.
+  </Step>
+  <Step title="Stop or delete">
+    Stop when the task should resume later. Delete when the task is done.
+  </Step>
+</Steps>
+
+## Why it works well
+
+<CardGroup cols={2}>
+  <Card icon="shield-halved" title="Safer command execution" href="/smolvm/concepts/security">
+    Generated code and shell commands run inside the sandbox, not on your server.
+  </Card>
+  <Card icon="database" title="Room for large projects" href="/celesto-sdk/features/petabyte-storage">
+    Keep repositories, build artifacts, and generated files in CelestoFS workspace storage.
+  </Card>
+  <Card icon="rotate" title="Resume long tasks" href="/getting-started/long-running-agents">
+    Keep state when a coding job spans multiple turns, retries, or handoffs.
+  </Card>
+  <Card icon="globe" title="Share previews" href="/celesto-sdk/features/publish-ports">
+    Expose local apps and dashboards from the sandbox through public HTTPS URLs.
+  </Card>
+</CardGroup>
+
+## Start here
+
+Create a hosted computer with the [Celesto quickstart](/celesto-sdk/quickstart), then read [Create and manage sandboxed computers](/celesto-sdk/computers) for templates, command execution, ports, and lifecycle.

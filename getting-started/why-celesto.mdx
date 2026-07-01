@@ -1,0 +1,53 @@
+---
+title: Why Celesto
+sidebarTitle: Why Celesto
+description: "Learn why Celesto gives AI agents secure sandboxed computers with durable state, petabyte-scale workspace storage, browser access, ports, and open-source runtimes."
+---
+
+AI agents need more than function calls. They need a computer where they can inspect files, run commands, browse the web, install tools, start apps, save progress, and recover when a task takes longer than one turn.
+
+Celesto gives agents that computer without putting your own infrastructure at risk. Each agent runs inside an isolated sandbox with a shell, files, networking controls, optional browser access, durable state, and workspace storage that can handle much larger projects than the VM root disk.
+
+## What makes it different
+
+<CardGroup cols={2}>
+  <Card icon="shield-halved" title="Isolation by default" href="/smolvm/concepts/security">
+    Run untrusted code, generated scripts, build commands, and browser automation away from your app server.
+  </Card>
+  <Card icon="database" title="Large durable workspaces" href="/celesto-sdk/features/petabyte-storage">
+    Keep repositories, datasets, build output, and generated files in a petabyte-scale CelestoFS workspace.
+  </Card>
+  <Card icon="rotate" title="State that survives" href="/celesto-sdk/features/persistence">
+    Stop a computer and start it later with saved root disk and workspace state.
+  </Card>
+  <Card icon="github" title="Open-source foundations" href="/getting-started/hosted-and-open-source">
+    Use the hosted platform, or build locally with SmolVM, SmolFS, and Agentor.
+  </Card>
+</CardGroup>
+
+## When Celesto fits
+
+Use Celesto when your agent needs to do real computer work:
+
+- clone a repository and run tests,
+- install dependencies and build a project,
+- browse a site or inspect a web app,
+- generate files or artifacts,
+- expose a preview app or API,
+- pause and resume the same task later.
+
+If your agent only needs a single stateless API call, Celesto may be more than you need. If your agent needs a workspace, a terminal, a browser, or durable files, Celesto is the right primitive.
+
+## Start building
+
+<CardGroup cols={3}>
+  <Card icon="rocket" title="Quickstart" href="/celesto-sdk/quickstart">
+    Create your first hosted Celesto computer.
+  </Card>
+  <Card icon="computer" title="Agent computers" href="/getting-started/agent-computers">
+    Understand the core sandbox primitive.
+  </Card>
+  <Card icon="code" title="Coding agents" href="/getting-started/coding-agents">
+    See how coding workflows fit together.
+  </Card>
+</CardGroup>

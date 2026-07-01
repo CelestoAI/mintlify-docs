@@ -1,0 +1,43 @@
+---
+title: Durable workspaces
+sidebarTitle: Durable workspaces
+description: "Learn how Celesto keeps agent state durable across sessions with root disk persistence and petabyte-scale CelestoFS workspace storage."
+---
+
+Agents often need to keep going after one request ends. They install packages, edit files, clone repositories, generate artifacts, and build up context over time. Celesto computers are designed for that kind of stateful work.
+
+Both the root disk and the workspace are durable across normal stop and start operations. They serve different jobs.
+
+## Two durable storage surfaces
+
+| Storage | Best for | How to size it |
+|---|---|---|
+| Root disk | Operating system, runtime, package manager internals, and system-level state. | Increase `disk_size_mb` when system tools need more room. |
+| CelestoFS workspace | Repositories, generated files, datasets, build artifacts, and agent project state. | Use it for large workspace data. |
+
+In Celesto Linux sandboxes, the sandbox user's home directory is `/home/ohm`. That is the default place for agent workspace files.
+
+## Stop, start, delete
+
+<Steps>
+  <Step title="Stop when work should continue later">
+    Stopping turns the computer off while keeping saved state available for a later start.
+  </Step>
+  <Step title="Start when the same agent job resumes">
+    Starting the same computer brings back its saved root disk and workspace state.
+  </Step>
+  <Step title="Delete when the work is done">
+    Deleting removes the computer and its saved state. Use it when you no longer need the files or resources.
+  </Step>
+</Steps>
+
+## Learn more
+
+<CardGroup cols={2}>
+  <Card icon="database" title="Petabyte-scale storage" href="/celesto-sdk/features/petabyte-storage">
+    See how a 10 GB sandbox can write a 20 GB workspace file with CelestoFS.
+  </Card>
+  <Card icon="rotate" title="Persistent state" href="/celesto-sdk/features/persistence">
+    Learn the stop/start/delete model for saved computer state.
+  </Card>
+</CardGroup>

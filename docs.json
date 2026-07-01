@@ -19,9 +19,27 @@
         "tab": "Getting Started",
         "groups": [
           {
-            "group": "Overview",
+            "group": "Start Here",
             "pages": [
-              "index"
+              "index",
+              "getting-started/why-celesto",
+              "celesto-sdk/quickstart"
+            ]
+          },
+          {
+            "group": "Core Ideas",
+            "pages": [
+              "getting-started/agent-computers",
+              "getting-started/durable-workspaces",
+              "getting-started/hosted-and-open-source"
+            ]
+          },
+          {
+            "group": "Popular Paths",
+            "pages": [
+              "getting-started/coding-agents",
+              "getting-started/browser-agents",
+              "getting-started/long-running-agents"
             ]
           }
         ]

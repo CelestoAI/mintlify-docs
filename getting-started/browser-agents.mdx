@@ -1,0 +1,40 @@
+---
+title: Browser agents
+sidebarTitle: Browser agents
+description: "Use Celesto and SmolVM browser sandboxes for AI agents that browse sites, test web apps, inspect pages, and run computer-use workflows."
+---
+
+Some agents need to see and use the web. They open pages, inspect UI, run browser automation, test flows, and collect evidence from real sites.
+
+Celesto supports browser-oriented agent workflows through sandboxed computers and SmolVM browser sessions. The browser runs away from your infrastructure, while the agent can still inspect pages, use tools, and save outputs.
+
+## Good browser-agent tasks
+
+- QA a web app flow.
+- Inspect a site before summarizing it.
+- Test login, checkout, onboarding, or dashboard flows.
+- Combine browser automation with shell commands.
+- Use computer-use style workflows that need a visible browser session.
+
+## Building blocks
+
+<CardGroup cols={2}>
+  <Card icon="globe" title="Browser sandboxes" href="/smolvm/features/browser-sandboxes">
+    Start browser or desktop sessions that agents can control.
+  </Card>
+  <Card icon="robot" title="OpenAI Agents sandbox" href="/celesto-sdk/openai-agents">
+    Give an OpenAI `SandboxAgent` a hosted Celesto computer or local SmolVM.
+  </Card>
+  <Card icon="terminal" title="Command execution" href="/celesto-sdk/computers#run-commands">
+    Pair browser work with scripts, file inspection, and local tooling.
+  </Card>
+  <Card icon="folder-open" title="Saved artifacts" href="/getting-started/durable-workspaces">
+    Keep screenshots, logs, reports, and generated files in the sandbox workspace.
+  </Card>
+</CardGroup>
+
+## When to choose browser sandboxes
+
+Use browser sandboxes when page state matters. If the task can be answered from a plain API response, use a normal tool call. If the task requires seeing the page, clicking through a flow, or running browser automation, use a sandboxed browser.
+
+Start with [SmolVM browser sandboxes](/smolvm/features/browser-sandboxes) for local browser runs, or [OpenAI Agents SDK sandboxes](/celesto-sdk/openai-agents) for hosted Celesto integration.

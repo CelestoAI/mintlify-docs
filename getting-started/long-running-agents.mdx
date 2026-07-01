@@ -1,0 +1,47 @@
+---
+title: Long-running agents
+sidebarTitle: Long-running agents
+description: "Design long-running AI agent jobs with Celesto durable computers, stop/start lifecycle, saved workspace state, and large storage for artifacts."
+---
+
+Long-running agents need continuity. A task may take many turns, multiple retries, a human handoff, or a later scheduled resume. Celesto computers let that work keep a stable place to live.
+
+Stop the computer when the agent pauses. Start the same computer when the task resumes. Delete the computer when the saved state is no longer needed.
+
+## Patterns that need continuity
+
+<CardGroup cols={2}>
+  <Card icon="code" title="Large coding tasks" href="/getting-started/coding-agents">
+    Keep dependencies, build output, edited files, and test results across retries.
+  </Card>
+  <Card icon="globe" title="Browser investigations" href="/getting-started/browser-agents">
+    Save reports, screenshots, downloaded files, and intermediate notes.
+  </Card>
+  <Card icon="database" title="Large artifacts" href="/celesto-sdk/features/petabyte-storage">
+    Store generated data, datasets, logs, and project files in CelestoFS.
+  </Card>
+  <Card icon="users" title="Human handoffs" href="/celesto-sdk/features/persistence">
+    Resume the same computer after review, approval, or a later background job.
+  </Card>
+</CardGroup>
+
+## Lifecycle rule of thumb
+
+| Action | Use when | Result |
+|---|---|---|
+| Stop | The task should continue later. | The computer turns off and keeps saved state. |
+| Start | The agent is ready to continue. | The same computer comes back with saved files and state. |
+| Delete | The task is finished. | The computer and saved state are removed. |
+
+## Design your job record
+
+For long-running workflows, store the Celesto computer ID or name alongside your own job record. That lets a worker, agent, or human-triggered resume step return to the same computer later.
+
+<CardGroup cols={2}>
+  <Card icon="rotate" title="Lifecycle guide" href="/celesto-sdk/features/lifecycle">
+    Learn create, stop, start, resume, and delete behavior.
+  </Card>
+  <Card icon="hard-drive" title="Persistent state" href="/celesto-sdk/features/persistence">
+    Keep files, installed packages, and workspace changes between sessions.
+  </Card>
+</CardGroup>

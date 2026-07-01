@@ -1,0 +1,53 @@
+---
+title: Agent computers
+sidebarTitle: Agent computers
+description: "Understand Celesto agent computers: isolated sandboxes where AI agents can run commands, read and write files, publish ports, and keep state."
+---
+
+A Celesto computer is a sandboxed Linux machine for an AI agent. It gives the agent a real workspace with files, a shell, process isolation, optional browser capabilities, and APIs for lifecycle control.
+
+Think of it as the agent's workbench. Your application asks Celesto to create a computer, sends commands or file operations to it, and deletes it when the work is finished.
+
+## What an agent can do
+
+<CardGroup cols={2}>
+  <Card icon="terminal" title="Run shell commands" href="/celesto-sdk/computers#run-commands">
+    Execute scripts, package managers, tests, build tools, and diagnostics.
+  </Card>
+  <Card icon="folder-open" title="Read and write files" href="/celesto-sdk/computers">
+    Keep source code, generated files, logs, and artifacts inside the sandbox.
+  </Card>
+  <Card icon="globe" title="Expose ports" href="/celesto-sdk/features/publish-ports">
+    Publish preview apps, APIs, notebooks, dashboards, and webhooks.
+  </Card>
+  <Card icon="rotate" title="Pause and resume" href="/celesto-sdk/features/lifecycle">
+    Stop a computer when work pauses, then start the same computer later.
+  </Card>
+</CardGroup>
+
+## The lifecycle
+
+<Steps>
+  <Step title="Create">
+    Choose a template such as `scratch` or `coding-agent`, then create a computer with the SDK or CLI.
+  </Step>
+  <Step title="Run work">
+    Send commands, write files, publish ports, or connect an agent framework.
+  </Step>
+  <Step title="Stop or delete">
+    Stop the computer when you want to resume later. Delete it when the saved state is no longer needed.
+  </Step>
+</Steps>
+
+## Hosted or local
+
+Use the hosted Celesto Platform when you want managed infrastructure, APIs, and orchestration. Use local SmolVM when you want open-source sandboxes on your own machine.
+
+<CardGroup cols={2}>
+  <Card icon="cloud" title="Hosted platform" href="/celesto-sdk/overview">
+    Managed computers from Python, TypeScript, JavaScript, or the Celesto CLI.
+  </Card>
+  <Card icon="computer" title="Local SmolVM" href="/smolvm/introduction">
+    Open-source microVM sandboxes for local development and private runs.
+  </Card>
+</CardGroup>
