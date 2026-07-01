@@ -22,7 +22,7 @@ The root disk is durable too. It holds the operating system, runtime, and system
 
 ## Check the filesystem
 
-Run `df -h` inside a Celesto computer to see both storage surfaces.
+Run `df -h` inside a Celesto computer to see both storage surfaces. In Celesto Linux sandboxes, `/home/ohm` is the sandbox user's home directory and the default place for agent workspace files.
 
 ```bash CLI
 celesto computer create --template coding-agent --disk-size-mb 10240
@@ -51,7 +51,7 @@ This test creates a 10 GiB sandbox, then writes 20 GiB of data into the workspac
 celesto computer create --template coding-agent --disk-size-mb 10240
 ```
 
-Write 20 GiB under `/home/ohm`:
+Write 20 GiB in the sandbox home directory:
 
 ```bash CLI
 celesto computer run einstein "python3 - <<'PY'
@@ -83,7 +83,7 @@ Verify the file is larger than the 10 GiB root disk:
 celesto computer run einstein "du -h /home/ohm/storage-proof/twenty-gib.bin && df -h / /home/ohm"
 ```
 
-You should see a 20 GiB file under `/home/ohm` while `/dev/root` remains a 10 GiB filesystem. That does not mean the root disk is temporary. It means workspace storage and root disk storage have different jobs.
+You should see a 20 GiB file in the sandbox home directory while `/dev/root` remains a 10 GiB filesystem. That does not mean the root disk is temporary. It means workspace storage and root disk storage have different jobs.
 
 Clean up the proof data:
 
@@ -120,11 +120,11 @@ Both root disk and CelestoFS are durable across normal computer lifecycle operat
 | Root disk | Operating system, runtime, package manager internals, and system-level state. | Size it with `disk_size_mb` when system tools need more room. |
 | CelestoFS workspace | Agent work, repositories, generated files, datasets, build artifacts, and project state. | Use it for large durable workspace files. |
 
-For most agent work, write project data to `/home/ohm`. Increase root disk size when the OS, package manager, or system-level tooling needs more room.
+For most agent work, write project data to the sandbox home directory. Increase root disk size when the OS, package manager, or system-level tooling needs more room.
 
 ## Best practices
 
-- Write agent work under `/home/ohm` or the template workspace path.
+- Write agent work under the sandbox home directory or the template workspace path.
 - Keep generated artifacts and repositories in the workspace, not under `/tmp`.
 - Stop a computer when you plan to resume it later.
 - Delete a computer when the saved computer state is no longer needed.
