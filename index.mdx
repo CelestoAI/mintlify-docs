@@ -1,52 +1,67 @@
 ---
-title: "Secure AI agent sandboxes with durable petabyte-scale storage"
+title: "AI agent sandboxes with durable workspaces"
 sidebarTitle: "Overview"
-description: "Celesto gives AI agents secure sandboxed computers with durable state, petabyte-scale workspace storage, browser access, terminals, ports, SDKs, and open-source runtimes."
+description: "Create secure sandboxed computers for AI agents with persistent files, CelestoFS storage, browser access, terminals, ports, SDKs, and open-source runtimes."
 ---
 
-![Computer for AI Agents](/assets/celesto-cover.jpg)
+Celesto gives each agent a safe computer for real work: clone repositories, run commands, browse sites, expose previews, save files, and resume later in a managed sandbox.
 
-<p className="dark:text-white text-black" style={{textAlign: 'center', fontSize: '1.25rem', fontWeight: 500, lineHeight: 1.6}}>
-Give AI agents real computers: secure sandboxes with durable state, petabyte-scale workspace storage, browser access, terminals, ports, and open-source runtimes.
-</p>
-
-Celesto lets agents browse, code, run commands, save files, and expose apps without touching your infrastructure. Use the hosted platform when you want managed sandboxes, or use the open-source projects when you want to run the stack yourself.
+Use the hosted platform when you want managed sandboxes. Use the open-source stack when you want local control or deeper customization.
 
 <CardGroup cols={2}>
   <Card icon="rocket" href="/celesto-sdk/quickstart" title="Create your first sandbox">
     Launch a hosted Celesto computer, run a command, and clean it up from the SDK or CLI.
   </Card>
-  <Card icon="code" href="/smolvm/introduction" title="Explore open source">
-    Start with SmolVM, the open-source microVM runtime behind local agent sandboxes.
+  <Card icon="book-open" href="/getting-started/why-celesto" title="Understand the model">
+    Learn why agents need real computers, durable workspaces, isolation, and open-source runtimes.
   </Card>
 </CardGroup>
 
-## Why Celesto
+## Start by goal
+
+<CardGroup cols={2}>
+  <Card icon="code" href="/getting-started/coding-agents" title="Build a coding agent">
+    Clone repos, install dependencies, run tests, keep work between sessions, and publish previews.
+  </Card>
+  <Card icon="globe" href="/getting-started/browser-agents" title="Run browser workflows">
+    Give agents browser sessions, command execution, saved artifacts, and sandboxed web access.
+  </Card>
+  <Card icon="clock" href="/getting-started/long-running-agents" title="Resume long-running work">
+    Pause and restart multi-step jobs with saved computer state, files, and workspace artifacts.
+  </Card>
+  <Card icon="database" href="/getting-started/durable-workspaces" title="Store large project data">
+    Understand root disk durability, CelestoFS workspaces, and where agent files should live.
+  </Card>
+</CardGroup>
+
+## What the sandbox includes
 
 <CardGroup cols={3}>
-  <Card icon="shield-halved" href="/smolvm/concepts/security" title="Secure sandboxes">
-    Run untrusted code and agent tools inside isolated computers instead of your app server.
+  <Card icon="shield-halved" href="/smolvm/concepts/security" title="Isolated execution">
+    Run untrusted code and tools inside sandboxed computers instead of your app server.
   </Card>
-  <Card icon="database" href="/celesto-sdk/features/petabyte-storage" title="Petabyte-scale workspace storage">
-    Store large repositories, datasets, generated files, and build artifacts in CelestoFS.
-  </Card>
-  <Card icon="rotate" href="/celesto-sdk/features/persistence" title="Durable computer state">
+  <Card icon="rotate" href="/celesto-sdk/features/persistence" title="Durable state">
     Stop a computer and start it again with saved root disk and workspace state.
   </Card>
-  <Card icon="globe" href="/smolvm/features/browser-sandboxes" title="Browser and terminal access">
-    Give agents a browser, shell, files, ports, and the tools needed for real workflows.
+  <Card icon="database" href="/celesto-sdk/features/petabyte-storage" title="CelestoFS workspace">
+    Store large repositories, datasets, generated files, and build artifacts in a large durable workspace.
   </Card>
-  <Card icon="plug" href="/celesto-sdk/features/publish-ports" title="Publish running apps">
+  <Card icon="terminal" href="/celesto-sdk/computers#run-commands" title="Shell and files">
+    Run commands, read outputs, write files, and inspect artifacts from your agent code.
+  </Card>
+  <Card icon="plug" href="/celesto-sdk/features/publish-ports" title="Published ports">
     Expose web apps, APIs, dashboards, notebooks, and previews from inside the sandbox.
   </Card>
-  <Card icon="github" href="/smolvm/introduction" title="Open-source foundations">
-    Build on SmolVM, SmolFS, and Agentor when you want local control or deeper customization.
+  <Card icon="github" href="/getting-started/hosted-and-open-source" title="Open-source foundations">
+    Build on SmolVM, SmolFS, and Agentor when you want to run or extend the stack yourself.
   </Card>
 </CardGroup>
 
-## Build without outgrowing the sandbox
+![Computer for AI Agents](/assets/celesto-cover.jpg)
 
-Create a 10 GB sandbox and write a 20 GB file in the sandbox home directory. In Celesto Linux sandboxes, `/home/ohm` is that home directory. The root disk stays small while the CelestoFS workspace handles large agent data.
+## Storage that grows with the job
+
+In a storage test, a 10 GB coding-agent sandbox wrote a 20 GB file into the sandbox user's home workspace. The root disk stayed small while CelestoFS provided the large durable workspace.
 
 ```bash CLI
 celesto computer create --template coding-agent --disk-size-mb 10240
@@ -54,40 +69,31 @@ celesto computer create --template coding-agent --disk-size-mb 10240
 celesto computer run einstein "python3 - <<'PY'
 from pathlib import Path
 
-target = Path('/home/ohm/storage-proof/twenty-gib.bin')
+target = Path.home() / 'storage-proof/twenty-gib.bin'
 target.parent.mkdir(parents=True, exist_ok=True)
 
 with target.open('wb') as f:
-    chunk = (b'celesto-storage-proof\n' * 65536)[:1024 * 1024]
+    chunk = b'0' * (1024 * 1024)
     for gib in range(20):
         for _ in range(1024):
             f.write(chunk)
-        f.flush()
         print(f'wrote {gib + 1} GiB', flush=True)
 
 print(target.stat().st_size)
 PY"
 
-celesto computer run einstein "du -h /home/ohm/storage-proof/twenty-gib.bin && df -h / /home/ohm"
+celesto computer run einstein "du -h ~/storage-proof/twenty-gib.bin && df -h / ~"
 ```
 
-Example `df -h` output:
+See [Petabyte-scale storage for AI agent sandboxes](/celesto-sdk/features/petabyte-storage) for the full storage guide, expected output, and cleanup commands.
 
-```text
-Filesystem      Size  Used Avail Use% Mounted on
-/dev/root        10G  2.2G  7.8G  22% /
-celestofs       1.0P  161M  1.0P   1% /home/ohm
-```
-
-See [Petabyte-scale storage for AI agent sandboxes](/celesto-sdk/features/petabyte-storage) for the full storage guide and cleanup commands.
-
-## Choose your path
+## Choose your runtime
 
 <CardGroup cols={2}>
   <Card icon="cloud" href="/celesto-sdk/overview" title="Hosted Celesto Platform">
     Launch and orchestrate managed sandboxes at scale with the Celesto SDK and CLI.
   </Card>
-  <Card icon="computer" href="/smolvm/introduction" title="Local SmolVM sandboxes">
+  <Card icon="computer" href="/smolvm/introduction" title="SmolVM">
     Run open-source microVM sandboxes locally with hardware-level isolation.
   </Card>
   <Card icon="folder-open" href="/smolfs/overview" title="SmolFS">
@@ -95,24 +101,5 @@ See [Petabyte-scale storage for AI agent sandboxes](/celesto-sdk/features/petaby
   </Card>
   <Card icon="robot" href="/agentor/home" title="Agentor">
     Build production-ready AI agents with tool use, MCP, and agent-to-agent communication.
-  </Card>
-</CardGroup>
-
-## Start with a workflow
-
-Pick the path closest to what you are building, then drop into the deeper guides when you need the API details.
-
-<CardGroup cols={2}>
-  <Card icon="code" href="/getting-started/coding-agents" title="Coding agents">
-    Clone repositories, install dependencies, run tests, publish previews, and keep work between sessions.
-  </Card>
-  <Card icon="globe" href="/getting-started/browser-agents" title="Browser agents">
-    Browse sites, inspect web apps, capture artifacts, and run computer-use style workflows.
-  </Card>
-  <Card icon="clock" href="/getting-started/long-running-agents" title="Long-running agents">
-    Pause and resume multi-step jobs with saved computer state, files, and workspace artifacts.
-  </Card>
-  <Card icon="database" href="/getting-started/durable-workspaces" title="Durable workspaces">
-    Understand root disk, CelestoFS, stop/start behavior, and where large project data belongs.
   </Card>
 </CardGroup>
