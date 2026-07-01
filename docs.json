@@ -99,6 +99,45 @@
         ]
       },
       {
+        "tab": "Platform",
+        "groups": [
+          {
+            "group": "Start Here",
+            "pages": [
+              "celesto-sdk/overview",
+              "celesto-sdk/quickstart",
+              "celesto-sdk/authentication"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "celesto-sdk/computers",
+              "celesto-sdk/features/publish-ports",
+              "celesto-sdk/features/lifecycle",
+              "celesto-sdk/features/resources",
+              "celesto-sdk/features/persistence",
+              "celesto-sdk/features/petabyte-storage"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "celesto-sdk/guides/publish-github-app"
+            ]
+          },
+          {
+            "group": "Agents and Integrations",
+            "pages": [
+              "celesto-sdk/deployments",
+              "celesto-sdk/openai-agents",
+              "celesto-sdk/gatekeeper",
+              "celesto-sdk/errors"
+            ]
+          }
+        ]
+      },
+      {
         "tab": "SmolFS",
         "groups": [
           {
@@ -177,45 +216,6 @@
             "group": "SuperAuth",
             "pages": [
               "superauth/google-oauth-setup"
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "Celesto Platform",
-        "groups": [
-          {
-            "group": "Start Here",
-            "pages": [
-              "celesto-sdk/overview",
-              "celesto-sdk/quickstart",
-              "celesto-sdk/authentication"
-            ]
-          },
-          {
-            "group": "Features",
-            "pages": [
-              "celesto-sdk/computers",
-              "celesto-sdk/features/publish-ports",
-              "celesto-sdk/features/lifecycle",
-              "celesto-sdk/features/resources",
-              "celesto-sdk/features/persistence",
-              "celesto-sdk/features/petabyte-storage"
-            ]
-          },
-          {
-            "group": "Guides",
-            "pages": [
-              "celesto-sdk/guides/publish-github-app"
-            ]
-          },
-          {
-            "group": "Agents and Integrations",
-            "pages": [
-              "celesto-sdk/deployments",
-              "celesto-sdk/openai-agents",
-              "celesto-sdk/gatekeeper",
-              "celesto-sdk/errors"
             ]
           }
         ]
