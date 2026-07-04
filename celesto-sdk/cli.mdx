@@ -6,52 +6,140 @@ description: "Use the celesto CLI to authenticate, create computers, run command
 
 The `celesto` CLI lets you manage Celesto from your terminal. Use it for one-off sandbox work, scripts, and debugging SDK workflows.
 
-## Authentication commands
+## Install and sign in
 
-| Command | Description |
-|---|---|
-| `celesto auth login [--api-key KEY] [--base-url URL]` | Save your API key in the operating system credential store |
-| `celesto auth status [--base-url URL]` | Show whether a key is saved for the given API URL |
-| `celesto auth logout [--base-url URL]` | Remove the saved API key |
+Install or upgrade the CLI:
+
+```bash
+pip install -U celesto
+```
+
+Save your API key once:
+
+```bash
+celesto auth login
+```
+
+Check or remove the saved key later:
+
+```bash
+celesto auth status
+celesto auth logout
+```
+
+## Create your first computer
+
+Create a computer with the default `scratch` template. The command prints a generated name. Use that name in later commands.
+
+```bash
+celesto computer create
+# Name:   einstein
+# ID:     cmp_123
+# Status: creating
+```
+
+Inspect the computer by name or ID:
+
+```bash
+celesto computer get einstein
+# Name:   einstein
+# Status: running
+```
+
+List your computers:
+
+```bash
+celesto computer list
+```
+
+Run a command inside the computer:
+
+```bash
+celesto computer run einstein "uname -a"
+```
+
+Open an interactive terminal. SSH means an interactive shell connection to the computer.
+
+```bash
+celesto computer ssh einstein
+```
+
+Stop and start the same computer when you want to keep its files for later:
+
+```bash
+celesto computer stop einstein
+celesto computer start einstein
+```
+
+Delete the computer when you are done:
+
+```bash
+celesto computer delete einstein
+```
 
 ## Computer commands
 
 | Command | Description |
 |---|---|
-| `celesto computer create [--template ID] [--cpus N] [--memory MB] [--disk-size-mb MB]` | Create a computer from a template |
-| `celesto computer templates` | List available sandbox templates |
-| `celesto computer list` | List all computers |
-| `celesto computer run <name> "command"` | Execute a command and auto-resume stopped computers |
-| `celesto computer ssh <name>` | Open an interactive terminal and auto-resume stopped computers |
-| `celesto computer stop <name>` | Stop a computer |
-| `celesto computer start <name>` | Start a stopped computer |
-| `celesto computer delete <name> [--force]` | Delete a computer |
+| `celesto computer create [--template ID] [--cpus N] [--memory MB] [--disk-size-mb MB]` | Create a computer |
+| `celesto computer templates` | List templates with preinstalled tools |
+| `celesto computer list [--status STATUS] [--template ID] [--project ID] [--limit N]` | List matching computers |
+| `celesto computer get NAME` | Get one computer by name or ID |
+| `celesto computer run NAME "command" [--timeout N]` | Run a command on a computer |
+| `celesto computer run NAME "command" --stream` | Stream command output while it runs |
+| `celesto computer ssh NAME` | Open an interactive terminal |
+| `celesto computer stop NAME` | Stop a computer |
+| `celesto computer start NAME` | Start a stopped computer |
+| `celesto computer delete [--force] NAME` | Delete a computer |
+
+## Templates and resources
+
+List templates when you want a computer with tools already installed:
+
+```bash
+celesto computer templates
+```
+
+Create a computer from a template:
+
+```bash
+celesto computer create --template coding-agent
+# Name:   curie
+# Status: creating
+```
+
+Override the template's default CPU, memory, or disk size when the job needs more room:
+
+```bash
+celesto computer create --template coding-agent --cpus 2 --memory 2048 --disk-size-mb 15360
+```
 
 ## Port commands
 
-| Command | Description |
-|---|---|
-| `celesto computer port publish <name> [--port N]` | Expose a port on the public internet. Defaults to `8000` |
-| `celesto computer port list <name>` | List published ports for a computer |
-| `celesto computer port unpublish <name> [--port N]` | Stop exposing a port. Defaults to `8000` |
-
-## Update command
-
-| Command | Description |
-|---|---|
-| `celesto update` | Upgrade the `celesto` package in your current Python environment |
-
-Run `celesto update` to get the latest release without remembering which package manager you used to install it. The command upgrades `celesto` using `pip` when it is available, and falls back to `uv` when you installed Celesto with `uv` or are running inside a `uv run` environment.
+Publish a port when a process inside the computer needs a public HTTPS URL:
 
 ```bash
-celesto update
+celesto computer port publish einstein --port 8000
+# https://p-test.celesto.ai
 ```
 
-If neither `pip` nor `uv` is available, the command prints the exact command to run yourself, for example:
+List published ports:
 
 ```bash
-uv pip install --python /path/to/python --upgrade celesto
+celesto computer port list einstein
 ```
+
+Unpublish the port when you are done:
+
+```bash
+celesto computer port unpublish einstein --port 8000
+```
+
+| Command | Description |
+|---|---|
+| `celesto computer port publish NAME [--port N]` | Expose a port on the public internet. Defaults to `8000` |
+| `celesto computer port list NAME` | List published ports for a computer |
+| `celesto computer port unpublish NAME [--port N]` | Stop exposing a port. Defaults to `8000` |
 
 ## Auto-resume stopped computers
 
@@ -64,7 +152,7 @@ celesto computer ssh einstein
 
 ## JSON output
 
-All commands support `--json` or `-j` for machine-readable output:
+Most computer commands support `--json` or `-j` for structured output. Use JSON in scripts and automation.
 
 ```bash
 celesto computer list --json
@@ -72,30 +160,20 @@ celesto computer create --template coding-agent --json
 celesto computer run einstein "uname -a" --json
 ```
 
-## Common workflows
+`celesto computer ssh` is interactive and does not support JSON output.
 
-Browse templates, create a computer, run a command, and delete it:
+## Update command
+
+Run `celesto update` to upgrade the `celesto` package in your current Python environment.
 
 ```bash
-export CELESTO_API_KEY="your-api-key"
-
-celesto computer templates
-celesto computer create --template coding-agent
-celesto computer run einstein "ls -la"
-celesto computer ssh einstein
-celesto computer delete einstein
+celesto update
 ```
 
-Override the template's defaults at create time:
+The command upgrades `celesto` using `pip` when it is available, and falls back to `uv` when you installed Celesto with `uv` or are running inside a `uv run` environment.
+
+If neither `pip` nor `uv` is available, the command prints the exact command to run yourself, for example:
 
 ```bash
-celesto computer create --template coding-agent --cpus 2 --memory 2048 --disk-size-mb 15360
-```
-
-Expose a web service running inside the computer:
-
-```bash
-celesto computer port publish einstein
-celesto computer port list einstein
-celesto computer port unpublish einstein
+uv pip install --python /path/to/python --upgrade celesto
 ```

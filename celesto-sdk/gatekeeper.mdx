@@ -3,7 +3,7 @@ title: "Connect users to third-party OAuth with Gatekeeper"
 description: "Use Celesto Gatekeeper to connect your end users to third-party providers like Google Drive with delegated OAuth access scoped to your project."
 ---
 
-Delegated Access lets you connect your end users (subjects) to third-party providers such as Google Drive while keeping access scoped to your project.
+Gatekeeper lets your app ask a user for access to an external account, such as Google Drive, and then use only the access that user approved.
 
 ## Prerequisites
 
@@ -16,251 +16,138 @@ Set the following environment variables:
 - `CELESTO_API_KEY`: Your Celesto API key
 - `CELESTO_PROJECT_NAME`: Your project name
 
-Install the SDK:
+Install the TypeScript SDK:
 
-<CodeGroup>
-
-```bash Python
-pip install celesto
+```bash
+npm install @celestoai/sdk@latest
 ```
 
-```bash TypeScript
-npm install @celestoai/sdk
-```
-
-</CodeGroup>
+<Note>
+  The TypeScript SDK includes a Gatekeeper client. Python Gatekeeper examples are being updated to the new resource-style SDK.
+</Note>
 
 ## Quickstart script
 
 Use this complete script to start a connection, list active connections, and list Drive files once OAuth completes.
 
-<CodeGroup>
-
-```python gatekeeper.py
-import os
-from celesto import Celesto
-
-
-project_name = "Default"
-subject = "user:acme:alice"  # Unique identifier for your end user
-
-client = Celesto()
-
-# ====================================================================
-
-# Initiate connection (returns oauth_url if authorization is required)
-response = client.gatekeeper.connect(
-    subject=subject,
-    provider="google_drive",
-    project_name=project_name,
-)
-print("connect:", response)
-
-if response.get("oauth_url"):
-    print("OAuth URL:", response["oauth_url"])
-    print("Complete OAuth flow before continuing...")
-    raise SystemExit
-
-print("Connected! Status:", response.get("status"))
-
-# ====================================================================
-
-# List current connections
-connections = client.gatekeeper.list_connections(project_name=project_name)
-print("connections:", connections)
-
-# ====================================================================
-
-# List Drive files for the subject
-files = client.gatekeeper.list_drive_files(
-    project_name=project_name,
-    subject=subject,
-    page_size=10,
-    include_folders=True,
-)
-print("drive_files:", files)
-
-# ====================================================================
-
-# Update access rules (restrict to specific folders)
-# rules = client.gatekeeper.update_access_rules(
-#     subject=subject,
-#     project_name=project_name,
-#     allowed_folders=["folder_id_1", "folder_id_2"],
-# )
-# print("access_rules:", rules)
-
-# ====================================================================
-
-# Revoke connection when done
-# client.gatekeeper.revoke_connection(
-#     subject=subject,
-#     project_name=project_name,
-# )
-```
-
 ```ts gatekeeper.ts
-import { Celesto } from "@celestoai/sdk";
+import { GatekeeperClient } from "@celestoai/sdk/gatekeeper";
 
-const projectName = "Default";
-const subject = "user:acme:alice"; // Unique identifier for your end user
+const projectName = process.env.CELESTO_PROJECT_NAME ?? "Default";
+const subject = "user:acme:alice"; // Stable identifier for your end user
 
-const client = new Celesto({
+const client = new GatekeeperClient({
   token: process.env.CELESTO_API_KEY,
-  // baseUrl: "https://api.celesto.ai",
 });
 
-const run = async () => {
-  // `provider` defaults to "google_drive" — pass it explicitly to override.
-  const connect = await client.gatekeeper.connect({
-    subject,
-    projectName,
-  });
-  console.log("connect:", connect);
+// Start the connection. The default provider is Google Drive.
+const connect = await client.connect({
+  subject,
+  projectName,
+});
+console.log("connect:", connect);
 
-  if (connect.status === "redirect" && connect.oauthUrl) {
-    console.log("OAuth URL:", connect.oauthUrl);
-    console.log("Complete OAuth flow before continuing...");
-    return;
-  }
+if (connect.status === "redirect" && connect.oauthUrl) {
+  console.log("OAuth URL:", connect.oauthUrl);
+  console.log("Open this URL and complete OAuth before listing files.");
+  process.exit(0);
+}
 
-  const connections = await client.gatekeeper.listConnections({ projectName });
-  console.log("connections:", connections);
+const connections = await client.listConnections({ projectName });
+console.log("connections:", connections);
 
-  const files = await client.gatekeeper.listDriveFiles({
-    projectName,
-    subject,
-    pageSize: 10,
-    includeFolders: true,
-  });
-  console.log("drive_files:", files);
-
-  // Update access rules (restrict to specific folders)
-  // const rules = await client.gatekeeper.updateAccessRules({
-  //   subject,
-  //   projectName,
-  //   accessRules: { allowedFolders: ["folder_id_1", "folder_id_2"] },
-  // });
-  // console.log("access_rules:", rules);
-
-  // Revoke connection when done
-  // await client.gatekeeper.revokeConnection({ subject, projectName });
-};
-
-run().catch(console.error);
+const files = await client.listDriveFiles({
+  projectName,
+  subject,
+  pageSize: 10,
+  includeFolders: true,
+});
+console.log("drive_files:", files);
 ```
 
-</CodeGroup>
+Run it:
+
+```bash
+export CELESTO_API_KEY="your-api-key"
+export CELESTO_PROJECT_NAME="Default"
+npx tsx gatekeeper.ts
+```
 
 ## Expected responses
-
 
 ```json connect (redirect)
 {
   "status": "redirect",
-  "oauth_url": "https://accounts.google.com/o/oauth2/v2/auth?..."
+  "oauthUrl": "https://accounts.google.com/o/oauth2/v2/auth?..."
 }
 ```
-
-
 
 ```json connect (connected)
 {
   "status": "connected",
-  "connection_id": "conn_8e7f4b0b"
+  "connectionId": "conn_8e7f4b0b"
 }
 ```
 
-
-```json list_connections
+```json listConnections
 {
   "data": [
     {
       "id": "conn_8e7f4b0b",
       "subject": "user:acme:alice",
       "provider": "google_drive",
-      "project_id": "proj_5f2c9f41",
-      "account_email": "alice@acme.com",
-      "scopes": ["https://www.googleapis.com/auth/drive.readonly"],
-      "status": "ACTIVE",
-      "created_at": "2025-12-10T19:22:11Z",
-      "updated_at": "2025-12-10T19:25:45Z",
-      "last_used_at": "2025-12-11T10:01:12Z"
+      "projectId": "proj_5f2c9f41",
+      "accountEmail": "alice@acme.com",
+      "status": "ACTIVE"
     }
   ],
   "total": 1
 }
 ```
 
-```json list_drive_files
+```json listDriveFiles
 {
   "files": [
     {
       "id": "1a2b3c4d",
       "name": "Quarterly Report",
-      "mime_type": "application/pdf",
-      "size": 482133,
-      "modified_time": "2025-12-01T08:10:22Z",
-      "web_view_link": "https://drive.google.com/file/d/1a2b3c4d/view"
+      "mimeType": "application/pdf",
+      "webViewLink": "https://drive.google.com/file/d/1a2b3c4d/view"
     }
   ],
-  "next_page_token": "Cj4QAA"
+  "nextPageToken": "Cj4QAA"
 }
 ```
-
-```json error
-{
-  "detail": "OAuth not configured for provider: google_drive"
-}
-```
-
 
 ## How the flow works
 
 <Steps>
   <Step title="Create a connection">
-    You call `connect` with a subject and project name. If the subject has not authorized yet, you receive an OAuth URL.
+    Call `connect` with a subject and project name. If the subject has not authorized yet, you receive an OAuth URL.
 
     <Check>
-      You get `status: redirect` and an `oauth_url`.
+      You get `status: redirect` and an `oauthUrl`.
     </Check>
   </Step>
 
   <Step title="Complete OAuth">
-    You send your user to the OAuth URL and complete consent. The provider calls Celesto back to finalize the connection.
+    Send your user to the OAuth URL so they can approve access. The provider calls Celesto back to finalize the connection.
 
     <Check>
-      The connection becomes `ACTIVE` for that subject.
+      The connection becomes active for that subject.
     </Check>
   </Step>
 
   <Step title="Use delegated access">
-    You list connections, fetch file metadata, and optionally revoke access when you are done.
+    List connections, fetch file metadata, update access rules, or revoke access when you are done.
   </Step>
 </Steps>
 
 ## SDK methods
 
-<Note>
-  Python uses snake_case parameters (e.g., `project_name`, `page_size`). TypeScript uses camelCase (e.g., `projectName`, `pageSize`).
-</Note>
-
 ### `connect`
 
-Signature:
-
-<CodeGroup>
-
-```python Python
-connect(
-    subject: str, 
-    project_name: str, 
-    provider: str = "google_drive", 
-    redirect_uri: str | None = None
-) -> dict
-```
-
-```ts TypeScript
+```ts
 connect(payload: {
   subject: string;
   projectName: string;
@@ -269,101 +156,35 @@ connect(payload: {
 }): Promise<GatekeeperConnectResponse>
 ```
 
-</CodeGroup>
-
-**Parameters**
-
 <ParamField body="subject" type="string" required>
-  Stable identifier for your end user (for example, `user:acme:alice`)
+  Stable identifier for your end user, for example `user:acme:alice`.
 </ParamField>
 
-<ParamField body="project_name" type="string" required>
-  Your Celesto project name
+<ParamField body="projectName" type="string" required>
+  Your Celesto project name.
 </ParamField>
 
 <ParamField body="provider" type="string" default="google_drive">
-  Provider key. Use `google_drive` for Google Drive
+  Provider key. Use `google_drive` for Google Drive.
 </ParamField>
 
-<ParamField body="redirect_uri" type="string">
-  Optional custom redirect URI after OAuth completion
+<ParamField body="redirectUri" type="string">
+  Optional custom redirect URI after OAuth completion.
 </ParamField>
 
-### `list_connections`
+### `listConnections`
 
-Signature:
-
-<CodeGroup>
-
-```python Python
-list_connections(
-    project_name: str, 
-    status_filter: str | None = None
-) -> dict
-```
-
-```ts TypeScript
-listConnections(params: {
+```ts
+listConnections(payload: {
   projectName: string;
   statusFilter?: string;
 }): Promise<GatekeeperListConnectionsResponse>
 ```
 
-</CodeGroup>
+### `listDriveFiles`
 
-**Parameters**
-
-<ParamField body="project_name" type="string" required>
-  Your Celesto project name
-</ParamField>
-
-<ParamField body="status_filter" type="string">
-  Filter by status: `ACTIVE`, `PENDING`, or `REVOKED`
-</ParamField>
-
-### `get_connection`
-
-Signature:
-
-<CodeGroup>
-
-```python Python
-get_connection(connection_id: str) -> dict
-```
-
-```ts TypeScript
-getConnection(connectionId: string): Promise<GatekeeperConnection>
-```
-
-</CodeGroup>
-
-**Parameters**
-
-<ParamField body="connection_id" type="string" required>
-  Delegated connection ID
-</ParamField>
-
-### `list_drive_files`
-
-Signature:
-
-<CodeGroup>
-
-```python Python
-list_drive_files(
-    project_name: str, 
-    subject: str, 
-    page_size: int = 20, 
-    page_token: str | None = None, 
-    folder_id: str | None = None, 
-    query: str | None = None, 
-    include_folders: bool = True, 
-    order_by: str | None = None
-) -> dict
-```
-
-```ts TypeScript
-listDriveFiles(params: {
+```ts
+listDriveFiles(payload: {
   projectName: string;
   subject: string;
   pageSize?: number;
@@ -375,107 +196,12 @@ listDriveFiles(params: {
 }): Promise<GatekeeperDriveListResponse>
 ```
 
-</CodeGroup>
+### `updateAccessRules`
 
-**Parameters**
-
-<ParamField body="project_name" type="string" required>
-  Your Celesto project name
-</ParamField>
-
-<ParamField body="subject" type="string" required>
-  Subject identifier tied to the delegated connection
-</ParamField>
-
-<ParamField body="page_size" type="integer" default="20">
-  Number of files to return (1-1000)
-</ParamField>
-
-<ParamField body="page_token" type="string">
-  Token from a previous response for pagination
-</ParamField>
-
-<ParamField body="folder_id" type="string">
-  Google Drive folder ID. Defaults to root unless `query` is provided
-</ParamField>
-
-<ParamField body="query" type="string">
-  Google Drive search query (`q` parameter)
-</ParamField>
-
-<ParamField body="include_folders" type="boolean" default="true">
-  Include folders in the results
-</ParamField>
-
-<ParamField body="order_by" type="string">
-  Google Drive `orderBy` parameter
-</ParamField>
-
-<Note>
-  If access rules are active, a page may contain fewer than `page_size` results after filtering. Use `next_page_token` to continue.
-</Note>
-
-### `get_access_rules`
-
-Signature:
-
-<CodeGroup>
-
-```python Python
-get_access_rules(connection_id: str) -> dict
-```
-
-```ts TypeScript
-getAccessRules(connectionId: string): Promise<GatekeeperAccessRules>
-```
-
-</CodeGroup>
-
-**Parameters**
-
-<ParamField body="connection_id" type="string" required>
-  Delegated connection ID
-</ParamField>
-
-**Response**
-
-<ResponseField name="version" type="integer" required>
-  Version number of the access rules configuration.
-</ResponseField>
-
-<ResponseField name="allowed_folders" type="string[]" required>
-  List of Google Drive folder IDs with recursive access.
-</ResponseField>
-
-<ResponseField name="allowed_files" type="string[]" required>
-  List of individual Google Drive file IDs.
-</ResponseField>
-
-<ResponseField name="unrestricted" type="boolean" required>
-  When `true`, the subject has full access to all files with no folder or file restrictions.
-</ResponseField>
-
-### `update_access_rules`
-
-Signature:
-
-<CodeGroup>
-
-```python Python
-update_access_rules(
-    subject: str,
-    project_name: str,
-    allowed_folders: list[str] | None = None,
-    allowed_files: list[str] | None = None,
-    provider: str | None = None
-) -> dict
-```
-
-```ts TypeScript
-updateAccessRules(params: {
+```ts
+updateAccessRules(payload: {
   subject: string;
   projectName: string;
-  provider?: string;
   accessRules: {
     allowedFolders?: string[];
     allowedFiles?: string[];
@@ -483,108 +209,16 @@ updateAccessRules(params: {
 }): Promise<GatekeeperAccessRules>
 ```
 
-</CodeGroup>
+Use access rules to limit which folders or files the connection can read.
 
-**Parameters**
+### `revokeConnection`
 
-<ParamField body="subject" type="string" required>
-  Subject identifier (e.g., `user:acme:alice`)
-</ParamField>
-
-<ParamField body="project_name" type="string" required>
-  Your Celesto project name
-</ParamField>
-
-<ParamField body="allowed_folders" type="string[]">
-  List of Google Drive folder IDs with recursive access
-</ParamField>
-
-<ParamField body="allowed_files" type="string[]">
-  List of individual Google Drive file IDs
-</ParamField>
-
-<ParamField body="provider" type="string">
-  Optional provider filter (e.g., `google_drive`)
-</ParamField>
-
-<Note>
-  Setting both lists to empty blocks all access. Use `clear_access_rules` to remove restrictions.
-</Note>
-
-### `clear_access_rules`
-
-Signature:
-
-<CodeGroup>
-
-```python Python
-clear_access_rules(connection_id: str) -> dict
-```
-
-```ts TypeScript
-clearAccessRules(connectionId: string): Promise<GatekeeperAccessRules>
-```
-
-</CodeGroup>
-
-**Parameters**
-
-<ParamField body="connection_id" type="string" required>
-  Delegated connection ID
-</ParamField>
-
-### `revoke_connection`
-
-Signature:
-
-<CodeGroup>
-
-```python Python
-revoke_connection(
-    subject: str,
-    project_name: str,
-    provider: str | None = None
-) -> dict
-```
-
-```ts TypeScript
-revokeConnection(params: {
+```ts
+revokeConnection(payload: {
   subject: string;
   projectName: string;
   provider?: string;
 }): Promise<GatekeeperRevokeResponse>
 ```
 
-</CodeGroup>
-
-**Parameters**
-
-<ParamField body="subject" type="string" required>
-  Subject identifier (e.g., `user:acme:alice`)
-</ParamField>
-
-<ParamField body="project_name" type="string" required>
-  Your Celesto project name
-</ParamField>
-
-<ParamField body="provider" type="string">
-  Optional provider filter (e.g., `google_drive`)
-</ParamField>
-
-## Troubleshooting
-
-<AccordionGroup>
-  <Accordion title="OAuth is not configured for the provider">
-    - Ensure Google OAuth is configured for delegated access in your Celesto settings.
-    - Verify you are using `provider="google_drive"` and the correct project name.
-  </Accordion>
-  <Accordion title="Connection stays in PENDING">
-    - Make sure the user completed the OAuth flow in the browser.
-    - Check that the callback URL is reachable from the OAuth provider.
-  </Accordion>
-</AccordionGroup>
-
-## Next steps
-
-- Review the Google OAuth setup guide in `superauth/google-oauth-setup`.
-- Use `get_connection` to inspect scopes and last usage when you debug access.
+Use this when the user disconnects their account or your app no longer needs access.
