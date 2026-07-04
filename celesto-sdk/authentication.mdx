@@ -1,10 +1,10 @@
 ---
 title: Authenticate the Celesto SDK and CLI
 sidebarTitle: Authentication
-description: "Authenticate Celesto SDK and CLI calls with the CELESTO_API_KEY environment variable, direct client credentials, or the saved CLI login session."
+description: "Authenticate Celesto SDK and CLI calls with the CELESTO_API_KEY environment variable, direct credentials, or the saved CLI login session."
 ---
 
-Celesto uses an API key to identify your project and authorize SDK or CLI requests. You can save the key once for CLI commands, set it in your environment for SDK code, or pass it directly when you create a client.
+Celesto uses an API key to identify your project and authorize SDK or CLI requests. You can save the key once for CLI commands, set it in your environment for SDK code, or pass it directly when you create a computer client.
 
 ## Save your key for the CLI
 
@@ -44,14 +44,14 @@ The CLI resolves the API key in this order:
 export CELESTO_API_KEY="your-api-key"
 ```
 
-Create the client:
+List computers with the environment key:
 
 ```python auth.py
-from celesto import Celesto
+from celesto import Computer
 
 
-client = Celesto()
-print(client.computers.list()["count"])
+computers = Computer.list()
+print(len(computers))
 ```
 
 ## Pass the key in code
@@ -61,11 +61,11 @@ Pass `api_key` when you need to select credentials explicitly:
 ```python auth_explicit.py
 import os
 
-from celesto import Celesto
+from celesto import Computer
 
 
-client = Celesto(api_key=os.environ["CELESTO_API_KEY"])
-print(client.computers.list()["count"])
+computers = Computer.list(api_key=os.environ["CELESTO_API_KEY"])
+print(len(computers))
 ```
 
 </View>
@@ -78,14 +78,13 @@ print(client.computers.list()["count"])
 export CELESTO_API_KEY="your-api-key"
 ```
 
-Create the client:
+List computers with the environment key:
 
 ```ts auth.ts
-import { Celesto } from "@celestoai/sdk";
+import { Computer } from "@celestoai/sdk";
 
-const client = new Celesto({ token: process.env.CELESTO_API_KEY });
-const result = await client.computers.list();
-console.log(result.count);
+const computers = await Computer.list();
+console.log(computers.length);
 ```
 
 ## Pass the key in code
@@ -93,16 +92,15 @@ console.log(result.count);
 Pass `token` when you need to select credentials explicitly:
 
 ```ts auth-explicit.ts
-import { Celesto } from "@celestoai/sdk";
+import { Computer } from "@celestoai/sdk";
 
 const token = process.env.CELESTO_API_KEY;
 if (!token) {
   throw new Error("Set CELESTO_API_KEY before running this script.");
 }
 
-const client = new Celesto({ token });
-const result = await client.computers.list();
-console.log(result.count);
+const computers = await Computer.list({}, { token });
+console.log(computers.length);
 ```
 
 </View>

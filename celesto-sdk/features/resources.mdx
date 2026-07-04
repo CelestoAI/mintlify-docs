@@ -17,11 +17,10 @@ Use `coding-agent` when your workflow needs common coding tools. Use the templat
 <CodeGroup>
 
 ```python Python
-from celesto import Celesto
+from celesto import Computer
 
 
-client = Celesto()
-templates = client.computers.list_templates()
+templates = Computer.list_templates()
 
 for template in templates:
     print(
@@ -32,10 +31,9 @@ for template in templates:
 ```
 
 ```ts TypeScript
-import { Celesto } from "@celestoai/sdk";
+import { Computer } from "@celestoai/sdk";
 
-const client = new Celesto({ token: process.env.CELESTO_API_KEY });
-const templates = await client.computers.listTemplates();
+const templates = await Computer.listTemplates();
 
 for (const template of templates) {
   console.log(
@@ -62,8 +60,12 @@ Change one setting at a time when the default size is too small. MB means megaby
   Working space for running programs. More memory helps with notebooks, large files, package installs, and heavier services. Range: 512-32768 MB.
 </ParamField>
 
+<ParamField body="disk" type="integer | string">
+  Root disk storage as MB or a string such as `"20gb"`. More root disk helps when tools, package managers, or system-level build steps need more local runtime space.
+</ParamField>
+
 <ParamField body="disk_size_mb" type="integer">
-  Root disk storage inside the computer. More root disk helps when tools, package managers, or system-level build steps need more local runtime space. Range: 512-51200 MB. For large workspace files, use CelestoFS instead of increasing root disk size.
+  Root disk storage inside the computer in MB. Range: 512-51200 MB. For large workspace files, use CelestoFS instead of increasing root disk size.
 </ParamField>
 
 <ParamField body="template_id" type="string" default="scratch">
@@ -77,34 +79,32 @@ Create a larger computer when the default template does not have enough room for
 <CodeGroup>
 
 ```python Python
-from celesto import Celesto
+from celesto import Computer
 
 
-client = Celesto()
-computer = client.computers.create(
+computer = Computer(
     template_id="coding-agent",
     cpus=2,
     memory=4096,
-    disk_size_mb=20480,
+    disk="20gb",
 )
 
-print(computer["name"])
-print(f"{computer['vcpus']} CPU")
-print(f"{computer['ram_mb']} MB memory")
-print(f"{computer['disk_size_mb']} MB disk")
+print(computer.name)
+print(f"{computer.vcpus} CPU")
+print(f"{computer.ram_mb} MB memory")
+print(f"{computer.disk_size_mb} MB disk")
 
-client.computers.delete(computer["id"])
+computer.delete()
 ```
 
 ```ts TypeScript
-import { Celesto } from "@celestoai/sdk";
+import { Computer } from "@celestoai/sdk";
 
-const client = new Celesto({ token: process.env.CELESTO_API_KEY });
-const computer = await client.computers.create({
+const computer = await Computer.create({
   templateId: "coding-agent",
   cpus: 2,
   memory: 4096,
-  diskSizeMb: 20480,
+  disk: "20gb",
 });
 
 console.log(computer.name);
@@ -112,7 +112,7 @@ console.log(`${computer.vcpus} CPU`);
 console.log(`${computer.ramMb} MB memory`);
 console.log(`${computer.diskSizeMb} MB disk`);
 
-await client.computers.delete(computer.id);
+await computer.delete();
 ```
 
 ```bash CLI

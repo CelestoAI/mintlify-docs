@@ -1,7 +1,7 @@
 ---
 title: Create and manage sandboxed computers
 sidebarTitle: Sandboxed computers
-description: "Use the Celesto Computers API to provision sandboxed computers, select templates, run shell commands, publish ports, and manage the VM lifecycle."
+description: "Use the Celesto Computers API to create sandboxed computers, select templates, run shell commands, publish ports, and manage the VM lifecycle."
 ---
 
 The Computers API gives your code or agent an isolated Linux computer. You create a computer, run work inside it, and then stop, start, or delete it when your workflow is done.
@@ -13,7 +13,7 @@ The Computers API gives your code or agent an isolated Linux computer. You creat
     Create a new computer from `scratch` or a template such as `coding-agent`.
   </Step>
   <Step title="Run">
-    Execute shell commands, inspect output, and publish supported ports when a service needs a public URL.
+    Execute shell commands, inspect output, and publish ports when a service needs a public URL.
   </Step>
   <Step title="Manage">
     Get details, list computers, stop and start long-lived computers, or delete temporary computers.
@@ -24,36 +24,31 @@ The Computers API gives your code or agent an isolated Linux computer. You creat
 
 ## Create a computer
 
-Call `create()` with no arguments to get a fresh `scratch` computer, which is a minimal Ubuntu sandbox.
+Use `Computer()` with no arguments to get a fresh `scratch` computer, which is a minimal Ubuntu sandbox.
 
 ```python create_computer.py
-from celesto import Celesto
+from celesto import Computer
 
 
-with Celesto() as client:
-    computer = client.computers.create()
-    print(computer["name"])
-    print(computer["id"])
-    print(computer["status"])
-    client.computers.delete(computer["id"])
+computer = Computer()
+print(computer.name)
+print(computer.id)
+print(computer.status)
+
+computer.delete()
 ```
 
 Override CPU, memory, or disk size when the default size is too small:
 
 ```python create_sized_computer.py
-from celesto import Celesto
+from celesto import Computer
 
 
-with Celesto() as client:
-    computer = client.computers.create(
-        cpus=2,
-        memory=2048,
-        disk_size_mb=15360,
-    )
-    try:
-        print(f"{computer['name']} has {computer['vcpus']} vCPUs")
-    finally:
-        client.computers.delete(computer["id"])
+computer = Computer(cpus=2, memory=2048, disk="15gb")
+print(f"{computer.name} has {computer.vcpus} vCPUs")
+print(f"{computer.ram_mb} MB RAM")
+
+computer.delete()
 ```
 
 <ParamField body="cpus" type="integer">
@@ -62,6 +57,10 @@ with Celesto() as client:
 
 <ParamField body="memory" type="integer">
   Memory in MB. Range: 512-32768. Defaults to the template's value.
+</ParamField>
+
+<ParamField body="disk" type="integer | string">
+  Disk size as MB or a string such as `"15gb"`. Alias for `disk_size_mb`.
 </ParamField>
 
 <ParamField body="disk_size_mb" type="integer">
@@ -76,56 +75,47 @@ with Celesto() as client:
   Optional immutable template version. Pin this when you want repeatable builds as a template changes over time.
 </ParamField>
 
-<ParamField body="image" type="string">
-  Legacy OS image selector. Prefer `template_id` for new code.
-</ParamField>
-
 ## Use a template
 
 A template is a ready-made computer image with extra tools and default CPU, memory, and disk settings. Use `coding-agent` for common coding workflows:
 
 ```python create_from_template.py
-from celesto import Celesto
+from celesto import Computer
 
 
-with Celesto() as client:
-    computer = client.computers.create(template_id="coding-agent")
-    try:
-        result = client.computers.exec(computer["id"], "python3 --version")
-        print(result["stdout"].strip())
-    finally:
-        client.computers.delete(computer["id"])
+computer = Computer(template_id="coding-agent")
+result = computer.run("python3 --version")
+print(result["stdout"].strip())
+
+computer.delete()
 ```
 
 ## List templates
 
 ```python list_templates.py
-from celesto import Celesto
+from celesto import Computer
 
 
-with Celesto() as client:
-    templates = client.computers.list_templates()
-    for template in templates:
-        print(
-            f"{template['id']}: {template['display_name']} "
-            f"({template['default_vcpus']} vCPU, {template['default_ram_mb']} MB RAM)"
-        )
+templates = Computer.list_templates()
+for template in templates:
+    print(
+        f"{template['id']}: {template['display_name']} "
+        f"({template['default_vcpus']} vCPU, {template['default_ram_mb']} MB RAM)"
+    )
 ```
 
 ## Run commands
 
 ```python run_command.py
-from celesto import Celesto
+from celesto import Computer
 
 
-with Celesto() as client:
-    computer = client.computers.create(template_id="scratch")
-    try:
-        result = client.computers.exec(computer["id"], "ls -la /home")
-        print(result["stdout"])
-        print(result["exit_code"])
-    finally:
-        client.computers.delete(computer["id"])
+computer = Computer(template_id="scratch")
+result = computer.run("ls -la /home", timeout=60)
+print(result["stdout"])
+print(result["exit_code"])
+
+computer.delete()
 ```
 
 <ResponseField name="exit_code" type="integer" required>
@@ -143,60 +133,48 @@ with Celesto() as client:
 ## Get and list computers
 
 ```python list_computers.py
-from celesto import Celesto
+from celesto import Computer
 
 
-with Celesto() as client:
-    result = client.computers.list()
-    for computer in result["computers"]:
-        info = client.computers.get(computer["id"])
-        print(f"{info['name']}: {info['status']}")
-    print(f"Total: {result['count']}")
+computers = Computer.list(status="running")
+for computer in computers:
+    info = Computer.get(computer["id"])
+    print(f"{info.name}: {info.status}")
+
+print(f"Total: {len(computers)}")
 ```
 
 ## Publish a port
 
 Publishing a port gives your computer a public HTTPS URL. Use it when an app, API server, or notebook running inside the computer needs to be reachable from outside the sandbox.
 
-<Note>
-  Port publishing is currently available in the Python SDK and CLI. The current release supports publishing port `8000`.
-</Note>
-
 ```python publish_port.py
-from celesto import Celesto
+from celesto import Computer
 
 
-with Celesto() as client:
-    computer = client.computers.create(template_id="coding-agent")
-    try:
-        client.computers.exec(
-            computer["id"],
-            "cd /tmp && python3 -m http.server 8000 > /tmp/server.log 2>&1 &",
-        )
-        published = client.computers.publish_port(computer["id"])
-        print(published["url"])
+computer = Computer(template_id="coding-agent")
+computer.run("cd /tmp && python3 -m http.server 8000 > /tmp/server.log 2>&1 &")
 
-        for port in client.computers.list_published_ports(computer["id"]):
-            print(f"{port['port']} -> {port['url']} ({port['status']})")
+url = computer.publish_port(8000)
+print(url)
 
-        client.computers.unpublish_port(computer["id"])
-    finally:
-        client.computers.delete(computer["id"])
+for port in computer.list_published_ports():
+    print(f"{port['port']} -> {port['url']} ({port['status']})")
+
+computer.unpublish_port(8000)
+computer.delete()
 ```
 
 ## Stop, start, and delete
 
 ```python lifecycle.py
-from celesto import Celesto
+from celesto import Computer
 
 
-with Celesto() as client:
-    computer = client.computers.create()
-    computer_id = computer["id"]
-
-    client.computers.stop(computer_id)
-    client.computers.start(computer_id)
-    client.computers.delete(computer_id)
+computer = Computer()
+computer.stop()
+computer.start()
+computer.delete()
 ```
 
 </View>
@@ -205,36 +183,34 @@ with Celesto() as client:
 
 ## Create a computer
 
-Call `create()` with no arguments to get a fresh `scratch` computer, which is a minimal Ubuntu sandbox.
+Use `Computer.create()` with no arguments to get a fresh `scratch` computer, which is a minimal Ubuntu sandbox.
 
 ```ts create-computer.ts
-import { Celesto } from "@celestoai/sdk";
+import { Computer } from "@celestoai/sdk";
 
-const client = new Celesto({ token: process.env.CELESTO_API_KEY });
-const computer = await client.computers.create();
+const computer = await Computer.create();
 console.log(computer.name);
 console.log(computer.id);
 console.log(computer.status);
-await client.computers.delete(computer.id);
+
+await computer.delete();
 ```
 
 Override CPU, memory, or disk size when the default size is too small:
 
 ```ts create-sized-computer.ts
-import { Celesto } from "@celestoai/sdk";
+import { Computer } from "@celestoai/sdk";
 
-const client = new Celesto({ token: process.env.CELESTO_API_KEY });
-const computer = await client.computers.create({
+const computer = await Computer.create({
   cpus: 2,
   memory: 2048,
-  diskSizeMb: 15360,
+  disk: "15gb",
 });
 
-try {
-  console.log(`${computer.name} has ${computer.vcpus} vCPUs`);
-} finally {
-  await client.computers.delete(computer.id);
-}
+console.log(`${computer.name} has ${computer.vcpus} vCPUs`);
+console.log(`${computer.ramMb} MB RAM`);
+
+await computer.delete();
 ```
 
 <ParamField body="cpus" type="integer">
@@ -243,6 +219,10 @@ try {
 
 <ParamField body="memory" type="integer">
   Memory in MB. Range: 512-32768. Defaults to the template's value.
+</ParamField>
+
+<ParamField body="disk" type="integer | string">
+  Disk size as MB or a string such as `"15gb"`. Alias for `diskSizeMb`.
 </ParamField>
 
 <ParamField body="diskSizeMb" type="integer">
@@ -257,35 +237,26 @@ try {
   Optional immutable template version. Pin this when you want repeatable builds as a template changes over time.
 </ParamField>
 
-<ParamField body="image" type="string">
-  Legacy OS image selector. Prefer `templateId` for new code.
-</ParamField>
-
 ## Use a template
 
 A template is a ready-made computer image with extra tools and default CPU, memory, and disk settings. Use `coding-agent` for common coding workflows:
 
 ```ts create-from-template.ts
-import { Celesto } from "@celestoai/sdk";
+import { Computer } from "@celestoai/sdk";
 
-const client = new Celesto({ token: process.env.CELESTO_API_KEY });
-const computer = await client.computers.create({ templateId: "coding-agent" });
+const computer = await Computer.create({ templateId: "coding-agent" });
+const result = await computer.run("python3 --version");
+console.log(result.stdout.trim());
 
-try {
-  const result = await client.computers.exec(computer.id, "python3 --version");
-  console.log(result.stdout.trim());
-} finally {
-  await client.computers.delete(computer.id);
-}
+await computer.delete();
 ```
 
 ## List templates
 
 ```ts list-templates.ts
-import { Celesto } from "@celestoai/sdk";
+import { Computer } from "@celestoai/sdk";
 
-const client = new Celesto({ token: process.env.CELESTO_API_KEY });
-const templates = await client.computers.listTemplates();
+const templates = await Computer.listTemplates();
 
 for (const template of templates) {
   console.log(
@@ -298,18 +269,14 @@ for (const template of templates) {
 ## Run commands
 
 ```ts run-command.ts
-import { Celesto } from "@celestoai/sdk";
+import { Computer } from "@celestoai/sdk";
 
-const client = new Celesto({ token: process.env.CELESTO_API_KEY });
-const computer = await client.computers.create({ templateId: "scratch" });
+const computer = await Computer.create({ templateId: "scratch" });
+const result = await computer.run("ls -la /home", { timeout: 60 });
+console.log(result.stdout);
+console.log(result.exitCode);
 
-try {
-  const result = await client.computers.exec(computer.id, "ls -la /home");
-  console.log(result.stdout);
-  console.log(result.exitCode);
-} finally {
-  await client.computers.delete(computer.id);
-}
+await computer.delete();
 ```
 
 <ResponseField name="exitCode" type="integer" required>
@@ -327,60 +294,65 @@ try {
 ## Get and list computers
 
 ```ts list-computers.ts
-import { Celesto } from "@celestoai/sdk";
+import { Computer } from "@celestoai/sdk";
 
-const client = new Celesto({ token: process.env.CELESTO_API_KEY });
-const result = await client.computers.list();
+const computers = await Computer.list({ status: "running" });
 
-for (const computer of result.computers) {
-  const info = await client.computers.get(computer.id);
+for (const computer of computers) {
+  const info = await Computer.get(computer.id);
   console.log(`${info.name}: ${info.status}`);
 }
 
-console.log(`Total: ${result.count}`);
+console.log(`Total: ${computers.length}`);
 ```
 
 ## Publish a port
 
-<Note>
-  Port publishing is currently available in the Python SDK and CLI. Use the [CLI port commands](/celesto-sdk/cli#port-commands) from TypeScript projects when you need to expose a service today.
-</Note>
+Publishing a port gives your computer a public HTTPS URL. Use it when an app, API server, or notebook running inside the computer needs to be reachable from outside the sandbox.
+
+```ts publish-port.ts
+import { Computer } from "@celestoai/sdk";
+
+const computer = await Computer.create({ templateId: "coding-agent" });
+await computer.run("cd /tmp && python3 -m http.server 8000 > /tmp/server.log 2>&1 &");
+
+const url = await computer.publishPort(8000);
+console.log(url);
+
+for (const port of await computer.listPublishedPorts()) {
+  console.log(`${port.port} -> ${port.url} (${port.status})`);
+}
+
+await computer.unpublishPort(8000);
+await computer.delete();
+```
 
 ## Stop, start, and delete
 
 ```ts lifecycle.ts
-import { Celesto } from "@celestoai/sdk";
+import { Computer } from "@celestoai/sdk";
 
-const client = new Celesto({ token: process.env.CELESTO_API_KEY });
-const computer = await client.computers.create();
-const computerId = computer.id;
+const computer = await Computer.create();
 
-await client.computers.stop(computerId);
-await client.computers.start(computerId);
-await client.computers.delete(computerId);
+await computer.stop();
+await computer.start();
+await computer.delete();
 ```
 
 ## Open a terminal connection
 
-The TypeScript SDK provides a `getTerminalConnection` method that returns the URL, headers, and first message for an interactive WebSocket terminal session.
+Use `ComputersClient.getTerminalConnection()` when you are building your own interactive terminal. It returns the URL, headers, and first message for a WebSocket terminal session. A WebSocket is a long-running connection that sends terminal input and receives terminal output.
 
 ```ts terminal.ts
 import WebSocket from "ws";
-import { Celesto } from "@celestoai/sdk";
+import { ComputersClient } from "@celestoai/sdk/computers";
 
-const client = new Celesto({ token: process.env.CELESTO_API_KEY });
-const computer = await client.computers.create({ templateId: "scratch" });
+const client = new ComputersClient({ token: process.env.CELESTO_API_KEY });
+const conn = await client.getTerminalConnection("einstein");
+const ws = new WebSocket(conn.url, { headers: conn.headers });
 
-try {
-  const conn = await client.computers.getTerminalConnection(computer.id);
-  const ws = new WebSocket(conn.url, { headers: conn.headers });
-
-  ws.on("open", () => ws.send(conn.firstMessage));
-  ws.on("message", (data) => process.stdout.write(data));
-} catch (error) {
-  await client.computers.delete(computer.id);
-  throw error;
-}
+ws.on("open", () => ws.send(conn.firstMessage));
+ws.on("message", (data) => process.stdout.write(data));
 ```
 
 </View>
@@ -404,19 +376,19 @@ try {
 </ResponseField>
 
 <ResponseField name="ram_mb" type="integer" required>
-  Memory allocated in MB.
+  Memory allocated in MB. TypeScript exposes this as `ramMb`.
 </ResponseField>
 
 <ResponseField name="disk_size_mb" type="integer" required>
-  Disk allocated in MB.
+  Disk allocated in MB. TypeScript exposes this as `diskSizeMb`.
 </ResponseField>
 
 <ResponseField name="template_id" type="string" required>
-  Sandbox template the computer was created from.
+  Sandbox template the computer was created from. TypeScript exposes this as `templateId`.
 </ResponseField>
 
 <ResponseField name="template_version" type="string">
-  Pinned template version, if one was provided at create time.
+  Pinned template version, if one was provided at create time. TypeScript exposes this as `templateVersion`.
 </ResponseField>
 
 <ResponseField name="connection" type="object">

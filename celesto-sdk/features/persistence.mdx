@@ -31,38 +31,34 @@ The example below creates a file, stops the computer, starts it again, and check
 <CodeGroup>
 
 ```python Python
-from celesto import Celesto
+from celesto import Computer
 
 
-client = Celesto()
-computer = client.computers.create(template_id="coding-agent")
-computer_id = computer["id"]
+computer = Computer(template_id="coding-agent")
 
-client.computers.exec(computer_id, "echo ready > status.txt")
-client.computers.stop(computer_id)
+computer.run("echo ready > status.txt")
+computer.stop()
 
-client.computers.start(computer_id)
-result = client.computers.exec(computer_id, "cat status.txt")
+computer.start()
+result = computer.run("cat status.txt")
 print(result["stdout"].strip())
 
-client.computers.delete(computer_id)
+computer.delete()
 ```
 
 ```ts TypeScript
-import { Celesto } from "@celestoai/sdk";
+import { Computer } from "@celestoai/sdk";
 
-const client = new Celesto({ token: process.env.CELESTO_API_KEY });
-const computer = await client.computers.create({ templateId: "coding-agent" });
-const computerId = computer.id;
+const computer = await Computer.create({ templateId: "coding-agent" });
 
-await client.computers.exec(computerId, "echo ready > status.txt");
-await client.computers.stop(computerId);
+await computer.run("echo ready > status.txt");
+await computer.stop();
 
-await client.computers.start(computerId);
-const result = await client.computers.exec(computerId, "cat status.txt");
+await computer.start();
+const result = await computer.run("cat status.txt");
 console.log(result.stdout.trim());
 
-await client.computers.delete(computerId);
+await computer.delete();
 ```
 
 ```bash CLI
@@ -88,7 +84,7 @@ celesto computer delete einstein
 
 Use the same computer when you want the same state.
 
-- In SDK code, save the computer ID returned by `create()`.
+- In SDK code, save `computer.id`.
 - In the CLI, use the computer name shown by `celesto computer create`.
 
 <Tip>

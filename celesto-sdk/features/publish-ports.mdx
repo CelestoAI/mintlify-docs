@@ -1,15 +1,14 @@
 ---
 title: Publish ports from a sandboxed computer
 sidebarTitle: Publish ports
-description: "Expose a web server, API, notebook, or preview app running inside a Celesto computer through a public HTTPS URL with the Python SDK or CLI."
+description: "Expose a web server, API, notebook, or preview app running inside a Celesto computer through a public HTTPS URL with the SDK or CLI."
 ---
 
-Services inside a Celesto computer are private by default. This isolation is useful for running agents, notebooks, APIs, and preview apps safely, but it also means you cannot open a browser or send a webhook to a service unless you expose it first.
+Services inside a Celesto computer are private by default. This isolation is useful for running agents, notebooks, APIs, and preview apps safely, but it also means you need to expose a service before you can open it in a browser or send a webhook to it.
 
 Port publishing creates a public HTTPS URL that forwards traffic to a port inside the computer, so you can preview, test, and share running services without deploying them elsewhere.
 
 A port is the numbered address a service listens on. For example, a local development server might listen on port `8000`.
-
 
 ## When to publish a port
 
@@ -19,10 +18,6 @@ Publish a port when you need to:
 - Share a local API running inside a computer.
 - Receive webhooks during a test run.
 - Inspect a notebook, dashboard, or development server.
-
-<Note>
-  Port publishing is currently available in the Python SDK and CLI. TypeScript projects can use the same CLI commands today.
-</Note>
 
 ## Publish a service
 
@@ -35,23 +30,36 @@ The following example starts a simple HTTP server on port `8000`, publishes the 
     <CodeGroup>
 
     ```python Python
-    from celesto import Celesto
+    from celesto import Computer
 
 
-    client = Celesto()
-    computer = client.computers.create(template_id="coding-agent")
-    computer_id = computer["id"]
+    computer = Computer(template_id="coding-agent")
+    computer.run("python3 -m http.server 8000 &")
 
-    client.computers.exec(computer_id, "python3 -m http.server 8000 &")
+    url = computer.publish_port(8000)
+    print(url)
 
-    published_port = client.computers.publish_port(computer_id)
-    print(published_port["url"])
-
-    published_ports = client.computers.list_published_ports(computer_id)
+    published_ports = computer.list_published_ports()
     print(published_ports)
 
-    client.computers.unpublish_port(computer_id)
-    client.computers.delete(computer_id)
+    computer.unpublish_port(8000)
+    computer.delete()
+    ```
+
+    ```ts TypeScript
+    import { Computer } from "@celestoai/sdk";
+
+    const computer = await Computer.create({ templateId: "coding-agent" });
+    await computer.run("python3 -m http.server 8000 &");
+
+    const url = await computer.publishPort(8000);
+    console.log(url);
+
+    const publishedPorts = await computer.listPublishedPorts();
+    console.log(publishedPorts);
+
+    await computer.unpublishPort(8000);
+    await computer.delete();
     ```
 
     ```bash CLI

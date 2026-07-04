@@ -131,15 +131,12 @@ Pass a `CelestoSandboxClientOptions` to control how the computer is created. Eve
 
 ### Authenticate the client
 
-By default `CelestoSandboxClient` uses your `CELESTO_API_KEY` environment variable. You can also pass credentials directly or share an existing `Celesto` instance:
+By default `CelestoSandboxClient` uses your `CELESTO_API_KEY` environment variable. You can also pass credentials directly:
 
 ```python
-from celesto import Celesto
 from celesto.integrations.openai_agents import CelestoSandboxClient
 
 client = CelestoSandboxClient(api_key="your-api-key")
-# or
-client = CelestoSandboxClient(client=Celesto(api_key="your-api-key"))
 ```
 
 ### Resume a session later

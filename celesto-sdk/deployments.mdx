@@ -1,120 +1,62 @@
 ---
-title: Deploy agents with the Celesto SDK
+title: Deploy agents on Celesto
 sidebarTitle: Deployments
-description: "Use the Celesto Deployment API to package Python agent code, ship it to Celesto's managed infrastructure, and manage deployment versions and rollouts."
+description: "Learn the current status of Celesto deployment APIs and use sandboxed computers while the deployment resource is updated."
 ---
 
-The Deployment API packages an agent folder and runs it on Celesto's managed infrastructure. Use it when you are ready to move an agent from local development into a hosted Celesto environment.
+Celesto deployments run agent code on managed infrastructure. The deployment API is being updated to match the new resource-style SDK used by `Computer`.
 
 <Note>
-  The Deployment API is currently available in the Python SDK.
+  The current public SDK release focuses on sandboxed computers. Use [sandboxed computers](/celesto-sdk/computers) to create a cloud workspace, run commands, publish preview ports, and clean up resources while deployment docs are refreshed.
 </Note>
 
-## Deploy an agent
+## What to use today
 
-Create a folder named `weather-agent` with your agent code, then deploy it:
-
-```python deploy_agent.py
-import os
-from pathlib import Path
-
-from celesto import Celesto
-
-
-client = Celesto()
-result = client.deployment.deploy(
-    folder=Path("./weather-agent"),
-    name="weather-agent-v1",
-    description="Weather assistant",
-    envs={"OPENAI_API_KEY": os.environ["OPENAI_API_KEY"]},
-)
-
-print(f"Deployment ID: {result['id']}")
-print(f"Status: {result['status']}")
-print(f"URL: {result.get('url', 'pending')}")
-```
-
-Run it:
+For agent development and preview workflows, create a `coding-agent` computer and run your app inside it:
 
 ```bash
-export CELESTO_API_KEY="your-api-key"
-export OPENAI_API_KEY="your-openai-api-key"
-python deploy_agent.py
+celesto computer create --template coding-agent
+celesto computer run einstein "python3 --version"
+celesto computer run einstein "python3 -m http.server 8000 &"
+celesto computer port publish einstein --port 8000
 ```
 
-<ParamField body="folder" type="Path" required>
-  Path to the directory containing your agent code.
-</ParamField>
+For Python code, use the `Computer` resource:
 
-<ParamField body="name" type="string" required>
-  Unique name for the deployment.
-</ParamField>
-
-<ParamField body="description" type="string">
-  Human-readable description of the deployment.
-</ParamField>
-
-<ParamField body="envs" type="object">
-  Environment variables as key-value pairs.
-</ParamField>
-
-<ParamField body="project_name" type="string">
-  Project name to scope the deployment. Defaults to your first project.
-</ParamField>
-
-## Deployment response
-
-<ResponseField name="id" type="string" required>
-  Unique deployment identifier.
-</ResponseField>
-
-<ResponseField name="status" type="string" required>
-  Deployment status: `BUILDING`, `READY`, or `FAILED`.
-</ResponseField>
-
-<ResponseField name="url" type="string">
-  Endpoint URL, available when status is `READY`.
-</ResponseField>
-
-<ResponseField name="message" type="string">
-  Additional information about the deployment result.
-</ResponseField>
-
-## List deployments
-
-```python list_deployments.py
-from celesto import Celesto
+```python
+from celesto import Computer
 
 
-client = Celesto()
-deployments = client.deployment.list()
+computer = Computer(template_id="coding-agent")
+print(computer.name)
 
-for deployment in deployments:
-    print(f"{deployment['name']}: {deployment['status']}")
+result = computer.run("python3 --version")
+print(result["stdout"])
+
+computer.delete()
 ```
 
-Each deployment object includes:
+For TypeScript code, use the `Computer` resource:
 
-<ResponseField name="id" type="string" required>
-  Unique deployment identifier.
-</ResponseField>
+```ts
+import { Computer } from "@celestoai/sdk";
 
-<ResponseField name="name" type="string" required>
-  Deployment name.
-</ResponseField>
+const computer = await Computer.create({ templateId: "coding-agent" });
+console.log(computer.name);
 
-<ResponseField name="description" type="string">
-  Human-readable description, if provided during deploy.
-</ResponseField>
+const result = await computer.run("python3 --version");
+console.log(result.stdout);
 
-<ResponseField name="status" type="string" required>
-  Deployment status: `READY`, `BUILDING`, `FAILED`, or `STOPPED`.
-</ResponseField>
+await computer.delete();
+```
 
-<ResponseField name="created_at" type="string">
-  ISO 8601 timestamp of when the deployment was created.
-</ResponseField>
+## Next steps
 
-<ResponseField name="updated_at" type="string">
-  ISO 8601 timestamp of the most recent update.
-</ResponseField>
+<CardGroup cols={2}>
+  <Card title="Sandboxed computers" icon="server" href="/celesto-sdk/computers">
+    Create computers, run commands, publish ports, and manage lifecycle.
+  </Card>
+  <Card title="Publish a GitHub app" icon="github" href="/celesto-sdk/guides/publish-github-app">
+    Use a Celesto computer to build and preview an app from a repository.
+  </Card>
+</CardGroup>

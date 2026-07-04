@@ -24,7 +24,7 @@ from celesto.sdk.exceptions import (
 ## Catch common failures
 
 ```python handle_errors.py
-from celesto import Celesto
+from celesto import Computer
 from celesto.sdk.exceptions import (
     CelestoAuthenticationError,
     CelestoNetworkError,
@@ -35,11 +35,9 @@ from celesto.sdk.exceptions import (
 )
 
 
-client = Celesto()
-
 try:
-    computer = client.computers.get("missing-computer")
-    print(computer["name"])
+    computer = Computer.get("missing-computer")
+    print(computer.name)
 except CelestoAuthenticationError:
     print("Check CELESTO_API_KEY.")
 except CelestoValidationError as error:
@@ -76,12 +74,10 @@ import { CelestoApiError, CelestoError, CelestoNetworkError } from "@celestoai/s
 ## Catch common failures
 
 ```ts handle-errors.ts
-import { Celesto, CelestoApiError, CelestoError, CelestoNetworkError } from "@celestoai/sdk";
-
-const client = new Celesto({ token: process.env.CELESTO_API_KEY });
+import { Computer, CelestoApiError, CelestoError, CelestoNetworkError } from "@celestoai/sdk";
 
 try {
-  const computer = await client.computers.get("missing-computer");
+  const computer = await Computer.get("missing-computer");
   console.log(computer.name);
 } catch (error) {
   if (error instanceof CelestoApiError) {

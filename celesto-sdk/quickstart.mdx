@@ -15,7 +15,7 @@ Get an API key from [celesto.ai](https://celesto.ai) under **Settings > Security
 ## Install the Python SDK
 
 ```bash
-pip install celesto
+pip install -U celesto
 ```
 
 ## Run your first computer
@@ -25,21 +25,19 @@ Create `quickstart.py`:
 ```python quickstart.py
 import os
 
-from celesto import Celesto
+from celesto import Computer
 
 
 if not os.environ.get("CELESTO_API_KEY"):
     raise RuntimeError("Set CELESTO_API_KEY before running this script.")
 
-with Celesto() as client:
-    computer = client.computers.create(template_id="scratch")
-    print(f"Computer ready: {computer['name']}")
+computer = Computer(template_id="scratch")
+print(f"Computer ready: {computer.name}")
 
-    try:
-        result = client.computers.exec(computer["id"], "uname -a")
-        print(result["stdout"].strip())
-    finally:
-        client.computers.delete(computer["id"])
+result = computer.run("uname -a")
+print(result["stdout"].strip())
+
+computer.delete()
 ```
 
 Run it:
@@ -64,7 +62,7 @@ Learn how to [create computers with templates](/celesto-sdk/computers#use-a-temp
 ## Install the TypeScript SDK
 
 ```bash
-npm install @celestoai/sdk
+npm install @celestoai/sdk@latest
 npm install --save-dev tsx typescript
 ```
 
@@ -73,23 +71,20 @@ npm install --save-dev tsx typescript
 Create `quickstart.ts`:
 
 ```ts quickstart.ts
-import { Celesto } from "@celestoai/sdk";
+import { Computer } from "@celestoai/sdk";
 
 const token = process.env.CELESTO_API_KEY;
 if (!token) {
   throw new Error("Set CELESTO_API_KEY before running this script.");
 }
 
-const client = new Celesto({ token });
-const computer = await client.computers.create({ templateId: "scratch" });
-console.log(`Computer ready: ${computer.name}`);
+const computer = await Computer.create({ templateId: "scratch" }, { token });
+console.log("Computer ready:", computer.name);
 
-try {
-  const result = await client.computers.exec(computer.id, "uname -a");
-  console.log(result.stdout.trim());
-} finally {
-  await client.computers.delete(computer.id);
-}
+const result = await computer.run("uname -a");
+console.log(result.stdout.trim());
+
+await computer.delete();
 ```
 
 Run it:

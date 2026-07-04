@@ -10,8 +10,8 @@ Use this section when you want to:
 
 - Run generated code in an isolated computer.
 - Give an AI agent a workspace with files, shell commands, and optional public ports.
-- Deploy an agent to Celesto's managed infrastructure.
-- Connect end-user data sources through Gatekeeper.
+- Keep long-running agent work in a durable cloud workspace.
+- Connect end-user data sources through Gatekeeper from TypeScript apps.
 
 <CardGroup cols={2}>
   <Card title="Quickstart" icon="rocket" href="/celesto-sdk/quickstart">
@@ -27,13 +27,13 @@ Use this section when you want to:
     Use `celesto auth` and `celesto computer` commands from your terminal.
   </Card>
   <Card title="Deployments" icon="cloud-upload" href="/celesto-sdk/deployments">
-    Package and deploy Python agents to Celesto's managed infrastructure.
+    See the current status of managed deployment APIs.
   </Card>
   <Card title="OpenAI Agents" icon="robot" href="/celesto-sdk/openai-agents">
     Give an OpenAI `SandboxAgent` a hosted Celesto computer or local SmolVM.
   </Card>
   <Card title="Gatekeeper" icon="shield-check" href="/celesto-sdk/gatekeeper">
-    Connect your users to providers like Google Drive with delegated OAuth access.
+    Connect your users to providers like Google Drive from TypeScript apps.
   </Card>
   <Card title="Errors" icon="triangle-alert" href="/celesto-sdk/errors">
     Handle authentication, validation, rate limit, server, and network errors.
@@ -68,7 +68,7 @@ Pages with SDK examples use Mintlify's `View` component. Pick Python or TypeScri
 Use the Python SDK when you are building agents, automation scripts, or backend services in Python. Python examples use `snake_case` parameters such as `template_id` and `disk_size_mb`.
 
 ```bash
-pip install celesto
+pip install -U celesto
 ```
 
 Start with the [Python quickstart](/celesto-sdk/quickstart), then read [Sandboxed computers](/celesto-sdk/computers) when you need templates, command execution, ports, or lifecycle control.
@@ -80,7 +80,7 @@ Start with the [Python quickstart](/celesto-sdk/quickstart), then read [Sandboxe
 Use the npm SDK when you are building Node.js services, TypeScript workers, or web tooling. TypeScript and JavaScript projects use the same package. TypeScript examples use `camelCase` parameters such as `templateId` and `diskSizeMb`.
 
 ```bash
-npm install @celestoai/sdk
+npm install @celestoai/sdk@latest
 ```
 
 Start with the [TypeScript quickstart](/celesto-sdk/quickstart), then read [Sandboxed computers](/celesto-sdk/computers) when you need templates, command execution, lifecycle control, or terminal connections.
@@ -111,7 +111,7 @@ Start with the [TypeScript quickstart](/celesto-sdk/quickstart), then read [Sand
       Your code or agent runs inside the sandbox instead of on your host machine.
     </Check>
   </Step>
-  <Step title="Clean up or deploy">
-    Delete temporary computers when you are done, or package agent code with the Deployment API when you are ready to run it on Celesto.
+  <Step title="Clean up">
+    Delete temporary computers when you are done, or stop long-lived computers when you want to keep their files for later.
   </Step>
 </Steps>

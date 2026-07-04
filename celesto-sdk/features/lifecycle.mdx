@@ -15,32 +15,26 @@ Create a computer when you need a clean workspace. Stop it to pause work and kee
 <CodeGroup>
 
 ```python Python
-from celesto import Celesto
+from celesto import Computer
 
 
-client = Celesto()
-computer = client.computers.create(template_id="coding-agent")
-computer_id = computer["id"]
+computer = Computer(template_id="coding-agent")
+print(computer.name)
 
-print(computer["name"])
-
-client.computers.stop(computer_id)
-client.computers.start(computer_id)
-client.computers.delete(computer_id)
+computer.stop()
+computer.start()
+computer.delete()
 ```
 
 ```ts TypeScript
-import { Celesto } from "@celestoai/sdk";
+import { Computer } from "@celestoai/sdk";
 
-const client = new Celesto({ token: process.env.CELESTO_API_KEY });
-const computer = await client.computers.create({ templateId: "coding-agent" });
-const computerId = computer.id;
-
+const computer = await Computer.create({ templateId: "coding-agent" });
 console.log(computer.name);
 
-await client.computers.stop(computerId);
-await client.computers.start(computerId);
-await client.computers.delete(computerId);
+await computer.stop();
+await computer.start();
+await computer.delete();
 ```
 
 ```bash CLI
