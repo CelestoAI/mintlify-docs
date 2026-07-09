@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">CelestoFS high-level architecture</title>
+  <desc id="desc">An AI agent runs inside a Celesto sandbox. System files use a separate durable root disk, while normal file operations under /home/ohm flow through the CelestoFS mount to a managed storage plane with durable metadata and petabyte-scale object storage.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0B0D12"/>
+      <stop offset="1" stop-color="#131720"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FF7043"/>
+      <stop offset="1" stop-color="#F0441D"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1C212C"/>
+      <stop offset="1" stop-color="#151922"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#000" flood-opacity=".28"/>
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M0 0L12 6L0 12Z" fill="#FF6840"/>
+    </marker>
+    <style>
+      .sans{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+      .eyebrow{font-size:17px;font-weight:700;letter-spacing:2.4px;fill:#FF7956}
+      .title{font-size:46px;font-weight:720;letter-spacing:-1.4px;fill:#F7F8FA}
+      .subtitle{font-size:20px;font-weight:430;fill:#AEB5C2}
+      .label{font-size:23px;font-weight:680;fill:#F5F6F8}
+      .body{font-size:17px;font-weight:430;fill:#AEB5C2}
+      .small{font-size:15px;font-weight:600;fill:#C9CED7}
+      .chip{font-size:14px;font-weight:700;letter-spacing:.5px;fill:#FF8A6B}
+    </style>
+  </defs>
+
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <path d="M0 746C312 650 560 824 858 751C1138 682 1302 610 1600 710V900H0Z" fill="#FF5A32" opacity=".035"/>
+  <circle cx="1440" cy="60" r="250" fill="#FF5A32" opacity=".025"/>
+
+  <g class="sans">
+    <text x="100" y="82" class="eyebrow">CELESTOFS</text>
+    <text x="100" y="139" class="title">Durable storage for AI agent sandboxes</text>
+    <text x="100" y="181" class="subtitle">A familiar filesystem inside the sandbox. Managed, petabyte-scale storage underneath.</text>
+
+    <!-- Agent workload -->
+    <g filter="url(#shadow)">
+      <rect x="100" y="286" width="262" height="252" rx="24" fill="url(#panel)" stroke="#343A47" stroke-width="2"/>
+      <rect x="124" y="312" width="82" height="29" rx="14.5" fill="#FF6840" opacity=".13"/>
+      <text x="143" y="332" class="chip">AGENT</text>
+      <circle cx="168" cy="397" r="29" fill="url(#accent)"/>
+      <path d="M156 397h24M168 385v24" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".92"/>
+      <text x="124" y="459" class="label">Agent workload</text>
+      <text x="124" y="489" class="body">Code • tools • builds</text>
+      <text x="124" y="517" class="body">datasets • artifacts</text>
+    </g>
+
+    <!-- Sandbox boundary -->
+    <g filter="url(#shadow)">
+      <rect x="452" y="238" width="548" height="486" rx="28" fill="#10141B" stroke="#4A5261" stroke-width="2"/>
+      <rect x="452" y="238" width="548" height="72" rx="28" fill="#1D222C"/>
+      <path d="M452 282V266a28 28 0 0 1 28-28h492a28 28 0 0 1 28 28v16Z" fill="#1D222C"/>
+      <circle cx="493" cy="274" r="6" fill="#FF6840"/>
+      <circle cx="516" cy="274" r="6" fill="#596171"/>
+      <circle cx="539" cy="274" r="6" fill="#596171"/>
+      <text x="576" y="282" class="small">CELESTO SANDBOX</text>
+
+      <rect x="490" y="346" width="472" height="138" rx="20" fill="#191E27" stroke="#353C49" stroke-width="2"/>
+      <rect x="516" y="371" width="52" height="52" rx="14" fill="#2A303B"/>
+      <path d="M530 386h24v22h-24zM535 380h14v6h-14z" fill="none" stroke="#B9C0CB" stroke-width="2" stroke-linejoin="round"/>
+      <text x="590" y="393" class="label">Durable root disk</text>
+      <text x="590" y="423" class="body">OS, runtime and system-level state</text>
+      <text x="590" y="454" class="small">/dev/root</text>
+
+      <rect x="490" y="516" width="472" height="168" rx="20" fill="#211A1A" stroke="#FF6840" stroke-width="2.5"/>
+      <rect x="516" y="543" width="52" height="52" rx="14" fill="#FF6840" opacity=".16"/>
+      <path d="M530 561c0-5 4-9 9-9h12c5 0 9 4 9 9v17c0 5-4 9-9 9h-12c-5 0-9-4-9-9zM537 561h16M537 570h16M537 579h10" fill="none" stroke="#FF7956" stroke-width="2.4" stroke-linecap="round"/>
+      <text x="590" y="565" class="label">CelestoFS workspace</text>
+      <text x="590" y="595" class="body">Repositories, datasets and artifacts</text>
+      <text x="590" y="626" class="small">/home/ohm</text>
+      <rect x="815" y="642" width="121" height="25" rx="12.5" fill="#FF6840" opacity=".13"/>
+      <text x="832" y="660" class="chip">POSIX I/O</text>
+    </g>
+
+    <!-- Storage plane -->
+    <g filter="url(#shadow)">
+      <rect x="1090" y="286" width="410" height="402" rx="28" fill="url(#panel)" stroke="#343A47" stroke-width="2"/>
+      <text x="1128" y="337" class="small">CELESTO MANAGED STORAGE PLANE</text>
+      <rect x="1128" y="374" width="334" height="106" rx="18" fill="#151921" stroke="#353C49" stroke-width="2"/>
+      <circle cx="1170" cy="427" r="24" fill="#272D38"/>
+      <path d="M1157 421h26M1157 428h26M1157 435h18" stroke="#C8CDD6" stroke-width="2.4" stroke-linecap="round"/>
+      <text x="1211" y="419" class="label">Durable metadata</text>
+      <text x="1211" y="448" class="body">Namespace and file state</text>
+
+      <rect x="1128" y="508" width="334" height="142" rx="18" fill="#211A1A" stroke="#FF6840" stroke-width="2"/>
+      <circle cx="1170" cy="565" r="24" fill="#FF6840" opacity=".16"/>
+      <path d="M1155 556c0-5 7-9 15-9s15 4 15 9v18c0 5-7 9-15 9s-15-4-15-9zm0 0c0 5 7 9 15 9s15-4 15-9m-30 9c0 5 7 9 15 9s15-4 15-9" fill="none" stroke="#FF7956" stroke-width="2.2"/>
+      <text x="1211" y="556" class="label">Object storage</text>
+      <text x="1211" y="585" class="body">Petabyte-scale file data</text>
+      <text x="1211" y="615" class="body">Durable by design</text>
+    </g>
+
+    <!-- Data flow -->
+    <path d="M362 412H452" fill="none" stroke="#FF6840" stroke-width="3" marker-end="url(#arrow)"/>
+    <text x="380" y="393" class="small">runs in</text>
+    <path d="M962 600C1025 600 1028 487 1090 487" fill="none" stroke="#FF6840" stroke-width="3" marker-end="url(#arrow)"/>
+    <text x="1004" y="568" class="small">files</text>
+    <path d="M1295 480V508" fill="none" stroke="#FF6840" stroke-width="3" marker-end="url(#arrow)"/>
+
+    <!-- Lifecycle note -->
+    <rect x="452" y="762" width="1048" height="70" rx="18" fill="#171B23" stroke="#2E3440" stroke-width="1.5"/>
+    <circle cx="492" cy="797" r="15" fill="#FF6840" opacity=".16"/>
+    <path d="M486 797l4 4 8-9" fill="none" stroke="#FF7956" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="522" y="803" class="body">Root disk and workspace state survive stop/start. Deleting the computer removes both.</text>
+  </g>
+</svg>
