@@ -8,6 +8,10 @@ Celesto sandboxes include a large durable filesystem for workspace data. Your ag
 
 The root disk is durable too. It holds the operating system, runtime, and system-level state. CelestoFS is a separate durable workspace filesystem for the files your agent actively works with.
 
+<Frame caption="CelestoFS gives each sandbox normal file operations while Celesto manages durable metadata and petabyte-scale object storage underneath.">
+  ![CelestoFS architecture showing an AI agent in a Celesto sandbox, the durable root disk, the CelestoFS workspace, and the managed storage plane](/assets/celestofs-architecture.svg)
+</Frame>
+
 ## What you get
 
 - A large durable workspace filesystem for agent files and generated data.
@@ -164,6 +168,12 @@ Both root disk and CelestoFS are durable across normal computer lifecycle operat
 
 For most agent work, write project data to the sandbox home directory. Increase root disk size when the OS, package manager, or system-level tooling needs more room.
 
+## How it works
+
+CelestoFS is mounted inside the sandbox so programs can use normal file operations from the guest. Celesto manages the storage lifecycle for you.
+
+You do not need to mount or configure anything yourself. Use the Celesto SDK or CLI, write files in the sandbox, and stop or start the computer when you want to resume the same work later.
+
 ## Best practices
 
 - Write agent work under the sandbox home directory or the template workspace path.
@@ -171,9 +181,3 @@ For most agent work, write project data to the sandbox home directory. Increase 
 - Stop a computer when you plan to resume it later.
 - Delete a computer when the saved computer state is no longer needed.
 - Use `df -h / /home/ohm` when debugging disk usage so you can see root disk and workspace storage separately.
-
-## How it works
-
-CelestoFS is mounted inside the sandbox so programs can use normal file operations from the guest. Celesto manages the storage lifecycle for you.
-
-You do not need to mount or configure anything yourself. Use the Celesto SDK or CLI, write files in the sandbox, and stop or start the computer when you want to resume the same work later.
