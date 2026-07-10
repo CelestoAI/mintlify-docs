@@ -21,6 +21,7 @@ A **Celesto computer** is a remote Linux computer created for your work. **Model
 
 You need:
 
+- Node.js 22.19 or newer.
 - [Pi](https://github.com/earendil-works/pi) installed and configured with a model provider.
 - A Celesto account and API key. Create the key at [celesto.ai](https://celesto.ai) under **Settings > Security**.
 - A local project directory you want Pi to edit.
@@ -44,14 +45,25 @@ You need:
     </Check>
   </Step>
 
-  <Step title="Set your Celesto API key">
-    Export the key in the shell where you will start Pi:
+  <Step title="Sign in to Celesto">
+    Install the Celesto CLI and save your API key locally:
 
     ```bash
-    export CELESTO_API_KEY="your-celesto-api-key"
+    pip install celesto
+    celesto auth login
     ```
 
-    Keep the key in your shell environment or secret manager. Do not add it to your project files.
+    <Check>
+      Run `celesto auth status` and confirm that an API key is saved.
+    </Check>
+
+    You can instead export the key or add it to the project's local `.env` file:
+
+    ```bash .env
+    CELESTO_API_KEY="your-celesto-api-key"
+    ```
+
+    Add `.env` to `.gitignore`. The extension checks the shell environment first, then `.env`, then credentials saved by `celesto auth login`.
   </Step>
 
   <Step title="Start Pi from your project">
@@ -108,7 +120,7 @@ You need:
 | Pi terminal interface | Project copy in `/workspace` |
 | Conversation and session history | `read`, `write`, `edit`, and `bash` operations |
 | Model-provider credentials | Shell commands and test processes |
-| `CELESTO_API_KEY` used by the local SDK | Files created by Pi during the session |
+| Celesto API key from your shell, `.env`, or CLI login | Files created by Pi during the session |
 
 Pi treats `/workspace` on the Celesto computer as the active project while the session runs. Local files stay unchanged until synchronization.
 
@@ -198,6 +210,8 @@ The extension is designed so the model connection stays local:
 
 - Pi calls your model provider from your machine.
 - Model credentials are not forwarded as shell environment variables.
+- The Celesto API key stays in the local Pi process and is not forwarded to the remote computer.
+- Local `.env` files remain excluded from workspace upload by default.
 - Celesto receives the project files that pass the exclusion rules.
 - Tool paths stay inside `/workspace`.
 - Shell commands can use the rest of the isolated Celesto computer.
@@ -223,13 +237,16 @@ pi update npm:@celestoai/pi
 ## Troubleshoot setup
 
 <AccordionGroup>
-  <Accordion title="CELESTO_API_KEY is not set">
-    Export the key in the same shell where you run Pi:
+  <Accordion title="No Celesto credentials were found">
+    Install the Celesto CLI and sign in, then restart Pi:
 
     ```bash
-    export CELESTO_API_KEY="your-celesto-api-key"
+    pip install celesto
+    celesto auth login
     pi --celesto
     ```
+
+    Alternatively, export `CELESTO_API_KEY` in the same shell or add it to the project's local `.env` file.
   </Accordion>
 
   <Accordion title="Pi does not recognize --celesto">
