@@ -73,10 +73,10 @@ You need:
     pi --celesto
     ```
 
-    The extension creates a Celesto computer, copies the project to `/workspace`, and routes Pi's `read`, `write`, `edit`, and `bash` tools there.
+    The extension creates a Celesto computer, copies the project to `$HOME/workspace`, and routes Pi's `read`, `write`, `edit`, and `bash` tools there.
 
     <Check>
-      Pi reports the computer name and shows `/workspace` as the active workspace.
+      Pi reports the computer name and shows `$HOME/workspace` as the active workspace.
     </Check>
   </Step>
 
@@ -117,12 +117,12 @@ You need:
 
 | Your machine | Celesto computer |
 | --- | --- |
-| Pi terminal interface | Project copy in `/workspace` |
+| Pi terminal interface | Project copy in `$HOME/workspace` |
 | Conversation and session history | `read`, `write`, `edit`, and `bash` operations |
 | Model-provider credentials | Shell commands and test processes |
 | Celesto API key from your shell, `.env`, or CLI login | Files created by Pi during the session |
 
-Pi treats `/workspace` on the Celesto computer as the active project while the session runs. Local files stay unchanged until synchronization.
+Pi treats `$HOME/workspace` on the Celesto computer as the active project while the session runs. Local files stay unchanged until synchronization.
 
 <Warning>
   The current extension uses compressed archives and base64 transfer. Treat your local Git repository as the durable copy: commit before long sessions, run `/celesto sync` regularly, and inspect `git diff` afterward.
@@ -135,7 +135,7 @@ The extension records a common revision after each successful synchronization. O
 | Change | Result |
 | --- | --- |
 | Only the Celesto file changed | Pull the remote file to your local project |
-| Only the local file changed | Push the local file to `/workspace` |
+| Only the local file changed | Push the local file to `$HOME/workspace` |
 | Both copies are identical | Leave the file unchanged |
 | Both copies changed differently | Preserve a conflict instead of overwriting either copy |
 | One copy deleted an unchanged file | Apply the deletion to the other copy |
@@ -166,7 +166,7 @@ Start Pi with a computer name or ID from that list:
 pi --celesto --celesto-computer curie
 ```
 
-A caller-selected computer is never deleted automatically. If it already contains files in `/workspace`, that remote workspace becomes the active copy. Run `/celesto sync` before editing locally.
+A caller-selected computer is never deleted automatically. If it already contains files in `$HOME/workspace`, that remote workspace becomes the active copy. A non-empty legacy `/workspace` is moved there automatically when the home workspace is empty. Run `/celesto sync` before editing locally.
 
 ## Control computer cleanup
 
@@ -213,7 +213,7 @@ The extension is designed so the model connection stays local:
 - The Celesto API key stays in the local Pi process and is not forwarded to the remote computer.
 - Local `.env` files remain excluded from workspace upload by default.
 - Celesto receives the project files that pass the exclusion rules.
-- Tool paths stay inside `/workspace`.
+- Tool paths stay inside `$HOME/workspace`.
 - Shell commands can use the rest of the isolated Celesto computer.
 - Remote command output streams back to the local Pi interface.
 
@@ -224,7 +224,7 @@ Review `.gitignore` and `.celestoignore` before the first session. Files intenti
 | Command | Outcome |
 | --- | --- |
 | `/celesto status` | Show the active computer, workspace, cleanup policy, and revision |
-| `/celesto sync` | Reconcile the local project with `/workspace` |
+| `/celesto sync` | Reconcile the local project with `$HOME/workspace` |
 | `/celesto keep` | Keep an extension-created computer after Pi exits |
 | `!<command>` | Run a shell command in the Celesto computer |
 
