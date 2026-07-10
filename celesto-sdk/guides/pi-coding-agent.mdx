@@ -1,0 +1,294 @@
+---
+title: Run Pi coding agent in the cloud
+sidebarTitle: Pi coding agent
+description: "Run Pi coding agent remotely on a Celesto cloud computer, keep model credentials local, sync project files safely, and troubleshoot common setup issues."
+---
+
+Run Pi's coding tools on a Celesto cloud computer while the Pi interface stays on your machine. Your project runs in an isolated workspace, and you choose when to copy changes back locally.
+
+A **Celesto computer** is a remote Linux computer created for your work. **Model credentials** are the API keys or login details Pi uses to access your chosen AI model. The Celesto extension keeps those credentials, your conversation history, and the Pi terminal interface on your machine.
+
+<CardGroup cols={2}>
+  <Card title="Start on Celesto Free" icon="cloud" href="https://celesto.ai/pi-coding-agent">
+    Create an account without a credit card and run Pi tools on an included cloud computer.
+  </Card>
+  <Card title="Open the Pi package" icon="box" href="https://pi.dev/packages/@celestoai/pi">
+    Review the package details and install `@celestoai/pi` from the official Pi package catalog.
+  </Card>
+</CardGroup>
+
+## Before you start
+
+You need:
+
+- [Pi](https://github.com/earendil-works/pi) installed and configured with a model provider.
+- A Celesto account and API key. Create the key at [celesto.ai](https://celesto.ai) under **Settings > Security**.
+- A local project directory you want Pi to edit.
+
+<Note>
+  This guide keeps Pi local and sends its coding tools to Celesto. If you want to run the entire Pi process inside a local SmolVM instead, see [Coding agents in SmolVM](/smolvm/features/coding-agents).
+</Note>
+
+## Run Pi remotely
+
+<Steps>
+  <Step title="Install the Celesto extension">
+    Install the package once through Pi:
+
+    ```bash
+    pi install npm:@celestoai/pi
+    ```
+
+    <Check>
+      Run `pi --help` and confirm that `--celesto` appears under extension flags.
+    </Check>
+  </Step>
+
+  <Step title="Set your Celesto API key">
+    Export the key in the shell where you will start Pi:
+
+    ```bash
+    export CELESTO_API_KEY="your-celesto-api-key"
+    ```
+
+    Keep the key in your shell environment or secret manager. Do not add it to your project files.
+  </Step>
+
+  <Step title="Start Pi from your project">
+    Change to the project directory, then run:
+
+    ```bash
+    pi --celesto
+    ```
+
+    The extension creates a Celesto computer, copies the project to `/workspace`, and routes Pi's `read`, `write`, `edit`, and `bash` tools there.
+
+    <Check>
+      Pi reports the computer name and shows `/workspace` as the active workspace.
+    </Check>
+  </Step>
+
+  <Step title="Check the remote workspace">
+    Run this inside Pi:
+
+    ```text
+    /celesto status
+    ```
+
+    The result shows the computer name, status, cleanup behavior, and current synchronization revision.
+  </Step>
+
+  <Step title="Ask Pi to change the project">
+    Give Pi a normal coding task. For example:
+
+    ```text
+    Add a health-check endpoint, run its tests, and explain the changes.
+    ```
+
+    Pi reads files, edits code, and runs tests inside the Celesto computer. Press `Esc` to stop a long-running tool command.
+  </Step>
+
+  <Step title="Copy changes back locally">
+    Run this inside Pi when you want the remote changes on your machine:
+
+    ```text
+    /celesto sync
+    ```
+
+    <Check>
+      Open your local editor or run `git diff`. The files changed by Pi now appear in your local project.
+    </Check>
+  </Step>
+</Steps>
+
+## What runs locally and remotely
+
+| Your machine | Celesto computer |
+| --- | --- |
+| Pi terminal interface | Project copy in `/workspace` |
+| Conversation and session history | `read`, `write`, `edit`, and `bash` operations |
+| Model-provider credentials | Shell commands and test processes |
+| `CELESTO_API_KEY` used by the local SDK | Files created by Pi during the session |
+
+Pi treats `/workspace` on the Celesto computer as the active project while the session runs. Local files stay unchanged until synchronization.
+
+<Warning>
+  The current extension uses compressed archives and base64 transfer. Treat your local Git repository as the durable copy: commit before long sessions, run `/celesto sync` regularly, and inspect `git diff` afterward.
+</Warning>
+
+## Synchronize local and remote changes
+
+The extension records a common revision after each successful synchronization. On the next `/celesto sync`, it compares both copies with that revision.
+
+| Change | Result |
+| --- | --- |
+| Only the Celesto file changed | Pull the remote file to your local project |
+| Only the local file changed | Push the local file to `/workspace` |
+| Both copies are identical | Leave the file unchanged |
+| Both copies changed differently | Preserve a conflict instead of overwriting either copy |
+| One copy deleted an unchanged file | Apply the deletion to the other copy |
+
+Conflicting remote files are saved under:
+
+```text
+.celesto-conflicts/<revision>/<path>.remote
+```
+
+If the remote copy was deleted, the extension writes a `.remote-deleted` marker. Resolve the local file, remove the conflict copy when you no longer need it, then run `/celesto sync` again.
+
+<Info>
+  A failed or conflicted final synchronization keeps an extension-created computer. Reopen the Pi session and run `/celesto sync` to recover the work.
+</Info>
+
+## Reuse an existing Celesto computer
+
+List your computers:
+
+```bash
+celesto computer list
+```
+
+Start Pi with a computer name or ID from that list:
+
+```bash
+pi --celesto --celesto-computer curie
+```
+
+A caller-selected computer is never deleted automatically. If it already contains files in `/workspace`, that remote workspace becomes the active copy. Run `/celesto sync` before editing locally.
+
+## Control computer cleanup
+
+The extension normally synchronizes and deletes a computer it created when Pi exits. Keep that computer for another session by running:
+
+```text
+/celesto keep
+```
+
+Pi prints the exact `celesto computer delete` command you can use later. Computers selected with `--celesto-computer` are always caller-owned and are never deleted by the extension.
+
+## Files excluded from the cloud workspace
+
+The extension reads `.gitignore`, then applies project-specific `.celestoignore` rules. It also excludes common secrets and large generated directories by default, including:
+
+- `.env` files and common credential files.
+- Pi, cloud-provider, SSH, and package-manager credentials.
+- `node_modules`, build output, coverage output, and `.next`.
+- Symbolic links.
+- Individual files larger than 25 MB.
+- `.celesto-conflicts` and the synchronization metadata file.
+
+The `.git` directory remains available so Pi can inspect branches, status, and diffs.
+
+Add extra exclusions to `.celestoignore`:
+
+```gitignore .celestoignore
+fixtures/private/
+*.large-test-data
+```
+
+A negated rule can explicitly include a path that another rule excluded:
+
+```gitignore .celestoignore
+!fixtures/public-example.json
+```
+
+## Security boundary
+
+The extension is designed so the model connection stays local:
+
+- Pi calls your model provider from your machine.
+- Model credentials are not forwarded as shell environment variables.
+- Celesto receives the project files that pass the exclusion rules.
+- Tool paths stay inside `/workspace`.
+- Shell commands can use the rest of the isolated Celesto computer.
+- Remote command output streams back to the local Pi interface.
+
+Review `.gitignore` and `.celestoignore` before the first session. Files intentionally included in the project can be copied to Celesto even when they contain sensitive application data.
+
+## Pi commands
+
+| Command | Outcome |
+| --- | --- |
+| `/celesto status` | Show the active computer, workspace, cleanup policy, and revision |
+| `/celesto sync` | Reconcile the local project with `/workspace` |
+| `/celesto keep` | Keep an extension-created computer after Pi exits |
+| `!<command>` | Run a shell command in the Celesto computer |
+
+Update the installed package when a new version is available:
+
+```bash
+pi update npm:@celestoai/pi
+```
+
+## Troubleshoot setup
+
+<AccordionGroup>
+  <Accordion title="CELESTO_API_KEY is not set">
+    Export the key in the same shell where you run Pi:
+
+    ```bash
+    export CELESTO_API_KEY="your-celesto-api-key"
+    pi --celesto
+    ```
+  </Accordion>
+
+  <Accordion title="Pi does not recognize --celesto">
+    Confirm Node.js and Pi meet the requirements, then reinstall the extension:
+
+    ```bash
+    node --version
+    pi install npm:@celestoai/pi
+    pi --help
+    ```
+
+    Node.js must be version 22.19 or newer.
+  </Accordion>
+
+  <Accordion title="The free plan has no available computer slot">
+    List existing computers and reuse one:
+
+    ```bash
+    celesto computer list
+    pi --celesto --celesto-computer curie
+    ```
+
+    Replace `curie` with a name from the list. Delete an unused computer when you no longer need it:
+
+    ```bash
+    celesto computer delete --force curie
+    ```
+  </Accordion>
+
+  <Accordion title="Synchronization reports conflicts">
+    Open `.celesto-conflicts/<revision>/` in your local project. Compare each `.remote` file with the local path, keep the intended content, and run `/celesto sync` again.
+  </Accordion>
+
+  <Accordion title="A command keeps running">
+    Press `Esc` in Pi. The extension cancels the output stream and terminates the remote process group. Run `/celesto status` to confirm the computer remains connected.
+  </Accordion>
+
+  <Accordion title="Final synchronization failed">
+    The extension keeps the computer instead of deleting it. Reopen the same Pi session and run:
+
+    ```text
+    /celesto sync
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Manage Celesto computers" icon="server" href="/celesto-sdk/computers">
+    Learn about templates, resources, ports, command execution, and lifecycle controls.
+  </Card>
+  <Card title="Authenticate the SDK" icon="key" href="/celesto-sdk/authentication">
+    Learn where to create API keys and how the CLI stores credentials.
+  </Card>
+  <Card title="Compare plans" icon="credit-card" href="https://celesto.ai/pricing">
+    Review free-plan limits and paid capacity for longer or parallel sessions.
+  </Card>
+  <Card title="View the extension source" icon="github" href="https://github.com/CelestoAI/sdk/tree/main/pi">
+    Review the implementation, tests, and package README.
+  </Card>
+</CardGroup>

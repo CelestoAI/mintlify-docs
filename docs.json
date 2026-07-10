@@ -129,6 +129,7 @@
           {
             "group": "Agents and Integrations",
             "pages": [
+              "celesto-sdk/guides/pi-coding-agent",
               "celesto-sdk/deployments",
               "celesto-sdk/openai-agents",
               "celesto-sdk/gatekeeper",
