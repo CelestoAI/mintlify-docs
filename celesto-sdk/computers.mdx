@@ -20,6 +20,10 @@ The Computers API gives your code or agent an isolated Linux computer. You creat
   </Step>
 </Steps>
 
+<Note>
+  Celesto accepts Nano (1 vCPU, 512 MB), Small (1 vCPU, 1 GB), Standard (2 vCPU, 4 GB), and Large (4 vCPU, 12 GB). Free and Nano plans can create Nano computers. Builder and Growth can create every named size. See [Choose computer size](/celesto-sdk/features/resources).
+</Note>
+
 <View title="Python" icon="python">
 
 ## Create a computer
@@ -44,7 +48,7 @@ Override CPU, memory, or disk size when the default size is too small:
 from celesto import Computer
 
 
-computer = Computer(cpus=2, memory=2048, disk="15gb")
+computer = Computer(cpus=2, memory=4096, disk="15gb")
 print(f"{computer.name} has {computer.vcpus} vCPUs")
 print(f"{computer.ram_mb} MB RAM")
 
@@ -52,11 +56,11 @@ computer.delete()
 ```
 
 <ParamField body="cpus" type="integer">
-  Number of virtual CPUs. Range: 1-16. Defaults to the template's value.
+  CPU value from a named size. Use together with the matching `memory` value. Defaults to the template's value.
 </ParamField>
 
 <ParamField body="memory" type="integer">
-  Memory in MB. Range: 512-32768. Defaults to the template's value.
+  Memory in MB from a named size. Use together with the matching `cpus` value. Defaults to the template's value.
 </ParamField>
 
 <ParamField body="disk" type="integer | string">
@@ -64,7 +68,7 @@ computer.delete()
 </ParamField>
 
 <ParamField body="disk_size_mb" type="integer">
-  Disk size in MB. Range: 512-51200. Defaults to the template's value.
+  Disk size in MB. Range: 512-20480. Defaults to the template's value.
 </ParamField>
 
 <ParamField body="template_id" type="string" default="scratch">
@@ -203,7 +207,7 @@ import { Computer } from "@celestoai/sdk";
 
 const computer = await Computer.create({
   cpus: 2,
-  memory: 2048,
+  memory: 4096,
   disk: "15gb",
 });
 
@@ -214,11 +218,11 @@ await computer.delete();
 ```
 
 <ParamField body="cpus" type="integer">
-  Number of virtual CPUs. Range: 1-16. Defaults to the template's value.
+  CPU value from a named size. Use together with the matching `memory` value. Defaults to the template's value.
 </ParamField>
 
 <ParamField body="memory" type="integer">
-  Memory in MB. Range: 512-32768. Defaults to the template's value.
+  Memory in MB from a named size. Use together with the matching `cpus` value. Defaults to the template's value.
 </ParamField>
 
 <ParamField body="disk" type="integer | string">
@@ -226,7 +230,7 @@ await computer.delete();
 </ParamField>
 
 <ParamField body="diskSizeMb" type="integer">
-  Disk size in MB. Range: 512-51200. Defaults to the template's value.
+  Disk size in MB. Range: 512-20480. Defaults to the template's value.
 </ParamField>
 
 <ParamField body="templateId" type="string" default="scratch">
