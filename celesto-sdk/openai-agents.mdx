@@ -67,7 +67,7 @@ Use `CelestoSandboxClient` when you want OpenAI to spin up a fresh Celesto compu
     async def main():
         client = CelestoSandboxClient()
         session = await client.create(
-            options=CelestoSandboxClientOptions(cpus=2, memory=2048),
+            options=CelestoSandboxClientOptions(cpus=2, memory=4096),
         )
         try:
             async with session:
@@ -93,6 +93,10 @@ Use `CelestoSandboxClient` when you want OpenAI to spin up a fresh Celesto compu
 
 Pass a `CelestoSandboxClientOptions` to control how the computer is created. Every field is optional. Omit a field to inherit the template's default.
 
+<Note>
+  CPU and memory must match a named Celesto size. Free and Nano plans use Nano (1 vCPU, 512 MB). Builder and Growth can also use Small (1 vCPU, 1 GB), Standard (2 vCPU, 4 GB), and Large (4 vCPU, 12 GB). See [Choose computer size](/celesto-sdk/features/resources).
+</Note>
+
 <ParamField body="template_id" type="string" default="scratch">
   Sandbox template to create the computer from. Defaults to `scratch` (a minimal Ubuntu computer). Pass `coding-agent` when your agent needs common coding tools preinstalled. See [Use a template](/celesto-sdk/computers#use-a-template).
 </ParamField>
@@ -102,15 +106,15 @@ Pass a `CelestoSandboxClientOptions` to control how the computer is created. Eve
 </ParamField>
 
 <ParamField body="cpus" type="integer">
-  Number of virtual CPUs for the new computer. Range: 1-16. Defaults to the template's value.
+  CPU value from a named size. Use together with the matching `memory` value. Defaults to the template's value.
 </ParamField>
 
 <ParamField body="memory" type="integer">
-  Memory in MB for the new computer. Range: 512-32768. Defaults to the template's value.
+  Memory in MB from a named size. Use together with the matching `cpus` value. Defaults to the template's value.
 </ParamField>
 
 <ParamField body="disk_size_mb" type="integer">
-  Disk size in MB. Range: 512-51200. Defaults to the template's value.
+  Disk size in MB. Range: 512-20480. Defaults to the template's value.
 </ParamField>
 
 <ParamField body="image" type="string">
