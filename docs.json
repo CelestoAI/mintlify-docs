@@ -62,6 +62,7 @@
               "smolvm/features/coding-agents",
               "smolvm/features/host-mounts",
               "smolvm/features/network-controls",
+              "smolvm/features/bridged-networking",
               "smolvm/features/port-forwarding",
               "smolvm/features/snapshots"
             ]
