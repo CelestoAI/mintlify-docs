@@ -83,6 +83,10 @@ pip install agentor[slack]
 pip install agentor[scrapegraph]
 ```
 
+<Info>
+  The `scrapegraph` extra requires **Python 3.12 or newer** because `scrapegraph-py>=2.1.0` does not ship wheels for Python 3.10 or 3.11. On older interpreters, the extra installs but the SDK is skipped, and instantiating `ScrapeGraphAI` raises `ImportError`. See the [ScrapeGraphAI tool reference](/agentor/api/tools/scrapegraphai) for the full capability surface.
+</Info>
+
 ### Install all optional dependencies
 
 ```bash  theme={null}

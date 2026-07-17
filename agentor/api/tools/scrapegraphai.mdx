@@ -1,0 +1,213 @@
+---
+title: "ScrapeGraphAI"
+description: "ScrapeGraphAI tool reference: agents scrape pages, extract structured data, run web searches, crawl sites, and schedule change monitors via the scrapegraph-py 2.x SDK."
+---
+
+`ScrapeGraphAI` gives an agent a full web-data toolkit backed by the [ScrapeGraphAI](https://scrapegraphai.com) API: fetch pages in different formats, pull structured data with an AI prompt, search the web, run multi-page crawls, and schedule change monitors.
+
+Use it when your agent needs live web content or LLM-ready extractions without you writing a scraper, browser automation, or search wrapper.
+
+## Installation
+
+<Info>
+  The `scrapegraph` extra pulls in `scrapegraph-py>=2.1.0`, which requires **Python 3.12 or newer**. On Python 3.10 or 3.11, `pip install agentor[scrapegraph]` succeeds but the SDK is not installed, and instantiating `ScrapeGraphAI` raises `ImportError`.
+</Info>
+
+```bash  theme={null}
+pip install "agentor[scrapegraph]"
+```
+
+## Authentication
+
+Set your ScrapeGraphAI API key as an environment variable:
+
+```bash  theme={null}
+export SGAI_API_KEY=your_scrapegraph_key
+```
+
+The constructor resolves the key in this order:
+
+1. The `api_key` argument, if passed.
+2. The `SGAI_API_KEY` environment variable (the new SDK default).
+3. The `SCRAPEGRAPH_API_KEY` environment variable (legacy fallback for pre-2.x deployments).
+
+## Constructor
+
+<ParamField path="api_key" type="str">
+  ScrapeGraphAI API key. Falls back to `SGAI_API_KEY`, then to `SCRAPEGRAPH_API_KEY`.
+</ParamField>
+
+## Capabilities
+
+Every capability returns a JSON string on success or an `Error in <capability>: ...` string on failure — so results are always agent-consumable.
+
+### scrape
+
+Fetch a webpage and return its content.
+
+<ParamField path="url" type="str" required>
+  The URL to scrape.
+</ParamField>
+
+<ParamField path="format" type="str" default="markdown">
+  Output format: `"markdown"`, `"html"`, `"links"`, or `"summary"`.
+</ParamField>
+
+### extract
+
+Extract structured data from a URL using an AI prompt.
+
+<ParamField path="prompt" type="str" required>
+  What to extract, e.g. `"Extract product names and prices"`.
+</ParamField>
+
+<ParamField path="url" type="str" required>
+  The page to extract from.
+</ParamField>
+
+<ParamField path="schema" type="dict">
+  Optional JSON schema describing the desired output shape.
+</ParamField>
+
+### search
+
+Search the web and optionally AI-extract from the results.
+
+<ParamField path="query" type="str" required>
+  Search query.
+</ParamField>
+
+<ParamField path="num_results" type="int" default="3">
+  Number of results to return (1–20).
+</ParamField>
+
+<ParamField path="prompt" type="str">
+  Optional extraction prompt applied to the results.
+</ParamField>
+
+### crawl
+
+Start a crawl job. Returns the crawl id and initial status — poll it with `get_crawl_result`.
+
+<ParamField path="url" type="str" required>
+  Seed URL.
+</ParamField>
+
+<ParamField path="max_pages" type="int" default="10">
+  Maximum pages to crawl.
+</ParamField>
+
+<ParamField path="max_depth" type="int" default="2">
+  Maximum link depth from the seed.
+</ParamField>
+
+<ParamField path="include_patterns" type="list[str]">
+  Optional path globs to include (e.g. `["/blog/*"]`).
+</ParamField>
+
+<ParamField path="exclude_patterns" type="list[str]">
+  Optional path globs to exclude (e.g. `["/admin/*"]`).
+</ParamField>
+
+### get\_crawl\_result
+
+Fetch the status and results of a crawl.
+
+<ParamField path="crawl_id" type="str" required>
+  Crawl id returned by `crawl`.
+</ParamField>
+
+### stop\_crawl / resume\_crawl / delete\_crawl
+
+Manage a crawl job's lifecycle by id. Each takes a single `crawl_id: str` argument.
+
+### monitor
+
+Create a scheduled monitor that re-scrapes a page on a cron schedule.
+
+<ParamField path="url" type="str" required>
+  Page to monitor.
+</ParamField>
+
+<ParamField path="interval" type="str" required>
+  Cron expression, e.g. `"0 * * * *"` for hourly.
+</ParamField>
+
+<ParamField path="name" type="str">
+  Optional monitor name.
+</ParamField>
+
+<ParamField path="webhook_url" type="str">
+  Optional webhook to receive change notifications.
+</ParamField>
+
+### list\_monitors / get\_monitor / pause\_monitor / resume\_monitor / delete\_monitor
+
+Manage scheduled monitors. `list_monitors` takes no arguments; the others take a single `monitor_id: str`.
+
+### credits
+
+Return plan info and remaining API credits.
+
+### health
+
+Return API health status.
+
+## Usage
+
+### With an Agentor agent
+
+```python  theme={null}
+import os
+
+from agentor import Agentor
+from agentor.tools import ScrapeGraphAI
+
+agent = Agentor(
+    name="ScrapeGraph Agent",
+    model="gpt-5-mini",
+    tools=[ScrapeGraphAI(api_key=os.environ["SGAI_API_KEY"])],
+    instructions="Use ScrapeGraphAI tools for extraction from websites.",
+)
+
+result = agent.run(
+    "Extract https://celesto.ai/blog and write a short summary in markdown."
+)
+print(result.final_output)
+```
+
+### Direct capability calls
+
+```python  theme={null}
+from agentor.tools import ScrapeGraphAI
+
+scraper = ScrapeGraphAI()  # reads SGAI_API_KEY from the environment
+
+# Fetch a page as markdown
+print(scraper.scrape("https://celesto.ai", format="markdown"))
+
+# Pull structured data
+print(scraper.extract(
+    prompt="Extract the title and author of each blog post",
+    url="https://celesto.ai/blog",
+))
+
+# Kick off a crawl and poll it
+job = scraper.crawl("https://celesto.ai", max_pages=25, max_depth=3)
+# job is a JSON string containing an `id` you pass to get_crawl_result
+```
+
+## Error handling
+
+Capabilities never raise for API-level failures — the tool converts SDK errors into a string an LLM can act on:
+
+```python  theme={null}
+scraper.scrape("https://not-a-real-domain.example")
+# → 'Error in scrape: <upstream error message>'
+```
+
+If `scrapegraph-py` isn't installed, or if you're on Python 3.10 / 3.11 where the 2.x SDK cannot be installed, the constructor raises `ImportError` with an explanation.
+
+## Source reference
+
+`src/agentor/tools/scrapegraphai.py`
