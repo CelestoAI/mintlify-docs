@@ -134,6 +134,33 @@ computer.delete()
   Standard error output from the command.
 </ResponseField>
 
+## Stream command output
+
+Use `run_stream()` when you want to see output as it is produced instead of waiting for the command to finish. It returns an iterator of event dicts that arrive over a server-sent events stream, which is useful for long-running builds, test suites, or agent tool calls that print progress.
+
+```python stream_command.py
+from celesto import Computer
+
+
+computer = Computer(template_id="coding-agent")
+
+for event in computer.run_stream("pytest -q", timeout=300):
+    if event["type"] in ("stdout", "stderr"):
+        print(event["data"], end="")
+    elif event["type"] == "exit":
+        print(f"\nexit code: {event['exit_code']}")
+
+computer.delete()
+```
+
+Each event has a `type` field:
+
+- `started` — the command has been accepted. Includes `command_id` and `timeout_seconds`.
+- `stdout` and `stderr` — a chunk of output. The bytes are in `data`.
+- `exit` — the command finished. Includes `exit_code`, `duration_ms`, and `timed_out`.
+
+The stream always ends with an `exit` event, even when the command times out or is interrupted. Break out of the loop early to stop consuming; the remote command still runs to completion.
+
 ## Get and list computers
 
 ```python list_computers.py
@@ -168,6 +195,52 @@ for port in computer.list_published_ports():
 computer.unpublish_port(8000)
 computer.delete()
 ```
+
+## Open a terminal connection
+
+Use `create_terminal_session()` when your application needs an interactive shell against a running computer, for example to power a web terminal in your own product. It calls `POST /computers/{id}/terminals` and returns a short-lived, direct connection to Celesto's fast terminal gateway. Your account must have write access to the computer.
+
+```python terminal.py
+import websockets
+import asyncio
+from celesto import Computer
+
+
+async def main():
+    computer = Computer.get("einstein")
+    session = computer.create_terminal_session()
+
+    async with websockets.connect(session["url"]) as ws:
+        await ws.send("echo hello\n")
+        print(await ws.recv())
+
+
+asyncio.run(main())
+```
+
+<Warning>
+  `session["url"]` embeds a short-lived terminal token. Treat it as a secret: pass it straight to your WebSocket client, do not log it, and do not send it to a browser you do not control. Use `session["expires_at"]` to know when to request a new session.
+</Warning>
+
+<ResponseField name="terminal_id" type="string" required>
+  Durable terminal session ID.
+</ResponseField>
+
+<ResponseField name="gateway_url" type="string" required>
+  Base gateway URL without credentials. Combine with `token` yourself only when you cannot use `url` directly.
+</ResponseField>
+
+<ResponseField name="token" type="string" required>
+  Short-lived terminal token. Treat this as a secret.
+</ResponseField>
+
+<ResponseField name="expires_at" type="string" required>
+  ISO 8601 timestamp after which the token stops working. Create a new session before this time.
+</ResponseField>
+
+<ResponseField name="url" type="string" required>
+  Authenticated `wss://` URL ready to pass to a WebSocket client.
+</ResponseField>
 
 ## Stop, start, and delete
 
@@ -295,6 +368,61 @@ await computer.delete();
   Standard error output from the command.
 </ResponseField>
 
+## Stream command output
+
+Use `runStream()` when you want to display command output as it is produced instead of waiting for the command to finish. It returns an `AsyncGenerator` that yields events over a server-sent events stream, so `for await` reads them one at a time. This is a good fit for long builds, test runs, or an agent tool call that wants to show progress to a user. `execStream()` is an alias.
+
+```ts stream-command.ts
+import { Computer } from "@celestoai/sdk";
+
+const computer = await Computer.create({ templateId: "coding-agent" });
+
+for await (const event of computer.runStream("pytest -q", { timeout: 300 })) {
+  if (event.type === "stdout" || event.type === "stderr") {
+    process.stdout.write(event.data);
+  } else if (event.type === "exit") {
+    console.log(`\nexit code: ${event.exitCode}`);
+  }
+}
+
+await computer.delete();
+```
+
+Each event has a `type` field:
+
+- `started` — the command has been accepted. Includes `commandId`, `startedAtUnixMs`, and `timeoutSeconds`.
+- `stdout` and `stderr` — a chunk of output. The bytes are in `data`.
+- `exit` — the command finished. Includes `exitCode`, `durationMs`, and `timedOut`.
+
+Pass an `AbortSignal` to cancel a stream from your own code. Aborting also stops the remote command:
+
+```ts stream-cancel.ts
+const controller = new AbortController();
+setTimeout(() => controller.abort(), 5000);
+
+for await (const event of computer.runStream("sleep 60 && echo done", {
+  timeout: 120,
+  signal: controller.signal,
+})) {
+  // ...
+}
+```
+
+## List recent commands
+
+Retrieve metadata for commands recently executed on a computer, including their exit codes, durations, and command IDs. This is useful for auditing what an agent has run.
+
+```ts list-command-history.ts
+import { Computer } from "@celestoai/sdk";
+
+const computer = await Computer.get("einstein");
+const history = await computer.listCommandHistory({ limit: 20 });
+
+for (const entry of history.commands) {
+  console.log(entry.commandId, entry.status, entry.exitCode);
+}
+```
+
 ## Get and list computers
 
 ```ts list-computers.ts
@@ -345,19 +473,47 @@ await computer.delete();
 
 ## Open a terminal connection
 
-Use `ComputersClient.getTerminalConnection()` when you are building your own interactive terminal. It returns the URL, headers, and first message for a WebSocket terminal session. A WebSocket is a long-running connection that sends terminal input and receives terminal output.
+Use `createTerminalSession()` when you are building your own interactive terminal against a Celesto computer, for example to power a web terminal in your own product. It calls `POST /computers/{id}/terminals` and returns a short-lived, direct connection to Celesto's fast terminal gateway. Your account must have write access to the computer.
 
 ```ts terminal.ts
 import WebSocket from "ws";
-import { ComputersClient } from "@celestoai/sdk/computers";
+import { Computer } from "@celestoai/sdk";
 
-const client = new ComputersClient({ token: process.env.CELESTO_API_KEY });
-const conn = await client.getTerminalConnection("einstein");
-const ws = new WebSocket(conn.url, { headers: conn.headers });
+const computer = await Computer.get("einstein");
+const session = await computer.createTerminalSession();
 
-ws.on("open", () => ws.send(conn.firstMessage));
+const ws = new WebSocket(session.url);
 ws.on("message", (data) => process.stdout.write(data));
+ws.on("open", () => ws.send("echo hello\n"));
 ```
+
+<Warning>
+  `session.url` embeds a short-lived terminal token. Treat it as a secret: pass it straight to your WebSocket client, do not log it, and do not send it to a browser you do not control. Use `session.expiresAt` to know when to create a new session.
+</Warning>
+
+<ResponseField name="terminalId" type="string" required>
+  Durable terminal session ID.
+</ResponseField>
+
+<ResponseField name="gatewayUrl" type="string" required>
+  Base gateway URL without credentials. Combine with `token` yourself only when you cannot use `url` directly.
+</ResponseField>
+
+<ResponseField name="token" type="string" required>
+  Short-lived terminal token. Treat this as a secret.
+</ResponseField>
+
+<ResponseField name="expiresAt" type="string" required>
+  ISO 8601 timestamp after which the token stops working. Create a new session before this time.
+</ResponseField>
+
+<ResponseField name="url" type="string" required>
+  Authenticated `wss://` URL ready to pass to a `WebSocket` constructor.
+</ResponseField>
+
+<Info>
+  `getTerminalConnection()` is retained as a deprecated alias for `createTerminalSession()` and calls the same fast terminal gateway endpoint. Update existing code to `createTerminalSession()` at your convenience.
+</Info>
 
 </View>
 
