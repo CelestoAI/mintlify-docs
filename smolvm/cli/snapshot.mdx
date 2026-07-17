@@ -27,6 +27,8 @@ smolvm sandbox snapshot create <sandbox> \
   [--snapshot-id <id>] \
   [--snapshot-type full|diff|disk] \
   [--resume-source] \
+  [--live-only] \
+  [--flush-policy required|best-effort|skip] \
   [--json]
 ```
 
@@ -46,6 +48,14 @@ smolvm sandbox snapshot create <sandbox> \
   Resume the source sandbox after the snapshot is created.
 </ParamField>
 
+<ParamField path="--live-only" type="flag">
+  Keep a running QEMU sandbox available for the whole snapshot instead of briefly pausing it. Requires `--snapshot-type disk` and `--resume-source`, and only works on QEMU. If the installed QEMU cannot do a live block backup, the command fails rather than falling back to a pause.
+</ParamField>
+
+<ParamField path="--flush-policy" type="string" default="required">
+  How to handle the pre-snapshot guest filesystem flush for `--snapshot-type disk`. `required` fails the snapshot if the flush fails, `best-effort` continues with a crash-consistent copy, and `skip` does not ask the guest to flush at all.
+</ParamField>
+
 ```bash
 smolvm sandbox snapshot create my-sandbox \
   --snapshot-id before-deploy \
@@ -56,6 +66,26 @@ Create a QEMU disk-only snapshot:
 
 ```bash
 smolvm sandbox snapshot create my-sandbox --snapshot-type disk
+```
+
+Take a live disk snapshot of a running QEMU sandbox without pausing the guest:
+
+```bash
+smolvm sandbox snapshot create my-sandbox \
+  --snapshot-id live-checkpoint \
+  --snapshot-type disk \
+  --resume-source \
+  --live-only
+```
+
+Use `--flush-policy` to trade durability for speed. This example keeps a sandbox running through a live snapshot and doesn't fail if the guest agent can't flush:
+
+```bash
+smolvm sandbox snapshot create my-sandbox \
+  --snapshot-type disk \
+  --resume-source \
+  --live-only \
+  --flush-policy best-effort
 ```
 
 ## restore
@@ -109,6 +139,8 @@ smolvm sandbox snapshot delete <snapshot> [--json]
 ## Guest sync before disk snapshots
 
 For disk snapshots, SmolVM asks the guest to flush filesystem state before it copies the disk. Recent images answer this through the SmolVM guest agent over the control channel, with SSH as a fallback where needed.
+
+Use `--flush-policy` to tune this step: `required` (default) fails the snapshot if the flush cannot succeed, `best-effort` continues with a crash-consistent copy, and `skip` bypasses the flush entirely.
 
 If snapshot creation times out during guest sync, check [Control channel](/smolvm/concepts/control-channel) and [Troubleshooting](/smolvm/advanced/troubleshooting) before debugging storage or upload paths.
 
