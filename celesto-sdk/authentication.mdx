@@ -72,6 +72,15 @@ print(len(computers))
 
 <View title="TypeScript" icon="js">
 
+`Computer.create()`, `Computer.get()`, `Computer.list()`, and `Computer.listTemplates()` resolve credentials automatically. The SDK checks these sources in order and uses the first one that has a value:
+
+1. `token` or `apiKey` passed in the client config
+2. `CELESTO_API_KEY` environment variable
+3. `CELESTO_API_KEY` in a `.env` file in the current working directory
+4. Key saved by `celesto auth login`
+
+If none of them produce a key, the SDK throws a `CelestoError` telling you to run `celesto auth login` or set `CELESTO_API_KEY`.
+
 ## Use an environment variable
 
 ```bash
@@ -87,9 +96,28 @@ const computers = await Computer.list();
 console.log(computers.length);
 ```
 
+## Use a local `.env` file
+
+Create a `.env` file next to your entry point and add it to `.gitignore`:
+
+```bash .env
+CELESTO_API_KEY="your-api-key"
+```
+
+The SDK reads `.env` from `process.cwd()` when `CELESTO_API_KEY` is not already set in the shell, so the same `Computer.list()` call works without any extra setup.
+
+## Use CLI-saved credentials
+
+Install the CLI and sign in once. The SDK falls back to the key saved in your operating system's secure credential store when no other source is set:
+
+```bash
+pip install celesto
+celesto auth login
+```
+
 ## Pass the key in code
 
-Pass `token` when you need to select credentials explicitly:
+Pass `token` when you need to select credentials explicitly. Explicit credentials take precedence over every other source:
 
 ```ts auth-explicit.ts
 import { Computer } from "@celestoai/sdk";
@@ -101,6 +129,23 @@ if (!token) {
 
 const computers = await Computer.list({}, { token });
 console.log(computers.length);
+```
+
+## Resolve credentials manually
+
+The SDK exports the same resolution helpers it uses internally, so you can reuse them in your own tooling:
+
+- `resolveCelestoApiKey(options?)` walks the environment, `.env`, and CLI-saved key and returns the first match, or `undefined` if none are set.
+- `resolveClientConfig(config?, options?)` returns a `ClientConfig` with `token` populated, preserving any explicit `token` or `apiKey` you already passed. It throws `CelestoError` with `MISSING_CREDENTIALS_MESSAGE` when no credentials are available.
+
+```ts resolve.ts
+import { resolveCelestoApiKey, resolveClientConfig } from "@celestoai/sdk";
+
+const apiKey = await resolveCelestoApiKey();
+console.log(apiKey ? "Found a Celesto API key" : "No credentials configured");
+
+const config = await resolveClientConfig();
+console.log(`Using token ending in ${config.token?.slice(-4)}`);
 ```
 
 </View>
