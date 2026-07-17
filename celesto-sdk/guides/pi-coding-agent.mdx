@@ -1,10 +1,10 @@
 ---
 title: Run Pi coding agent in the cloud
 sidebarTitle: Pi coding agent
-description: "Run Pi coding agent remotely on a Celesto cloud computer, keep model credentials local, sync project files safely, and troubleshoot common setup issues."
+description: "Run Pi coding agent remotely on a Celesto cloud computer, keep model credentials local, push and sync project files explicitly, and troubleshoot common setup issues."
 ---
 
-Run Pi's coding tools on a Celesto cloud computer while the Pi interface stays on your machine. Your project runs in an isolated workspace, and you choose when to copy changes back locally.
+Run Pi's coding tools on a Celesto cloud computer while the Pi interface stays on your machine. Your project runs in an isolated workspace, and you choose when to copy files to the remote workspace and when to bring changes back locally.
 
 A **Celesto computer** is a remote Linux computer created for your work. **Model credentials** are the API keys or login details Pi uses to access your chosen AI model. The Celesto extension keeps those credentials, your conversation history, and the Pi terminal interface on your machine.
 
@@ -73,11 +73,27 @@ You need:
     pi --celesto
     ```
 
-    The extension creates a Celesto computer, copies the project to `$HOME/workspace`, and routes Pi's `read`, `write`, `edit`, and `bash` tools there.
+    The extension creates a Celesto computer with an empty `$HOME/workspace` and routes Pi's `read`, `write`, `edit`, and `bash` tools there. Nothing is copied from your machine yet.
 
     <Check>
       Pi reports the computer name and shows `$HOME/workspace` as the active workspace.
     </Check>
+  </Step>
+
+  <Step title="Push your project to the computer">
+    Copy the current local project to the remote workspace:
+
+    ```text
+    /celesto push
+    ```
+
+    This replaces the contents of `$HOME/workspace` with the files in your local project. Run it once at the start of a session, before asking Pi to read or edit code.
+
+    <Check>
+      Pi reports how many files were copied and warns you about any skipped oversized or unsafe files.
+    </Check>
+
+    Push refuses to copy your filesystem root or your home directory. Start Pi from an actual project folder.
   </Step>
 
   <Step title="Check the remote workspace">
@@ -87,7 +103,7 @@ You need:
     /celesto status
     ```
 
-    The result shows the computer name, status, cleanup behavior, and current synchronization revision.
+    The result shows the computer name, status, cleanup behavior, and current synchronization revision. After a successful push, the revision changes from `not synchronized` to an ID.
   </Step>
 
   <Step title="Ask Pi to change the project">
@@ -100,12 +116,14 @@ You need:
     Pi reads files, edits code, and runs tests inside the Celesto computer. Press `Esc` to stop a long-running tool command.
   </Step>
 
-  <Step title="Copy changes back locally">
+  <Step title="Sync changes back locally">
     Run this inside Pi when you want the remote changes on your machine:
 
     ```text
     /celesto sync
     ```
+
+    Sync reconciles both copies against the last shared revision. It requires a prior `/celesto push` (or an already-shared revision) — without one, it reports that the workspace has no shared revision.
 
     <Check>
       Open your local editor or run `git diff`. The files changed by Pi now appear in your local project.
@@ -117,20 +135,31 @@ You need:
 
 | Your machine | Celesto computer |
 | --- | --- |
-| Pi terminal interface | Project copy in `$HOME/workspace` |
+| Pi terminal interface | `$HOME/workspace` (starts empty, populated by `/celesto push`) |
 | Conversation and session history | `read`, `write`, `edit`, and `bash` operations |
 | Model-provider credentials | Shell commands and test processes |
 | Celesto API key from your shell, `.env`, or CLI login | Files created by Pi during the session |
+| Local project files until you run `/celesto push` | Files copied by `/celesto push` and `/celesto sync` |
 
-Pi treats `$HOME/workspace` on the Celesto computer as the active project while the session runs. Local files stay unchanged until synchronization.
+The remote workspace is empty when Pi starts. Files only exist there after you run `/celesto push`. From that point on, `$HOME/workspace` is the active copy that Pi's tools operate on, and your local project stays unchanged until you run `/celesto sync`.
 
 <Warning>
-  The current extension uses compressed archives and base64 transfer. Treat your local Git repository as the durable copy: commit before long sessions, run `/celesto sync` regularly, and inspect `git diff` afterward.
+  The current extension uses compressed archives and base64 transfer, and it never copies files automatically — not on connect and not on exit. Treat your local Git repository as the durable copy: commit before long sessions, run `/celesto sync` before ending a session, and inspect `git diff` afterward.
 </Warning>
+
+## Explicit push and sync lifecycle
+
+A typical session moves files in a fixed order:
+
+1. **Push once.** `/celesto push` copies the local project into the empty remote workspace and records a shared revision. It refuses to run if a shared revision already exists — use `/celesto sync` from that point onward.
+2. **Work remotely.** Pi's tools read, write, edit, and run shell commands inside `$HOME/workspace`. Your local files are not touched.
+3. **Sync when you want the changes locally.** `/celesto sync` compares both copies with the shared revision and moves changed files in the direction they changed.
+
+Only one workspace transfer runs at a time. If a push or sync is already in progress, a second attempt reports that another Celesto workspace transfer is running.
 
 ## Synchronize local and remote changes
 
-The extension records a common revision after each successful synchronization. On the next `/celesto sync`, it compares both copies with that revision.
+The extension records a shared revision after each successful push or sync. On the next `/celesto sync`, it compares both copies with that revision.
 
 | Change | Result |
 | --- | --- |
@@ -149,7 +178,7 @@ Conflicting remote files are saved under:
 If the remote copy was deleted, the extension writes a `.remote-deleted` marker. Resolve the local file, remove the conflict copy when you no longer need it, then run `/celesto sync` again.
 
 <Info>
-  A failed or conflicted final synchronization keeps an extension-created computer. Reopen the Pi session and run `/celesto sync` to recover the work.
+  Sync is the only way to bring remote changes back to your machine. Pi never syncs automatically when it exits, so make sure to run `/celesto sync` before ending a session you care about.
 </Info>
 
 ## Reuse an existing Celesto computer
@@ -166,21 +195,27 @@ Start Pi with a computer name or ID from that list:
 pi --celesto --celesto-computer curie
 ```
 
-A caller-selected computer is never deleted automatically. If it already contains files in `$HOME/workspace`, that remote workspace becomes the active copy. A non-empty legacy `/workspace` is moved there automatically when the home workspace is empty. Run `/celesto sync` before editing locally.
+A caller-selected computer is never deleted automatically. Any files already in `$HOME/workspace` remain untouched until you explicitly run `/celesto push` or `/celesto sync`. A non-empty legacy `/workspace` is moved to `$HOME/workspace` automatically when the home workspace is empty.
+
+If the remote workspace already contains a project from a previous session, run `/celesto sync` to reconcile it with your local copy. If the remote workspace is empty (or you want to replace it with the current local project), run `/celesto push`.
 
 ## Control computer cleanup
 
-The extension normally synchronizes and deletes a computer it created when Pi exits. Keep that computer for another session by running:
+When Pi exits, an extension-created computer is deleted without any automatic sync. Any changes you have not copied back with `/celesto sync` are lost.
+
+Keep the computer for another session by running:
 
 ```text
 /celesto keep
 ```
 
-Pi prints the exact `celesto computer delete` command you can use later. Computers selected with `--celesto-computer` are always caller-owned and are never deleted by the extension.
+Pi prints the exact `celesto computer delete` command you can use later. Keeping the computer preserves the remote workspace, but you are still responsible for retaining a local copy of anything you want to keep — run `/celesto sync` before exiting.
 
-## Files excluded from the cloud workspace
+Computers selected with `--celesto-computer` are always caller-owned and are never deleted by the extension.
 
-The extension reads `.gitignore`, then applies project-specific `.celestoignore` rules. It also excludes common secrets and large generated directories by default, including:
+## Files excluded from explicit transfers
+
+`/celesto push` and `/celesto sync` read `.gitignore` and then apply project-specific `.celestoignore` overrides. They also exclude common secrets and large generated directories by default, including:
 
 - `.env` files and common credential files.
 - Pi, cloud-provider, SSH, and package-manager credentials.
@@ -211,20 +246,21 @@ The extension is designed so the model connection stays local:
 - Pi calls your model provider from your machine.
 - Model credentials are not forwarded as shell environment variables.
 - The Celesto API key stays in the local Pi process and is not forwarded to the remote computer.
-- Local `.env` files remain excluded from workspace upload by default.
-- Celesto receives the project files that pass the exclusion rules.
+- Local `.env` files remain excluded from workspace transfers by default.
+- Celesto only receives files you push or sync that pass the exclusion rules.
 - Tool paths stay inside `$HOME/workspace`.
 - Shell commands can use the rest of the isolated Celesto computer.
 - Remote command output streams back to the local Pi interface.
 
-Review `.gitignore` and `.celestoignore` before the first session. Files intentionally included in the project can be copied to Celesto even when they contain sensitive application data.
+Review `.gitignore` and `.celestoignore` before your first push. Files intentionally included in the project can be copied to Celesto even when they contain sensitive application data.
 
 ## Pi commands
 
 | Command | Outcome |
 | --- | --- |
 | `/celesto status` | Show the active computer, workspace, cleanup policy, and revision |
-| `/celesto sync` | Reconcile the local project with `$HOME/workspace` |
+| `/celesto push` | Copy the current local project to the empty remote workspace and record a shared revision |
+| `/celesto sync` | Reconcile the local project with `$HOME/workspace` after a push |
 | `/celesto keep` | Keep an extension-created computer after Pi exits |
 | `!<command>` | Run a shell command in the Celesto computer |
 
@@ -276,6 +312,20 @@ pi update npm:@celestoai/pi
     ```
   </Accordion>
 
+  <Accordion title="Push refuses to copy the current directory">
+    The extension refuses to push from your filesystem root or home directory to avoid uploading unrelated files. Exit Pi, change into an actual project directory, restart with `pi --celesto`, and run `/celesto push` again.
+  </Accordion>
+
+  <Accordion title="Sync reports no shared revision">
+    `/celesto sync` requires an initial push. Run:
+
+    ```text
+    /celesto push
+    ```
+
+    After the push succeeds, `/celesto status` shows a revision ID and sync works normally.
+  </Accordion>
+
   <Accordion title="Synchronization reports conflicts">
     Open `.celesto-conflicts/<revision>/` in your local project. Compare each `.remote` file with the local path, keep the intended content, and run `/celesto sync` again.
   </Accordion>
@@ -284,12 +334,8 @@ pi update npm:@celestoai/pi
     Press `Esc` in Pi. The extension cancels the output stream and terminates the remote process group. Run `/celesto status` to confirm the computer remains connected.
   </Accordion>
 
-  <Accordion title="Final synchronization failed">
-    The extension keeps the computer instead of deleting it. Reopen the same Pi session and run:
-
-    ```text
-    /celesto sync
-    ```
+  <Accordion title="Another workspace transfer is already running">
+    Only one `/celesto push` or `/celesto sync` runs at a time. Wait for the current transfer to finish, then rerun the command.
   </Accordion>
 </AccordionGroup>
 
