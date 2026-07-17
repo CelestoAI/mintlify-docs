@@ -290,6 +290,7 @@
               "agentor/api/tools/github",
               "agentor/api/tools/git",
               "agentor/api/tools/gmail",
+              "agentor/api/tools/scrapegraphai",
               "agentor/api/tools/shell",
               "agentor/api/tools/weather",
               "agentor/api/tools/web-search",
