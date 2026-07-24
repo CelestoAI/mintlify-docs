@@ -1,0 +1,259 @@
+---
+title: "Disposable macOS environments"
+sidebarTitle: "macOS sandboxes"
+description: "Create a disposable macOS desktop on an Apple Silicon Mac, open it with Screen Sharing, share local folders, and delete it when you finish."
+keywords: ["macOS sandbox", "disposable macOS environment", "macOS virtual machine", "Apple Silicon VM", "macOS desktop sandbox", "SmolVM macOS"]
+---
+
+A macOS sandbox gives you a temporary Mac desktop for testing apps, opening installers, and trying changes away from your everyday system. It runs locally on your Apple Silicon Mac and opens in Apple's built-in Screen Sharing app.
+
+<Frame caption="A disposable macOS sandbox running Safari on an Apple Silicon Mac">
+  ![Disposable macOS desktop with Safari open to Hacker News inside a local virtualization window](/assets/smolvm-macos-desktop.png)
+</Frame>
+
+## What you can do
+
+- Open and use a full macOS desktop.
+- Test apps and installers, including apps distributed in `.dmg` files.
+- Share a local folder with read-only access by default.
+- Stop and restart a sandbox without losing its private files.
+- Delete the sandbox to discard its apps, files, and changes.
+- Reuse one prepared macOS image to create later sandboxes quickly.
+
+SmolVM keeps System Integrity Protection, Gatekeeper, and normal macOS permission prompts enabled. Apps behave as they would on a regular Mac.
+
+## Before you start
+
+You need:
+
+- An Apple Silicon Mac
+- macOS 14 or newer
+- About 50 GB of free space for the first image preparation
+- An APFS volume, the standard file system on modern Macs
+- SmolVM installed locally using the [installation guide](/smolvm/installation)
+
+The first image preparation downloads an Apple restore file of about 15–18 GB. Download and installation usually take 20–40 minutes, depending on your connection and Mac.
+
+<Note>
+  The Apple restore file and prepared macOS image stay on the Mac where you create them. Image publishing, export, and transfer are unavailable for macOS images.
+</Note>
+
+## Create your first macOS sandbox
+
+<Steps>
+  <Step title="Prepare your Mac">
+    Install the tested macOS desktop runtime:
+
+    ```bash
+    smolvm setup --macos
+    ```
+
+    Check that your Mac is ready:
+
+    ```bash
+    smolvm doctor --backend vz
+    ```
+
+    `vz` is the local runtime that uses Apple's built-in virtualization support.
+
+    <Check>
+      Continue when the doctor summary shows `Result: OK` and `Failures: 0`.
+    </Check>
+  </Step>
+
+  <Step title="Create the sandbox">
+    Create a sandbox named `test-mac`:
+
+    ```bash
+    smolvm sandbox create --os macos --name test-mac
+    ```
+
+    On the first run, SmolVM asks before downloading and preparing macOS. Enter `y` to continue. The progress bar follows the download, installation, and desktop setup.
+
+    ```text
+    No local macOS image is ready. SmolVM will download macOS from Apple...
+    Continue? [y/N]: y
+    ```
+
+    <Tip>
+      If installation fails after the download completes, run the same command again. SmolVM keeps the completed restore file and reuses it instead of downloading another copy.
+    </Tip>
+  </Step>
+
+  <Step title="Open the desktop">
+    After creation finishes, open the sandbox in Screen Sharing:
+
+    ```bash
+    smolvm sandbox desktop test-mac
+    ```
+
+    SmolVM supplies the private Screen Sharing password automatically. At the macOS login screen, use:
+
+    - **Username:** `lume`
+    - **Password:** `lume`
+
+    <Warning>
+      The fixed guest login is a preview limitation. Keep the sandbox local and avoid sensitive accounts or data.
+    </Warning>
+  </Step>
+</Steps>
+
+## Share a local folder
+
+Create a new sandbox that can read your current folder:
+
+```bash
+smolvm sandbox create --os macos --name shared-mac --mount "$PWD"
+```
+
+Open Finder inside the sandbox to access the shared folder. The sandbox receives read-only access by default.
+
+Allow changes only when the sandbox needs to edit your local files:
+
+```bash
+smolvm sandbox create --os macos --name editing-mac --mount "$PWD" --writable-mounts
+```
+
+<Warning>
+  A writable shared folder lets apps inside the sandbox change or delete files in that folder. Share only the files needed for the task.
+</Warning>
+
+## Stop, reopen, and discard the sandbox
+
+Stop the sandbox when you want to keep its private files for later:
+
+```bash
+smolvm sandbox stop test-mac
+```
+
+Start it and open the desktop again:
+
+```bash
+smolvm sandbox desktop test-mac --start
+```
+
+Delete it when you want to discard its installed apps, files, and other changes:
+
+```bash
+smolvm sandbox delete test-mac
+```
+
+The reusable macOS image remains after deletion, so the next sandbox starts much faster.
+
+<Check>
+  Deleting a sandbox removes its private desktop. The reusable base image and files in read-only shared folders remain available.
+</Check>
+
+## Prepare the image ahead of time
+
+Run the long preparation step before you need your first sandbox:
+
+```bash
+smolvm image build --os macos --ipsw latest -t macos-latest
+```
+
+SmolVM downloads the latest compatible restore file from Apple, installs it locally, and prepares the desktop account. Later `sandbox create` commands reuse this image.
+
+List local images:
+
+```bash
+smolvm image list
+```
+
+Remove the reusable macOS image when you no longer need it:
+
+```bash
+smolvm image rm macos-latest
+```
+
+Removing the image frees its local storage. The next macOS sandbox must prepare a new image.
+
+## How it works
+
+SmolVM keeps one reusable macOS base image. Each sandbox receives a fast APFS clone, a private copy that stores only its own changes.
+
+This means:
+
+- Installing an app in one sandbox does not add it to the base image.
+- Two sandboxes do not share their private changes.
+- Stopping a sandbox keeps its changes.
+- Deleting a sandbox discards its private clone.
+
+The Screen Sharing connection listens on `127.0.0.1`, an address that only your Mac can reach. Screen Sharing uses <Tooltip tip="Virtual Network Computing, a standard way to view and control another computer's screen">VNC</Tooltip>. SmolVM stores the generated connection password in the sandbox's private files and keeps it out of commands, logs, and API responses.
+
+### Lume
+
+SmolVM uses [Lume](https://github.com/trycua/cua/tree/main/libs/lume) behind the scenes to prepare and run the macOS desktop. Lume is an open-source project that works with Apple's built-in system for running virtual Macs.
+
+`smolvm setup --macos` installs the tested Lume version for you, and SmolVM handles it through the commands in this guide. The `lume` login name comes from the desktop account that Lume creates during automatic setup.
+
+## Preview limits
+
+- You can run at most two macOS sandboxes at the same time.
+- Each sandbox uses 4 CPU cores, 8 GB of memory, and an 80 GB logical disk. Custom sizes are not available yet.
+- Shell commands, SSH sessions, file transfer commands, and SSH tunnels are not available through SmolVM for macOS guests yet.
+- Bridge networking, outbound-domain rules, pause and resume, snapshots, and browser sessions are not available for macOS guests yet.
+- The prepared image and sandbox clones remain tied to the local Mac.
+
+Review [Apple's software license agreements](https://www.apple.com/legal/sla/) and use a Mac you own or control for permitted development and testing.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="The confirmation prompt says invalid input">
+    Enter only `y` or `n` at `Continue? [y/N]:`. For unattended scripts, approve the one-time image preparation explicitly:
+
+    ```bash
+    smolvm sandbox create --os macos --name test-mac --yes
+    ```
+  </Accordion>
+
+  <Accordion title="Image installation failed after the download">
+    Run the create command again. SmolVM stores a completed restore download under `~/.smolvm/images/macos/.downloads/` and reuses it for the next installation attempt.
+  </Accordion>
+
+  <Accordion title="Screen Sharing did not open">
+    Confirm that the sandbox is running, then allow more time for startup:
+
+    ```bash
+    smolvm sandbox desktop test-mac --start --boot-timeout 120
+    ```
+  </Accordion>
+
+  <Accordion title="SmolVM reports an unsupported or unreadable runtime">
+    Reinstall the tested runtime and check it again:
+
+    ```bash
+    smolvm setup --macos
+    smolvm doctor --backend vz
+    ```
+  </Accordion>
+
+  <Accordion title="A third macOS sandbox will not start">
+    Apple allows at most two running macOS virtual machines on supported hardware. Stop one sandbox, then start the other:
+
+    ```bash
+    smolvm sandbox stop test-mac
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Create a sandbox" icon="plus" href="/smolvm/cli/create">
+    Review the sandbox creation options
+  </Card>
+
+  <Card title="Share local folders" icon="folder-open" href="/smolvm/features/host-mounts">
+    Control read-only and writable folder access
+  </Card>
+
+  <Card title="Sandbox lifecycle" icon="circle-play" href="/smolvm/guides/vm-lifecycle">
+    Start, stop, inspect, and delete sandboxes
+  </Card>
+
+  <Card title="Security model" icon="shield" href="/smolvm/concepts/security">
+    Understand isolation and local access
+  </Card>
+</CardGroup>

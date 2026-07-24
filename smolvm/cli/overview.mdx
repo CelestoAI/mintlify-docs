@@ -23,7 +23,7 @@ pip install "smolvm[dashboard]"
 
 | Command | What you can do |
 | --- | --- |
-| `smolvm sandbox` | Create, inspect, start, stop, pause, resume, connect to, and delete sandboxes |
+| `smolvm sandbox` | Create, inspect, start, stop, pause, resume, connect to, and delete sandboxes; open macOS desktops with `sandbox desktop` |
 | `smolvm sandbox exec` | Run one command inside a running sandbox from a script or agent |
 | `smolvm sandbox logs` | Show a sandbox's host boot and console log |
 | `smolvm sandbox snapshot` | Save and restore sandbox state |
@@ -75,6 +75,22 @@ Read the host boot and console log when something goes wrong at startup:
 ```bash
 smolvm sandbox logs my-sandbox --follow
 ```
+
+## macOS desktop workflow
+
+On an Apple Silicon Mac, create a disposable macOS environment:
+
+```bash
+smolvm sandbox create --os macos --name test-mac
+```
+
+Then open it in Screen Sharing:
+
+```bash
+smolvm sandbox desktop test-mac
+```
+
+The first run prepares a reusable local image. See [Disposable macOS environments](/smolvm/guides/macos-sandboxes) for requirements and setup.
 
 ## Tab completion
 
@@ -151,7 +167,7 @@ smolvm server start --help
 
 <CardGroup cols={2}>
   <Card title="Create a sandbox" icon="plus" href="/smolvm/cli/create">
-    Start a Linux or Windows sandbox from the CLI
+    Start a Linux, macOS, or Windows sandbox from the CLI
   </Card>
   <Card title="Open a shell" icon="terminal" href="/smolvm/cli/shell">
     Use the fast shell or an SSH session

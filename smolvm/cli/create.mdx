@@ -18,7 +18,7 @@ smolvm sandbox create [OPTIONS]
 </ParamField>
 
 <ParamField path="--os" type="string">
-  Guest operating system image. Supported values are `alpine`, `ubuntu`, and `windows`. Omit it for the default Linux image, or pair `windows` with `--image`.
+  Guest operating system image. Supported values are `alpine`, `ubuntu`, `windows`, and `macos`. Omit it for the default Linux image, pair `windows` with `--image`, or see [Disposable macOS environments](/smolvm/guides/macos-sandboxes) before using `macos`.
 </ParamField>
 
 <ParamField path="--image" type="string">
@@ -34,7 +34,7 @@ smolvm sandbox create [OPTIONS]
 </ParamField>
 
 <ParamField path="--backend" type="string">
-  Runtime backend. Choices are `auto`, `firecracker`, `qemu`, and `libkrun`.
+  Runtime backend. Choices are `auto`, `firecracker`, `qemu`, `libkrun`, and `vz`. SmolVM selects `vz` automatically for macOS guests.
 </ParamField>
 
 <ParamField path="--qemu-machine" type="string" default="auto">
@@ -51,6 +51,10 @@ smolvm sandbox create [OPTIONS]
 
 <ParamField path="--writable-mounts" type="flag">
   Allow writes to every shared folder from this command.
+</ParamField>
+
+<ParamField path="--yes" type="flag">
+  Approve the one-time macOS image download and preparation without an interactive prompt.
 </ParamField>
 
 <ParamField path="--network" type="string" default="nat">
@@ -124,6 +128,14 @@ smolvm sandbox create \
 
 See [Windows sandboxes](/smolvm/guides/windows-guests) before running Windows guests.
 
+### Create a macOS desktop sandbox
+
+```bash
+smolvm sandbox create --os macos --name test-mac
+```
+
+The first macOS sandbox asks before downloading and preparing a local image. See [Disposable macOS environments](/smolvm/guides/macos-sandboxes) for host requirements, desktop access, and preview limits.
+
 ## What happens
 
 1. SmolVM resolves the image, backend, and control channel.
@@ -135,5 +147,6 @@ See [Windows sandboxes](/smolvm/guides/windows-guests) before running Windows gu
 
 * [`smolvm sandbox shell`](/smolvm/cli/shell) - Open the fast shell
 * [`smolvm sandbox ssh`](/smolvm/cli/ssh) - Open an SSH session
+* [`smolvm sandbox desktop`](/smolvm/guides/macos-sandboxes) - Open a macOS sandbox in Screen Sharing
 * [`smolvm sandbox list`](/smolvm/cli/list) - View sandboxes
 * [`smolvm sandbox delete`](/smolvm/cli/cleanup) - Delete one or more sandboxes
