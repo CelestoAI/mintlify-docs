@@ -264,6 +264,8 @@
               "smolvm/cli/list",
               "smolvm/cli/shell",
               "smolvm/cli/ssh",
+              "smolvm/cli/exec",
+              "smolvm/cli/logs",
               "smolvm/cli/stop",
               "smolvm/cli/cleanup",
               "smolvm/cli/file",
@@ -275,6 +277,7 @@
               "smolvm/cli/doctor",
               "smolvm/cli/update",
               "smolvm/cli/prune",
+              "smolvm/cli/completion",
               "smolvm/cli/windows"
             ]
           },
