@@ -81,16 +81,27 @@ smolvm sandbox logs my-sandbox --follow
 On an Apple Silicon Mac, create a disposable macOS environment:
 
 ```bash
-smolvm sandbox create --os macos --name test-mac
+smolvm sandbox create --os macos --name nimble-mac
 ```
 
-Then open it in Screen Sharing:
+The create output confirms that the sandbox is running and includes the next command:
+
+```text
+Next: smolvm sandbox desktop nimble-mac
+Info: smolvm sandbox info nimble-mac
+```
+
+Run the `Next` command to open the sandbox in Screen Sharing:
 
 ```bash
-smolvm sandbox desktop test-mac
+smolvm sandbox desktop nimble-mac
 ```
 
-The first run prepares a reusable local image. See [Disposable macOS environments](/smolvm/guides/macos-sandboxes) for requirements and setup.
+```text
+Opened the desktop for sandbox 'nimble-mac'.
+```
+
+The first run prepares a reusable local image. See [Disposable macOS environments](/smolvm/guides/macos-sandboxes) for the one-time setup, requirements, and full create output.
 
 ## Tab completion
 
