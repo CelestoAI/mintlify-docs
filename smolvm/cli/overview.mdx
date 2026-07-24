@@ -24,6 +24,8 @@ pip install "smolvm[dashboard]"
 | Command | What you can do |
 | --- | --- |
 | `smolvm sandbox` | Create, inspect, start, stop, pause, resume, connect to, and delete sandboxes; open macOS desktops with `sandbox desktop` |
+| `smolvm sandbox exec` | Run one command inside a running sandbox from a script or agent |
+| `smolvm sandbox logs` | Show a sandbox's host boot and console log |
 | `smolvm sandbox snapshot` | Save and restore sandbox state |
 | `smolvm sandbox file` | Copy files into or out of a sandbox |
 | `smolvm sandbox env` | Set, remove, and list sandbox environment variables |
@@ -32,9 +34,13 @@ pip install "smolvm[dashboard]"
 | `smolvm windows` | Build a reusable Windows 11 `qcow2` image |
 | `smolvm server` | Start the local SmolVM HTTP API |
 | `smolvm ui` | Start the local dashboard |
+| `smolvm bridge` | Check host Linux bridges before using [bridged networking](/smolvm/features/bridged-networking) |
+| `smolvm completion` | Install shell tab completion for `bash`, `zsh`, or `fish` |
 | `smolvm doctor` | Check whether your host can run SmolVM |
 | `smolvm update` | Upgrade SmolVM to the latest stable release |
-| `smolvm prune` | Remove old image cache entries |
+| `smolvm image` | Pull, list, inspect, build, save, load, and prune cached sandbox images |
+| `smolvm images` | Alias of `smolvm image list` |
+| `smolvm prune` | Alias of `smolvm image prune` — remove image caches from older releases |
 
 ## Everyday sandbox workflow
 
@@ -58,6 +64,18 @@ List your sandboxes:
 smolvm sandbox list --all
 ```
 
+Run a single command in a sandbox from a script or agent — the guest's exit code becomes `smolvm`'s exit code:
+
+```bash
+smolvm sandbox exec my-sandbox -- python --version
+```
+
+Read the host boot and console log when something goes wrong at startup:
+
+```bash
+smolvm sandbox logs my-sandbox --follow
+```
+
 ## macOS desktop workflow
 
 On an Apple Silicon Mac, create a disposable macOS environment:
@@ -73,6 +91,16 @@ smolvm sandbox desktop test-mac
 ```
 
 The first run prepares a reusable local image. See [Disposable macOS environments](/smolvm/guides/macos-sandboxes) for requirements and setup.
+
+## Tab completion
+
+Turn on tab completion so your shell can finish `smolvm` commands, options, and the names of your existing sandboxes:
+
+```bash
+smolvm completion bash --install   # also: zsh, fish
+```
+
+See [`smolvm completion`](/smolvm/cli/completion) for the manual setup and per-shell details.
 
 ## Snapshot workflow
 

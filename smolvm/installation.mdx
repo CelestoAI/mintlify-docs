@@ -50,10 +50,14 @@ After setup on Linux, activate your new KVM group membership with `newgrp kvm`, 
   </Tab>
 </Tabs>
 
-The backend is selected automatically based on your platform (Firecracker on Linux, QEMU on macOS). To force a specific backend:
+When `SMOLVM_BACKEND` is unset or `auto`, SmolVM picks the best backend that is actually installed on your machine. It prefers Firecracker on Linux and QEMU on macOS, and falls back through Firecracker → QEMU → libkrun so it never resolves to a hypervisor your host cannot run.
+
+If nothing suitable is installed, `smolvm sandbox create` fails immediately with a plain-English message telling you what to install — before downloading the base image, so a missing hypervisor no longer costs you a multi-hundred-MB download.
+
+To force a specific backend:
 
 ```bash
-export SMOLVM_BACKEND=auto   # or firecracker, or auto (the default)
+export SMOLVM_BACKEND=firecracker   # or qemu, libkrun, or auto (the default)
 ```
 
 ## Optional extras

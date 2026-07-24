@@ -4,7 +4,7 @@ sidebarTitle: VM resources
 description: "Configure CPU, memory, disk size, and templates when creating a Celesto computer so coding agents have enough resources for builds, packages, and apps."
 ---
 
-You can choose how much CPU, memory, and root disk space a Celesto computer gets before it starts. Start with the default size for small jobs, then choose more resources when your agent builds code, installs packages, opens large files, or runs a web app.
+You can choose a named computer size before a Celesto computer starts. Start with Nano for small jobs, then move to Small, Standard, or Large when your agent builds code, installs packages, opens large files, or runs a web app.
 
 Root disk and workspace storage are both durable, but they serve different jobs. Use `disk_size_mb` for operating system and runtime space. Use CelestoFS workspace storage for large project files, repositories, datasets, and artifacts. See [Petabyte-scale storage for AI agent sandboxes](/celesto-sdk/features/petabyte-storage).
 
@@ -48,16 +48,34 @@ celesto computer templates
 
 </CodeGroup>
 
-## Choose what to change
+## Choose a named size
 
-Change one setting at a time when the default size is too small. MB means megabytes, a common unit for memory and disk size.
+CPU and memory must match one of these named sizes:
+
+| Size | CPU | Memory |
+| --- | ---: | ---: |
+| Nano | 1 vCPU | 512 MB |
+| Small | 1 vCPU | 1 GB |
+| Standard | 2 vCPU | 4 GB |
+| Large | 4 vCPU | 12 GB |
+
+Your Celesto plan controls which sizes you can create:
+
+| Plan | Available sizes |
+| --- | --- |
+| Free | Nano |
+| Nano | Nano |
+| Builder | Nano, Small, Standard, Large |
+| Growth | Nano, Small, Standard, Large |
+
+Omit both CPU and memory to use the template default. When you set them explicitly, choose both values from the same row. Mixed combinations such as 2 vCPU with 2 GB memory are rejected.
 
 <ParamField body="cpus" type="integer">
-  CPU cores for the computer. CPU cores run code and build commands. Range: 1-16.
+  CPU value from a named size. Use together with the matching `memory` value.
 </ParamField>
 
 <ParamField body="memory" type="integer">
-  Working space for running programs. More memory helps with notebooks, large files, package installs, and heavier services. Range: 512-32768 MB.
+  Memory in MB from a named size. Use together with the matching `cpus` value.
 </ParamField>
 
 <ParamField body="disk" type="integer | string">
@@ -65,7 +83,7 @@ Change one setting at a time when the default size is too small. MB means megaby
 </ParamField>
 
 <ParamField body="disk_size_mb" type="integer">
-  Root disk storage inside the computer in MB. Range: 512-51200 MB. For large workspace files, use CelestoFS instead of increasing root disk size.
+  Root disk storage inside the computer in MB. Range: 512-20480 MB. For large workspace files, use CelestoFS instead of increasing root disk size.
 </ParamField>
 
 <ParamField body="template_id" type="string" default="scratch">
@@ -74,7 +92,7 @@ Change one setting at a time when the default size is too small. MB means megaby
 
 ## Create a larger computer
 
-Create a larger computer when the default template does not have enough room for the job. This example creates a `coding-agent` computer with 2 CPUs, 4096 MB of memory, and 20480 MB of disk space.
+Create a larger computer when the default template does not have enough room for the job. This example creates a Standard `coding-agent` computer with 2 CPUs, 4096 MB of memory, and 20480 MB of disk space.
 
 <CodeGroup>
 
@@ -131,12 +149,12 @@ Use the smallest computer that can finish the job. Increase the setting that mat
 
 | Workload | Start with |
 |---|---|
-| Quick shell commands | Template defaults |
-| Coding agent with package installs | `coding-agent`, 2 CPUs, 4096 MB memory |
-| Large repository builds | More CPU, plus CelestoFS workspace storage |
-| Data processing or notebooks | More memory, plus CelestoFS workspace storage |
-| Hosted preview app | Enough memory for the app, plus port publishing |
+| Quick shell commands | Nano or template defaults |
+| Coding agent with package installs | Standard `coding-agent` |
+| Large repository builds | Large, plus CelestoFS workspace storage |
+| Data processing or notebooks | Standard or Large, plus CelestoFS workspace storage |
+| Hosted preview app | Standard, plus port publishing |
 
 <Tip>
-  Increase CPU for slow builds, memory for programs that crash or slow down under load, and root disk when system tools run out of runtime space. Use CelestoFS for large workspace files.
+  Move to the next named size when builds are slow or programs run out of memory. Increase root disk when system tools run out of runtime space, and use CelestoFS for large workspace files.
 </Tip>

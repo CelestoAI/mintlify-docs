@@ -57,6 +57,14 @@ smolvm sandbox create [OPTIONS]
   Approve the one-time macOS image download and preparation without an interactive prompt.
 </ParamField>
 
+<ParamField path="--network" type="string" default="nat">
+  Network mode for the sandbox. Choices are `nat` (default, private SmolVM network with NAT, port forwarding, and domain controls) and `bridge` (attach directly to an existing host bridge on Linux). See [Bridged networking](/smolvm/features/bridged-networking).
+</ParamField>
+
+<ParamField path="--bridge" type="string">
+  Name of the Linux bridge to attach to. Required with `--network bridge` and rejected otherwise. Run [`smolvm bridge check BRIDGE`](/smolvm/features/bridged-networking#check-a-bridge-before-you-use-it) first to verify the bridge.
+</ParamField>
+
 <ParamField path="--boot-timeout" type="number" default="30">
   Seconds to wait for the sandbox to become ready.
 </ParamField>
@@ -97,6 +105,17 @@ smolvm sandbox create \
   --backend qemu \
   --qemu-machine microvm
 ```
+
+### Attach a sandbox to a host bridge
+
+On Linux, connect the sandbox directly to an existing bridge so it appears as a regular machine on that network with its own MAC and guest-managed IP:
+
+```bash
+smolvm bridge check br10
+smolvm sandbox create --name demo --os alpine --network bridge --bridge br10
+```
+
+In bridge mode, SSH from the host, host port forwards, workspace mounts, and outbound-domain allow-lists are unavailable — use `smolvm sandbox shell` and connect to guest services over the bridged network instead. See [Bridged networking](/smolvm/features/bridged-networking) for the full setup, tradeoffs, and SDK usage.
 
 ### Create a Windows sandbox from a local image
 

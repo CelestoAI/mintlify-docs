@@ -1,0 +1,68 @@
+---
+title: "smolvm sandbox logs"
+description: "Use smolvm sandbox logs to inspect a sandbox's host-side boot and console log, with tail, follow, and JSON output for debugging startup and guest console messages."
+---
+
+`smolvm sandbox logs` prints the host-side boot and console log for a sandbox. Reach for it when a sandbox is slow to become ready, when `shell` or `ssh` won't connect, or when you want to see what the guest kernel and init printed on the serial console.
+
+## Synopsis
+
+```bash
+smolvm sandbox logs <sandbox> [OPTIONS]
+```
+
+## Arguments
+
+<ParamField path="sandbox" type="string" required>
+  Name or ID of the sandbox to read logs from.
+</ParamField>
+
+## Options
+
+<ParamField path="--tail" type="number" default="200">
+  Number of lines to show from the end of the log.
+</ParamField>
+
+<ParamField path="-f, --follow" type="flag">
+  Keep printing new log lines as they arrive. Exit with `Ctrl+C`.
+</ParamField>
+
+<ParamField path="--json" type="flag">
+  Emit a JSON envelope with the log content in `data` instead of streaming raw text.
+</ParamField>
+
+## Examples
+
+### Show the last 200 lines
+
+```bash
+smolvm sandbox logs my-sandbox
+```
+
+### Show more history
+
+```bash
+smolvm sandbox logs my-sandbox --tail 1000
+```
+
+### Watch a boot live
+
+```bash
+smolvm sandbox logs my-sandbox --follow
+```
+
+### Capture the log for a bug report
+
+```bash
+smolvm sandbox logs my-sandbox --tail 500 --json > sandbox.log.json
+```
+
+## How it behaves
+
+The command reads the boot/console log that SmolVM captures on the host, so it works even when the guest agent or SSH isn't reachable. `--follow` streams appended bytes through an incremental UTF-8 decoder, so multi-byte characters that span a read boundary aren't garbled, and the final line isn't split when the log lacks a trailing newline. Piping into a reader that closes early (for example `| head`) exits cleanly.
+
+## Related commands
+
+* [`smolvm sandbox exec`](/smolvm/cli/exec) - Run a command in a sandbox from a script
+* [`smolvm sandbox shell`](/smolvm/cli/shell) - Open an interactive shell once the sandbox is up
+* [`smolvm doctor`](/smolvm/cli/doctor) - Check whether the host can run SmolVM at all

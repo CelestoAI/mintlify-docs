@@ -153,9 +153,107 @@ result = vm.run("python3 --version")  # python3 is already installed
   If the backing image for a QEMU diff snapshot is missing at restore time, SmolVM raises a clear error pointing to the missing path and suggesting you take a `full` snapshot instead. To stay safe, keep backing images in place while their diff snapshots exist.
 </Note>
 
+## Keep a running QEMU sandbox available
+
+By default, snapshot creation may briefly pause a running sandbox while SmolVM captures state. For QEMU disk snapshots, live capture keeps the guest running throughout — SmolVM copies the disk in the background without stopping the VM. If the installed QEMU cannot do a live block backup, the command fails rather than silently falling back to a pause.
+
+Use live capture when a sandbox must stay reachable during the snapshot — for example, a long-running agent or an interactive session you don't want to interrupt.
+
+Live capture has three requirements:
+
+- The backend must be QEMU.
+- `snapshot_type` must be `disk` — memory is not captured.
+- `resume_source` must be `True` (`--resume-source` on the CLI). The sandbox stays running end-to-end.
+
+<Tabs>
+  <Tab title="Python SDK">
+    ```python  theme={null}
+    from smolvm import SmolVM, SnapshotCapturePolicy, SnapshotType
+
+    vm = SmolVM(backend="qemu")
+    vm.start()
+
+    snapshot = vm.snapshot(
+        snapshot_id="live-checkpoint",
+        snapshot_type=SnapshotType.DISK,
+        resume_source=True,
+        capture_policy=SnapshotCapturePolicy.LIVE_ONLY,
+    )
+    # vm keeps running the whole time
+    vm.run("echo 'still serving requests'")
+    ```
+
+    Optional live-capture tuning:
+
+    - `timeout_seconds` — maximum time to wait for the background copy (default `600.0`).
+    - `max_bytes_per_second` — cap the backup I/O bandwidth to protect other workloads.
+
+    ```python  theme={null}
+    snapshot = vm.snapshot(
+        snapshot_type=SnapshotType.DISK,
+        resume_source=True,
+        capture_policy=SnapshotCapturePolicy.LIVE_ONLY,
+        timeout_seconds=900,
+        max_bytes_per_second=50 * 1024 * 1024,  # 50 MiB/s
+    )
+    ```
+  </Tab>
+
+  <Tab title="CLI">
+    ```bash  theme={null}
+    smolvm sandbox snapshot create my-sandbox \
+      --snapshot-id live-checkpoint \
+      --snapshot-type disk \
+      --resume-source \
+      --live-only
+    ```
+
+    Without `--live-only`, a disk snapshot may briefly pause the guest even when `--resume-source` is set. `--resume-source` only controls the final state; `--live-only` is what avoids the pause during capture.
+  </Tab>
+</Tabs>
+
+<Note>
+  Live capture is crash-consistent by default: the resulting disk looks like the guest was power-cut at the capture moment. Combine it with the guest flush policy below to reduce the chance of losing in-flight writes.
+</Note>
+
+## Control the guest flush before a disk snapshot
+
+Before a disk snapshot, SmolVM asks the guest agent to flush pending filesystem writes so the copied disk includes recent changes. `flush_policy` decides what happens if that flush fails:
+
+- **`required`** (default) — Fail the snapshot if the flush cannot succeed. Safest for workflows that need up-to-date disk state.
+- **`best-effort`** — Try to flush, but continue and take a crash-consistent snapshot if the flush fails. Useful when the guest agent may be unavailable but you still want a snapshot.
+- **`skip`** — Do not attempt the flush. Fastest, and the right choice when the guest has already been quiesced or when a crash-consistent copy is acceptable.
+
+`flush_policy` applies to all `disk` snapshots — paused or live.
+
+<Tabs>
+  <Tab title="Python SDK">
+    ```python  theme={null}
+    from smolvm import SmolVM, GuestFlushPolicy, SnapshotCapturePolicy, SnapshotType
+
+    snapshot = vm.snapshot(
+        snapshot_type=SnapshotType.DISK,
+        resume_source=True,
+        capture_policy=SnapshotCapturePolicy.LIVE_ONLY,
+        flush_policy=GuestFlushPolicy.BEST_EFFORT,
+    )
+    ```
+  </Tab>
+
+  <Tab title="CLI">
+    ```bash  theme={null}
+    smolvm sandbox snapshot create my-sandbox \
+      --snapshot-type disk \
+      --resume-source \
+      --live-only \
+      --flush-policy best-effort
+    ```
+  </Tab>
+</Tabs>
+
 ## How SmolVM prepares the guest
 
-Before SmolVM pauses a running sandbox, it asks the guest to save pending filesystem changes. Recent SmolVM images use the Rust guest agent over vsock for this sync step.
+Before SmolVM captures a disk snapshot, it asks the guest to save pending filesystem changes. Recent SmolVM images use the Rust guest agent over vsock for this sync step. You can adjust this behavior with `flush_policy` (see [Control the guest flush before a disk snapshot](#control-the-guest-flush-before-a-disk-snapshot)).
 
 The sync path matters because it happens before SmolVM creates snapshot files:
 

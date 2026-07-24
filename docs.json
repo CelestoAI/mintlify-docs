@@ -62,6 +62,7 @@
               "smolvm/features/coding-agents",
               "smolvm/features/host-mounts",
               "smolvm/features/network-controls",
+              "smolvm/features/bridged-networking",
               "smolvm/features/port-forwarding",
               "smolvm/features/snapshots"
             ]
@@ -264,6 +265,8 @@
               "smolvm/cli/list",
               "smolvm/cli/shell",
               "smolvm/cli/ssh",
+              "smolvm/cli/exec",
+              "smolvm/cli/logs",
               "smolvm/cli/stop",
               "smolvm/cli/cleanup",
               "smolvm/cli/file",
@@ -274,7 +277,9 @@
               "smolvm/cli/ui",
               "smolvm/cli/doctor",
               "smolvm/cli/update",
+              "smolvm/cli/image",
               "smolvm/cli/prune",
+              "smolvm/cli/completion",
               "smolvm/cli/windows"
             ]
           },
@@ -291,6 +296,7 @@
               "agentor/api/tools/github",
               "agentor/api/tools/git",
               "agentor/api/tools/gmail",
+              "agentor/api/tools/scrapegraphai",
               "agentor/api/tools/shell",
               "agentor/api/tools/weather",
               "agentor/api/tools/web-search",
