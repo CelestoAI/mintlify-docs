@@ -40,8 +40,14 @@ The first image preparation downloads an Apple restore file of about 15–18 GB.
 
 ## Create your first macOS sandbox
 
+After the one-time setup, you only need two commands: create the sandbox, then open its desktop.
+
+<Note>
+  These examples use the installed `smolvm` command. When you run SmolVM from its source repository, prefix each command with `uv run`.
+</Note>
+
 <Steps>
-  <Step title="Prepare your Mac">
+  <Step title="Prepare your Mac once">
     Install the tested macOS desktop runtime:
 
     ```bash
@@ -62,10 +68,10 @@ The first image preparation downloads an Apple restore file of about 15–18 GB.
   </Step>
 
   <Step title="Create the sandbox">
-    Create a sandbox named `test-mac`:
+    Create a sandbox named `nimble-mac`:
 
     ```bash
-    smolvm sandbox create --os macos --name test-mac
+    smolvm sandbox create --os macos --name nimble-mac
     ```
 
     On the first run, SmolVM asks before downloading and preparing macOS. Enter `y` to continue. The progress bar follows the download, installation, and desktop setup.
@@ -75,16 +81,39 @@ The first image preparation downloads an Apple restore file of about 15–18 GB.
     Continue? [y/N]: y
     ```
 
+    When creation finishes, the sandbox is already running. The output includes the next command. Your start time will differ:
+
+    ```text
+    ╭─────── VM Created ───────╮
+    │ Created VM 'nimble-mac'. │
+    ╰──────────────────────────╯
+                 VM Details
+    ┌─────────┬─────────────────────────┐
+    │ Name    │ nimble-mac              │
+    │ Status  │ running                 │
+    │ OS      │ macos                   │
+    │ Started │ 2026-07-24 18:08:50 UTC │
+    └─────────┴─────────────────────────┘
+    Next: smolvm sandbox desktop nimble-mac
+    Info: smolvm sandbox info nimble-mac
+    ```
+
     <Tip>
       If installation fails after the download completes, run the same command again. SmolVM keeps the completed restore file and reuses it instead of downloading another copy.
     </Tip>
   </Step>
 
   <Step title="Open the desktop">
-    After creation finishes, open the sandbox in Screen Sharing:
+    Run the `Next` command from the create output:
 
     ```bash
-    smolvm sandbox desktop test-mac
+    smolvm sandbox desktop nimble-mac
+    ```
+
+    SmolVM opens Screen Sharing and confirms the connection:
+
+    ```text
+    Opened the desktop for sandbox 'nimble-mac'.
     ```
 
     SmolVM supplies the private Screen Sharing password automatically. At the macOS login screen, use:
@@ -123,19 +152,19 @@ smolvm sandbox create --os macos --name editing-mac --mount "$PWD" --writable-mo
 Stop the sandbox when you want to keep its private files for later:
 
 ```bash
-smolvm sandbox stop test-mac
+smolvm sandbox stop nimble-mac
 ```
 
 Start it and open the desktop again:
 
 ```bash
-smolvm sandbox desktop test-mac --start
+smolvm sandbox desktop nimble-mac --start
 ```
 
 Delete it when you want to discard its installed apps, files, and other changes:
 
 ```bash
-smolvm sandbox delete test-mac
+smolvm sandbox delete nimble-mac
 ```
 
 The reusable macOS image remains after deletion, so the next sandbox starts much faster.
@@ -208,7 +237,7 @@ Review [Apple's software license agreements](https://www.apple.com/legal/sla/) a
     Enter only `y` or `n` at `Continue? [y/N]:`. For unattended scripts, approve the one-time image preparation explicitly:
 
     ```bash
-    smolvm sandbox create --os macos --name test-mac --yes
+    smolvm sandbox create --os macos --name nimble-mac --yes
     ```
   </Accordion>
 
@@ -220,7 +249,7 @@ Review [Apple's software license agreements](https://www.apple.com/legal/sla/) a
     Confirm that the sandbox is running, then allow more time for startup:
 
     ```bash
-    smolvm sandbox desktop test-mac --start --boot-timeout 120
+    smolvm sandbox desktop nimble-mac --start --boot-timeout 120
     ```
   </Accordion>
 
@@ -237,7 +266,7 @@ Review [Apple's software license agreements](https://www.apple.com/legal/sla/) a
     Apple allows at most two running macOS virtual machines on supported hardware. Stop one sandbox, then start the other:
 
     ```bash
-    smolvm sandbox stop test-mac
+    smolvm sandbox stop nimble-mac
     ```
   </Accordion>
 </AccordionGroup>

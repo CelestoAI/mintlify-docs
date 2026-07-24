@@ -131,10 +131,23 @@ See [Windows sandboxes](/smolvm/guides/windows-guests) before running Windows gu
 ### Create a macOS desktop sandbox
 
 ```bash
-smolvm sandbox create --os macos --name test-mac
+smolvm sandbox create --os macos --name nimble-mac
 ```
 
-The first macOS sandbox asks before downloading and preparing a local image. See [Disposable macOS environments](/smolvm/guides/macos-sandboxes) for host requirements, desktop access, and preview limits.
+The sandbox starts immediately when a prepared macOS image is available. The output shows its `running` status and the next command:
+
+```text
+Next: smolvm sandbox desktop nimble-mac
+Info: smolvm sandbox info nimble-mac
+```
+
+Open the desktop:
+
+```bash
+smolvm sandbox desktop nimble-mac
+```
+
+The first macOS sandbox asks before downloading and preparing a local image. See [Disposable macOS environments](/smolvm/guides/macos-sandboxes) for host requirements, one-time setup, and preview limits.
 
 ## What happens
 
