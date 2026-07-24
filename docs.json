@@ -75,6 +75,7 @@
               "smolvm/guides/ai-agent-integration",
               "smolvm/guides/http-api-typescript-sdk",
               "smolvm/guides/vm-lifecycle",
+              "smolvm/guides/macos-sandboxes",
               "smolvm/guides/windows-guests"
             ]
           },
