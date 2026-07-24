@@ -1,0 +1,244 @@
+---
+title: "smolvm image"
+description: "Manage the SmolVM image cache from the command line: pre-download images before you need them, keep the cache tidy, move images between machines, and build your own from a Dockerfile."
+---
+
+The `smolvm image` command group is a Docker-style toolbelt for the images that sandboxes boot from. Use it to:
+
+* **Pre-download** an image so the first `smolvm sandbox create` finishes instantly (CI warm-up, air-gapped setup, flaky network).
+* **Keep the cache tidy** — see what is on disk, inspect a single entry, remove a specific image, or drop stale caches left behind by older releases.
+* **Move images between machines** — pack an image into a single archive on one host and unpack it on another.
+* **Build your own** custom rootfs from a Dockerfile without writing Python.
+
+By default SmolVM downloads images lazily the first time a sandbox needs them and stores them under `~/.smolvm/images/`. Everything in this group operates on that directory.
+
+## Synopsis
+
+```bash  theme={null}
+smolvm image pull [PRESET] [--all] [OPTIONS]
+smolvm image list [OPTIONS]
+smolvm image ls [OPTIONS]              # alias of `image list`
+smolvm images [OPTIONS]                # top-level alias of `image list`
+smolvm image inspect NAME [OPTIONS]
+smolvm image rm NAME [OPTIONS]
+smolvm image build -t NAME [PATH] [OPTIONS]
+smolvm image save NAME -o FILE [OPTIONS]
+smolvm image load -i FILE [OPTIONS]
+smolvm image prune [OPTIONS]
+```
+
+Every subcommand accepts:
+
+* `--image-dir PATH` — override the cache location for this invocation.
+* `--json` — emit a machine-readable envelope instead of the formatted output.
+
+## Where images live
+
+Resolution order for the cache directory (first match wins):
+
+1. `--image-dir PATH` on the command you are running.
+2. The `SMOLVM_IMAGE_DIR` environment variable.
+3. The default: `~/.smolvm/images/`.
+
+<Note>
+  Sandboxes read only `SMOLVM_IMAGE_DIR` — the `--image-dir` flag is a per-command override for `smolvm image ...` itself. If you pull to a non-default directory and want `smolvm sandbox create` to boot from that same directory, export `SMOLVM_IMAGE_DIR` before starting the sandbox:
+
+  ```bash  theme={null}
+  export SMOLVM_IMAGE_DIR=/data/smolvm-images
+  smolvm image pull codex
+  smolvm sandbox create --preset codex
+  ```
+</Note>
+
+## Subcommands
+
+### pull
+
+Download a published image (kernel + rootfs, verified and decompressed) ahead of time.
+
+```bash  theme={null}
+smolvm image pull codex
+smolvm image pull --all
+```
+
+<ParamField path="preset" type="string">
+  Preset to fetch (for example `codex`, `claude-code`, `openclaw`). Required unless `--all` is set. `claude` is accepted as an alias for `claude-code`.
+</ParamField>
+
+<ParamField path="--all" type="flag">
+  Download every image published for this machine's architecture and VMM. Failures for individual images are isolated so one bad download doesn't cancel the batch. Combine with `--os` to limit to a single operating system.
+</ParamField>
+
+<ParamField path="--arch" type='"amd64" | "arm64"'>
+  Processor architecture. Defaults to this machine's.
+</ParamField>
+
+<ParamField path="--vmm" type='"firecracker" | "qemu" | "libkrun"'>
+  Virtual machine engine the image targets. Defaults to what this host uses.
+</ParamField>
+
+<ParamField path="--os" type='"ubuntu" | "alpine"'>
+  Operating system inside the image. For a single pull the default is `ubuntu`; with `--all`, this limits the batch to one OS.
+</ParamField>
+
+<ParamField path="--image-dir" type="path">
+  Cache location for this pull. Overrides `SMOLVM_IMAGE_DIR` and the default.
+</ParamField>
+
+<ParamField path="--json" type="flag">
+  Emit a JSON envelope with the resolved target, output path, and cache-hit flag.
+</ParamField>
+
+Preview and warm-up patterns:
+
+```bash  theme={null}
+# CI: pre-download the image the build will use
+smolvm image pull codex
+
+# Air-gapped prep: fetch every image for this host in one go
+smolvm image pull --all --os ubuntu
+```
+
+### list / ls / images
+
+Show every entry in the cache with preset, platform, version-staleness, size, and age. `smolvm images` and `smolvm image ls` are aliases of `smolvm image list` — same output, same JSON envelope.
+
+```bash  theme={null}
+smolvm images
+```
+
+Example output:
+
+```
+NAME                                         TYPE     PRESET       CREATED         SIZE
+codex-v0.0.24-amd64-firecracker              image    codex        2 hours ago     1.9 GiB
+base-kernel-v0.0.24-amd64                    kernel   -            2 hours ago     34 MiB
+custom/my-agent/9c1e4a2f                     custom   my-agent     10 minutes ago  620 MiB
+```
+
+Sizes are computed from allocated blocks, so sparse rootfs files report what deleting them will actually free.
+
+### inspect
+
+Print a Docker-style JSON array describing one image: parsed fields, per-file sizes (both apparent and on-disk), the rootfs sidecar, and — for current-version published entries — the manifest URLs, SHAs, and release tag.
+
+```bash  theme={null}
+smolvm image inspect codex
+smolvm image inspect custom/my-agent
+```
+
+<ParamField path="name" type="string" required>
+  Preset name (matches every entry for that preset), full cache directory name (as shown by `image list`), or a custom image's `custom/<name>` handle. Absolute paths that `image list` prints are also accepted.
+</ParamField>
+
+### rm
+
+Remove a downloaded image to free space. Deletion is confined to direct children of the resolved image directory — symlinks are unlinked in place and never followed.
+
+```bash  theme={null}
+smolvm image rm codex                        # every codex entry
+smolvm image rm codex-v0.0.24-amd64-firecracker
+smolvm image rm custom/my-agent
+smolvm image rm custom/my-agent/9c1e4a2f     # one build
+```
+
+<ParamField path="name" type="string" required>
+  Preset name, full cache directory name, or `custom/<name>[/<fingerprint>]` handle. Fingerprints accept Docker-style unique prefixes.
+</ParamField>
+
+<ParamField path="--dry-run" type="flag">
+  List what would be removed without deleting.
+</ParamField>
+
+### build
+
+Build a custom rootfs from a Dockerfile, exposing the same pipeline as [`DockerRootfsBuilder`](/smolvm/api/dockerrootfsbuilder) as a CLI. Requires Docker on the host. The built image lands in the cache as `custom/<name>/<fingerprint>` and shows up in `image list` alongside published images.
+
+```bash  theme={null}
+smolvm image build -t my-agent .
+smolvm image build -t my-agent \
+  -f ./docker/Dockerfile.agent \
+  --build-arg MODEL=gpt-4.1 \
+  --size-mb 1024 \
+  ./context
+```
+
+<ParamField path="path" type="path" default=".">
+  Docker build context. Defaults to the current directory. A missing context is a clean error.
+</ParamField>
+
+<ParamField path="-t, --tag" type="string" required>
+  Name for the built image. Written under `custom/<name>/...` in the cache.
+</ParamField>
+
+<ParamField path="-f, --file" type="path">
+  Path to the Dockerfile. Defaults to `Dockerfile` in the context.
+</ParamField>
+
+<ParamField path="--size-mb" type="integer" default="512">
+  Virtual disk size of the built rootfs, in MiB.
+</ParamField>
+
+<ParamField path="--build-arg" type="KEY=VALUE" repeatable>
+  Value forwarded to the Dockerfile's `ARG` lines. Repeat for multiple args.
+</ParamField>
+
+<ParamField path="--arch" type='"amd64" | "arm64"'>
+  Target processor architecture. Defaults to this machine's.
+</ParamField>
+
+<ParamField path="--backend" type='"auto" | "firecracker" | "qemu" | "libkrun"' default="auto">
+  Boot backend the resulting image will target.
+</ParamField>
+
+<ParamField path="--init" type="string" default="/init">
+  First program the guest starts.
+</ParamField>
+
+<Note>
+  Because the CLI cannot boot local Linux images directly yet, a successful `image build` prints a ready-to-run `SmolVM.from_image(...)` snippet you can drop into Python.
+</Note>
+
+### save / load
+
+Move an image between hosts without going through the network. `save` packs a cached entry into a tar archive; `load` unpacks the archive back into a target cache. Useful for air-gapped installs, on-call laptops, or copying a `custom/<name>` build to a peer's machine.
+
+```bash  theme={null}
+# on the source host
+smolvm image save codex -o codex.tar
+
+# copy codex.tar to the destination host (scp, rsync, USB stick), then:
+smolvm image load -i codex.tar
+```
+
+The archive carries a `manifest.json` describing every member. Load stages into a hidden `.partial` directory and renames atomically; malicious archives (traversal, absolute paths, undeclared members, unsupported schema versions) are rejected before anything reaches the cache. Use `--force` on `load` to replace an existing entry.
+
+### prune
+
+Remove image caches left behind by older SmolVM releases. This is the canonical home for prune; `smolvm prune` at the top level is kept as an alias with the same implementation and flags. See [`smolvm prune`](/smolvm/cli/prune) for the full reference and dry-run examples.
+
+```bash  theme={null}
+smolvm image prune --dry-run
+smolvm image prune
+```
+
+## Choosing `SMOLVM_IMAGE_DIR` vs. `--image-dir`
+
+* Set **`SMOLVM_IMAGE_DIR`** when the whole host — including sandboxes started later — should read and write from a shared directory (a large data volume, a shared NFS mount for a fleet, or a per-user override on a multi-tenant box). This is the only variable sandboxes themselves consult.
+* Pass **`--image-dir`** when you only want the current `smolvm image ...` command to touch a specific directory (inspecting a peer's cache, saving from a scratch location, loading into a test directory) without changing what future sandboxes see.
+
+If you `pull` into a directory that isn't reachable via `SMOLVM_IMAGE_DIR`, the command warns you — the sandbox that boots afterward will fall back to the default location.
+
+## Exit codes
+
+| Code | Description                                                                 |
+| ---- | --------------------------------------------------------------------------- |
+| `0`  | Success                                                                     |
+| `1`  | Runtime error (download failed, disk full, corrupt archive, partial batch)  |
+| `2`  | Invalid usage (missing subcommand, conflicting flags, unknown preset)       |
+
+## Related
+
+* [`smolvm prune`](/smolvm/cli/prune) — top-level alias of `smolvm image prune`.
+* [`ImageBuilder`](/smolvm/api/imagebuilder) and [`DockerRootfsBuilder`](/smolvm/api/dockerrootfsbuilder) — the Python builders behind `smolvm image build`.
+* [`ImageManager`](/smolvm/api/imagemanager) — the loader sandboxes use to resolve entries in the cache.

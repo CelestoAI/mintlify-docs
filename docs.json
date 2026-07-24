@@ -274,6 +274,7 @@
               "smolvm/cli/ui",
               "smolvm/cli/doctor",
               "smolvm/cli/update",
+              "smolvm/cli/image",
               "smolvm/cli/prune",
               "smolvm/cli/windows"
             ]
