@@ -152,6 +152,10 @@ Run the long preparation step before you need your first sandbox:
 smolvm image build --os macos --ipsw latest -t macos-latest
 ```
 
+<Note>
+  SmolVM uses the macOS image's fixed size and selects `vz` automatically. Run the command as shown; `--size-mb` and `--backend` are available for Linux image builds instead.
+</Note>
+
 SmolVM downloads the latest compatible restore file from Apple, installs it locally, and prepares the desktop account. Later `sandbox create` commands reuse this image.
 
 List local images:
