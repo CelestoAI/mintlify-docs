@@ -1,0 +1,72 @@
+---
+title: "smolvm completion"
+description: "Use smolvm completion to install shell tab completion for bash, zsh, or fish in one step, including completion of your existing sandbox names."
+---
+
+`smolvm completion` sets up tab completion for the `smolvm` CLI. Once installed, your shell can complete subcommands, options, and the names of your existing sandboxes as you type — so `smolvm sandbox ssh <Tab>` offers the sandboxes you actually have.
+
+Supported shells are `bash`, `zsh`, and `fish`.
+
+## Synopsis
+
+```bash
+smolvm completion <bash|zsh|fish> [--install]
+```
+
+## Arguments
+
+<ParamField path="shell" type="string" required>
+  Which shell to generate the completion script for. One of `bash`, `zsh`, or `fish`.
+</ParamField>
+
+## Options
+
+<ParamField path="--install" type="flag">
+  Install the completion script and wire it into your shell's startup files. Without this flag, the script is printed to stdout so you can source it yourself.
+</ParamField>
+
+## One-shot install
+
+The quickest path is to let SmolVM install completion for you:
+
+```bash
+smolvm completion bash --install   # also works with: zsh, fish
+```
+
+Open a new shell afterward, then try:
+
+```bash
+smolvm sandbox ssh <Tab>
+```
+
+What `--install` does per shell:
+
+- **bash** and **zsh**: write the completion script to `~/.smolvm/completions/` and add a single marker-tagged `source` line to your startup file (`~/.bashrc`, or `~/.bash_profile` on macOS, or `$ZDOTDIR/.zshrc`). Re-running the command refreshes the script without duplicating the line.
+- **fish**: write the autoloaded completion file into `~/.config/fish/completions/smolvm.fish` (honoring `XDG_CONFIG_HOME`). Fish picks it up automatically — no startup-file edit is needed.
+
+If the install can't write a file, `smolvm` prints a plain-English error naming the manual `smolvm completion <shell>` fallback below.
+
+<Tip>
+Running `sudo smolvm completion <shell> --install` still installs into the invoking user's home directory (resolved via `SUDO_USER`), so completion lands where your interactive shell will actually see it.
+</Tip>
+
+## Manual setup
+
+Prefer to wire completion up yourself? Run the command without `--install` to print the script, then load it your own way:
+
+```bash
+# bash — add to ~/.bashrc
+eval "$(smolvm completion bash)"
+
+# zsh — add to ~/.zshrc
+eval "$(smolvm completion zsh)"
+
+# fish — create the folder once, then write the completion file
+mkdir -p ~/.config/fish/completions
+smolvm completion fish > ~/.config/fish/completions/smolvm.fish
+```
+
+## Related commands
+
+* [`smolvm sandbox list`](/smolvm/cli/list) - See the sandbox names that completion will suggest
+* [CLI overview](/smolvm/cli/overview) - Full list of commands completion covers

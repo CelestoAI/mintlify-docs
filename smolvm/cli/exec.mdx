@@ -1,0 +1,82 @@
+---
+title: "smolvm sandbox exec"
+description: "Use smolvm sandbox exec to run a single command inside a running sandbox and stream its output, with exit-code passthrough and an optional JSON envelope."
+---
+
+`smolvm sandbox exec` runs one command inside a running sandbox and streams its output back to your terminal. Use it in scripts and agent tooling when you want to invoke something in a sandbox without opening an interactive shell — the guest's exit code is returned as `smolvm`'s exit code, so it fits directly into pipelines and CI steps.
+
+By default the sandbox must already be running. Pass `--start` to have SmolVM start or resume it first, like `sandbox shell` and `sandbox ssh` do.
+
+## Synopsis
+
+```bash
+smolvm sandbox exec <sandbox> [OPTIONS] -- <command> [args...]
+```
+
+Everything after `--` is passed to the guest verbatim, including flags that would otherwise be interpreted by the CLI.
+
+## Arguments
+
+<ParamField path="sandbox" type="string" required>
+  Name or ID of the sandbox to run the command in.
+</ParamField>
+
+<ParamField path="command" type="string" required>
+  The command to run inside the sandbox. Put it after `--` so shell flags aren't consumed by `smolvm`.
+</ParamField>
+
+## Options
+
+<ParamField path="--start" type="flag">
+  Start or resume the sandbox first if it is not already running. Without this flag, `exec` exits with an error when the sandbox is stopped or paused.
+</ParamField>
+
+<ParamField path="--timeout" type="number" default="30">
+  Seconds to wait for the command to finish.
+</ParamField>
+
+<ParamField path="--boot-timeout" type="number" default="30">
+  Seconds to wait for the sandbox to become ready when `--start` is used.
+</ParamField>
+
+<ParamField path="--json" type="flag">
+  Emit a JSON envelope with `ok`, `data` (including `stdout`, `stderr`, and `exit_code`), and `error` instead of streaming raw output. On a non-zero guest exit, `error.code` is `command_failed`.
+</ParamField>
+
+## Examples
+
+### Run a command in a running sandbox
+
+```bash
+smolvm sandbox exec my-sandbox -- python --version
+```
+
+### Start the sandbox first if it's stopped
+
+```bash
+smolvm sandbox exec my-sandbox --start -- ls -la /workspace
+```
+
+### Get structured output for a script
+
+```bash
+smolvm sandbox exec my-sandbox --json -- uname -a
+```
+
+### Use the exit code in a pipeline
+
+```bash
+smolvm sandbox exec my-sandbox -- pytest tests/ && echo "tests passed"
+```
+
+## How it behaves
+
+`sandbox exec` streams the command's `stdout` and `stderr` back as they arrive and returns the guest's exit code as its own. Piping into a reader that closes early (for example `| head`) exits cleanly instead of raising.
+
+If the sandbox is stopped or paused and `--start` is not set, `exec` exits with an actionable error that names both `smolvm sandbox start` and the `--start` flag. In `--json` mode the same condition returns an envelope with `ok: false` and an `error` object.
+
+## Related commands
+
+* [`smolvm sandbox shell`](/smolvm/cli/shell) - Open an interactive shell instead
+* [`smolvm sandbox logs`](/smolvm/cli/logs) - Read the sandbox's boot and console logs
+* [`smolvm sandbox start`](/smolvm/cli/stop) - Start a stopped sandbox manually
