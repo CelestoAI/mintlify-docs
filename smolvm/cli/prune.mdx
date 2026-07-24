@@ -7,16 +7,25 @@ When you upgrade SmolVM, the new release pulls a fresh set of pre-built sandbox 
 
 Run it any time after an upgrade. It only touches caches that belong to versions you're no longer using, so your current sandboxes keep working.
 
+<Note>
+  `smolvm prune` is an alias of [`smolvm image prune`](/smolvm/cli/image#prune) — same implementation, same flags. Either name works. The `image` group is the canonical home; the top-level `smolvm prune` is kept for backward compatibility.
+</Note>
+
 ## Synopsis
 
 ```bash  theme={null}
 smolvm prune [OPTIONS]
+smolvm image prune [OPTIONS]   # canonical spelling
 ```
 
 ## Options
 
 <ParamField path="--dry-run" type="flag" default="false">
   Show what would be deleted without removing anything. Useful for previewing the targets before you commit.
+</ParamField>
+
+<ParamField path="--image-dir" type="path">
+  Cache location to prune. Overrides `SMOLVM_IMAGE_DIR` and the default `~/.smolvm/images/`.
 </ParamField>
 
 <ParamField path="--json" type="flag" default="false">
@@ -98,5 +107,6 @@ It does not touch:
 
 ## Related commands
 
-* [`smolvm sandbox delete`](/smolvm/cli/cleanup) - remove stale sandboxes and free runtime resources
-* [`smolvm doctor`](/smolvm/cli/doctor) - diagnose your install before pruning
+* [`smolvm image`](/smolvm/cli/image) — pull, list, inspect, build, save, and remove cached images
+* [`smolvm sandbox delete`](/smolvm/cli/cleanup) — remove stale sandboxes and free runtime resources
+* [`smolvm doctor`](/smolvm/cli/doctor) — diagnose your install before pruning
