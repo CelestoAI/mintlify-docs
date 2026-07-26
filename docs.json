@@ -12,6 +12,10 @@
     "dark": "#FF5722"
   },
   "favicon": "favicon.png",
+  "banner": {
+    "content": "SmolVM is open source. [Support the project with a star on GitHub →](https://github.com/celestoai/smolvm)",
+    "dismissible": true
+  },
   "navigation": {
     "global": {},
     "tabs": [
