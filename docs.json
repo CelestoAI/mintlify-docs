@@ -179,6 +179,9 @@
             "group": "Build Agents",
             "pages": [
               "agentor/agents-api",
+              "agentor/structured-output",
+              "agentor/durable-runs",
+              "agentor/model-providers",
               "agentor/deploy",
               "agentor/tracing",
               "agentor/agent-to-agent",
@@ -303,7 +306,6 @@
               "agentor/api/tools/scrapegraphai",
               "agentor/api/tools/shell",
               "agentor/api/tools/weather",
-              "agentor/api/tools/web-search",
               "agentor/api/mcp/hub",
               "agentor/api/mcp/litemcp",
               "agentor/api/mcp/router",

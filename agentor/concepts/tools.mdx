@@ -57,17 +57,24 @@ The decorator automatically generates JSON schemas from type hints and docstring
 Register tools globally for reuse across agents (src/agentor/tools/registry.py:23):
 
 ```python  theme={null}
+from agentor.engine.tools import RunContext
 from agentor.tools.registry import register_global_tool
-from agents import RunContextWrapper
-from agentor.tools.registry import CelestoConfig
 
 @register_global_tool
-def get_weather(wrapper: RunContextWrapper[CelestoConfig], city: str) -> str:
-    """Returns the weather in the given city."""
+def get_weather(wrapper: RunContext, city: str) -> str:
+    """Returns the weather in the given city.
+
+    Args:
+        city: The city to look up.
+    """
     api_key = wrapper.context.weather_api_key
     # Fetch weather using API key
     return f"Weather in {city}"
 ```
+
+<Note>
+  A parameter annotated `RunContext` is filled in by the engine, not by the model, so it never appears in the tool's schema. The older `RunContextWrapper` annotation from openai-agents is still recognised, so tools written before 0.1.0 keep working.
+</Note>
 
 Use registered tools by name:
 
@@ -301,7 +308,12 @@ Tools access this context:
 
 ```python  theme={null}
 @register_global_tool
-def github_operation(wrapper: RunContextWrapper[CelestoConfig], repo: str) -> str:
+def github_operation(wrapper: RunContext, repo: str) -> str:
+    """Run an operation against a GitHub repository.
+
+    Args:
+        repo: The repository, as owner/name.
+    """
     token = wrapper.context.github_token
     # Use token for API calls
     return f"Processed {repo}"
@@ -309,11 +321,12 @@ def github_operation(wrapper: RunContextWrapper[CelestoConfig], repo: str) -> st
 
 ## OpenAI Function Conversion
 
-All tools automatically convert to OpenAI function format (src/agentor/tools/base.py:46):
+All tools carry an OpenAI-compatible schema:
 
 ```python  theme={null}
 tools = weather_tool.to_openai_function()
-# Returns List[FunctionTool] compatible with agents library
+tools[0].to_openai()
+# {'type': 'function', 'function': {'name': ..., 'description': ..., 'parameters': {...}}}
 ```
 
 ## Next Steps

@@ -10,6 +10,10 @@ Agentor is an open-source Python framework for building and deploying long-runni
   [View source on GitHub](https://github.com/CelestoAI/agentor) · [Start with Quickstart](/agentor/quickstart)
 </Info>
 
+<Note>
+  **Agentor 0.1.0 is a prerelease.** It runs on Agentor's own agent engine, with durable runs, structured output, and any OpenAI-compatible provider built in. Install it with `pip install --pre agentor`; plain `pip install agentor` stays on the stable 0.0.x line. See [Installation](/agentor/installation).
+</Note>
+
 ## Quick example
 
 Build an agent, connect tools, and serve it over the A2A protocol in a few lines:
@@ -35,6 +39,10 @@ agent.serve()
   `agent.serve()` automatically enables the A2A protocol, making your agent discoverable and interoperable with other agents.
 </Tip>
 
+<Note>
+  `GetWeatherTool()` reads a free [WeatherAPI.com](https://www.weatherapi.com/) key from `WEATHER_API_KEY`, and raises if it is not set. Pass one directly with `GetWeatherTool(api_key="...")`.
+</Note>
+
 ## Start in 5 minutes
 
 <CardGroup cols={2}>
@@ -56,6 +64,14 @@ agent.serve()
 
   <Card title="Build Agents" icon="robot" href="/agentor/agents-api">
     Learn practical agent construction, deployment, tracing, skills, and A2A basics.
+  </Card>
+
+  <Card title="Durable Runs" icon="floppy-disk" href="/agentor/durable-runs">
+    Save every step of a run so another process can finish it after a crash.
+  </Card>
+
+  <Card title="Model Providers" icon="plug" href="/agentor/model-providers">
+    Point Agentor at OpenRouter, Groq, Together, vLLM, Ollama, or your own server.
   </Card>
 
   <Card title="Tool Use & MCP" icon="screwdriver-wrench" href="/agentor/tools/overview">

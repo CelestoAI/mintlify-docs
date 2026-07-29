@@ -1,12 +1,12 @@
 ---
 title: "Agentor class API reference"
 sidebarTitle: "Agentor"
-description: "Agentor class API reference: configure model, instructions, tools, skills, and tracing, then run agents synchronously, asynchronously, or as a streamed API."
+description: "Agentor class API reference: configure model, provider, tools, skills, structured output, durable storage, and tracing, then run agents synchronously, asynchronously, or as a streamed API."
 ---
 
 ## Overview
 
-The `Agentor` class is the main entry point for building AI agents. It provides a simple interface to create agents with tools, serve them as APIs, and run them with various configurations.
+The `Agentor` class is the main entry point for building AI agents. It wires a model, some tools, and the loop that drives them, then lets you run the agent, stream it, resume it, or serve it as an API.
 
 ## Constructor
 
@@ -14,118 +14,144 @@ The `Agentor` class is the main entry point for building AI agents. It provides 
 Agentor(
     name: str,
     instructions: Optional[str] = None,
-    model: Optional[str | LitellmModel] = "gpt-5-nano",
-    tools: Optional[List[Union[FunctionTool, str, MCPServerStreamableHttp, BaseTool]]] = None,
-    output_type: type[Any] | AgentOutputSchemaBase | None = None,
+    model: Any = "gpt-5-nano",
+    tools: Optional[List[Any]] = None,
+    output_type: Any = None,
     debug: bool = False,
     api_key: Optional[str] = None,
     model_settings: Optional[ModelSettings] = None,
     skills: Optional[List[str]] = None,
     enable_tracing: bool = False,
+    max_turns: int = 20,
+    store: Any = None,
+    base_url: Optional[str] = None,
+    tracer: Any = None,
+    engine: Optional[Literal["native"]] = None,
 )
 ```
 
 ### Parameters
 
 <ParamField path="name" type="str" required>
-  The name of the agent. Used in API endpoints and agent identification.
+  The name of the agent. Used in API endpoints, A2A agent cards, and traces.
 </ParamField>
 
 <ParamField path="instructions" type="str" default="None">
-  System prompt that defines the agent's behavior and personality. This guides how the agent responds to user queries.
+  System prompt that defines the agent's behavior. Sent as the first message of every run.
 </ParamField>
 
-<ParamField path="model" type="str | LitellmModel" default="gpt-5-nano">
-  The LLM model to use. Supports any model from LiteLLM (e.g., `"gpt-4o"`, `"gemini/gemini-pro"`, `"anthropic/claude-4"`).
-  For non-OpenAI models, use the format `"provider/model-name"` and provide an `api_key`.
+<ParamField path="model" type="str | Model" default="gpt-5-nano">
+  The model to use. A bare name such as `"gpt-4o-mini"` goes to OpenAI. A `provider/model` string such as `"gemini/gemini-2.5-flash"` is routed through LiteLLM. With `base_url` set, the string is passed to that provider untouched. See [Model providers](/agentor/model-providers).
 </ParamField>
 
-<ParamField path="tools" type="List[Union[FunctionTool, str, MCPServerStreamableHttp, BaseTool]]" default="None">
-  List of tools available to the agent. Can be:
+<ParamField path="tools" type="List[Callable | Tool | str | BaseTool | MCPServer]" default="None">
+  What the agent can call. Any mix of:
 
-  * `FunctionTool` objects created with `@function_tool`
-  * String names from the tool registry (e.g., `"gmail"`, `"get_weather"`)
-  * `MCPServerStreamableHttp` instances for MCP servers
-  * `BaseTool` subclasses with capabilities
+  * Functions decorated with `@function_tool`, or plain callables with type hints
+  * String names from the tool registry — currently `"get_weather"` and `"current_datetime"`
+  * [`BaseTool`](/agentor/api/tools) subclasses, whose `@capability` methods each become a tool
+  * [`MCPServer`](/agentor/guides/mcp-servers) instances, connected for the duration of each run
+
+  <Warning>
+    Provider-hosted tools (web search, file search, hosted MCP) are not supported. They have no callable body Agentor can invoke, so passing one raises `TypeError`. Write a function tool instead.
+  </Warning>
 </ParamField>
 
-<ParamField path="output_type" type="type[Any] | AgentOutputSchemaBase" default="None">
-  Optional Pydantic model or schema to structure the agent's output.
+<ParamField path="output_type" type="type[BaseModel]" default="None">
+  A Pydantic model describing the shape you want back. `result.final_output` becomes an instance of it. See [Structured output](/agentor/structured-output).
 </ParamField>
 
 <ParamField path="debug" type="bool" default="False">
-  Enable debug mode for additional logging and diagnostics.
+  Accepted for backwards compatibility. It currently has no effect — use Python's `logging` to see engine activity.
 </ParamField>
 
 <ParamField path="api_key" type="str" default="None">
-  API key for the LLM provider. Falls back to `OPENAI_API_KEY` environment variable if not provided.
+  API key for the provider. Falls back to the `OPENAI_API_KEY` environment variable.
 </ParamField>
 
 <ParamField path="model_settings" type="ModelSettings" default="None">
-  Advanced model configuration including temperature, top\_p, max\_tokens, etc. See [ModelSettings](/agentor/api/model-settings) for details.
+  Generation parameters: temperature, `max_tokens`, `top_p`, and more. See [ModelSettings](/agentor/api/model-settings).
 </ParamField>
 
 <ParamField path="skills" type="List[str]" default="None">
-  List of skill file paths to inject into the agent's system prompt.
+  Paths to skill files, injected into the system prompt. See [Skills](/agentor/skills).
 </ParamField>
 
 <ParamField path="enable_tracing" type="bool" default="False">
-  Enable LLM tracing and monitoring via Celesto. Requires `CELESTO_API_KEY` environment variable.
+  Turn on Celesto tracing explicitly. Requires `CELESTO_API_KEY`, and raises if it is missing. Tracing is already automatic when that variable is set.
+</ParamField>
+
+<ParamField path="max_turns" type="int" default="20">
+  How many model calls a run may make before giving up. A run that hits the limit ends with `status="max_turns"` instead of raising.
+</ParamField>
+
+<ParamField path="store" type="Store" default="None">
+  Where to save the run's events, so an interrupted run can be resumed. Use `FileStore` or `MemoryStore` from `agentor.engine.store`. See [Durable runs](/agentor/durable-runs).
+</ParamField>
+
+<ParamField path="base_url" type="str" default="None">
+  An OpenAI-compatible endpoint to talk to instead of OpenAI — OpenRouter, Groq, Together, vLLM, Ollama, and others. See [Model providers](/agentor/model-providers).
+</ParamField>
+
+<ParamField path="tracer" type="CelestoTracer" default="None">
+  A tracer built with `setup_celesto_tracing`. Takes precedence over the one Agentor builds from `CELESTO_API_KEY`. See [Tracing](/agentor/tracing).
+</ParamField>
+
+<ParamField path="engine" type='Literal["native"]' default="None">
+  Vestigial. `"native"` is accepted and does nothing; any other value raises. There is one engine and it is the default.
+
+  <Warning>
+    `engine="agents"` raised in 0.1.0. The openai-agents engine was removed — drop the argument.
+  </Warning>
 </ParamField>
 
 ## Methods
 
 ### run
 
-Run the agent synchronously with a single prompt.
+Run the agent synchronously.
 
 ```python  theme={null}
-def run(input: str) -> List[str] | str
+def run(input: str) -> RunResult
 ```
 
-**Parameters:**
-
-* `input` (str): The user's input prompt
-
-**Returns:** Agent response as a string or list of strings
-
-**Example:**
+**Returns:** a [`RunResult`](#runresult).
 
 ```python  theme={null}
 from agentor import Agentor
 
 agent = Agentor(
     name="Assistant",
-    instructions="You are a helpful assistant"
+    instructions="You are a helpful assistant",
 )
 
 result = agent.run("Write a haiku about recursion in programming.")
 print(result.final_output)
 ```
 
+<Note>
+  `run()` cannot be called from inside a running event loop. Use `await agent.arun(...)` there.
+</Note>
+
 ### arun
 
-Run the agent asynchronously with support for batch processing and fallback models.
+Run the agent asynchronously, with batching and model fallbacks.
 
 ```python  theme={null}
 async def arun(
     input: list[str] | str | list[AgentInputType],
     limit_concurrency: int = 10,
-    max_turns: int = 20,
+    max_turns: Optional[int] = None,
     fallback_models: Optional[List[str]] = None,
-) -> List[str] | str
+) -> RunResult | List[RunResult]
 ```
 
 **Parameters:**
 
-* `input`: A single prompt string, list of prompts for batch processing, or list of message dictionaries
-* `limit_concurrency` (int): Maximum concurrent tasks for batch prompts (default: 10)
-* `max_turns` (int): Maximum agent turns before stopping (default: 20)
-* `fallback_models` (List\[str]): Optional fallback models to try on rate limit or API errors
-
-**Returns:** Agent response(s)
-
-**Example:**
+* `input`: one prompt, a list of prompts to run concurrently, or a list of message dicts to continue a conversation
+* `limit_concurrency` (int): maximum concurrent runs when `input` is a list of prompts (default: 10)
+* `max_turns` (int): turn budget for this call. Defaults to the agent's `max_turns`
+* `fallback_models` (List\[str]): models to try if the primary one is rate limited or errors. Configured temperature and token limits carry across
 
 ```python  theme={null}
 import asyncio
@@ -137,10 +163,10 @@ agent = Agentor(name="Assistant", model="gpt-5-mini")
 result = await agent.arun("What is the weather in London?")
 print(result.final_output)
 
-# Batch prompts
+# Batch — each prompt is its own run, executed concurrently
 results = await agent.arun([
     "What is the weather in London?",
-    "What is the weather in Paris?"
+    "What is the weather in Paris?",
 ])
 for result in results:
     print(result.final_output)
@@ -148,13 +174,44 @@ for result in results:
 # With fallback models
 result = await agent.arun(
     "Analyze this dataset",
-    fallback_models=["gpt-4o-mini", "gpt-4"]
+    fallback_models=["gpt-4o-mini", "gpt-4o"],
 )
 ```
 
+<Warning>
+  A batch call uses `asyncio.gather(..., return_exceptions=True)`, so a failed prompt yields an exception object in the list rather than raising. Check each item's type before using it.
+</Warning>
+
+### resume
+
+Continue a run that was saved by a [store](/agentor/durable-runs).
+
+```python  theme={null}
+def resume(run_id: str) -> RunResult
+async def aresume(run_id: str) -> RunResult
+```
+
+**Parameters:**
+
+* `run_id` (str): the id from `result.run_id`
+
+**Returns:** a `RunResult` covering the whole run, including the part that ran before the interruption.
+
+```python  theme={null}
+from agentor import Agentor
+from agentor.engine.store import FileStore
+
+agent = Agentor(name="Agent", tools=[...], store=FileStore("runs"))
+
+result = agent.run("Do the thing")
+agent.resume(result.run_id)   # after a crash; a finished run is returned as-is
+```
+
+Raises `ValueError` if the agent has no store, and `KeyError` if the store has no run with that id.
+
 ### chat
 
-Interactive chat interface with optional streaming support.
+Run the agent, optionally returning a stream.
 
 ```python  theme={null}
 async def chat(
@@ -164,17 +221,11 @@ async def chat(
 )
 ```
 
-**Parameters:**
-
-* `input` (str): User message
-* `stream` (bool): Enable streaming responses (default: False)
-* `serialize` (bool): Serialize output to JSON (default: True)
-
-**Returns:** Agent response or async iterator for streaming
+**Returns:** a `RunResult`, or an async iterator when `stream=True`.
 
 ### stream\_chat
 
-Stream agent responses in real-time.
+Stream the agent's progress as it works.
 
 ```python  theme={null}
 async def stream_chat(
@@ -183,7 +234,10 @@ async def stream_chat(
 ) -> AsyncIterator[Union[str, AgentOutput]]
 ```
 
-**Example:**
+**Parameters:**
+
+* `input` (str): user message
+* `serialize` (bool): yield JSON strings (default) or `AgentOutput` objects
 
 ```python  theme={null}
 import asyncio
@@ -198,6 +252,8 @@ async def main():
 asyncio.run(main())
 ```
 
+See the [streaming guide](/agentor/guides/streaming) for the event shape.
+
 ### serve
 
 Serve the agent as an HTTP API with A2A protocol support.
@@ -211,32 +267,23 @@ def serve(
 )
 ```
 
-**Parameters:**
-
-* `host`: Server host address (default: "0.0.0.0")
-* `port` (int): Server port (default: 8000)
-* `log_level`: Logging level (default: "info")
-* `access_log` (bool): Enable access logging (default: True)
-
-**Example:**
-
 ```python  theme={null}
 from agentor import Agentor
 
 agent = Agentor(
     name="Weather Agent",
     model="gpt-5-mini",
-    instructions="You are a helpful weather assistant."
+    instructions="You are a helpful weather assistant.",
 )
 
 # Serves at http://0.0.0.0:8000
-# Agent card available at http://0.0.0.0:8000/.well-known/agent-card.json
+# Agent card at http://0.0.0.0:8000/.well-known/agent-card.json
 agent.serve(port=8000)
 ```
 
 ### from\_md
 
-Create an Agentor instance from a markdown file with YAML frontmatter.
+Create an agent from a markdown file with YAML frontmatter.
 
 ```python  theme={null}
 @classmethod
@@ -244,34 +291,27 @@ def from_md(
     cls,
     md_path: str | Path,
     *,
-    model: Optional[str | LitellmModel] = None,
-    tools: Optional[List[Union[FunctionTool, str, MCPServerStreamableHttp, BaseTool]]] = None,
-    output_type: type[Any] | AgentOutputSchemaBase | None = None,
+    model: Any = None,
+    tools: Optional[List[Any]] = None,
+    output_type: Any = None,
     debug: bool = False,
     api_key: Optional[str] = None,
     model_settings: Optional[ModelSettings] = None,
 ) -> Agentor
 ```
 
-**Parameters:**
+Keyword arguments override the frontmatter.
 
-* `md_path`: Path to markdown file
-* Other parameters override markdown frontmatter settings
-
-**Markdown Structure:**
-
-```markdown  theme={null}
+```markdown weather_agent.md
 ---
 name: Weather Agent
-tools: ["get_weather", "gmail"]
-model: gpt-4o
+tools: ["get_weather", "current_datetime"]
+model: gpt-4o-mini
 temperature: 0.3
 ---
 
 You are a helpful weather assistant with access to real-time data.
 ```
-
-**Example:**
 
 ```python  theme={null}
 from agentor import Agentor
@@ -280,37 +320,75 @@ agent = Agentor.from_md("agents/weather_agent.md")
 result = agent.run("What's the weather in Tokyo?")
 ```
 
+<Note>
+  Tool names in the frontmatter must exist in the registry. Unknown names are skipped with a warning, so an agent can end up with fewer tools than the file lists.
+</Note>
+
 ### think
 
-Make the agent "think" through a problem using chain-of-thought reasoning.
+Run the agent through a chain-of-thought prompt.
 
 ```python  theme={null}
-def think(query: str) -> List[str] | str
+def think(query: str) -> str
 ```
 
-**Parameters:**
+**Returns:** the agent's reasoning and conclusion as text.
 
-* `query` (str): The problem or question to analyze
+## RunResult
 
-**Returns:** The agent's reasoning and conclusion
+Every run returns a `RunResult`:
+
+<ResponseField name="final_output" type="str | BaseModel | None">
+  The answer. A parsed model instance when `output_type` is set, `None` if the run did not finish.
+</ResponseField>
+
+<ResponseField name="status" type="'completed' | 'max_turns' | 'failed'">
+  How the run ended.
+</ResponseField>
+
+<ResponseField name="error" type="str | None">
+  Why it did not complete. `None` on success.
+</ResponseField>
+
+<ResponseField name="run_id" type="str | None">
+  Set when the agent has a store. Pass it to `resume()`.
+</ResponseField>
+
+<ResponseField name="usage" type="Usage">
+  `input_tokens`, `output_tokens`, and `total_tokens` for the run.
+</ResponseField>
+
+<ResponseField name="messages" type="list[dict]">
+  The conversation as the model saw it. Feed it back into `arun()` to continue.
+</ResponseField>
+
+<ResponseField name="events" type="list[Event]">
+  Every step of the run, in order.
+</ResponseField>
+
+<ResponseField name="tool_calls" type="list[Event]">
+  Just the tool calls, with the arguments the model chose.
+</ResponseField>
+
+`str(result)` returns `final_output`, so `print(result)` prints the answer.
 
 ## Usage Examples
 
-### Basic Agent
+### Basic agent
 
 ```python  theme={null}
 from agentor import Agentor
 
 agent = Agentor(
     name="Assistant",
-    instructions="You are a helpful assistant"
+    instructions="You are a helpful assistant",
 )
 
 result = agent.run("Explain quantum computing in simple terms")
 print(result.final_output)
 ```
 
-### Agent with Custom Model
+### Agent with a different provider
 
 ```python  theme={null}
 import os
@@ -318,51 +396,50 @@ from agentor import Agentor
 
 agent = Agentor(
     name="Assistant",
-    model="gemini/gemini-pro",
-    api_key=os.environ.get("GEMINI_API_KEY")
+    model="gemini/gemini-2.5-flash",
+    api_key=os.environ["GEMINI_API_KEY"],
 )
 
 result = agent.run("What are the latest advances in AI?")
 ```
 
-### Agent with Tools
+### Agent with tools
 
 ```python  theme={null}
 from agentor import Agentor, function_tool
 
 @function_tool
 def get_weather(city: str) -> str:
-    """Get the current weather for a city."""
-    return f"The weather in {city} is sunny and 72°F"
+    """Get the current weather for a city.
+
+    Args:
+        city: The city to look up.
+    """
+    return f"The weather in {city} is sunny and 22C."
 
 agent = Agentor(
     name="Weather Agent",
     instructions="Use the weather tool to answer questions.",
-    tools=[get_weather]
+    tools=[get_weather],
 )
 
 result = agent.run("What's the weather in San Francisco?")
 ```
 
-### Agent with Model Settings
+### Agent with model settings
 
 ```python  theme={null}
 from agentor import Agentor, ModelSettings
 
-model_settings = ModelSettings(
-    temperature=0.7,
-    max_tokens=1000
-)
-
 agent = Agentor(
     name="Creative Writer",
     model="gpt-4o",
-    model_settings=model_settings,
-    instructions="You are a creative writing assistant."
+    model_settings=ModelSettings(temperature=0.7, max_tokens=1000),
+    instructions="You are a creative writing assistant.",
 )
 ```
 
-### Serving an Agent
+### Serving an agent
 
 ```python  theme={null}
 from agentor import Agentor
@@ -370,7 +447,7 @@ from agentor import Agentor
 agent = Agentor(
     name="Customer Support",
     model="gpt-5-mini",
-    instructions="You are a helpful customer support agent."
+    instructions="You are a helpful customer support agent.",
 )
 
 # Serves on http://0.0.0.0:8000
@@ -380,6 +457,9 @@ agent.serve(port=8000)
 
 ## Related
 
-* [LLM](/agentor/api/llm) - Lightweight LLM client
-* [ModelSettings](/agentor/api/model-settings) - Configure model parameters
-* [Tools](/agentor/api/tools) - Create custom tools
+* [Model providers](/agentor/model-providers) — reach any OpenAI-compatible endpoint
+* [Structured output](/agentor/structured-output) — return typed objects
+* [Durable runs](/agentor/durable-runs) — save and resume runs
+* [LLM](/agentor/api/llm) — lightweight LLM client
+* [ModelSettings](/agentor/api/model-settings) — configure generation parameters
+* [Tools](/agentor/api/tools) — create custom tools

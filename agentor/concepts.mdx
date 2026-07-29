@@ -57,17 +57,17 @@ Without tools, an agent can only respond based on its training data. Add tools t
 **Tools** are functions your agent can call. They bridge the gap between "knowing" and "doing."
 
 ```python
-from agentor.tools import GetWeatherTool, WebSearchTool
+from agentor.tools import CalculatorTool, GetWeatherTool
 
 agent = Agentor(
     name="research_assistant",
     model="gpt-5",
-    tools=[GetWeatherTool(), WebSearchTool()]
+    tools=[GetWeatherTool(), CalculatorTool()]
 )
 ```
 
 Tools can be:
-- **Built-in** - Celesto provides common tools like weather, web search, and more
+- **Built-in** - Celesto provides common tools like weather, fetch, GitHub, and more
 - **Custom** - Define your own Python functions as tools
 - **MCP Servers** - Connect to standardized tool servers
 
@@ -88,10 +88,12 @@ Why MCP matters:
 
 ```python
 # Connect to an MCP server
+from agentor.mcp import MCPServer
+
 agent = Agentor(
     name="gmail_assistant",
     model="gpt-5",
-    tools=["celesto/gmail", "celesto/calendar"]
+    tools=[MCPServer(url="http://localhost:8000/mcp")]
 )
 ```
 

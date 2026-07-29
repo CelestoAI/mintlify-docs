@@ -10,7 +10,7 @@ The Celesto CLI provides fast, serverless deployment for Agentor agents, MCP ser
 The Celesto CLI is installed automatically with Agentor:
 
 ```bash  theme={null}
-pip install agentor
+pip install --pre agentor
 ```
 
 Verify installation:
@@ -323,25 +323,26 @@ Connect to deployed MCP server:
 
 ```python  theme={null}
 import asyncio
+import os
+
 from agentor import Agentor
-from agentor.mcp import MCPServerStreamableHttp
+from agentor.mcp import MCPServer
+
+agent = Agentor(
+    name="Agent",
+    model="gpt-5-mini",
+    tools=[
+        MCPServer(
+            url="https://api.celesto.ai/deploy/apps/my-mcp-server/mcp",
+            headers={"Authorization": f"Bearer {os.environ['CELESTO_API_KEY']}"},
+            name="Deployed MCP",
+        )
+    ],
+)
 
 async def main():
-    mcp_url = "https://api.celesto.ai/deploy/apps/my-mcp-server/mcp"
-    headers = {"Authorization": f"Bearer {CELESTO_API_KEY}"}
-    
-    async with MCPServerStreamableHttp(
-        name="Deployed MCP",
-        params={"url": mcp_url, "headers": headers}
-    ) as server:
-        agent = Agentor(
-            name="Agent",
-            model="gpt-5-mini",
-            tools=[server]
-        )
-        
-        result = await agent.arun("Use the weather tool")
-        print(result.final_output)
+    result = await agent.arun("Use the weather tool")
+    print(result.final_output)
 
 asyncio.run(main())
 ```
@@ -407,16 +408,13 @@ asyncio.run(main())
   ### Set Timeouts
 
   ```python  theme={null}
-  from agentor.mcp import MCPServerStreamableHttp
+  from agentor.mcp import MCPServer
 
-  async with MCPServerStreamableHttp(
+  server = MCPServer(
+      url=mcp_url,
+      timeout=30,  # 30 second timeout
       name="Server",
-      params={
-          "url": mcp_url,
-          "timeout": 30  # 30 second timeout
-      }
-  ) as server:
-      # Use server
+  )
   ```
 
   ### Handle Errors

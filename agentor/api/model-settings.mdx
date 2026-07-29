@@ -5,7 +5,9 @@ description: "ModelSettings reference: tune temperature, max tokens, top-p, and 
 
 ## Overview
 
-`ModelSettings` is a configuration class from the `agents` library that controls LLM behavior including temperature, token limits, and other generation parameters. It's used with the [Agentor](/agentor/api/agentor) class to fine-tune model responses.
+`ModelSettings` controls how the model generates text — temperature, token limits, and the rest. Pass one to the [Agentor](/agentor/api/agentor) class to tune responses.
+
+It is provider-neutral on purpose: the parameters below are understood everywhere, and anything else you pass is forwarded to the provider untouched. That means a provider-specific parameter needs no support from Agentor.
 
 ## Import
 
@@ -33,9 +35,9 @@ agent = Agentor(
 
 ## Common Parameters
 
-While `ModelSettings` is defined in the `agents` library, here are the commonly used parameters:
+Every parameter defaults to unset, and unset parameters are left out of the request entirely — so the provider's own default applies.
 
-<ParamField path="temperature" type="float" default="1.0">
+<ParamField path="temperature" type="float" default="unset">
   Controls randomness in outputs. Lower values (0.0-0.3) make outputs more focused and deterministic. Higher values (0.7-1.0) make outputs more creative and varied.
 
   * `0.0-0.3`: Precise, consistent, factual responses
@@ -68,9 +70,45 @@ While `ModelSettings` is defined in the `agents` library, here are the commonly 
   * Negative values allow more repetition
 </ParamField>
 
-<ParamField path="stop" type="List[str]" default="None">
+<ParamField path="stop" type="str | List[str]" default="None">
   Sequences where the model will stop generating. Maximum of 4 sequences.
 </ParamField>
+
+<ParamField path="seed" type="int" default="None">
+  Ask the provider for reproducible sampling. Support varies by provider.
+</ParamField>
+
+<ParamField path="tool_choice" type="str | dict" default="None">
+  Force or forbid tool use: `"auto"`, `"none"`, `"required"`, or a specific tool.
+</ParamField>
+
+<ParamField path="parallel_tool_calls" type="bool" default="None">
+  Allow the model to request several tools in one turn. Agentor runs them concurrently.
+</ParamField>
+
+<ParamField path="reasoning_effort" type="str" default="None">
+  For reasoning models: how much thinking to do before answering.
+</ParamField>
+
+<ParamField path="verbosity" type="str" default="None">
+  For models that support it: how long the answer should be.
+</ParamField>
+
+<ParamField path="top_logprobs" type="int" default="None">
+  Number of most-likely tokens to return log probabilities for.
+</ParamField>
+
+<ParamField path="metadata" type="dict" default="None">
+  Arbitrary key/value pairs attached to the provider request.
+</ParamField>
+
+<ParamField path="extra" type="dict" default="{}">
+  Extra request parameters, passed through verbatim. Unrecognised keyword arguments land here automatically, so `ModelSettings(some_provider_flag=True)` works without listing it.
+</ParamField>
+
+<Note>
+  A handful of parameters from the pre-0.1.0 settings type have no chat-completions equivalent — `truncation`, `retry`, `context_management`, `include_usage`, `prompt_cache_options`, `prompt_cache_retention`, `response_include`. They are accepted and dropped with a warning rather than sent and rejected.
+</Note>
 
 ## Examples
 
@@ -163,7 +201,7 @@ You can also specify temperature in markdown frontmatter:
 name: Research Agent
 model: gpt-4o
 temperature: 0.5
-tools: ["web_search"]
+tools: ["current_datetime"]
 ---
 
 You are a research assistant that provides accurate information.
@@ -232,14 +270,13 @@ precise = ModelSettings(
 
 ## Notes
 
-* `ModelSettings` is imported from the `agents` library but re-exported by `agentor` for convenience
-* If not provided, Agentor uses sensible defaults via `get_default_model_settings()`
-* Temperature and top\_p are alternative sampling methods - typically you should adjust one or the other, not both
-* Different models may interpret these parameters differently
-* Some parameters may not be supported by all model providers
+* Import it from `agentor` directly: `from agentor import ModelSettings`
+* If you pass nothing, no generation parameters are sent and the provider's defaults apply
+* Temperature and `top_p` are alternative sampling methods — adjust one or the other, not both
+* Different models interpret these parameters differently, and not every provider supports every one
 
 ## Related
 
 * [Agentor](/agentor/api/agentor) - Main agent class that uses ModelSettings
+* [Model providers](/agentor/model-providers) - Reach any OpenAI-compatible endpoint
 * [LLM](/agentor/api/llm) - Lightweight LLM client
-* [LitellmModel](/agentor/api/agentor#litellmmodel) - Custom model wrapper

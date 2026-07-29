@@ -5,7 +5,9 @@ description: "Agent architecture in Agentor: how the Agent class handles configu
 
 ## Overview
 
-Agentor agents are built on top of the `Agent` class from the agents library, providing a high-level abstraction for creating production-ready AI agents with tools, skills, and external integrations.
+An Agentor agent is a model, a set of tools, and the loop that drives them. The loop calls the model; if the model asks for tools, the loop runs them and feeds the results back; it repeats until the model stops asking or the turn budget runs out.
+
+Everything the loop does is emitted as an event. Streaming, the final result, [traces](/agentor/tracing), and [durable runs](/agentor/durable-runs) are all views of that one stream.
 
 ## Agent Class
 
@@ -32,25 +34,37 @@ agent = Agentor(
   System prompt defining agent behavior and personality
 </ParamField>
 
-<ParamField path="model" type="str | LitellmModel" default="gpt-5-nano">
-  Model identifier. Supports any LiteLLM provider format:
+<ParamField path="model" type="str | Model" default="gpt-5-nano">
+  Model identifier:
 
-  * `"gpt-5-mini"` - OpenAI models
-  * `"gemini/gemini-2.5-pro"` - Google models
-  * `"anthropic/claude-3.5"` - Anthropic models
+  * `"gpt-5-mini"` — OpenAI models
+  * `"gemini/gemini-2.5-flash"` — a `provider/model` string, routed through LiteLLM
+  * any name the provider recognises, when `base_url` is set
 </ParamField>
 
-<ParamField path="tools" type="List[FunctionTool | str | MCPServerStreamableHttp | BaseTool]">
+<ParamField path="base_url" type="str">
+  An OpenAI-compatible endpoint to use instead of OpenAI. See [Model providers](/agentor/model-providers).
+</ParamField>
+
+<ParamField path="tools" type="List[Callable | Tool | str | BaseTool | MCPServer]">
   Tools available to the agent. Can be:
 
-  * String names from the tool registry (e.g., `"get_weather"`)
-  * FunctionTool instances decorated with `@function_tool`
-  * BaseTool subclasses with `@capability` methods
-  * MCP server connections
+  * String names from the tool registry (`"get_weather"`, `"current_datetime"`)
+  * Functions decorated with `@function_tool`, or plain callables
+  * `BaseTool` subclasses with `@capability` methods
+  * `MCPServer` connections
 </ParamField>
 
-<ParamField path="output_type" type="type[Any] | AgentOutputSchemaBase">
-  Pydantic model for structured output validation
+<ParamField path="output_type" type="type[BaseModel]">
+  Pydantic model describing the shape of the answer. See [Structured output](/agentor/structured-output).
+</ParamField>
+
+<ParamField path="max_turns" type="int" default={20}>
+  How many model calls a run may make before it ends with `status="max_turns"`.
+</ParamField>
+
+<ParamField path="store" type="Store">
+  Where to save the run's events, so it can be resumed. See [Durable runs](/agentor/durable-runs).
 </ParamField>
 
 <ParamField path="model_settings" type="ModelSettings">
@@ -173,30 +187,31 @@ agent = Agentor(
 
 ## Multi-Agent Systems
 
-Agentor supports hierarchical multi-agent orchestration. The framework includes specialized agents:
-
-* **Concept Research Agent** - Topic research and information gathering
-* **Coder Agent** - Code-related operations
-* **Google Agent** - Workspace integration
-* **Main Triage Agent** - Request routing and delegation
-
-See `src/agentor/agenthub/main.py` for the orchestration implementation.
+Agents talk to each other over the [A2A protocol](/agentor/concepts/a2a-protocol). Call `agent.serve()` and each agent becomes an addressable service with a published agent card, so one agent can delegate to another across processes or machines.
 
 ## Agent Context
 
-Agents receive a `RunContextWrapper` with configuration (src/agentor/tools/registry.py:33):
+A tool can ask for the run's shared configuration by annotating a parameter as `RunContext`. That parameter is filled in by the engine rather than by the model, so it never appears in the tool's schema:
 
 ```python  theme={null}
-from agents import RunContextWrapper
-from agentor.tools.registry import CelestoConfig
+from agentor.engine.tools import RunContext
+from agentor.tools.registry import CelestoConfig, register_global_tool
 
 @register_global_tool
-def get_weather(wrapper: RunContextWrapper[CelestoConfig], city: str) -> str:
-    """Returns the weather in the given city."""
+def get_weather(wrapper: RunContext, city: str) -> str:
+    """Returns the weather in the given city.
+
+    Args:
+        city: The city to look up.
+    """
     api_key = wrapper.context.weather_api_key
     # Use API key to fetch weather
     return f"Weather in {city}"
 ```
+
+<Note>
+  The older `RunContextWrapper` annotation from openai-agents is still recognised, so tools written before 0.1.0 keep working without an edit.
+</Note>
 
 ## Tracing and Observability
 

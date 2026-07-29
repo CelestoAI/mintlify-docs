@@ -1,33 +1,41 @@
 ---
 title: "Install Agentor and configure LLM providers"
 sidebarTitle: "Installation"
-description: "Install the Agentor Python framework on macOS, Linux, or Windows using pip or uv, and configure LLM provider API keys for OpenAI, Anthropic, or Gemini."
+description: "Install the Agentor Python framework on macOS, Linux, or Windows with pip or uv, pick the optional extras you need, and set up your LLM provider API keys."
 ---
 
 ## Requirements
 
-Before installing Agentor, ensure you have:
+Before installing Agentor, make sure you have:
 
-* **Python 3.10 or higher** - Check your version with `python --version`
+* **Python 3.11 or higher** — check your version with `python --version`
 * **pip** or **uv** package manager
-* An API key from your LLM provider (OpenAI, Anthropic, Google, etc.)
+* An API key from your LLM provider (OpenAI, Anthropic, Google, and [many more](/agentor/model-providers))
 
 ## Install from PyPI
 
-The recommended method is to install Agentor from PyPI using pip:
+Agentor 0.1.0 is a **prerelease**. Ask for it explicitly with `--pre`:
 
-```bash  theme={null}
+```bash
+pip install --pre agentor
+```
+
+<Warning>
+  Plain `pip install agentor` and `pip install --upgrade agentor` still give you the stable 0.0.x line. That is deliberate: 0.1.0 rebuilt the agent engine, and nobody is moved onto it without asking. See the [0.1.0a1 release notes](https://github.com/CelestoAI/agentor/releases) for what changed.
+</Warning>
+
+To stay on the stable line instead:
+
+```bash
 pip install agentor
 ```
 
-This installs the core framework with all required dependencies.
-
 <Tip>
-  For faster dependency resolution and better virtual environment management, consider using [uv](https://github.com/astral-sh/uv) instead of pip. On macOS and Linux, install uv with:
+  For faster dependency resolution and better virtual environment management, use [uv](https://github.com/astral-sh/uv). On macOS and Linux:
 
-  ```bash  theme={null}
+  ```bash
   curl -LsSf https://astral.sh/uv/install.sh | sh
-  uv pip install agentor
+  uv pip install --prerelease=allow agentor
   ```
 </Tip>
 
@@ -35,7 +43,7 @@ This installs the core framework with all required dependencies.
 
 To install the latest development version directly from GitHub:
 
-```bash  theme={null}
+```bash
 pip install git+https://github.com/celestoai/agentor@main
 ```
 
@@ -45,60 +53,33 @@ pip install git+https://github.com/celestoai/agentor@main
 
 ## Optional dependencies
 
-Agentor provides optional dependencies for specific tools and integrations:
+The core install stays small. Tools that need a heavyweight SDK live behind an extra, so you only download what you use.
 
-### Exa search
-
-```bash  theme={null}
-pip install agentor[exa]
-```
-
-### Git operations
-
-```bash  theme={null}
-pip install agentor[git]
-```
-
-### GitHub integration
-
-```bash  theme={null}
-pip install agentor[github]
-```
-
-### PostgreSQL database
-
-```bash  theme={null}
-pip install agentor[postgres]
-```
-
-### Slack integration
-
-```bash  theme={null}
-pip install agentor[slack]
-```
-
-### ScrapeGraph AI
-
-```bash  theme={null}
-pip install agentor[scrapegraph]
-```
+| Extra | Install | Needed by |
+| --- | --- | --- |
+| `google` | `pip install --pre "agentor[google]"` | [`GmailTool`](/agentor/api/tools/gmail), [`CalendarTool`](/agentor/api/tools/google-calendar), SuperAuth |
+| `exa` | `pip install --pre "agentor[exa]"` | `ExaSearchTool` |
+| `git` | `pip install --pre "agentor[git]"` | [`GitTool`](/agentor/api/tools/git) |
+| `github` | `pip install --pre "agentor[github]"` | [`GitHubTool`](/agentor/api/tools/github) |
+| `postgres` | `pip install --pre "agentor[postgres]"` | `PostgreSQLTool` |
+| `slack` | `pip install --pre "agentor[slack]"` | `SlackTool` |
+| `scrapegraph` | `pip install --pre "agentor[scrapegraph]"` | [`ScrapeGraphAI`](/agentor/api/tools/scrapegraphai) |
+| `all` | `pip install --pre "agentor[all]"` | Everything above |
 
 <Info>
-  The `scrapegraph` extra requires **Python 3.12 or newer** because `scrapegraph-py>=2.1.0` does not ship wheels for Python 3.10 or 3.11. On older interpreters, the extra installs but the SDK is skipped, and instantiating `ScrapeGraphAI` raises `ImportError`. See the [ScrapeGraphAI tool reference](/agentor/api/tools/scrapegraphai) for the full capability surface.
+  **Google tools moved in 0.1.0.** The Google API client and SuperAuth are roughly 100 MB and used to be installed for everyone. They are now in the `google` extra. If `GmailTool` or `CalendarTool` raises an `ImportError`, run `pip install --pre "agentor[google]"`.
 </Info>
 
-### Install all optional dependencies
-
-```bash  theme={null}
-pip install agentor[all]
-```
+<Info>
+  The `scrapegraph` extra requires **Python 3.12 or newer**, because `scrapegraph-py>=2.1.0` ships no wheels for 3.11. On 3.11 the extra installs but the SDK is skipped, and instantiating `ScrapeGraphAI` raises `ImportError`. See the [ScrapeGraphAI tool reference](/agentor/api/tools/scrapegraphai) for the full capability surface.
+</Info>
 
 ## Set up environment variables
 
-Agentor requires API keys to connect to LLM providers. Create a `.env` file in your project root:
+Agentor reads provider credentials from the environment. Create a `.env` file in your project root:
 
-```bash .env theme={null}
-# OpenAI (for gpt-4, gpt-5, etc.)
+```bash .env
+# OpenAI (for gpt-4o, gpt-5, etc.)
 OPENAI_API_KEY=sk-...
 
 # Anthropic (for Claude models)
@@ -112,14 +93,14 @@ CELESTO_API_KEY=...
 ```
 
 <Note>
-  You only need the API key for the LLM provider you plan to use. Agentor supports 100+ LLM providers through LiteLLM.
+  You only need the key for the provider you plan to use. Agentor reaches most providers through their [OpenAI-compatible endpoint](/agentor/model-providers), and the rest through LiteLLM.
 </Note>
 
 ## Load environment variables
 
 In your Python code, load the environment variables:
 
-```python  theme={null}
+```python
 import dotenv
 
 dotenv.load_dotenv()
@@ -127,7 +108,7 @@ dotenv.load_dotenv()
 
 Or set them directly in your shell:
 
-```bash  theme={null}
+```bash
 export OPENAI_API_KEY=sk-...
 export CELESTO_API_KEY=...
 ```
@@ -136,41 +117,45 @@ export CELESTO_API_KEY=...
 
 Confirm Agentor is installed correctly:
 
-```python  theme={null}
+```python
 import agentor
 
 print(agentor.__version__)
 ```
 
-You should see the version number printed (e.g., `0.0.22`).
+You should see `0.1.0a1` on the prerelease, or a `0.0.x` version on the stable line.
+
+<Check>
+  `import agentor` should return almost instantly. Heavy dependencies are loaded only when something actually needs them.
+</Check>
 
 ## Enable observability (optional)
 
-To enable automatic tracing and monitoring, set your Celesto API key:
+To turn on tracing and monitoring, set your Celesto API key:
 
-```bash  theme={null}
+```bash
 export CELESTO_API_KEY=your_api_key
 ```
 
-Get your API key from the [Celesto dashboard](https://celesto.ai/dashboard).
+Get your key from the [Celesto dashboard](https://celesto.ai/dashboard).
 
-When the `CELESTO_API_KEY` environment variable is set, Agentor automatically enables LLM monitoring and tracing:
+With `CELESTO_API_KEY` set, Agentor traces every run automatically:
 
-```python  theme={null}
+```python
 from agentor import Agentor
 
 # Tracing enabled automatically if CELESTO_API_KEY is set
 agent = Agentor(
     name="My Agent",
-    model="gpt-5-mini"
+    model="gpt-5-mini",
 )
 ```
 
-View traces at [https://celesto.ai/observe](https://celesto.ai/observe).
+View traces at [celesto.ai/observe](https://celesto.ai/observe).
 
 To disable automatic tracing:
 
-```bash  theme={null}
+```bash
 export CELESTO_DISABLE_AUTO_TRACING=True
 ```
 
@@ -178,10 +163,18 @@ export CELESTO_DISABLE_AUTO_TRACING=True
 
 <CardGroup cols={2}>
   <Card title="Quick start" icon="bolt" href="/agentor/quickstart">
-    Build your first agent in under 5 minutes
+    Build your first agent in under 5 minutes.
+  </Card>
+
+  <Card title="Model providers" icon="plug" href="/agentor/model-providers">
+    Point Agentor at OpenRouter, Groq, Ollama, or any compatible endpoint.
   </Card>
 
   <Card title="Model settings" icon="gear" href="/agentor/api/model-settings">
-    Learn about model settings and configuration options
+    Tune temperature, token limits, and other generation parameters.
+  </Card>
+
+  <Card title="Durable runs" icon="floppy-disk" href="/agentor/durable-runs">
+    Save runs so a new process can finish them after a crash.
   </Card>
 </CardGroup>

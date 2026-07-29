@@ -1,17 +1,19 @@
 ---
 title: "Streaming Responses"
-description: "Stream Agentor agent responses token by token using stream_chat to lower perceived latency, show tool calls live, and support cancellation in your UI."
+description: "Stream Agentor agent progress with stream_chat to show tool calls live, or drop to AgentLoop for token-by-token output."
 ---
 
-Streaming enables real-time response delivery, providing immediate feedback and better user experience for long-running agent operations.
+A long agent run looks broken until it finishes. Streaming lets you show progress instead: which tool the agent just called, what it came back with, and the answer as soon as it exists.
 
 ## Why Stream?
 
-* **Immediate Feedback**: Users see responses as they're generated
-* **Better UX**: Perceived performance improvement
-* **Tool Visibility**: See tool calls and reasoning in real-time
-* **Lower Latency**: First token appears faster
-* **Cancellation**: Stop generation early if needed
+* **Immediate feedback**: users see each step rather than a spinner
+* **Tool visibility**: show what the agent is doing and why it is taking a while
+* **Cancellation**: stop early once you have what you need
+
+<Note>
+  `stream_chat()` streams **steps**, not tokens: whole messages, tool calls, and tool results as each one happens. For token-by-token text, see [token-level streaming](#token-level-streaming) below.
+</Note>
 
 ## Quick Start
 
@@ -53,26 +55,47 @@ async def main():
         "What's the weather in London?",
         serialize=False  # Get AgentOutput objects instead of JSON strings
     ):
-        # Event types:
-        # - message: Text content
-        # - chunk: Text delta (partial message)
-        # - tool_action: Tool calls and outputs
-        # - reasoning: Chain-of-thought reasoning
-        
-        if event.message:
-            print(f"Message: {event.message}")
-        
-        if event.chunk:
-            print(event.chunk, end="", flush=True)
-        
         if event.tool_action:
-            print(f"\nTool: {event.tool_action.name} ({event.tool_action.type})")
-        
-        if event.reasoning:
-            print(f"Thinking: {event.reasoning}")
+            # type is "tool_called" when the agent asks,
+            # "tool_output" when the tool answers
+            print(f"[{event.tool_action.type}] {event.tool_action.name}")
+
+        if event.message:
+            print(event.message)
 
 asyncio.run(main())
 ```
+
+Output for the run above:
+
+```
+[tool_called] get_weather
+[tool_output] get_weather
+The weather in London is sunny and 22C.
+The weather in London is sunny with a temperature of 22°C.
+```
+
+Each `AgentOutput` carries:
+
+<ResponseField name="type" type="str">
+  Always `"run_item_stream_event"`.
+</ResponseField>
+
+<ResponseField name="message" type="str | None">
+  Text: a tool's return value on a `tool_output` event, the agent's answer on the final one.
+</ResponseField>
+
+<ResponseField name="tool_action" type="ToolAction | None">
+  `name` and `type` for a tool call (`tool_called`) or its result (`tool_output`).
+</ResponseField>
+
+<ResponseField name="chunk" type="None">
+  Reserved. `stream_chat()` never sets it — see [token-level streaming](#token-level-streaming).
+</ResponseField>
+
+<ResponseField name="reasoning" type="None">
+  Reserved. Not populated today.
+</ResponseField>
 
 ## JSON Serialization
 
@@ -215,25 +238,63 @@ for line in response.iter_lines(decode_unicode=True):
 
 ## Advanced Streaming Patterns
 
-### Custom Event Filtering
+### Token-level streaming
 
-Filter specific event types:
+`stream_chat()` gives you steps. For text as the model produces it, use `AgentLoop` — the engine underneath `Agentor` — and ask for `stream_text=True`:
 
 ```python  theme={null}
-from agentor.output_text_formatter import format_stream_events
-from agents import Runner
+import asyncio
 
-agent = Agentor(name="Assistant", model="gpt-5-mini")
+from agentor import AgentLoop, function_tool
 
+
+@function_tool
+def get_weather(city: str) -> str:
+    """Get the current weather for a city.
+
+    Args:
+        city: The city to look up.
+    """
+    return f"The weather in {city} is sunny and 22C."
+
+
+loop = AgentLoop(
+    name="Assistant",
+    model="gpt-4o-mini",
+    instructions="You are helpful.",
+    tools=[get_weather],
+)
+
+async def main():
+    async for event in loop.astream("What is the weather in Tokyo?", stream_text=True):
+        if event.type == "text_delta":
+            print(event.text, end="", flush=True)
+        elif event.type == "tool_call":
+            print(f"\n[calling {event.name}({event.args})]")
+        elif event.type == "run_end":
+            print(f"\n[{event.status}] {event.usage.total_tokens} tokens")
+
+asyncio.run(main())
+```
+
+```
+[calling get_weather({'city': 'Tokyo'})]
+The weather in Tokyo is sunny with a temperature of 22°C.
+[completed] 188 tokens
+```
+
+`astream` emits the engine's raw events: `run_start`, `generation`, `text_delta`, `tool_call`, `tool_result`, `message`, and `run_end`. The same events power [tracing](/agentor/tracing) and [durable runs](/agentor/durable-runs).
+
+<Warning>
+  Drain the generator. If you break out of an `astream` loop early, the run never finishes — its trace is not exported, and its saved log has no terminal event.
+</Warning>
+
+### Filter to just the answer
+
+```python  theme={null}
 async def stream_only_messages():
-    result = Runner.run_streamed(agent.agent, input="Hello")
-    
-    # Only emit run_item_stream_event
-    async for event in format_stream_events(
-        result.stream_events(),
-        allowed_events=["run_item_stream_event"]
-    ):
-        if event.message:
+    async for event in agent.stream_chat("Hello", serialize=False):
+        if event.message and not event.tool_action:
             print(event.message)
 
 asyncio.run(stream_only_messages())
@@ -241,57 +302,55 @@ asyncio.run(stream_only_messages())
 
 ### Progress Tracking
 
-Track completion progress:
+Count the steps as they go by:
 
 ```python  theme={null}
 import asyncio
 
 async def stream_with_progress():
-    chunks = []
     tool_calls = 0
-    
+    last_message = None
+
     async for event in agent.stream_chat(
         "Research quantum computing and summarize",
         serialize=False
     ):
-        if event.chunk:
-            chunks.append(event.chunk)
-            print(f"Progress: {len(chunks)} chunks", end="\r")
-        
         if event.tool_action and event.tool_action.type == "tool_called":
             tool_calls += 1
-            print(f"\nTool call #{tool_calls}: {event.tool_action.name}")
-        
+            print(f"Tool call #{tool_calls}: {event.tool_action.name}")
+
         if event.message:
-            print(f"\n{event.message}")
-    
-    print(f"\nComplete! Total chunks: {len(chunks)}, Tool calls: {tool_calls}")
+            last_message = event.message
+
+    print(f"\n{last_message}")
+    print(f"Complete! Tool calls: {tool_calls}")
 
 asyncio.run(stream_with_progress())
 ```
 
 ### Buffered Streaming
 
-Buffer and process events in batches:
+Batch tokens before writing them, to cut down on network round trips. This needs `text_delta` events, so it uses `AgentLoop`:
 
 ```python  theme={null}
 import asyncio
-from collections import deque
+
+from agentor import AgentLoop
+
+loop = AgentLoop(name="Assistant", model="gpt-4o-mini")
 
 async def buffered_stream(buffer_size=5):
-    buffer = deque(maxlen=buffer_size)
-    
-    async for event in agent.stream_chat("Write a story", serialize=False):
-        if event.chunk:
-            buffer.append(event.chunk)
-            
-            # Process when buffer is full
-            if len(buffer) == buffer_size:
-                text = "".join(buffer)
-                print(text, end="", flush=True)
-                buffer.clear()
-    
-    # Process remaining
+    buffer = []
+
+    async for event in loop.astream("Write a story", stream_text=True):
+        if event.type != "text_delta":
+            continue
+
+        buffer.append(event.text)
+        if len(buffer) == buffer_size:
+            print("".join(buffer), end="", flush=True)
+            buffer.clear()
+
     if buffer:
         print("".join(buffer), flush=True)
 
@@ -426,23 +485,23 @@ asyncio.run(safe_stream())
 
   ### Flush Output
 
-  Flush stdout for real-time display:
+  Flush stdout so text appears as it arrives:
 
   ```python  theme={null}
-  async for event in agent.stream_chat("Hello", serialize=False):
-      if event.chunk:
-          print(event.chunk, end="", flush=True)  # flush=True is important
+  async for event in loop.astream("Hello", stream_text=True):
+      if event.type == "text_delta":
+          print(event.text, end="", flush=True)  # flush=True is important
   ```
 
   ### Handle Partial Content
 
-  Chunks may not align with word boundaries:
+  Token deltas do not align with word boundaries — `'Wh'`, `'ispers'`, `' in'`. Buffer until you see a separator:
 
   ```python  theme={null}
   buffer = ""
-  async for event in agent.stream_chat("Hello", serialize=False):
-      if event.chunk:
-          buffer += event.chunk
+  async for event in loop.astream("Hello", stream_text=True):
+      if event.type == "text_delta":
+          buffer += event.text
           # Process complete words only
           if " " in buffer:
               words = buffer.split(" ")

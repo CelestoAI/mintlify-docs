@@ -31,15 +31,15 @@ hub = CelestoMCPHub(
 </ParamField>
 
 <ParamField path="max_retry_attempts" type="int" default="3">
-  Maximum number of retry attempts for failed requests
+  Accepted for backwards compatibility. The MCP client does not retry, so this has no effect.
 </ParamField>
 
 <ParamField path="cache_tools_list" type="bool" default="true">
-  Whether to cache the list of available tools
+  Accepted for backwards compatibility. Tools are listed once per connection, so this has no effect.
 </ParamField>
 
 <ParamField path="api_key" type="str" optional>
-  Celesto AI API key. If not provided, reads from environment variable or config.
+  Celesto AI API key. If not provided, reads from the `CELESTO_API_KEY` environment variable. Raises `ValueError` when neither is set.
 </ParamField>
 
 ## Usage
@@ -54,8 +54,12 @@ async with CelestoMCPHub() as mcp_hub:
 
 The context manager handles connection and cleanup automatically:
 
-* `__aenter__`: Connects to the MCP Hub and returns an `MCPServerStreamableHttp` instance
+* `__aenter__`: Connects to the MCP Hub and returns an [`MCPServer`](/agentor/guides/mcp-servers) instance
 * `__aexit__`: Cleans up the connection when exiting the context
+
+<Note>
+  Connect and exit on the same event loop — put the whole `async with` block inside one `asyncio.run()`.
+</Note>
 
 ## Example Usage
 
@@ -89,8 +93,6 @@ async def main():
     # Create hub with custom settings
     async with CelestoMCPHub(
         timeout=30,
-        max_retry_attempts=5,
-        cache_tools_list=False,
         api_key="your-api-key-here"
     ) as mcp_hub:
         agent = Agentor(
@@ -201,10 +203,12 @@ if __name__ == "__main__":
 
 When you use `CelestoMCPHub`, it:
 
-1. Creates an `MCPServerStreamableHttp` instance with the Celesto AI MCP endpoint
+1. Creates an `MCPServer` pointed at `{CELESTO_BASE_URL}/mcp` with a bearer token header
 2. Connects to the hub during `__aenter__`
-3. Returns the connected MCP server instance for use as a tool
+3. Returns the MCP server instance for use as a tool
 4. Automatically cleans up the connection during `__aexit__`
+
+When you pass that server to an agent, the agent opens its own connection for the duration of each run, so concurrent runs never share one session.
 
 The hub provides access to all tools registered across multiple MCP servers hosted by Celesto AI, allowing agents to use a wide range of capabilities through a single integration.
 
