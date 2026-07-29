@@ -1,0 +1,190 @@
+---
+title: "Get typed output from an agent"
+sidebarTitle: "Structured output"
+description: "Set output_type to a Pydantic model and an Agentor run returns a validated Python object instead of free text, ready to store or pass to the next step."
+---
+
+An agent that answers in prose is hard to build on. You end up parsing sentences, and the parsing breaks the first time the model phrases something differently.
+
+Tell the agent what shape you want instead. Describe it as a [Pydantic](https://docs.pydantic.dev) model, and `result.final_output` comes back as an instance of that model — already validated, with the right types.
+
+## Ask for a shape
+
+```python
+from pydantic import BaseModel
+
+from agentor import Agentor
+
+
+class Report(BaseModel):
+    city: str
+    readings: list[int]
+
+
+agent = Agentor(name="Reporter", model="gpt-4o-mini", output_type=Report)
+
+result = agent.run("City: Berlin. Readings: 3, 5, 8. Return them.")
+
+print(type(result.final_output))  # <class '__main__.Report'>
+print(result.final_output.city)   # Berlin
+print(sum(result.final_output.readings))  # 16
+```
+
+No parsing, no `json.loads`, no prompt asking nicely for JSON. The schema goes to the provider, the provider constrains the model to it, and Agentor validates what comes back before handing it to you.
+
+## Nest and make things optional
+
+Models can contain other models, and fields can be optional. Both survive the round trip:
+
+```python
+from typing import Optional
+
+from pydantic import BaseModel
+
+from agentor import Agentor
+
+
+class Reading(BaseModel):
+    label: str
+    celsius: float
+
+
+class Forecast(BaseModel):
+    city: str
+    readings: list[Reading]
+    warning: Optional[str] = None
+
+
+agent = Agentor(
+    name="Forecaster",
+    model="gpt-4o-mini",
+    instructions="Return a forecast for the city the user names.",
+    output_type=Forecast,
+)
+
+result = agent.run("Berlin: today 18C, tomorrow 21C. No warnings.")
+
+print(result.final_output)
+# city='Berlin' readings=[Reading(label='Today', celsius=18.0),
+#                         Reading(label='Tomorrow', celsius=21.0)] warning=None
+print(result.final_output.readings[0].celsius)  # 18.0
+```
+
+<Note>
+  An optional field still appears in every response — the model fills it with `null` rather than leaving it out. That is what the provider's strict mode requires, and Pydantic turns it back into `None`.
+</Note>
+
+## Open-ended dictionaries are not supported
+
+A field like `dict[str, int]` accepts any keys at all, and strict structured output has no way to describe that. Agentor rejects it when you build the agent, rather than letting the provider reject it mid-run:
+
+```python
+class Bad(BaseModel):
+    values: dict[str, int]
+
+
+Agentor(name="Agent", output_type=Bad)
+```
+
+```
+TypeError: output_type contains a dict/mapping field, which OpenAI strict
+structured output cannot express. Model the keys explicitly, or use a list of
+key/value objects.
+```
+
+Both fixes in the message work. Name the keys if you know them:
+
+```python
+class Scores(BaseModel):
+    accuracy: float
+    latency: float
+```
+
+Or use a list of pairs if you do not:
+
+```python
+class Score(BaseModel):
+    name: str
+    value: float
+
+
+class Scores(BaseModel):
+    entries: list[Score]
+```
+
+## When output does not match
+
+If the model returns something that fails validation, the run raises rather than handing you a half-filled object:
+
+```
+ValueError: Model output did not match Report: 1 validation error for Report
+...
+Raw output: {"city": "Berlin", "readings": "three, five"}
+```
+
+The raw text is included so you can see what the model actually said. Clearer field names and an `instructions` line describing what each field means usually fix it.
+
+<Warning>
+  `output_type` must be a Pydantic `BaseModel` subclass. Passing a plain `dict`, a dataclass, or a `TypedDict` raises `TypeError: output_type must be a pydantic BaseModel`.
+</Warning>
+
+## Tools and structured output together
+
+They compose. The agent calls whatever tools it needs, and shapes only the final answer:
+
+```python
+from pydantic import BaseModel
+
+from agentor import Agentor, function_tool
+
+
+@function_tool
+def get_weather(city: str) -> str:
+    """Get the current weather for a city.
+
+    Args:
+        city: The city to look up.
+    """
+    return f"The weather in {city} is sunny and 22C."
+
+
+class Weather(BaseModel):
+    city: str
+    celsius: float
+
+
+agent = Agentor(
+    name="Analyst",
+    model="gpt-4o-mini",
+    tools=[get_weather],
+    output_type=Weather,
+)
+
+result = agent.run("What is the weather in Berlin?")
+print(result.final_output)   # city='Berlin' celsius=22.0
+print([call.name for call in result.tool_calls])  # ['get_weather']
+```
+
+## Streaming returns text, not the object
+
+`stream_chat()` yields the model's raw JSON as it arrives, because there is no object to hand over until the last token lands:
+
+```python
+async for event in agent.stream_chat("City: Berlin. Readings 1,2,3."):
+    print(event)
+# {"type": "run_item_stream_event", "message": "{\"city\":\"Berlin\",\"readings\":[1,2,3]}", ...}
+```
+
+Use `agent.run()` or `await agent.arun()` when you want the parsed object.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Durable runs" icon="floppy-disk" href="/agentor/durable-runs">
+    Save a run so another process can finish it after a crash.
+  </Card>
+
+  <Card title="Model providers" icon="plug" href="/agentor/model-providers">
+    Structured output works against any OpenAI-compatible provider.
+  </Card>
+</CardGroup>

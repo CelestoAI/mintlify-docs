@@ -25,13 +25,12 @@ result = agent.run("What is the weather in London?")
 print(result)
 ```
 
-The result will be the weather in London.
+`agent.run(...)` returns a `RunResult`, and printing it prints the answer:
 
 ```markdown
-RunResult:
-- Last agent: Agent(name="Weather Agent", ...)
-- Final output (str):
-    London weather: sunny right now. Would you like the temperature or a short forecast?
+Weather in London is sunny.
 ```
+
+The result also carries the evidence — `result.status`, `result.usage`, and `result.tool_calls` show how the agent got there. See [Monitoring agents](/agentor/guides/observability).
 
 In the next section, we will learn about how to build and use MCP Servers with Agentor.

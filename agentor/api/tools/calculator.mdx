@@ -153,20 +153,20 @@ print(result.final_output)
 
 ```python  theme={null}
 from agentor import Agentor
-from agentor.tools import CalculatorTool, WebSearchTool
+from agentor.tools import CalculatorTool, FetchTool
 
 agent = Agentor(
     name="Research Calculator",
-    model="gpt-4",
-    tools=[CalculatorTool(), WebSearchTool()],
+    model="gpt-4o-mini",
+    tools=[CalculatorTool(), FetchTool()],
     instructions="""
-    Search for current data when needed, then perform 
+    Fetch current data when needed, then perform
     accurate calculations using the calculator tool.
     """,
 )
 
 result = agent.run(
-    "Find the current price of Bitcoin and calculate how much 2.5 BTC is worth"
+    "Fetch https://api.coinbase.com/v2/prices/BTC-USD/spot and calculate what 2.5 BTC is worth"
 )
 print(result.final_output)
 ```

@@ -1,0 +1,193 @@
+---
+title: "Use any OpenAI-compatible model provider"
+sidebarTitle: "Model providers"
+description: "Point Agentor at OpenRouter, Groq, Together, Fireworks, DeepSeek, vLLM, Ollama, or a local server by setting base_url — no extra dependency and no provider-specific code."
+---
+
+Almost every model provider now speaks the same HTTP dialect as OpenAI. Agentor takes advantage of that: give it a `base_url` and an API key, and it talks to that provider directly — tool calling, streaming, structured output and all.
+
+This is the fastest way to swap models. Nothing about your agent changes except three arguments.
+
+## Point at a provider
+
+```python
+import os
+
+from agentor import Agentor
+
+agent = Agentor(
+    name="Assistant",
+    model="openai/gpt-4o-mini",
+    base_url="https://openrouter.ai/api/v1",
+    api_key=os.environ["OPENROUTER_API_KEY"],
+)
+
+result = agent.run("What is the capital of France?")
+print(result.final_output)
+```
+
+Three arguments do the work:
+
+<ParamField path="model" type="str" required>
+  The model name **as that provider spells it**. On OpenRouter that is `openai/gpt-4o-mini`; on Groq, `llama-3.3-70b-versatile`; on Ollama, `llama3.2`.
+</ParamField>
+
+<ParamField path="base_url" type="str">
+  The provider's OpenAI-compatible endpoint. Usually ends in `/v1`.
+</ParamField>
+
+<ParamField path="api_key" type="str">
+  That provider's key. Without it, Agentor falls back to `OPENAI_API_KEY`, which the provider will reject.
+</ParamField>
+
+<Warning>
+  When you set `base_url`, the model string is sent to the provider untouched. A slash in it is part of the model's name, not a provider prefix — `"openai/gpt-4o-mini"` with an OpenRouter `base_url` is an OpenRouter model, not a request to OpenAI.
+</Warning>
+
+## Endpoints
+
+Every provider below exposes an OpenAI-compatible endpoint that works with the pattern above. No extra package to install.
+
+| Provider | `base_url` | Key |
+| --- | --- | --- |
+| OpenRouter | `https://openrouter.ai/api/v1` | `OPENROUTER_API_KEY` |
+| Groq | `https://api.groq.com/openai/v1` | `GROQ_API_KEY` |
+| Together AI | `https://api.together.xyz/v1` | `TOGETHER_API_KEY` |
+| Fireworks AI | `https://api.fireworks.ai/inference/v1` | `FIREWORKS_API_KEY` |
+| DeepSeek | `https://api.deepseek.com/v1` | `DEEPSEEK_API_KEY` |
+| Anthropic | `https://api.anthropic.com/v1` | `ANTHROPIC_API_KEY` |
+| Google Gemini | `https://generativelanguage.googleapis.com/v1beta/openai` | `GEMINI_API_KEY` |
+| vLLM (self-hosted) | `http://localhost:8000/v1` | any non-empty string |
+| Ollama (local) | `http://localhost:11434/v1` | any non-empty string |
+
+<Tip>
+  Check the provider's own docs for the current endpoint before you ship. These change more often than model names do.
+</Tip>
+
+### Run a model on your own machine
+
+Local servers work the same way. They ignore the key, but the OpenAI client still requires one, so pass any placeholder:
+
+```python
+from agentor import Agentor
+
+agent = Agentor(
+    name="Local Assistant",
+    model="llama3.2",
+    base_url="http://localhost:11434/v1",
+    api_key="ollama",
+)
+```
+
+## Tools and streaming come along
+
+Nothing about a provider swap changes the rest of your agent. This runs against OpenRouter with a function tool, and the tool is called exactly as it would be against OpenAI:
+
+```python
+import os
+
+from agentor import Agentor, function_tool
+
+
+@function_tool
+def get_weather(city: str) -> str:
+    """Get the current weather for a city.
+
+    Args:
+        city: The city to look up.
+    """
+    return f"The weather in {city} is sunny and 22C."
+
+
+agent = Agentor(
+    name="Assistant",
+    model="openai/gpt-4o-mini",
+    base_url="https://openrouter.ai/api/v1",
+    api_key=os.environ["OPENROUTER_API_KEY"],
+    tools=[get_weather],
+)
+
+result = agent.run("What is the weather in London?")
+print(result.final_output)
+# The weather in London is sunny with a temperature of 22°C.
+```
+
+[Streaming](/agentor/guides/streaming), [structured output](/agentor/structured-output) and [durable runs](/agentor/durable-runs) all work against a `base_url` provider too.
+
+## Providers without a compatible endpoint
+
+A few providers have no OpenAI-compatible API. For those, leave `base_url` unset and use a `provider/model` string — Agentor routes it through [LiteLLM](https://docs.litellm.ai/docs/providers), which covers 100+ services:
+
+```python
+import os
+
+from agentor import Agentor
+
+agent = Agentor(
+    name="Assistant",
+    model="gemini/gemini-2.5-flash",
+    api_key=os.environ["GEMINI_API_KEY"],
+)
+```
+
+The rule Agentor follows is simple:
+
+<Steps>
+  <Step title="base_url is set">
+    The request goes straight to that endpoint. The model string is passed through as written.
+  </Step>
+
+  <Step title="No base_url, and the model name contains a slash">
+    LiteLLM handles it, and the part before the slash names the provider.
+  </Step>
+
+  <Step title="No base_url, no slash">
+    The request goes to OpenAI.
+  </Step>
+</Steps>
+
+<Note>
+  LiteLLM is imported only when a `provider/model` string actually needs it, which is why `from agentor import Agentor` is fast on the OpenAI-only path.
+</Note>
+
+## Fall back to another model
+
+Async runs can name backup models to try when the primary one is rate limited or erroring. Temperature and token limits carry across, so a fallback answers the same way the primary would have:
+
+```python
+result = await agent.arun(
+    "Summarize the latest support tickets.",
+    fallback_models=["gpt-4o-mini", "gpt-4o"],
+)
+```
+
+Models are tried in order, and the original error is raised if they all fail.
+
+## Tune the request
+
+`ModelSettings` covers the parameters every provider understands. Anything else you pass is forwarded to the provider untouched, so a provider-specific parameter needs no support from Agentor:
+
+```python
+from agentor import Agentor, ModelSettings
+
+agent = Agentor(
+    name="Assistant",
+    model="openai/gpt-4o-mini",
+    base_url="https://openrouter.ai/api/v1",
+    model_settings=ModelSettings(temperature=0.2, max_tokens=512),
+)
+```
+
+See the [ModelSettings reference](/agentor/api/model-settings) for the full list.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Structured output" icon="brackets-curly" href="/agentor/structured-output">
+    Return a validated Pydantic object instead of free text.
+  </Card>
+
+  <Card title="Durable runs" icon="floppy-disk" href="/agentor/durable-runs">
+    Save a run so another process can finish it.
+  </Card>
+</CardGroup>

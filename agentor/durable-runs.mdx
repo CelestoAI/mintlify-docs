@@ -1,0 +1,218 @@
+---
+title: "Resume an agent run after a crash"
+sidebarTitle: "Durable runs"
+description: "Save every step of an Agentor run to disk so a new process can pick the job up by run id and finish it after a crash, restart, or deploy."
+---
+
+Long jobs get interrupted. A machine reboots, a deploy rolls, a container is evicted — and your agent was halfway through, having already paid for the tokens and called half its tools.
+
+Give the agent a **store** — somewhere to write down what it did — and each step is saved as it happens. A different process, knowing nothing but the run's id, can pick the job up and finish it.
+
+<Info>
+  Durable runs are new in Agentor 0.1.0, which ships as a prerelease. Install it with `pip install --pre agentor`.
+</Info>
+
+## Save a run
+
+Pass a store when you build the agent. `FileStore` keeps one file per run in the directory you name:
+
+```python agent.py
+from agentor import Agentor, function_tool
+from agentor.engine.store import FileStore
+
+
+@function_tool
+def get_weather(city: str) -> str:
+    """Get the current weather for a city.
+
+    Args:
+        city: The city to look up.
+    """
+    return f"The weather in {city} is sunny and 22C."
+
+
+agent = Agentor(
+    name="Weather Agent",
+    model="gpt-4o-mini",
+    instructions="You are a helpful weather assistant.",
+    tools=[get_weather],
+    store=FileStore("runs"),
+)
+
+result = agent.run("What is the weather in London?")
+
+print(result.run_id)        # cabc9046ac5040298aa362c0d6d2c5c5
+print(result.final_output)  # The weather in London is sunny with a temperature of 22°C.
+```
+
+Every run now gets an id, and `runs/<run_id>.jsonl` holds the whole story. Keep the id somewhere you can find it again — a database row, a queue message, a log line.
+
+<Note>
+  Without `store=`, `result.run_id` is `None` and nothing is written. Runs work exactly as before; they are just not recoverable.
+</Note>
+
+## Resume after a crash
+
+`resume()` takes a run id and continues from the last thing that was saved:
+
+```python resume.py
+agent.resume("cabc9046ac5040298aa362c0d6d2c5c5")
+```
+
+The agent object has to be built the same way — same tools, same instructions — but it does **not** have to be the same process. This is the whole point: the process that started the run can be gone.
+
+Two things make `resume()` safe to call whenever you are unsure:
+
+<CardGroup cols={2}>
+  <Card title="Finished runs are returned, not re-run" icon="circle-check">
+    If the run already completed, you get its result back without another model call and without any tool running twice.
+  </Card>
+
+  <Card title="Half-finished tool calls are rewound" icon="rotate-left">
+    If the process died between asking for tools and recording every result, the agent goes back to the request that produced them and decides again.
+  </Card>
+</CardGroup>
+
+Use `await agent.aresume(run_id)` from async code.
+
+### A worked example
+
+Start a run and kill the process partway through — after the weather tool answered but before the agent wrote its reply:
+
+```bash
+$ python agent.py
+RUN_ID cabc9046ac5040298aa362c0d6d2c5c5
+event: run_start
+event: generation
+event: tool_call get_weather
+event: tool_result get_weather
+Killed
+```
+
+Four lines made it to disk. Now a **separate** interpreter, given only that id:
+
+```bash
+$ python resume.py cabc9046ac5040298aa362c0d6d2c5c5
+status: completed
+final_output: The weather in London is sunny with a temperature of 22°C.
+```
+
+The tool did not run a second time. The saved result was enough.
+
+## What gets written
+
+The store records the same events the agent emits while it runs, one JSON object per line:
+
+```json runs/cabc9046ac5040298aa362c0d6d2c5c5.jsonl
+{"type": "run_start", "agent": "Weather Agent", "model": "gpt-4o-mini", "messages": [...]}
+{"type": "generation", "turn": 1, "usage": {...}, "calls": [...]}
+{"type": "tool_call", "name": "get_weather", "call_id": "call_8dGMCmO...", "turn": 1}
+{"type": "tool_result", "name": "get_weather", "result": "The weather in London is sunny and 22C.", "turn": 1}
+{"type": "run_end", "status": "completed", "text": "...", "usage": {...}}
+```
+
+Each `generation` records the exact messages that were sent to the model, so rebuilding the conversation is a replay rather than a guess. `FileStore` flushes and fsyncs after every line, because a crash is the case it exists for.
+
+You can read the same events back off any finished result:
+
+```python
+for event in result.events:
+    if event.type == "tool_result":
+        print(event.name, "->", event.result)
+```
+
+## Choose a store
+
+<Tabs>
+  <Tab title="FileStore">
+    One append-only file per run, on local disk. The right default for a worker, a cron job, or anything with a volume attached.
+
+    ```python
+    from agentor.engine.store import FileStore
+
+    store = FileStore("runs")        # directory is created if missing
+    store.list_runs()                # ['cabc9046ac50...', ...]
+    store.load("cabc9046ac50...")    # list[Event]
+    ```
+  </Tab>
+
+  <Tab title="MemoryStore">
+    Keeps runs in a dictionary for the life of the process. Useful in tests, and when you want `result.run_id` and event history without touching the filesystem.
+
+    ```python
+    from agentor.engine.store import MemoryStore
+
+    agent = Agentor(name="Agent", store=MemoryStore())
+    ```
+
+    <Warning>
+      A `MemoryStore` cannot survive the crash it would be recovering from. Use `FileStore` if you actually need resume.
+    </Warning>
+  </Tab>
+
+  <Tab title="Your own">
+    A store is any object with these three methods, so a Postgres or S3-backed store is a small class:
+
+    ```python
+    from agentor.engine.events import Event
+
+
+    class MyStore:
+        def append(self, run_id: str, event: Event) -> None:
+            """Save one event. Called once per step."""
+
+        def load(self, run_id: str) -> list[Event]:
+            """Return every event for a run, in order."""
+            return []
+
+        def list_runs(self) -> list[str]:
+            """Return every known run id."""
+            return []
+    ```
+
+    Use `Event.to_json()` to serialise and `Event.from_dict()` to read back. `append` is called on a worker thread, so blocking IO inside it will not stall the event loop.
+  </Tab>
+</Tabs>
+
+## Streamed runs are saved too
+
+`stream_chat()` persists a run whenever the agent has a store, so a stream that a client abandons is still recoverable:
+
+```python
+agent = Agentor(name="Agent", tools=[get_weather], store=FileStore("runs"))
+
+async for event in agent.stream_chat("What is the weather in Tokyo?"):
+    print(event)
+```
+
+## Limits to know about
+
+<AccordionGroup>
+  <Accordion title="Two workers must not resume the same unfinished run">
+    The bundled stores are single-process and take no lock. If two workers both see a run as incomplete, both will continue it, and any tool with a side effect runs twice. Coordinate outside Agentor — a queue with visibility timeouts, a row lock, a lease — if more than one worker can recover the same run.
+  </Accordion>
+
+  <Accordion title="Pausing for human approval is not built in">
+    There is no way to stop a run, ask a person to approve a tool call, and continue. The event log makes it possible to build, but Agentor does not ship it yet.
+  </Accordion>
+
+  <Accordion title="Saving is best-effort during a live run">
+    If a write to the store fails, the error is logged and the run carries on rather than dying. You get your answer; you may not be able to resume that run.
+  </Accordion>
+
+  <Accordion title="Nothing prunes old runs">
+    `FileStore` writes files and never deletes them. Rotate or expire the directory yourself.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Tracing" icon="chart-line" href="/agentor/tracing">
+    The same events power Celesto traces. Watch a run instead of reading its log.
+  </Card>
+
+  <Card title="Structured output" icon="brackets-curly" href="/agentor/structured-output">
+    Get a typed object back from a run instead of a block of text.
+  </Card>
+</CardGroup>

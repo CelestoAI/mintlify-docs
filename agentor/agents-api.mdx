@@ -21,6 +21,10 @@ result = agent.run("What is the weather in London?")
 print(result)
 ```
 
+<Note>
+  `GetWeatherTool()` reads a free [WeatherAPI.com](https://www.weatherapi.com/) key from `WEATHER_API_KEY`, and raises if it is not set.
+</Note>
+
 ## Connect to a tool
 
 Agents has access to tools to perform tasks and get information from the world.
@@ -85,43 +89,49 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-The response is streamed as a JSON object with the following fields:
+Each event is a JSON object with the following fields:
 
-- `type`: The type of event.
-- `message`: The message from the Agent.
-- `chunk`: The chunk of the message.
-- `tool_action`: The tool action from the Agent.
-- `reasoning`: The reasoning from the Agent.
-- `raw_event`: The raw event from the Agent.
+- `type`: always `run_item_stream_event`.
+- `message`: text — a tool's return value, or the agent's answer.
+- `tool_action`: `name` and `type` for a tool call (`tool_called`) or its result (`tool_output`).
+- `chunk`: reserved, always `null`.
+- `reasoning`: reserved, always `null`.
+- `raw_event`: reserved, always `null`.
 
 <Expandable title="output">
-  ```python
+  ```json
   {
-      'type': 'run_item_stream_event', 
-      'message': "{'tool_id': None, 'tool_name': 'current-weather', 'output': {'location': {'name': 'Tokyo', 'region': 'Tokyo', 'country': 'Japan', 'lat': 35.6895, 'lon': 139.6917, 'tz_id': 'Asia/Tokyo', 'localtime_epoch': 1761694721, 'localtime': '2025-10-29 08:38'}, 'current': {'last_updated_epoch': 1761694200, 'last_updated': '2025-10-29 08:30', 'temp_c': 14.1, 'temp_f': 57.4, 'is_day': 1, 'condition': {'text': 'Partly cloudy', 'icon': '//cdn.weatherapi.com/weather/64x64/day/116.png', 'code': 1003}, 'wind_mph': 7.4, 'wind_kph': 11.9, 'wind_degree': 37, 'wind_dir': 'NE', 'pressure_mb': 1028.0, 'pressure_in': 30.36, 'precip_mm': 0.0, 'precip_in': 0.0, 'humidity': 51, 'cloud': 75, 'feelslike_c': 13.3, 'feelslike_f': 55.9, 'windchill_c': 12.8, 'windchill_f': 55.0, 'heatindex_c': 13.7, 'heatindex_f': 56.6, 'dewpoint_c': 1.7, 'dewpoint_f': 35.1, 'vis_km': 10.0, 'vis_miles': 6.0, 'uv': 0.3, 'gust_mph': 9.6, 'gust_kph': 15.4}}, 'error': None}", 'chunk': None, 'tool_action': {'name': 'dict', 'type': 'tool_output'}, 
-      'reasoning': None, 
-      'raw_event': None
+    "type": "run_item_stream_event",
+    "message": null,
+    "chunk": null,
+    "tool_action": {"name": "get_weather", "type": "tool_called"},
+    "reasoning": null,
+    "raw_event": null
   }
-  
+
   {
-      'type': 'run_item_stream_event', 
-      'message': None, 
-      'chunk': None, 
-      'tool_action': None, 
-      'reasoning': '', 
-      'raw_event': None
+    "type": "run_item_stream_event",
+    "message": "The weather in Tokyo is sunny and 22C.",
+    "chunk": null,
+    "tool_action": {"name": "get_weather", "type": "tool_output"},
+    "reasoning": null,
+    "raw_event": null
   }
-  
+
   {
-      'type': 'run_item_stream_event', 
-      'message': 'Here’s the current weather in Tokyo:\n\n- Condition: Partly cloudy\n- Temperature: 14.1°C (57.4°F), feels like 13.3°C\n- Humidity: 51%\n- Wind: NE at 11.9 km/h (7.4 mph), gusts up to 15.4 km/h (9.6 mph)\n- Pressure: 1028 mb (30.36 in)\n- Precipitation: 0.0 mm\n- Visibility: 10 km\n- UV index: 0.3 (low)\n- Local time: 08: 38 (Japan Time), data as of 08: 30 local\n\nWould you like a short forecast or a weather alert for Tokyo?', 
-      'chunk': None, 
-      'tool_action': None, 
-      'reasoning': None, 
-      'raw_event': None
+    "type": "run_item_stream_event",
+    "message": "The weather in Tokyo is sunny with a temperature of 22°C.",
+    "chunk": null,
+    "tool_action": null,
+    "reasoning": null,
+    "raw_event": null
   }
   ```
 </Expandable>
+
+<Note>
+  `stream_chat` streams steps, not tokens. For token-by-token text, see [token-level streaming](/agentor/guides/streaming#token-level-streaming).
+</Note>
 
 ## Tracing and observability
 
@@ -185,5 +195,28 @@ Agentor supports tracing out of the box. Traces capture agent runs and tool call
   <Accordion title="No traces appear in the dashboard">
     - Confirm you set `CELESTO_API_KEY` in the same environment where you run the agent.
     - If you set `CELESTO_DISABLE_AUTO_TRACING=true`, enable tracing explicitly with `enable_tracing=True`.
+    - A failed upload is logged as a warning, never raised. Turn on warning-level logging to see it.
   </Accordion>
 </AccordionGroup>
+
+See [Tracing](/agentor/tracing) for the full span model and custom endpoints.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Structured output" icon="brackets-curly" href="/agentor/structured-output">
+    Return a validated Pydantic object instead of free text.
+  </Card>
+
+  <Card title="Durable runs" icon="floppy-disk" href="/agentor/durable-runs">
+    Save a run so another process can finish it after a crash.
+  </Card>
+
+  <Card title="Model providers" icon="plug" href="/agentor/model-providers">
+    Point the agent at OpenRouter, Groq, Ollama, or any compatible endpoint.
+  </Card>
+
+  <Card title="Tool use" icon="screwdriver-wrench" href="/agentor/tools/overview">
+    Build custom tools and connect MCP servers.
+  </Card>
+</CardGroup>

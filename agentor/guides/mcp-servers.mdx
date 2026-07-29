@@ -290,36 +290,112 @@ daphne -b 0.0.0.0 -p 8000 server:app
 
 ## Using MCP Servers with Agents
 
-### Connect to HTTP MCP Server
+### Connect to an HTTP MCP Server
+
+Hand the agent an `MCPServer` alongside its other tools. Agentor connects to it when a run starts, turns its remote tools into ordinary tools, and closes the connection when the run ends — including when the run raises.
 
 ```python  theme={null}
 import asyncio
 from agentor import Agentor
-from agentor.mcp import MCPServerStreamableHttp
+from agentor.mcp import MCPServer
+
+agent = Agentor(
+    name="Assistant",
+    model="gpt-5-mini",
+    instructions="You are a helpful assistant with access to external tools.",
+    tools=[
+        MCPServer(
+            url="http://localhost:8000/mcp",
+            headers={"Authorization": "Bearer token123"},
+            timeout=10,
+        )
+    ],
+)
 
 async def main():
-    async with MCPServerStreamableHttp(
-        name="My MCP Server",
-        params={
-            "url": "http://localhost:8000/mcp",
-            "timeout": 10,
-            "headers": {"Authorization": "Bearer token123"},
-        },
-        cache_tools_list=True,
-        max_retry_attempts=3
-    ) as server:
-        agent = Agentor(
-            name="Assistant",
-            model="gpt-5-mini",
-            instructions="You are a helpful assistant with access to external tools.",
-            tools=[server]  # Pass the MCP server as a tool
-        )
-        
-        result = await agent.arun("Use the weather tool to check London")
-        print(result.final_output)
+    result = await agent.arun("Use the weather tool to check London")
+    print(result.final_output)
 
 asyncio.run(main())
 ```
+
+`agent.run(...)` works the same way — you do not need to manage the connection yourself.
+
+<ParamField path="url" type="str" required>
+  The server's streamable-HTTP MCP endpoint, usually ending in `/mcp`.
+</ParamField>
+
+<ParamField path="headers" type="dict[str, str]" default="None">
+  Headers sent on every request, typically for authentication.
+</ParamField>
+
+<ParamField path="timeout" type="float" default="30.0">
+  Request timeout in seconds.
+</ParamField>
+
+<ParamField path="name" type="str" default="the url">
+  A label used in logs and warnings.
+</ParamField>
+
+<ParamField path="tool_prefix" type="str" default="None">
+  Prepended to every tool name from this server. Use it when two servers expose the same tool name — otherwise the second one is skipped with a warning.
+</ParamField>
+
+Remote tools behave like local ones: they appear in traces, and a tool that keeps failing is withdrawn after the same [failure budget](/agentor/guides/observability#failing-tools-do-not-kill-the-run).
+
+### Inspect a server directly
+
+`MCPServer` is also an async context manager, which is handy for checking what a server offers:
+
+```python  theme={null}
+import asyncio
+from agentor.mcp import MCPServer
+
+async def main():
+    async with MCPServer(url="http://localhost:8000/mcp") as server:
+        for tool in await server.list_tools():
+            print(tool.name, "-", tool.description)
+
+asyncio.run(main())
+```
+
+Tool discovery follows pagination, so servers with many tools are listed in full.
+
+<Warning>
+  Connect and close on the same event loop — inside one `asyncio.run()`, or with `async with`. Closing from a different loop raises, because the underlying session is bound to the task that opened it.
+</Warning>
+
+### Migrating from `MCPServerStreamableHttp`
+
+The old constructor still works and emits a `DeprecationWarning`. Options it accepted that the client no longer needs, such as `cache_tools_list` and `max_retry_attempts`, are ignored.
+
+<CodeGroup>
+  ```python Before theme={null}
+  from agentor.mcp import MCPServerStreamableHttp
+
+  server = MCPServerStreamableHttp(
+      name="My MCP Server",
+      params={
+          "url": "http://localhost:8000/mcp",
+          "timeout": 10,
+          "headers": {"Authorization": "Bearer token123"},
+      },
+      cache_tools_list=True,
+      max_retry_attempts=3,
+  )
+  ```
+
+  ```python After theme={null}
+  from agentor.mcp import MCPServer
+
+  server = MCPServer(
+      url="http://localhost:8000/mcp",
+      timeout=10,
+      headers={"Authorization": "Bearer token123"},
+      name="My MCP Server",
+  )
+  ```
+</CodeGroup>
 
 ### Connect to Celesto MCP Hub
 
@@ -456,18 +532,15 @@ if __name__ == "__main__":
   )
   ```
 
-  ### Cache Tool Lists
+  ### Namespace Tools From Multiple Servers
 
-  When connecting to MCP servers:
+  Two servers can easily both expose `search`. Give each one a prefix so neither is silently dropped:
 
   ```python  theme={null}
-  async with MCPServerStreamableHttp(
-      name="Server",
-      params={"url": "http://localhost:8000/mcp"},
-      cache_tools_list=True,  # Cache for better performance
-      max_retry_attempts=3
-  ) as server:
-      # Use server
+  tools = [
+      MCPServer(url="http://localhost:8000/mcp", tool_prefix="docs_"),
+      MCPServer(url="http://localhost:8100/mcp", tool_prefix="crm_"),
+  ]
   ```
 
   ### Handle Errors Gracefully

@@ -10,7 +10,7 @@ Tools give your agents the ability to interact with external systems, perform ca
 Create a simple tool using the `@function_tool` decorator:
 
 ```python  theme={null}
-from agents import function_tool
+from agentor import function_tool
 from agentor import Agentor
 
 @function_tool
@@ -35,7 +35,7 @@ result = agent.run("What's the weather in London?")
 The simplest way to create tools is with decorated functions:
 
 ```python  theme={null}
-from agents import function_tool
+from agentor import function_tool
 
 @function_tool
 def calculate_total(price: float, quantity: int, tax_rate: float = 0.1) -> str:
@@ -155,22 +155,37 @@ agent = Agentor(
 
 ## Using Built-in Tools
 
-Agentor comes with pre-built tools. Reference them by name:
+Two built-in tools can be referenced by string name:
 
 ```python  theme={null}
 agent = Agentor(
     name="Assistant",
     model="gpt-5-mini",
-    tools=["get_weather"]  # Reference by string name
+    tools=["get_weather", "current_datetime"]  # Reference by string name
 )
 ```
 
-Available built-in tools:
+* `get_weather` — current weather for a city. Needs `WEATHER_API_KEY`
+* `current_datetime` — the current date and time
 
-* `get_weather` - Weather information
-* `calculator` - Basic arithmetic
-* `web_search` - Internet search
-* And more in the registry
+<Warning>
+  Any other string raises `ValueError: Tool <name> not found`. Agentor's other built-in tools are classes you import and instantiate — `CalculatorTool`, `GitHubTool`, `GmailTool`, `SlackTool`, and more in the [tools reference](/agentor/api/tools).
+</Warning>
+
+```python  theme={null}
+from agentor import Agentor
+from agentor.tools import CalculatorTool
+
+agent = Agentor(
+    name="Assistant",
+    model="gpt-5-mini",
+    tools=[CalculatorTool()],
+)
+```
+
+<Note>
+  Provider-hosted tools such as web search are not supported. Agentor runs its own agent loop, so a tool whose body lives on the provider has nothing to invoke. Write a function tool that calls a search API instead.
+</Note>
 
 ## Real-World Tool Examples
 
@@ -178,7 +193,7 @@ Available built-in tools:
 
 ```python  theme={null}
 import requests
-from agents import function_tool
+from agentor import function_tool
 
 @function_tool
 def search_github(query: str, limit: int = 5) -> str:

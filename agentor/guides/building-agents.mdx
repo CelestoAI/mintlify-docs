@@ -43,22 +43,34 @@ agent = Agentor(
 
 ### Model Selection
 
-Agentor supports any model available through LiteLLM. Use the `provider/model-name` format:
+A bare name goes to OpenAI. A `provider/model-name` string is routed through LiteLLM:
 
 ```python  theme={null}
 # OpenAI models
 agent = Agentor(name="Agent", model="gpt-5-mini")
 agent = Agentor(name="Agent", model="gpt-4o")
 
-# Anthropic models  
-agent = Agentor(name="Agent", model="anthropic/claude-3.5-sonnet")
+# Anthropic models
+agent = Agentor(name="Agent", model="anthropic/claude-sonnet-4-5")
 
 # Google models
-agent = Agentor(name="Agent", model="gemini/gemini-2.5-pro")
-
-# Custom models
-agent = Agentor(name="Agent", model="openai/gpt-4o-mini", api_key=os.environ.get("OPENAI_API_KEY"))
+agent = Agentor(name="Agent", model="gemini/gemini-2.5-flash")
 ```
+
+To reach a provider directly over its OpenAI-compatible endpoint, set `base_url`. The model string is then passed through as that provider spells it:
+
+```python  theme={null}
+import os
+
+agent = Agentor(
+    name="Agent",
+    model="openai/gpt-4o-mini",
+    base_url="https://openrouter.ai/api/v1",
+    api_key=os.environ["OPENROUTER_API_KEY"],
+)
+```
+
+See [Model providers](/agentor/model-providers) for endpoints and the routing rules.
 
 ### Model Settings
 
@@ -201,8 +213,28 @@ agent = Agentor(
 )
 
 result = agent.run("What's the weather in London?")
-# result will be a WeatherResponse object
+print(result.final_output.temperature)  # final_output is a WeatherResponse
 ```
+
+<Warning>
+  Open-ended map fields such as `dict[str, int]` are rejected when the agent is built — strict structured output cannot describe them. See [Structured output](/agentor/structured-output) for the workarounds.
+</Warning>
+
+### Durable Runs
+
+Give the agent a store and every step is written to disk, so another process can finish an interrupted run:
+
+```python  theme={null}
+from agentor import Agentor
+from agentor.engine.store import FileStore
+
+agent = Agentor(name="Weather Agent", model="gpt-5-mini", store=FileStore("runs"))
+
+result = agent.run("What is the weather in London?")
+agent.resume(result.run_id)   # picks up where a crash left off
+```
+
+See [Durable runs](/agentor/durable-runs) for stores, limits, and the resume semantics.
 
 ### Agent Skills
 
@@ -297,6 +329,10 @@ print(result.final_output)
       )
       return results
   ```
+
+  <Note>
+    `max_turns` defaults to whatever the agent was built with — 20 unless you set it. A run that hits the limit returns with `status="max_turns"` rather than raising.
+  </Note>
 </Steps>
 
 ## Next Steps

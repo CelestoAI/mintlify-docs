@@ -1,547 +1,229 @@
 ---
-title: "Tracing and Monitoring"
-description: "Monitor Agentor agents in production with built-in tracing — debug tool calls, track token usage and costs, and analyze multi-agent workflows."
+title: "Monitoring agents in production"
+description: "Watch Agentor agents in production: send traces to Celesto, read token usage and tool history off a run result, and tell a real failure from a run that ran out of turns."
 ---
 
-Agentor provides comprehensive observability through automatic tracing, allowing you to monitor agent behavior, debug issues, and optimize performance in production.
+Once an agent is live you stop asking "does it work?" and start asking "what did it just do, and what did it cost?". Agentor answers both from one place: the stream of events every run emits.
 
-## Why Observability?
+Those events go two ways. They are uploaded to Celesto as a [trace](/agentor/tracing) you can click through, and they come back on the result object so your own code can read them.
 
-* **Debug Faster**: See exactly what your agent did and why
-* **Optimize Performance**: Identify bottlenecks and slow operations
-* **Monitor Costs**: Track token usage and API calls
-* **Improve Quality**: Analyze successful vs failed interactions
-* **Trace Multi-Agent**: Follow complex workflows across agents
+## Send runs to Celesto
 
-## Quick Start
+Set one environment variable and every run is recorded:
 
-Observability is automatically enabled when you have a Celesto API key:
+```bash
+export CELESTO_API_KEY="cel_..."
+```
 
-```python  theme={null}
-import os
+```python
 from agentor import Agentor
 
-# Set your API key
-os.environ["CELESTO_API_KEY"] = "your-api-key"
-
-# Tracing is automatically enabled
 agent = Agentor(
-    name="My Agent",
+    name="Support Agent",
     model="gpt-5-mini",
-    tools=["get_weather"]
+    tools=["get_weather"],
 )
 
 result = agent.run("What's the weather in Paris?")
-
-# View traces at: https://celesto.ai/observe
+# View the trace at https://celesto.ai/observe
 ```
 
-Get your API key from the [Celesto Dashboard](https://celesto.ai/dashboard).
+Each run becomes one trace: an agent span, a span per model call, and a span per tool call, with timings and token counts throughout. See [Tracing](/agentor/tracing) for setup options, private endpoints, and what each span holds.
 
-## Automatic Tracing
+<Tip>
+  Turn it off in tests with `export CELESTO_DISABLE_AUTO_TRACING=True`. Runs behave identically; nothing is uploaded.
+</Tip>
 
-Agentor automatically captures:
+## Read a run in code
 
-* **LLM Calls**: Model name, tokens, latency, cost
-* **Tool Calls**: Which tools were called and their results
-* **Agent Handoffs**: Multi-agent communication flows
-* **Errors**: Exception details and stack traces
-* **Timing**: Duration of each operation
-* **Input/Output**: Messages and responses
+`agent.run()` and `await agent.arun()` return a `RunResult`. It carries the answer and the evidence:
 
-```python  theme={null}
-from agentor import Agentor
+```python
+result = agent.run("Weather in London and Paris?")
 
-agent = Agentor(
-    name="Research Agent",
-    model="gpt-5-mini",
-    tools=["web_search"]
-)
-
-# This run is automatically traced
-result = agent.run("Research the latest developments in quantum computing")
-
-# All operations are captured:
-# - Initial LLM call
-# - Tool calls (web_search)
-# - Follow-up LLM calls
-# - Final response
+result.final_output   # 'It is sunny and 22C in both London and Paris.'
+result.status         # 'completed'
+result.error          # None
+result.run_id         # set when the agent has a store, otherwise None
+result.usage          # Usage(input_tokens=195, output_tokens=63, total_tokens=258)
+result.messages       # the full conversation, ready to feed back in
+result.events         # everything that happened, in order
 ```
 
-## Manual Tracing Setup
+<ResponseField name="final_output" type="str | BaseModel | None">
+  The agent's answer. A parsed model instance when [`output_type`](/agentor/structured-output) is set, `None` if the run did not finish.
+</ResponseField>
 
-For more control, explicitly enable tracing:
+<ResponseField name="status" type="'completed' | 'max_turns' | 'failed'">
+  How the run ended. Always check this before trusting `final_output`.
+</ResponseField>
 
-```python  theme={null}
-from agentor import Agentor
+<ResponseField name="error" type="str | None">
+  Why the run did not complete. `None` on success.
+</ResponseField>
 
-agent = Agentor(
-    name="Production Agent",
-    model="gpt-5-mini",
-    enable_tracing=True  # Explicitly enable
-)
+<ResponseField name="usage" type="Usage">
+  `input_tokens`, `output_tokens`, and `total_tokens` summed across every model call in the run.
+</ResponseField>
+
+<ResponseField name="messages" type="list[dict]">
+  The conversation as the model saw it — `user`, `assistant`, and `tool` messages. Pass it back into `arun()` to continue the conversation.
+</ResponseField>
+
+<ResponseField name="events" type="list[Event]">
+  Every step: `run_start`, `generation`, `tool_call`, `tool_result`, `message`, `run_end`.
+</ResponseField>
+
+### Track token usage
+
+```python
+result = agent.run("Summarize today's tickets.")
+
+print(f"{result.usage.total_tokens} tokens "
+      f"({result.usage.input_tokens} in, {result.usage.output_tokens} out)")
 ```
 
-Disable automatic tracing:
+For per-call detail, walk the generations:
 
-```python  theme={null}
-import os
-
-# Disable even with CELESTO_API_KEY set
-os.environ["CELESTO_DISABLE_AUTO_TRACING"] = "true"
-
-agent = Agentor(name="Agent", model="gpt-5-mini")
-# No automatic tracing
+```python
+for event in result.events:
+    if event.type == "generation" and event.usage:
+        print(f"turn {event.turn}: {event.usage.total_tokens} tokens")
 ```
 
-## Custom Tracing
+### See which tools ran
 
-For advanced use cases, configure tracing manually:
+`result.tool_calls` lists the calls the model asked for, with the arguments it chose:
 
-```python  theme={null}
-from agentor.tracer import setup_celesto_tracing, get_run_config
-from agentor import Agentor
-from agents import Runner
-import os
-
-# Setup tracing
-processor = setup_celesto_tracing(
-    endpoint="https://api.celesto.ai/traces/ingest",
-    token=os.environ.get("CELESTO_API_KEY"),
-    batch_delay=1.0,        # Seconds before flushing batch
-    max_batch_size=256,     # Max traces per batch
-    replace_default=True    # Replace OpenAI's default tracing
-)
-
-# Create agent
-agent = Agentor(name="Agent", model="gpt-5-mini")
-
-# Run with custom config
-result = await Runner.run(
-    agent.agent,
-    "Your query",
-    context=get_run_config(
-        group_id="session-123",  # Group related traces
-        metadata={               # Custom metadata
-            "user_id": "user-456",
-            "environment": "production"
-        }
-    )
-)
-
-# Ensure traces are sent before exit
-processor.force_flush()
-processor.shutdown()
+```python
+for call in result.tool_calls:
+    print(call.name, call.args)
+# get_weather {'city': 'London'}
+# get_weather {'city': 'Paris'}
 ```
 
-## Grouping Traces
+For what each tool actually returned, read the results:
 
-Group related operations (conversations, sessions):
-
-```python  theme={null}
-from agentor.tracer import get_run_config
-from agents import Runner
-import uuid
-
-# Create a session ID
-session_id = str(uuid.uuid4())
-
-agent = Agentor(name="Agent", model="gpt-5-mini")
-
-# All runs with same group_id are grouped together
-for user_message in conversation:
-    result = await Runner.run(
-        agent.agent,
-        user_message,
-        context=get_run_config(
-            group_id=session_id,
-            metadata={"turn": len(conversation)}
-        )
-    )
+```python
+for event in result.events:
+    if event.type == "tool_result":
+        status = "failed" if event.error else "ok"
+        print(f"{event.name} [{status}]: {event.result[:80]}")
 ```
 
-## Adding Metadata
+## Tell the three endings apart
 
-Enrich traces with custom metadata:
+A run that did not produce an answer is not automatically an exception. Check `status`:
 
-```python  theme={null}
-from agentor.tracer import get_run_config
-from agents import Runner
+<Tabs>
+  <Tab title="completed">
+    The agent answered. `final_output` is set, `error` is `None`.
+  </Tab>
 
-result = await Runner.run(
-    agent.agent,
-    user_input,
-    context=get_run_config(
-        metadata={
-            "user_id": "user-123",
-            "session_id": "session-456",
-            "environment": "production",
-            "version": "v2.1.0",
-            "feature_flags": ["new-ui", "beta-features"],
-            "user_tier": "premium"
-        }
-    )
-)
+  <Tab title="max_turns">
+    The agent used its whole turn budget without settling on an answer — usually a loop between tools, or instructions it cannot satisfy.
+
+    ```python
+    result = agent.run("Weather in London?")
+    result.status        # 'max_turns'
+    result.error         # 'Reached max_turns (2) without a final answer.'
+    result.final_output  # None
+    ```
+
+    Raise the budget with `Agentor(..., max_turns=40)`, or per call with `await agent.arun(prompt, max_turns=40)`. The default is 20.
+  </Tab>
+
+  <Tab title="failed">
+    Something raised — a provider error, a bad API key, a network failure. The exception propagates to your caller, and the `run_end` event is still recorded with `status="failed"` so the trace and the saved run show what happened.
+  </Tab>
+</Tabs>
+
+```python
+result = agent.run(prompt)
+
+if result.status != "completed":
+    logger.warning("Run ended as %s: %s", result.status, result.error)
 ```
 
-## Viewing Traces
+## Failing tools do not kill the run
 
-Access your traces in the Celesto dashboard:
+A tool that raises does not end the run. The error text goes back to the model, which can try something else or explain the gap. If the same tool keeps failing, it is withdrawn after two attempts so it cannot burn the remaining turns:
 
-1. Visit [https://celesto.ai/observe](https://celesto.ai/observe)
-2. Log in with your account
-3. View traces in real-time
+```python
+@function_tool
+def flaky_lookup(query: str) -> str:
+    """Look up a record in the records database.
 
-### Trace Details
+    Args:
+        query: What to look up.
+    """
+    raise RuntimeError("database unavailable")
 
-Each trace shows:
 
-* **Timeline**: Visual representation of operations
-* **Spans**: Individual operations (LLM calls, tool calls)
-* **Tokens**: Input/output tokens per call
-* **Cost**: Estimated cost per operation
-* **Latency**: Time spent in each operation
-* **Errors**: Any exceptions or failures
-* **Metadata**: Custom metadata you added
+agent = Agentor(name="Lookup Agent", model="gpt-4o-mini", tools=[flaky_lookup])
+result = agent.run("Look up the record for customer 42.")
 
-### Filtering Traces
-
-Filter by:
-
-* Agent name
-* Time range
-* Status (success/failure)
-* Group ID (session)
-* Custom metadata
-* Token usage
-* Cost
-
-## Monitoring Patterns
-
-### Track Token Usage
-
-```python  theme={null}
-import asyncio
-from agentor import Agentor
-from agentor.tracer import get_run_config
-from agents import Runner
-
-agent = Agentor(name="Agent", model="gpt-5-mini")
-
-async def track_usage():
-    results = []
-    
-    for i, prompt in enumerate(batch_prompts):
-        result = await Runner.run(
-            agent.agent,
-            prompt,
-            context=get_run_config(
-                group_id="batch-job-001",
-                metadata={"batch_index": i}
-            )
-        )
-        results.append(result)
-    
-    # View token usage in dashboard by group_id
-    return results
-
-asyncio.run(track_usage())
+result.status        # 'completed'
+result.final_output  # "I'm currently unable to access the database ..."
 ```
 
-### Monitor Error Rates
+The tool ran twice, then stopped being offered. Both failures are visible in the run:
 
-```python  theme={null}
-from agentor.tracer import get_run_config
-import logging
-
-logger = logging.getLogger(__name__)
-
-async def monitored_run(user_input, user_id):
-    try:
-        result = await Runner.run(
-            agent.agent,
-            user_input,
-            context=get_run_config(
-                metadata={
-                    "user_id": user_id,
-                    "input_length": len(user_input)
-                }
-            )
-        )
-        return result
-    except Exception as e:
-        logger.error(f"Agent error for user {user_id}: {e}")
-        # Error is automatically captured in traces
-        raise
+```python
+failures = [e for e in result.events if e.type == "tool_result" and e.error]
+print(len(failures))          # 2
+print(failures[0].error)      # RuntimeError: database unavailable
 ```
 
-### A/B Testing
+<Note>
+  The failure budget is fixed at two attempts per tool for agents built with `Agentor(...)`. It is configurable only on the lower-level `AgentLoop` via `max_tool_failures=`.
+</Note>
 
-```python  theme={null}
-import random
-from agentor.tracer import get_run_config
+## Keep a copy of every run
 
-def run_ab_test(user_input, user_id):
-    variant = "A" if random.random() < 0.5 else "B"
-    
-    # Different instructions for each variant
-    instructions = {
-        "A": "You are a concise assistant.",
-        "B": "You are a detailed assistant."
-    }
-    
-    agent = Agentor(
-        name=f"Agent-{variant}",
-        model="gpt-5-mini",
-        instructions=instructions[variant]
-    )
-    
-    result = await Runner.run(
-        agent.agent,
-        user_input,
-        context=get_run_config(
-            metadata={
-                "variant": variant,
-                "user_id": user_id
-            }
-        )
-    )
-    
-    # Compare variants in dashboard
-    return result
+Tracing is for looking at runs. A [store](/agentor/durable-runs) is for keeping them — and for finishing them if the process dies:
+
+```python
+from agentor.engine.store import FileStore
+
+agent = Agentor(name="Support Agent", tools=[...], store=FileStore("runs"))
+
+result = agent.run("Summarize today's tickets.")
+result.run_id  # 'cabc9046ac5040298aa362c0d6d2c5c5'
 ```
 
-### Multi-Agent Tracing
+Every event lands in `runs/<run_id>.jsonl` as it happens, so you can replay a run long after the dashboard has moved on, and `agent.resume(run_id)` can pick up an interrupted one.
 
-```python  theme={null}
-import asyncio
-from agentor import Agentor
-from agentor.tracer import get_run_config
-from agents import Runner
-import uuid
+## Watch a run as it happens
 
-research_agent = Agentor(name="Research", model="gpt-5-mini")
-writing_agent = Agentor(name="Writing", model="gpt-5-mini")
-review_agent = Agentor(name="Review", model="gpt-5-mini")
+For live progress rather than a post-mortem, stream it:
 
-async def traced_workflow(topic):
-    workflow_id = str(uuid.uuid4())
-    
-    # All operations share the same group_id
-    config = get_run_config(
-        group_id=workflow_id,
-        metadata={"workflow": "content-creation", "topic": topic}
-    )
-    
-    # Step 1: Research (traced)
-    research = await Runner.run(
-        research_agent.agent,
-        f"Research {topic}",
-        context=config
-    )
-    
-    # Step 2: Write (traced)
-    draft = await Runner.run(
-        writing_agent.agent,
-        f"Write about {topic} using: {research.final_output}",
-        context=config
-    )
-    
-    # Step 3: Review (traced)
-    final = await Runner.run(
-        review_agent.agent,
-        f"Review and improve: {draft.final_output}",
-        context=config
-    )
-    
-    # View complete workflow in dashboard by workflow_id
-    return final.final_output
+```python
+async for event in agent.stream_chat("Research quantum computing", serialize=False):
+    if event.tool_action:
+        print(f"[{event.tool_action.type}] {event.tool_action.name}")
+    elif event.message:
+        print(event.message)
 ```
 
-## Performance Optimization
+See the [streaming guide](/agentor/guides/streaming) for the full event shape.
 
-Use traces to identify bottlenecks:
+## Next steps
 
-<Steps>
-  ### Identify Slow Operations
+<CardGroup cols={2}>
+  <Card title="Tracing" icon="chart-line" href="/agentor/tracing">
+    Set up Celesto tracing and learn what each span records.
+  </Card>
 
-  View the timeline in the dashboard to find:
+  <Card title="Durable runs" icon="floppy-disk" href="/agentor/durable-runs">
+    Save runs to disk and resume them after a crash.
+  </Card>
 
-  * Slow LLM calls (switch to faster model?)
-  * Slow tool calls (optimize tool code)
-  * Unnecessary tool calls (improve instructions)
+  <Card title="Streaming" icon="bolt" href="/agentor/guides/streaming">
+    Show progress to users while the agent works.
+  </Card>
 
-  ### Optimize Token Usage
-
-  Check token counts:
-
-  * High input tokens → Reduce prompt length
-  * High output tokens → Add `max_tokens` limit
-  * Many calls → Better instructions to reduce iterations
-
-  ### Reduce Costs
-
-  Analyze cost per operation:
-
-  * Use cheaper models for simple tasks
-  * Cache tool results when possible
-  * Batch operations to reduce overhead
-
-  ### Fix Errors
-
-  Find common failure patterns:
-
-  * Which prompts fail most?
-  * Which tools have errors?
-  * What error messages appear?
-</Steps>
-
-## Best Practices
-
-<Steps>
-  ### Always Use Group IDs
-
-  Group related operations:
-
-  ```python  theme={null}
-  # Good - trackable session
-  config = get_run_config(group_id=session_id)
-
-  # Less useful - isolated traces
-  config = get_run_config()  # No group_id
-  ```
-
-  ### Add Meaningful Metadata
-
-  ```python  theme={null}
-  # Good - rich context
-  metadata = {
-      "user_id": user_id,
-      "user_tier": "premium",
-      "feature": "research",
-      "version": "v2"
-  }
-
-  # Less useful - minimal context
-  metadata = {"timestamp": time.time()}
-  ```
-
-  ### Flush Before Exit
-
-  For scripts and batch jobs:
-
-  ```python  theme={null}
-  from agentor.tracer import setup_celesto_tracing
-
-  processor = setup_celesto_tracing(
-      endpoint="https://api.celesto.ai/traces/ingest",
-      token=api_key
-  )
-
-  try:
-      # Your agent code
-      pass
-  finally:
-      processor.force_flush()  # Ensure traces are sent
-      processor.shutdown()
-  ```
-
-  ### Monitor Production Continuously
-
-  Set up alerts in the dashboard for:
-
-  * Error rate thresholds
-  * High latency operations
-  * Unusual token usage
-  * Cost spikes
-
-  ### Disable Tracing in Tests
-
-  ```python  theme={null}
-  import os
-
-  # In test setup
-  os.environ["CELESTO_DISABLE_AUTO_TRACING"] = "true"
-  ```
-</Steps>
-
-## Privacy and Security
-
-### Sensitive Data
-
-Tracing includes input/output by default. For sensitive data:
-
-```python  theme={null}
-from agents import RunConfig
-
-# Disable sensitive data capture
-config = RunConfig(
-    trace_include_sensitive_data=False  # Don't trace messages
-)
-
-result = await Runner.run(agent.agent, user_input, context=config)
-```
-
-### Data Retention
-
-Traces are stored according to your Celesto plan:
-
-* Free tier: 7 days
-* Pro tier: 30 days
-* Enterprise: Custom retention
-
-## Troubleshooting
-
-### Traces Not Appearing
-
-Check:
-
-1. API key is set correctly
-2. Network connectivity to Celesto
-3. No firewall blocking outbound requests
-4. Traces are flushed (for scripts)
-
-```python  theme={null}
-# Debug tracing
-import logging
-logging.basicConfig(level=logging.DEBUG)
-
-from agentor.tracer import setup_celesto_tracing
-processor = setup_celesto_tracing(
-    endpoint="https://api.celesto.ai/traces/ingest",
-    token=api_key
-)
-```
-
-### High Latency
-
-Tracing adds minimal overhead (less than 10ms typically). If experiencing issues:
-
-```python  theme={null}
-# Increase batch delay to reduce frequency
-processor = setup_celesto_tracing(
-    endpoint="https://api.celesto.ai/traces/ingest",
-    token=api_key,
-    batch_delay=5.0  # Send every 5 seconds instead of 1
-)
-```
-
-### Missing Metadata
-
-Ensure you're using `get_run_config`:
-
-```python  theme={null}
-# Correct
-from agentor.tracer import get_run_config
-config = get_run_config(metadata={"key": "value"})
-
-# Won't include metadata
-from agentor.config import CelestoConfig
-config = CelestoConfig()  # No metadata support
-```
-
-## Next Steps
-
-* Deploy agents with [Celesto CLI](/agentor/guides/deployment) for automatic observability
-* Learn about [streaming](/agentor/guides/streaming) to monitor responses in real-time
-* Explore [agent communication](/agentor/guides/agent-communication) tracing patterns
+  <Card title="Deployment" icon="cloud" href="/agentor/guides/deployment">
+    Ship the agent, with observability already on.
+  </Card>
+</CardGroup>

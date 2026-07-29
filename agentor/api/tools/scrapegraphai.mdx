@@ -10,11 +10,11 @@ Use it when your agent needs live web content or LLM-ready extractions without y
 ## Installation
 
 <Info>
-  The `scrapegraph` extra pulls in `scrapegraph-py>=2.1.0`, which requires **Python 3.12 or newer**. On Python 3.10 or 3.11, `pip install agentor[scrapegraph]` succeeds but the SDK is not installed, and instantiating `ScrapeGraphAI` raises `ImportError`.
+  The `scrapegraph` extra pulls in `scrapegraph-py>=2.1.0`, which requires **Python 3.12 or newer**. On Python 3.11, `pip install --pre "agentor[scrapegraph]"` succeeds but the SDK is not installed, and instantiating `ScrapeGraphAI` raises `ImportError`.
 </Info>
 
 ```bash  theme={null}
-pip install "agentor[scrapegraph]"
+pip install --pre "agentor[scrapegraph]"
 ```
 
 ## Authentication
@@ -206,7 +206,7 @@ scraper.scrape("https://not-a-real-domain.example")
 # → 'Error in scrape: <upstream error message>'
 ```
 
-If `scrapegraph-py` isn't installed, or if you're on Python 3.10 / 3.11 where the 2.x SDK cannot be installed, the constructor raises `ImportError` with an explanation.
+If `scrapegraph-py` isn't installed, or if you are on Python 3.11 where the 2.x SDK cannot be installed, the constructor raises `ImportError` with an explanation.
 
 ## Source reference
 

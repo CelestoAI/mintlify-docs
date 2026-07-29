@@ -62,8 +62,14 @@ def calculate(expression: str) -> float:
 
 **Parameters:**
 
-* `name_override` (str): Optional custom name for the tool
-* `strict_mode` (bool): Enable strict parameter validation (default: True)
+* `name_override` (str): Optional custom name for the tool (defaults to the function name)
+* `description_override` (str): Optional description (defaults to the docstring summary)
+
+<Note>
+  Options the decorator accepted before 0.1.0 — `strict_mode`, `failure_error_function`, `use_docstring_info`, and the rest — are still accepted and ignored, so existing tool definitions keep importing unchanged.
+</Note>
+
+Parameter descriptions come from a Google-style `Args:` block in the docstring. They are worth writing: without them the model sees only a type name and guesses more.
 
 **Example:**
 
@@ -137,13 +143,13 @@ def list_capabilities() -> List[Tuple[str, FunctionType]]
 
 #### to\_openai\_function
 
-Convert all capabilities to OpenAI-compatible FunctionTools.
+Convert all capabilities to `Tool` objects with OpenAI-compatible schemas.
 
 ```python  theme={null}
-def to_openai_function() -> List[FunctionTool]
+def to_openai_function() -> List[Tool]
 ```
 
-**Returns:** List of FunctionTool objects
+**Returns:** List of `agentor.engine.tools.Tool` objects
 
 #### json\_schema
 
@@ -258,34 +264,34 @@ result = agent.run("What is the current weather in London?")
 
 ### Tool Registry
 
-Tools can be registered and referenced by string name:
+A small set of built-in tools can be referenced by string name:
 
 ```python  theme={null}
 from agentor import Agentor
 
 agent = Agentor(
     name="Multi-Tool Agent",
-    tools=["gmail", "get_weather"],  # Reference by name
+    tools=["get_weather", "current_datetime"],  # Reference by name
     instructions="Use the available tools to help the user."
 )
 ```
+
+<Warning>
+  The registry holds exactly two names today: `get_weather` and `current_datetime`. Any other string raises `ValueError: Tool <name> not found`. Every other built-in — Gmail, GitHub, Slack, and the rest — is a class you import and instantiate.
+</Warning>
 
 ### MCP Servers
 
 ```python  theme={null}
 import os
 from agentor import Agentor
-from agentor.mcp import MCPServerStreamableHttp
+from agentor.mcp import MCPServer
 
-mcp_server = MCPServerStreamableHttp(
+mcp_server = MCPServer(
+    url="https://api.example.com/mcp",
+    headers={"Authorization": f"Bearer {os.environ['API_KEY']}"},
+    timeout=10,
     name="Search Server",
-    params={
-        "url": "https://api.example.com/mcp",
-        "headers": {"Authorization": f"Bearer {os.environ['API_KEY']}"},
-        "timeout": 10,
-    },
-    cache_tools_list=True,
-    max_retry_attempts=3
 )
 
 agent = Agentor(
@@ -294,6 +300,8 @@ agent = Agentor(
     instructions="Use the search tool to find information."
 )
 ```
+
+The agent connects to the server for the duration of each run and closes it afterwards. See the [MCP guide](/agentor/guides/mcp-servers) for details.
 
 ## Built-in Tools
 

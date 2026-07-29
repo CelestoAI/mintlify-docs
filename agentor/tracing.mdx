@@ -1,77 +1,83 @@
 ---
 title: "Tracing and Observability"
 sidebarTitle: "Tracing"
-description: "Capture and inspect agent runs, tool calls, and multi-step traces in the Celesto dashboard to debug failures and monitor agent behavior in production."
+description: "See every Agentor run in the Celesto dashboard — model calls, tool calls, timings, and token counts — with one environment variable."
 ---
 
 ## What tracing gives you
 
-Tracing captures each agent run and tool call so you can:
+A trace is a recording of one agent run. Set one environment variable and every run shows up in the Celesto dashboard, so you can:
 
-- See end-to-end execution paths for multi-step agents
-- Inspect tool inputs and outputs
-- Debug failures with rich span data
-- Monitor usage across environments
+* Follow an agent step by step instead of guessing from logs
+* See what each tool was given and what it returned
+* Find the slow step, and the expensive one
+* Tell a failed run from one that quietly ran out of turns
 
 <Frame caption="A trace in the Celesto dashboard shows the agent run and tool spans.">
   ![Celesto tracing view with agent run timeline and tool spans](/assets/tracing.png)
 </Frame>
 
----
+<Note>
+  Rebuilt in Agentor 0.1.0. Traces are now built from the agent's own event stream, so every run is covered — including streamed runs, resumed runs, and runs that raise.
+</Note>
+
+***
 
 ## Quick setup
 
 <Steps>
   <Step title="Set your Celesto API key">
-    Add your Celesto API key to the environment.
+    Add your Celesto API key to the environment. Get one from the [Celesto dashboard](https://celesto.ai/dashboard).
 
     ```bash
     export CELESTO_API_KEY="cel_..."
     ```
   </Step>
-  <Step title="Enable tracing">
-    Choose the setup that fits your workflow.
 
-    <Tabs>
-      <Tab title="Automatic (recommended)">
-        If `CELESTO_API_KEY` is set, Agentor enables tracing automatically.
+  <Step title="Run an agent">
+    That is the whole setup. With `CELESTO_API_KEY` set, Agentor traces every run and prints a one-line notice the first time it does.
 
-        ```python
-        from agentor import Agentor
+    ```python
+    from agentor import Agentor
 
-        agent = Agentor(
-            name="Support Agent",
-            model="gpt-5-mini",
-        )
-        result = agent.run("Summarize the latest support tickets.")
-        ```
-      </Tab>
-      <Tab title="Explicit">
-        Enable tracing directly on the agent.
+    agent = Agentor(
+        name="Support Agent",
+        model="gpt-5-mini",
+    )
+    result = agent.run("Summarize the latest support tickets.")
+    ```
 
-        ```python
-        from agentor import Agentor
-
-        agent = Agentor(
-            name="Support Agent",
-            model="gpt-5-mini",
-            enable_tracing=True,
-        )
-        result = agent.run("Summarize the latest support tickets.")
-        ```
-      </Tab>
-    </Tabs>
+    <Tip>
+      Prefer to be explicit? `Agentor(..., enable_tracing=True)` turns tracing on and raises a clear error if the key is missing, instead of silently doing nothing.
+    </Tip>
   </Step>
+
   <Step title="Verify">
-    Run your agent once, then open the Celesto dashboard and confirm the trace appears.
+    Open [celesto.ai/observe](https://celesto.ai/observe) and confirm the trace appears.
 
     <Check>
-      You should see a trace entry with spans for the model call and any tools.
+      You should see one trace per run, with a span for each model call and each tool call.
     </Check>
   </Step>
 </Steps>
 
----
+***
+
+## What a trace contains
+
+Each run produces one trace and a small tree of spans:
+
+| Span | One per | What it records |
+| --- | --- | --- |
+| `agent` | run | Agent name, model, final output, status, total tokens |
+| `generation` | model call | The exact messages sent, the reply, requested tool calls, tokens, timing |
+| `function` | tool call | Tool name, arguments, return value, timing, and the error if it raised |
+
+Because a `generation` span keeps the request as it was actually sent, you can see the conversation the model saw at every turn — the part that is hardest to reconstruct after the fact.
+
+A run that ends in `max_turns` or `failed` is traced with that status rather than dropped, which is usually the run you most wanted to see.
+
+***
 
 ## Environment variables
 
@@ -80,20 +86,18 @@ Tracing captures each agent run and tool call so you can:
 </ParamField>
 
 <ParamField path="CELESTO_DISABLE_AUTO_TRACING" type="boolean" default="false">
-  Disable automatic tracing when `CELESTO_API_KEY` is set.
+  Stop Agentor from tracing automatically when `CELESTO_API_KEY` is set. Useful in tests.
 </ParamField>
 
 <ParamField path="CELESTO_BASE_URL" type="string" default="https://api.celesto.ai/v1">
-  Custom Celesto API base URL for self-hosted or private deployments.
+  Celesto API base URL, for self-hosted or private deployments. Traces are posted to `{CELESTO_BASE_URL}/traces/ingest`.
 </ParamField>
 
----
+***
 
-## Advanced usage
+## Configure the tracer yourself
 
-Use these patterns only when you need more control than the quick setup.
-
-### Customize batching and exporter settings
+Build a tracer with `setup_celesto_tracing` and pass it to the agent. Use this to send traces somewhere other than the default endpoint, or to hold one tracer across several agents:
 
 ```python
 import os
@@ -101,77 +105,95 @@ import os
 from agentor import Agentor
 from agentor.tracer import setup_celesto_tracing
 
-os.environ["CELESTO_DISABLE_AUTO_TRACING"] = "true"
-
-processor = setup_celesto_tracing(
+tracer = setup_celesto_tracing(
     endpoint="https://api.celesto.ai/v1/traces/ingest",
     token=os.environ["CELESTO_API_KEY"],
-    replace_default=True,
-    batch_delay=2.0,
-    max_batch_size=512,
+    timeout=10.0,
 )
 
 agent = Agentor(
     name="Support Agent",
     model="gpt-5-mini",
+    tracer=tracer,
 )
 result = agent.run("Summarize the latest support tickets.")
-
-processor.force_flush()
-processor.shutdown()
 ```
+
+<ParamField path="endpoint" type="str" required>
+  Celesto trace ingest URL.
+</ParamField>
+
+<ParamField path="token" type="str" required>
+  Bearer token used to authenticate the upload.
+</ParamField>
+
+<ParamField path="timeout" type="float" default="10.0">
+  How long to wait for the upload, in seconds.
+</ParamField>
+
+An explicit `tracer=` always wins over the one built from `CELESTO_API_KEY`, so you do not need to disable auto-tracing first.
 
 <Note>
-`setup_celesto_tracing` should run once at startup before you execute any agents.
+  A tracer is a plain object, safe to share between agents, and it needs no shutdown or flush call. Each run uploads its own trace when it finishes.
 </Note>
 
-### Attach per-run metadata for grouping
+***
 
-Each `agent.run(...)` call creates a trace automatically. Use the underlying runner if you need a `group_id` or metadata per run.
+## Good to know
 
-```python
-from agentor import Agentor
-from agentor.core.agent import Runner
-from agentor.tracer import get_run_config, setup_celesto_tracing
+<AccordionGroup>
+  <Accordion title="Traces upload at the end of a run">
+    Agentor collects a run's events in memory and posts them once, after the run finishes. There is no background batch worker and nothing to flush before your script exits.
+  </Accordion>
 
-setup_celesto_tracing(
-    endpoint="https://api.celesto.ai/v1/traces/ingest",
-    token="cel_...",
-)
+  <Accordion title="Tracing never breaks a run">
+    If the upload fails — network down, wrong token, endpoint unreachable — the failure is logged as a warning and your agent still returns its answer. Turn on `logging.basicConfig(level=logging.WARNING)` to see those messages.
+  </Accordion>
 
-agent = Agentor(
-    name="Support Agent",
-    instructions="You help triage tickets.",
-    model="gpt-5-mini",
-)
-run_config = get_run_config(
-    group_id="ticket-queue-jan-13",
-    metadata={"team": "support", "priority": "p1"},
-)
+  <Accordion title="Abandoning a stream skips the upload">
+    If you iterate `stream_chat()` and break out early, the run never finishes and its trace is not exported. `run()` and `arun()` always drain, so they always export.
+  </Accordion>
 
-result = Runner.run_sync(
-    agent.agent,
-    "Summarize today's urgent tickets.",
-    run_config=run_config,
-)
-```
+  <Accordion title="Grouping traces by session is not exposed yet">
+    Traces carry an agent name and timing, but there is no supported way to attach a `group_id` or custom metadata per run from the `Agentor` API. Use distinct agent names if you need to tell workloads apart in the dashboard.
+  </Accordion>
+</AccordionGroup>
 
----
+***
 
 ## Security considerations
 
 <Warning>
-Traces can include model inputs and tool outputs. Avoid sending secrets or sensitive data unless you intend to store it in Celesto.
+  Traces include model inputs and tool outputs. Avoid sending secrets or personal data unless you intend to store it in Celesto. Set `CELESTO_DISABLE_AUTO_TRACING=True` in environments where that is not acceptable.
 </Warning>
 
----
+***
 
 ## Troubleshooting
 
 <AccordionGroup>
   <Accordion title="No traces appear in the dashboard">
-    - Confirm you set `CELESTO_API_KEY` in the same environment where you run the agent.
-    - If you set `CELESTO_DISABLE_AUTO_TRACING=true`, enable tracing explicitly or call `setup_celesto_tracing`.
-    - If you use a custom endpoint, verify `CELESTO_BASE_URL` points to your Celesto API URL.
+    * Confirm `CELESTO_API_KEY` is set in the same environment that runs the agent.
+    * If `CELESTO_DISABLE_AUTO_TRACING` is set, unset it, pass `enable_tracing=True`, or pass an explicit `tracer=`.
+    * If you use a private deployment, check `CELESTO_BASE_URL` points at your Celesto API.
+    * Enable warning logs — a failed upload is reported there rather than raised.
+  </Accordion>
+
+  <Accordion title="A run appears with no tool spans">
+    Tool spans come from tool calls. If the model answered without calling anything, there is nothing to show. Check the `generation` span to see which tools were offered.
   </Accordion>
 </AccordionGroup>
+
+***
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Durable runs" icon="floppy-disk" href="/agentor/durable-runs">
+    The same events that make traces can be saved to disk and replayed.
+  </Card>
+
+  <Card title="Observability guide" icon="chart-line" href="/agentor/guides/observability">
+    Read token usage and tool history straight off a run result.
+  </Card>
+</CardGroup>

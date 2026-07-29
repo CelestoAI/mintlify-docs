@@ -327,18 +327,15 @@ if __name__ == "__main__":
 Connect agents to external MCP servers:
 
 ```python  theme={null}
-from agentor import Agentor, CelestoMCPHub
-from agents.mcp import MCPServerStreamableHttp
+from agentor import Agentor
+from agentor.mcp import MCPServer
 
-# Connect to external MCP server
-mcp_server = MCPServerStreamableHttp(
+# Connect to an external MCP server
+mcp_server = MCPServer(
+    url="https://api.example.com/mcp",
+    headers={"Authorization": "Bearer TOKEN"},
+    timeout=10,
     name="External Tools",
-    params={
-        "url": "https://api.example.com/mcp",
-        "headers": {"Authorization": "Bearer TOKEN"},
-        "timeout": 10,
-        "cache_tools_list": True
-    }
 )
 
 agent = Agentor(
@@ -346,6 +343,8 @@ agent = Agentor(
     tools=[mcp_server]
 )
 ```
+
+The agent opens a connection when a run starts, exposes the server's tools as ordinary tools, and closes it when the run ends. See the [MCP guide](/agentor/guides/mcp-servers) for the full API.
 
 ### Celesto MCP Hub
 

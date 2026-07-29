@@ -38,13 +38,12 @@ Example: You ship a Gmail MCP Server that already contains the OAuth token requi
 
 
 ```python
-from agentor.tools import GmailAPI
+from agentor.tools import GmailTool
 
-tool = GmailAPI(
-    scopes=["readonly"],
-    token="your-token-here",
-)
-result = tool.list_emails()
+# Reads credentials saved by superauth; defaults to GOOGLE_USER_CREDENTIALS
+# or ./credentials.json. Requires `pip install --pre "agentor[google]"`.
+tool = GmailTool(credentials_path="credentials.json")
+result = tool.list_messages(limit=10)
 print(result)
 ```
 

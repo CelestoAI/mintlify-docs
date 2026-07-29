@@ -11,7 +11,7 @@ description: "Legacy overview of Agentor, the open-source framework for building
 
 ## Prerequisites
 
-- Python 3.10 or higher
+- Python 3.11 or higher
 - An OpenAI API key (or other supported LLM provider)
 
 ## Get started in 3 steps
@@ -19,7 +19,7 @@ description: "Legacy overview of Agentor, the open-source framework for building
 <Steps>
   <Step title="Install">
     ```bash
-    pip install agentor
+    pip install --pre agentor
     ```
   </Step>
   <Step title="Build an Agent">
@@ -46,13 +46,13 @@ description: "Legacy overview of Agentor, the open-source framework for building
     Give your agent the ability to interact with the real world.
 
     ```python
-    from agentor.tools import WeatherAPI
+    from agentor.tools import GetWeatherTool
     from agentor import Agentor
 
     agent = Agentor(
         name="Weather Agent",
         model="gpt-5-mini",
-        tools=[WeatherAPI()]
+        tools=[GetWeatherTool()]
     )
     result = agent.run("What's the weather in London?")
     ```
