@@ -54,7 +54,7 @@ The decorator automatically generates JSON schemas from type hints and docstring
 
 ## Tool Registry
 
-Register tools globally for reuse across agents (src/agentor/tools/registry.py:23):
+Register tools globally for reuse across agents:
 
 ```python  theme={null}
 from agentor.engine.tools import RunContext
@@ -89,8 +89,8 @@ agent = Agentor(
 
 Agentor includes these built-in tools in the registry:
 
-* `get_weather` - Weather information (src/agentor/tools/registry.py:33)
-* `current_datetime` - Current date and time (src/agentor/tools/registry.py:43)
+* `get_weather` - Weather information
+* `current_datetime` - Current date and time
 
 List available tools:
 
@@ -103,7 +103,7 @@ print(tools)  # ('get_weather', 'current_datetime')
 
 ## BaseTool Class
 
-Create reusable tool classes with multiple capabilities (src/agentor/tools/base.py:18):
+Create reusable tool classes with multiple capabilities:
 
 ```python  theme={null}
 from agentor.tools.base import BaseTool, capability
@@ -134,7 +134,7 @@ agent = Agentor(
 
 ### Capability Decorator
 
-The `@capability` decorator (src/agentor/tools/base.py:12) marks methods as agent-callable tools:
+The `@capability` decorator marks methods as agent-callable tools:
 
 ```python  theme={null}
 def capability(func: Callable):
@@ -147,7 +147,7 @@ Each capability becomes a separate tool for the LLM.
 
 ### Dynamic Tools from Functions
 
-Create a tool from any function (src/agentor/tools/base.py:100):
+Create a tool from any function:
 
 ```python  theme={null}
 from agentor.tools.base import BaseTool
@@ -163,7 +163,7 @@ print(result)  # Weather in London is warm and sunny.
 
 ## Serving Tools as MCP Servers
 
-Serve any `BaseTool` as a standalone MCP server (src/agentor/tools/base.py:73):
+Serve any `BaseTool` as a standalone MCP server:
 
 ```python  theme={null}
 class WeatherTool(BaseTool):
@@ -229,7 +229,7 @@ result = shell.run_command("ls -la")
 
 ## Tool JSON Schema
 
-Convert tools to JSON schema for documentation (src/agentor/tools/base.py:58):
+Convert tools to JSON schema for documentation:
 
 ```python  theme={null}
 tool = WeatherTool()
@@ -292,7 +292,7 @@ The agent receives the error message and can adjust its strategy.
 
 ## Tool Context and Authentication
 
-Tools receive context with API keys and configuration (src/agentor/tools/registry.py:15):
+Tools receive context with API keys and configuration:
 
 ```python  theme={null}
 from dataclasses import dataclass

@@ -1,91 +1,43 @@
 ---
 title: "Deployment"
-description: "Deploy Agentor agents and MCP servers to production using Celesto AI, self-hosted uvicorn or gunicorn servers, Docker containers, or serverless platforms."
+description: "Deploy Agentor agents and MCP servers to production using self-hosted uvicorn or gunicorn servers, Docker containers, Kubernetes, or serverless platforms."
 ---
 
 ## Overview
 
-Agentor provides multiple deployment options:
+`agent.serve()` returns an ordinary ASGI app running under uvicorn, so anywhere
+you can run a Python web service will do:
 
-1. **Celesto AI Platform** - One-command deployment with observability
-2. **Self-hosted Servers** - Deploy with uvicorn, gunicorn, or Docker
-3. **Serverless** - Deploy to AWS Lambda, Cloud Run, etc.
-4. **ASGI Servers** - Use with any ASGI-compatible platform
+1. **Self-hosted Servers** - uvicorn, gunicorn, or Docker
+2. **Kubernetes** - a standard Deployment and Service
+3. **Serverless** - AWS Lambda, Cloud Run, and similar
+4. **ASGI Servers** - any ASGI-compatible platform
 
-## Celesto AI Deployment
+The app carries no authentication of its own. Put it behind whatever your
+infrastructure already uses.
 
-The fastest way to deploy agents to production.
+## Observability
 
-### Prerequisites
-
-```bash  theme={null}
-pip install --pre agentor
-```
-
-The `celesto` CLI is automatically installed with Agentor.
-
-### Deploy Command
-
-From your project directory:
-
-```bash  theme={null}
-celesto deploy
-```
-
-Your agent is deployed to:
-
-```
-https://api.celesto.ai/deploy/apps/<app-name>
-```
-
-### Configuration
-
-Create a `celesto.yaml` (optional):
-
-```yaml  theme={null}
-name: my-weather-agent
-runtime: python3.11
-env:
-  OPENAI_API_KEY: ${OPENAI_API_KEY}
-  WEATHER_API_KEY: ${WEATHER_API_KEY}
-```
-
-### Environment Variables
-
-Set required API keys:
-
-```bash  theme={null}
-export CELESTO_API_KEY="your-celesto-key"
-export OPENAI_API_KEY="your-openai-key"
-```
-
-Find your Celesto API key at: [https://celesto.ai/dashboard](https://celesto.ai/dashboard)
-
-### Observability
-
-Automatic tracing is enabled when `CELESTO_API_KEY` is set (src/agentor/core/agent.py:119):
+Tracing is off unless you ask for it. A trace carries prompts, tool arguments and
+tool results, so nothing leaves your process by default:
 
 ```python  theme={null}
 agent = Agentor(
     name="Production Agent",
     model="gpt-4o",
-    # Tracing auto-enabled with CELESTO_API_KEY
+    enable_tracing=True,   # needs CELESTO_API_KEY
 )
 ```
 
-View traces at: [https://celesto.ai/observe](https://celesto.ai/observe)
-
-Disable auto-tracing:
-
-```bash  theme={null}
-export CELESTO_DISABLE_AUTO_TRACING=True
-```
+You can also decide per run - `agent.run("...", tracing=False)` sends nothing for
+that call, and `tracing=True` traces one run without turning it on for the agent.
+See [Tracing](/agentor/tracing) for the full picture.
 
 ## Self-Hosted Deployment
 
 ### Local Development
 
-Run agents locally (src/agentor/core/agent.py:513):
+Run agents locally:
 
 ```python  theme={null}
 from agentor import Agentor
@@ -252,7 +204,7 @@ kubectl apply -f deployment.yaml
 
 ## MCP Server Deployment
 
-Deploy LiteMCP servers (src/agentor/mcp/server.py:14):
+Deploy LiteMCP servers:
 
 ```python  theme={null}
 from agentor.mcp import LiteMCP
@@ -280,7 +232,7 @@ gunicorn mcp_server:app \
 
 ### MCP as ASGI App
 
-LiteMCP is a full ASGI application (src/agentor/mcp/server.py:50):
+LiteMCP is a full ASGI application:
 
 ```python  theme={null}
 # Use with any ASGI server
@@ -349,7 +301,6 @@ from dataclasses import dataclass
 class Config:
     base_url: str = os.getenv("CELESTO_BASE_URL", "https://api.celesto.ai")
     api_key: str | None = os.getenv("CELESTO_API_KEY")
-    disable_auto_tracing: bool = os.getenv("CELESTO_DISABLE_AUTO_TRACING", "False") == "True"
 ```
 
 ### Required Environment Variables
@@ -360,7 +311,7 @@ export OPENAI_API_KEY="sk-..."
 export ANTHROPIC_API_KEY="sk-ant-..."
 export GEMINI_API_KEY="..."
 
-# Celesto Platform (optional)
+# Celesto tracing (only needed if you pass enable_tracing=True)
 export CELESTO_API_KEY="..."
 
 # Tool-specific keys
@@ -370,7 +321,7 @@ export GITHUB_TOKEN="..."
 
 ## Health Checks
 
-Agents automatically include health endpoints (src/agentor/core/agent.py:573):
+Agents automatically include health endpoints:
 
 ```python  theme={null}
 @app.get("/health")
@@ -498,7 +449,7 @@ gunicorn server:app \
 
 ### Concurrency Control
 
-Limit concurrent requests (src/agentor/core/agent.py:393):
+Limit concurrent requests:
 
 ```python  theme={null}
 results = await agent.arun(

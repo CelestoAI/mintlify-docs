@@ -558,20 +558,16 @@ if __name__ == "__main__":
 
 ## Deployment
 
-Deploy your MCP server to Celesto:
-
-```bash  theme={null}
-celesto deploy
-```
-
-Your MCP server will be available at:
+LiteMCP is a FastAPI app, so host it like any other ASGI service - see
+[Serve agents as an API](/agentor/deploy). The MCP endpoint is served relative to
+wherever you mount it:
 
 ```
-https://api.celesto.ai/deploy/apps/<app-name>/mcp
+<your-host>/mcp
 ```
 
 ## Next Steps
 
 * Learn about [agent-to-agent communication](/agentor/guides/agent-communication) using A2A protocol
 * Set up [observability](/agentor/guides/observability) for your MCP servers
-* Deploy with the [Celesto CLI](/agentor/guides/deployment)
+* [Serve your MCP server](/agentor/deploy) behind your own infrastructure

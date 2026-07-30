@@ -82,11 +82,8 @@ A run that ends in `max_turns` or `failed` is traced with that status rather tha
 ## Environment variables
 
 <ParamField path="CELESTO_API_KEY" type="string" required>
-  Enables tracing and authenticates trace uploads to Celesto.
-</ParamField>
-
-<ParamField path="CELESTO_DISABLE_AUTO_TRACING" type="boolean" default="false">
-  Stop Agentor from tracing automatically when `CELESTO_API_KEY` is set. Useful in tests.
+  Authenticates trace uploads to Celesto. Holding the key does not by itself
+  enable tracing - you also pass `enable_tracing=True` or `tracing=True`.
 </ParamField>
 
 <ParamField path="CELESTO_BASE_URL" type="string" default="https://api.celesto.ai/v1">
@@ -164,7 +161,10 @@ An explicit `tracer=` always wins over the one built from `CELESTO_API_KEY`, so 
 ## Security considerations
 
 <Warning>
-  Traces include model inputs and tool outputs. Avoid sending secrets or personal data unless you intend to store it in Celesto. Set `CELESTO_DISABLE_AUTO_TRACING=True` in environments where that is not acceptable.
+  Traces include model inputs and tool outputs. Nothing is sent unless you ask
+  for it, so the safe default needs no action. Where a particular run must not
+  leave the process, pass `tracing=False` on that call - it overrides an agent
+  configured with `enable_tracing=True`.
 </Warning>
 
 ***
@@ -174,7 +174,8 @@ An explicit `tracer=` always wins over the one built from `CELESTO_API_KEY`, so 
 <AccordionGroup>
   <Accordion title="No traces appear in the dashboard">
     * Confirm `CELESTO_API_KEY` is set in the same environment that runs the agent.
-    * If `CELESTO_DISABLE_AUTO_TRACING` is set, unset it, pass `enable_tracing=True`, or pass an explicit `tracer=`.
+    * Confirm you opted in: tracing is off unless you pass `enable_tracing=True`, an explicit `tracer=`, or `tracing=True` on the call.
+    * Check no `tracing=False` is being passed on the run.
     * If you use a private deployment, check `CELESTO_BASE_URL` points at your Celesto API.
     * Enable warning logs — a failed upload is reported there rather than raised.
   </Accordion>

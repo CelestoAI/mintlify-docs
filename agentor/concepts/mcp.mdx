@@ -29,7 +29,7 @@ LiteMCP offers key advantages over the official FastMCP implementation:
 
 ## Quick Start
 
-Create an MCP server with the decorator API (src/agentor/mcp/server.py:14):
+Create an MCP server with the decorator API:
 
 ```python  theme={null}
 from agentor.mcp import LiteMCP
@@ -67,7 +67,7 @@ mcp = LiteMCP(
 
 ### Serving Options
 
-Serve with custom configuration (src/agentor/mcp/server.py:58):
+Serve with custom configuration:
 
 ```python  theme={null}
 mcp.serve(
@@ -232,7 +232,7 @@ LiteMCP automatically resolves dependencies before calling tools.
 
 ## ASGI Application
 
-LiteMCP is a full ASGI application (src/agentor/mcp/server.py:50):
+LiteMCP is a full ASGI application:
 
 ```python  theme={null}
 app = LiteMCP(name="my-server")
@@ -348,7 +348,7 @@ The agent opens a connection when a run starts, exposes the server's tools as or
 
 ### Celesto MCP Hub
 
-Connect to Celesto's hosted MCP servers (src/agentor/core/agent.py:676):
+Connect to Celesto's hosted MCP servers:
 
 ```python  theme={null}
 from agentor import CelestoMCPHub

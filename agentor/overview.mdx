@@ -63,7 +63,7 @@ description: "Legacy overview of Agentor, the open-source framework for building
 
 ## Observability and tracing
 
-Agentor supports tracing for agent runs and tool calls. Set `CELESTO_API_KEY` to enable automatic tracing, or enable it explicitly in the agent configuration.
+Agentor supports tracing for agent runs and tool calls. It is off unless you ask for it: set `CELESTO_API_KEY` and pass `enable_tracing=True` on the agent, or `tracing=True` on a single call.
 
 <Card title="Set up tracing" icon="chart-line" horizontal href="/agentor/agents-api#tracing-and-observability">
   Follow the step-by-step tracing setup guide.

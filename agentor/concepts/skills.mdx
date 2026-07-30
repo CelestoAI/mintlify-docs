@@ -61,7 +61,7 @@ ffmpeg -i input.mp4 -vf "scale=480:-1" -r 10 output.gif
 
 ## Loading Skills
 
-The `Skills` class (src/agentor/skills.py:8) loads skills from paths:
+The `Skills` class loads skills from paths:
 
 ```python
 from agentor.skills import Skills
@@ -85,7 +85,7 @@ class Skills:
 
 ## Using Skills with Agents
 
-Pass skill paths to the agent constructor (src/agentor/core/agent.py:182):
+Pass skill paths to the agent constructor:
 
 ```python  theme={null}
 from agentor import Agentor
@@ -120,7 +120,7 @@ agent = Agentor(
 
 ## Skill Injection
 
-Skills are injected into the agent's system prompt as XML (src/agentor/core/agent.py:227):
+Skills are injected into the agent's system prompt as XML:
 
 ```python  theme={null}
 def _inject_skills(self, skills: List[str]) -> str:
@@ -134,7 +134,7 @@ def _inject_skills(self, skills: List[str]) -> str:
 
 ### XML Format
 
-Skills are serialized to XML (src/agentor/skills.py:34):
+Skills are serialized to XML:
 
 ```xml  theme={null}
 <available_skills>
@@ -336,7 +336,7 @@ agent = Agentor(
 
 ## JSON Serialization
 
-Export skills to JSON (src/agentor/skills.py:43):
+Export skills to JSON:
 
 ```python  theme={null}
 skill = Skills.load_from_path(".skills/my-skill")
@@ -356,7 +356,7 @@ Output:
 
 ## Error Handling
 
-The loader validates skill structure (src/agentor/skills.py:14):
+The loader validates skill structure:
 
 ```python  theme={null}
 # Raises FileNotFoundError if path doesn't exist
