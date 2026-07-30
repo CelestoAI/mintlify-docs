@@ -194,17 +194,17 @@ Deploy your agent to Celesto AI's serverless platform:
     ```
   </Step>
 
-  <Step title="Deploy">
-    Deploy your agent with a single command:
+  <Step title="Serve it">
+    `serve()` runs an ordinary ASGI app under uvicorn, so host it the way you
+    host any other Python service - a container, a process manager, or a
+    serverless runtime. See [Serve agents as an API](/agentor/deploy).
 
     ```bash  theme={null}
-    celesto deploy
+    python weather_agent.py
     ```
 
-    Your agent will be available at:
-
     ```
-    https://api.celesto.ai/deploy/apps/<app-name>
+    http://localhost:8000/chat
     ```
   </Step>
 </Steps>

@@ -185,7 +185,7 @@
               "agentor/deploy",
               "agentor/tracing",
               "agentor/agent-to-agent",
-              "agentor/skills"
+              "agentor/concepts/skills"
             ]
           },
           {
@@ -218,8 +218,7 @@
               "agentor/guides/custom-tools",
               "agentor/guides/streaming",
               "agentor/guides/observability",
-              "agentor/guides/agent-communication",
-              "agentor/guides/deployment"
+              "agentor/guides/agent-communication"
             ]
           },
           {

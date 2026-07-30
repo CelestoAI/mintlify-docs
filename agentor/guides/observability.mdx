@@ -31,7 +31,9 @@ result = agent.run("What's the weather in Paris?")
 Each run becomes one trace: an agent span, a span per model call, and a span per tool call, with timings and token counts throughout. See [Tracing](/agentor/tracing) for setup options, private endpoints, and what each span holds.
 
 <Tip>
-  Turn it off in tests with `export CELESTO_DISABLE_AUTO_TRACING=True`. Runs behave identically; nothing is uploaded.
+  Tests need no special handling - tracing is off unless you ask for it. To keep
+  one run out of an agent that has it on, pass `tracing=False` on that call. Runs
+  behave identically either way; only the upload is skipped.
 </Tip>
 
 ## Read a run in code
@@ -223,7 +225,7 @@ See the [streaming guide](/agentor/guides/streaming) for the full event shape.
     Show progress to users while the agent works.
   </Card>
 
-  <Card title="Deployment" icon="cloud" href="/agentor/guides/deployment">
+  <Card title="Deployment" icon="cloud" href="/agentor/deploy">
     Ship the agent, with observability already on.
   </Card>
 </CardGroup>

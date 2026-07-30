@@ -458,21 +458,17 @@ agent_card = discover_agent("http://localhost:8000")
 
 ## Deployment
 
-Deploy A2A-enabled agents to Celesto:
-
-```bash  theme={null}
-celesto deploy
-```
-
-Your agent will be available at:
+`agent.serve()` exposes the A2A endpoints on the same ASGI app, so deploying an
+A2A-enabled agent is just deploying that app - see
+[Serve agents as an API](/agentor/deploy). Relative to wherever you host it:
 
 ```
-https://api.celesto.ai/deploy/apps/<app-name>
-https://api.celesto.ai/deploy/apps/<app-name>/.well-known/agent-card.json
+<your-host>/
+<your-host>/.well-known/agent-card.json
 ```
 
 ## Next Steps
 
 * Enable [streaming responses](/agentor/guides/streaming) for real-time agent communication
 * Set up [observability](/agentor/guides/observability) to monitor agent interactions
-* Learn about [deployment](/agentor/guides/deployment) best practices
+* Learn about [serving and deployment](/agentor/deploy)

@@ -11,7 +11,7 @@ Everything the loop does is emitted as an event. Streaming, the final result, [t
 
 ## Agent Class
 
-The core `Agentor` class (src/agentor/core/agent.py:138) provides the primary interface for building agents:
+The core `Agentor` class provides the primary interface for building agents:
 
 ```python  theme={null}
 from agentor import Agentor
@@ -85,7 +85,7 @@ agent = Agentor(
 
 ## Creating Agents from Markdown
 
-Agents can be defined in markdown files with YAML frontmatter (src/agentor/core/agent.py:236):
+Agents can be defined in markdown files with YAML frontmatter:
 
 ```markdown  theme={null}
 ---
@@ -110,7 +110,7 @@ result = agent.run("Weather in Paris?")
 
 ### Synchronous Execution
 
-The `run()` method (src/agentor/core/agent.py:367) provides synchronous execution:
+The `run()` method provides synchronous execution:
 
 ```python  theme={null}
 result = agent.run("What is the weather in London?")
@@ -119,7 +119,7 @@ print(result)
 
 ### Asynchronous Execution
 
-The `arun()` method (src/agentor/core/agent.py:370) supports async execution with batch processing:
+The `arun()` method supports async execution with batch processing:
 
 ```python  theme={null}
 import asyncio
@@ -137,7 +137,7 @@ results = await agent.arun(
 
 #### Fallback Models
 
-Handle rate limits gracefully with fallback models (src/agentor/core/agent.py:415):
+Handle rate limits gracefully with fallback models:
 
 ```python  theme={null}
 result = await agent.arun(
@@ -150,14 +150,14 @@ If the primary model fails with rate limit or API errors, Agentor automatically 
 
 ### Streaming Responses
 
-Stream agent responses in real-time (src/agentor/core/agent.py:487):
+Stream agent responses in real-time:
 
 ```python  theme={null}
 async for chunk in agent.chat("Tell me about AI", stream=True):
     print(chunk, end="", flush=True)
 ```
 
-The `stream_chat()` method (src/agentor/core/agent.py:498) returns an async iterator of `AgentOutput` objects:
+The `stream_chat()` method returns an async iterator of `AgentOutput` objects:
 
 ```python  theme={null}
 async for event in agent.stream_chat("Question", serialize=False):
@@ -167,7 +167,7 @@ async for event in agent.stream_chat("Question", serialize=False):
 
 ## Model Configuration
 
-Configure model behavior with `ModelSettings` (src/agentor/core/agent.py:211):
+Configure model behavior with `ModelSettings`:
 
 ```python  theme={null}
 from agentor import Agentor, ModelSettings
@@ -215,7 +215,7 @@ def get_weather(wrapper: RunContext, city: str) -> str:
 
 ## Tracing and Observability
 
-Enable automatic tracing with Celesto AI (src/agentor/core/agent.py:119):
+Opt in to tracing with Celesto AI:
 
 ```python  theme={null}
 agent = Agentor(
@@ -225,13 +225,10 @@ agent = Agentor(
 )
 ```
 
-Traces are automatically sent to `https://celesto.ai/observe`.
+Traces appear at `https://celesto.ai/observe`.
 
-To disable auto-tracing:
-
-```bash  theme={null}
-export CELESTO_DISABLE_AUTO_TRACING=True
-```
+Tracing is off unless you ask for it, so there is nothing to disable. To exclude
+a single run from an agent that has it on, pass `tracing=False` on that call.
 
 ## Next Steps
 

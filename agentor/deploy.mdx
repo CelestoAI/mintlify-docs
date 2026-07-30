@@ -1,10 +1,12 @@
 ---
-title: "Run agents in cloud"
-sidebarTitle: "Run Agents in Cloud"
-description: "Serve Agentor agents as production REST APIs and deploy them to Celesto's cloud or your own infrastructure with the built-in serve command."
+title: "Serve agents as an API"
+sidebarTitle: "Serve Agents"
+description: "Serve Agentor agents as production REST APIs with serve(), then host the resulting ASGI app on your own infrastructure with Docker or Kubernetes."
 ---
 
 You can connect an agent to other applications and services by exposing an API endpoint. Agentor makes it easy to create a production-ready server.
+
+`agent.serve()` returns an ordinary ASGI app running under uvicorn, so you host it the way you host any other Python service. It adds no authentication of its own.
 
 ## Serve an Agent as API
 
@@ -38,22 +40,18 @@ print(response.content)
 ```
 
 
-```python Cloud Deployment
-import os
+```python Remote Server
 import requests
 
-URL = "https://api.celesto.ai/v1/deploy/apps/APP-NAME/chat"
-CELESTO_API_KEY = os.environ.get("CELESTO_API_KEY")
-
-headers = {
-    "Authorization": f"Bearer {CELESTO_API_KEY}",
-    "Content-Type": "application/json",
-}
+# Wherever you are hosting the agent. `serve()` adds no authentication of its
+# own, so put it behind whatever your infrastructure already uses.
+URL = "https://agents.example.com/chat"
 
 response = requests.post(
     URL,
     json={"input": "how are you?"},
-    headers=headers,
+    headers={"Content-Type": "application/json"},
+    timeout=(5, 120),
 )
 print(response.content)
 ```
@@ -70,29 +68,6 @@ curl -X 'POST' \
 ```
 
 </CodeGroup>
-
-## Run Agent in Managed Cloud
-
-Agentor comes with a built-in CLI to deploy agents to the cloud with a single command - `celesto deploy`.
-
-Celesto provides a serverless platform to run agents, which means you only pay when your agent is running.
-
-```bash
-✓ Building agent...
-✓ Pushing to Celesto Cloud...
-✓ Deploying agent...
-
-🚀 Agent deployed successfully!
-
-Endpoint: https://api.celesto.ai/v1/apps/your-agent-name
-Dashboard: https://celesto.ai/apps/your-agent-name
-```
-
-<Tip>
-  Your agent is now live and accessible via the API endpoint. Visit the [dashboard](https://celesto.ai) to monitor performance and manage settings.
-</Tip>
-
----
 
 ## Self-Hosted Deployment
 

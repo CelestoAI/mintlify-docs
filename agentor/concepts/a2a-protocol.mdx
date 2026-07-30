@@ -18,7 +18,7 @@ Every agent served with `agent.serve()` automatically becomes A2A-compatible wit
 
 ## Quick Start
 
-Serving an agent automatically enables A2A protocol (src/agentor/core/agent.py:513):
+Serving an agent automatically enables A2A protocol:
 
 ```python  theme={null}
 from agentor import Agentor
@@ -41,7 +41,7 @@ http://localhost:8000/.well-known/agent-card.json
 
 ## Agent Card
 
-The agent card describes agent capabilities, endpoints, and skills (src/agentor/a2a.py:53):
+The agent card describes agent capabilities, endpoints, and skills:
 
 ```json  theme={null}
 {
@@ -70,7 +70,7 @@ The agent card describes agent capabilities, endpoints, and skills (src/agentor/
 
 ### Agent Capabilities
 
-The `capabilities` object (src/agentor/a2a.py:40) indicates:
+The `capabilities` object indicates:
 
 * **streaming** - Supports Server-Sent Events for real-time responses
 * **statefulness** - Maintains conversation context across requests
@@ -78,7 +78,7 @@ The `capabilities` object (src/agentor/a2a.py:40) indicates:
 
 ## A2A Controller
 
-The `A2AController` (src/agentor/a2a.py:20) implements the A2A protocol on top of FastAPI:
+The `A2AController` implements the A2A protocol on top of FastAPI:
 
 ```python  theme={null}
 from agentor.a2a import A2AController, AgentSkill
@@ -101,7 +101,7 @@ controller = A2AController(
 
 ### Custom Endpoints
 
-Add custom routes to the controller (src/agentor/core/agent.py:554):
+Add custom routes to the controller:
 
 ```python  theme={null}
 controller.add_api_route("/chat", chat_handler, methods=["POST"])
@@ -110,7 +110,7 @@ controller.add_api_route("/health", health_handler, methods=["GET"])
 
 ## JSON-RPC Methods
 
-A2A protocol implements these JSON-RPC 2.0 methods (src/agentor/a2a.py:90):
+A2A protocol implements these JSON-RPC 2.0 methods:
 
 ### message/send
 
@@ -136,7 +136,7 @@ Send a non-streaming message:
 
 ### message/stream
 
-Send a streaming message with Server-Sent Events (src/agentor/a2a.py:114):
+Send a streaming message with Server-Sent Events:
 
 ```json  theme={null}
 {
@@ -190,7 +190,7 @@ Cancel a running task:
 
 ## Streaming Implementation
 
-The streaming handler (src/agentor/core/agent.py:579) sends events in Server-Sent Events format:
+The streaming handler sends events in Server-Sent Events format:
 
 ```python  theme={null}
 async def _message_stream_handler(
@@ -278,7 +278,7 @@ class JSONRPCReturnCodes:
 
 ## Custom Handlers
 
-Register custom A2A handlers (src/agentor/core/agent.py:576):
+Register custom A2A handlers:
 
 ```python  theme={null}
 def _register_a2a_handlers(self, controller: A2AController):
@@ -304,7 +304,7 @@ controller.add_handler("custom/method", custom_handler)
 
 ## Agent Skills in A2A
 
-Tools are automatically exposed as agent skills (src/agentor/core/agent.py:535):
+Tools are automatically exposed as agent skills:
 
 ```python  theme={null}
 skills = [
@@ -366,7 +366,7 @@ curl -X POST http://localhost:8000/ \
 
 ## Integration with FastAPI
 
-The A2A controller is a FastAPI router (src/agentor/core/agent.py:559):
+The A2A controller is a FastAPI router:
 
 ```python  theme={null}
 from fastapi import FastAPI

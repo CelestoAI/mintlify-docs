@@ -153,11 +153,8 @@ agent = Agentor(
 
 View traces at [celesto.ai/observe](https://celesto.ai/observe).
 
-To disable automatic tracing:
-
-```bash
-export CELESTO_DISABLE_AUTO_TRACING=True
-```
+Tracing is off unless you ask for it. Opt in per agent with
+`enable_tracing=True`, or per call with `agent.run("...", tracing=True)`.
 
 ## Next steps
 
