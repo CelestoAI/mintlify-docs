@@ -19,6 +19,10 @@ Publish a port when you need to:
 - Receive webhooks during a test run.
 - Inspect a notebook, dashboard, or development server.
 
+## What you can publish
+
+Pick any application port that your service listens on inside the computer, from `1024` through `65535`. A computer can have up to four ports published at a time — unpublish one before adding another once you reach the limit. Celesto system ports are reserved for the platform and cannot be published.
+
 ## Publish a service
 
 The following example starts a simple HTTP server on port `8000`, publishes the port, prints the public URL, lists published ports, and then removes the published port.

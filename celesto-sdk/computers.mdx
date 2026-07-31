@@ -179,6 +179,8 @@ print(f"Total: {len(computers)}")
 
 Publishing a port gives your computer a public HTTPS URL. Use it when an app, API server, or notebook running inside the computer needs to be reachable from outside the sandbox.
 
+Pick any application port from `1024` through `65535`. A computer can have up to four ports published at a time, and Celesto system ports are reserved for the platform.
+
 ```python publish_port.py
 from celesto import Computer
 
@@ -441,6 +443,8 @@ console.log(`Total: ${computers.length}`);
 ## Publish a port
 
 Publishing a port gives your computer a public HTTPS URL. Use it when an app, API server, or notebook running inside the computer needs to be reachable from outside the sandbox.
+
+Pick any application port from `1024` through `65535`. A computer can have up to four ports published at a time, and Celesto system ports are reserved for the platform.
 
 ```ts publish-port.ts
 import { Computer } from "@celestoai/sdk";
