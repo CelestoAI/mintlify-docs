@@ -23,9 +23,12 @@ Agentor(
     skills: Optional[List[str]] = None,
     enable_tracing: bool = False,
     max_turns: int = 20,
+    max_tool_failures: int = 2,
     store: Any = None,
     base_url: Optional[str] = None,
     tracer: Any = None,
+    trace_group_id: Optional[str] = None,
+    trace_metadata: Optional[Dict[str, Any]] = None,
     engine: Optional[Literal["native"]] = None,
 )
 ```
@@ -78,11 +81,15 @@ Agentor(
 </ParamField>
 
 <ParamField path="enable_tracing" type="bool" default="False">
-  Turn on Celesto tracing explicitly. Requires `CELESTO_API_KEY`, and raises if it is missing. Tracing is already automatic when that variable is set.
+  Turn on Celesto tracing for this agent. Requires `CELESTO_API_KEY`, and raises if it is missing. Tracing is off by default; setting `CELESTO_API_KEY` alone does not enable it. See [Tracing](/agentor/tracing).
 </ParamField>
 
 <ParamField path="max_turns" type="int" default="20">
   How many model calls a run may make before giving up. A run that hits the limit ends with `status="max_turns"` instead of raising.
+</ParamField>
+
+<ParamField path="max_tool_failures" type="int" default="2">
+  How many times any one tool may raise before Agentor stops offering it to the model. Applies per tool, per run — so a run with two tools has a budget of `max_tool_failures` for each. Set higher for tools that are legitimately flaky, or lower to fail fast.
 </ParamField>
 
 <ParamField path="store" type="Store" default="None">
@@ -94,7 +101,15 @@ Agentor(
 </ParamField>
 
 <ParamField path="tracer" type="CelestoTracer" default="None">
-  A tracer built with `setup_celesto_tracing`. Takes precedence over the one Agentor builds from `CELESTO_API_KEY`. See [Tracing](/agentor/tracing).
+  A tracer built with `setup_celesto_tracing`. Passing one turns tracing on for the agent — you do not also need `enable_tracing=True`. See [Tracing](/agentor/tracing).
+</ParamField>
+
+<ParamField path="trace_group_id" type="str" default="None">
+  Optional group id attached to every trace this agent exports. Traces sharing an id are grouped together in the Celesto dashboard, so use it to correlate the runs that make up one user session, one job, or one request. See [Tracing](/agentor/tracing).
+</ParamField>
+
+<ParamField path="trace_metadata" type="Dict[str, Any]" default="None">
+  Optional dictionary of key-value pairs attached to every trace this agent exports. Useful for tagging environment, tenant, or experiment so the dashboard can filter by it.
 </ParamField>
 
 <ParamField path="engine" type='Literal["native"]' default="None">
@@ -112,8 +127,13 @@ Agentor(
 Run the agent synchronously.
 
 ```python  theme={null}
-def run(input: str) -> RunResult
+def run(input: str, tracing: Optional[bool] = None) -> RunResult
 ```
+
+**Parameters:**
+
+* `input` (str): the prompt
+* `tracing` (bool | None): override tracing for this call. `None` keeps the agent's configuration, `False` sends nothing for this run, `True` traces it even when the agent has tracing off (requires `CELESTO_API_KEY`). See [Tracing](/agentor/tracing).
 
 **Returns:** a [`RunResult`](#runresult).
 
@@ -143,6 +163,7 @@ async def arun(
     limit_concurrency: int = 10,
     max_turns: Optional[int] = None,
     fallback_models: Optional[List[str]] = None,
+    tracing: Optional[bool] = None,
 ) -> RunResult | List[RunResult]
 ```
 
@@ -152,6 +173,7 @@ async def arun(
 * `limit_concurrency` (int): maximum concurrent runs when `input` is a list of prompts (default: 10)
 * `max_turns` (int): turn budget for this call. Defaults to the agent's `max_turns`
 * `fallback_models` (List\[str]): models to try if the primary one is rate limited or errors. Configured temperature and token limits carry across
+* `tracing` (bool | None): override tracing for this call. `None` keeps the agent's configuration, `False` sends nothing, `True` traces it even when the agent has tracing off. When `input` is a batch, the flag applies to every prompt
 
 ```python  theme={null}
 import asyncio
@@ -218,8 +240,16 @@ async def chat(
     input: str,
     stream: bool = False,
     serialize: bool = True,
+    tracing: Optional[bool] = None,
 )
 ```
+
+**Parameters:**
+
+* `input` (str): user message
+* `stream` (bool): return an async iterator instead of a `RunResult`
+* `serialize` (bool): when streaming, yield JSON strings (default) or `AgentOutput` objects
+* `tracing` (bool | None): override tracing for this call, same semantics as [`run`](#run)
 
 **Returns:** a `RunResult`, or an async iterator when `stream=True`.
 
@@ -231,6 +261,7 @@ Stream the agent's progress as it works.
 async def stream_chat(
     input: str,
     serialize: bool = True,
+    tracing: Optional[bool] = None,
 ) -> AsyncIterator[Union[str, AgentOutput]]
 ```
 
@@ -238,6 +269,7 @@ async def stream_chat(
 
 * `input` (str): user message
 * `serialize` (bool): yield JSON strings (default) or `AgentOutput` objects
+* `tracing` (bool | None): override tracing for this call, same semantics as [`run`](#run)
 
 ```python  theme={null}
 import asyncio
