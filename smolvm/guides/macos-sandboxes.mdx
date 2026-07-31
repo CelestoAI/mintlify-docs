@@ -124,32 +124,20 @@ After the one-time setup, you only need two commands: create the sandbox, then o
   </Step>
 </Steps>
 
-## Copy text from your Mac
+## Copy and paste between your Mac and the sandbox
 
-Until clipboard sharing is available, use a temporary browser note to move text from your Mac into the sandbox.
+Copy and paste works in both directions between your Mac and a macOS sandbox out of the box. Copy on one side, paste on the other — no extra setup.
 
-<Steps>
-  <Step title="Choose a unique note address">
-    Add a unique, hard-to-guess phrase to `https://notepad.pw/`. For example, a phrase such as `maple-comet-7429` produces this address:
+If you would rather keep the two clipboards separate, turn clipboard sync off when you create the sandbox:
 
-    ```text
-    https://notepad.pw/maple-comet-7429
-    ```
+```bash
+smolvm sandbox create --os macos --name private-mac --no-clipboard
+```
 
-    Use your own random phrase instead of the example above.
-  </Step>
-
-  <Step title="Paste the text on your Mac">
-    Open your note address in a browser on your Mac, then paste the text you want to transfer.
-  </Step>
-
-  <Step title="Copy the text in the sandbox">
-    Open Safari in the macOS sandbox and visit the same note address. Copy the text into an app inside the sandbox, then clear the note when you finish.
-  </Step>
-</Steps>
+The choice is saved with the sandbox, so stopping and starting it later keeps the same setting.
 
 <Warning>
-  Anyone who knows the note address may be able to read its contents. Use this workaround only for non-sensitive text. Keep passwords, API keys, personal information, and other secrets out of the note.
+  With clipboard sync on, text you copy on your Mac is readable from inside the running sandbox, including passwords, API keys, and other secrets. Use `--no-clipboard` for sandboxes where you do not want the guest to see host clipboard contents.
 </Warning>
 
 ## Share a local folder
