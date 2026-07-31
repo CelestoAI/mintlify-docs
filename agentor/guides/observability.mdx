@@ -9,7 +9,7 @@ Those events go two ways. They are uploaded to Celesto as a [trace](/agentor/tra
 
 ## Send runs to Celesto
 
-Set one environment variable and every run is recorded:
+Set your Celesto API key and turn tracing on for the agent — a run is only recorded when both are true:
 
 ```bash
 export CELESTO_API_KEY="cel_..."
@@ -22,6 +22,7 @@ agent = Agentor(
     name="Support Agent",
     model="gpt-5-mini",
     tools=["get_weather"],
+    enable_tracing=True,
 )
 
 result = agent.run("What's the weather in Paris?")
@@ -178,7 +179,7 @@ print(failures[0].error)      # RuntimeError: database unavailable
 ```
 
 <Note>
-  The failure budget is fixed at two attempts per tool for agents built with `Agentor(...)`. It is configurable only on the lower-level `AgentLoop` via `max_tool_failures=`.
+  The failure budget defaults to two attempts per tool. Adjust it per agent with `Agentor(..., max_tool_failures=3)` — higher for tools that are legitimately flaky, lower to fail fast.
 </Note>
 
 ## Keep a copy of every run

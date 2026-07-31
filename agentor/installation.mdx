@@ -139,22 +139,22 @@ export CELESTO_API_KEY=your_api_key
 
 Get your key from the [Celesto dashboard](https://celesto.ai/dashboard).
 
-With `CELESTO_API_KEY` set, Agentor traces every run automatically:
+Tracing is off unless you ask for it. Opt in on the agent, or on a single call:
 
 ```python
 from agentor import Agentor
 
-# Tracing enabled automatically if CELESTO_API_KEY is set
 agent = Agentor(
     name="My Agent",
     model="gpt-5-mini",
+    enable_tracing=True,   # trace every run this agent makes
 )
+
+# Or trace one call from an otherwise-untraced agent.
+agent.run("Debug this", tracing=True)
 ```
 
-View traces at [celesto.ai/observe](https://celesto.ai/observe).
-
-Tracing is off unless you ask for it. Opt in per agent with
-`enable_tracing=True`, or per call with `agent.run("...", tracing=True)`.
+View traces at [celesto.ai/observe](https://celesto.ai/observe). See [Tracing](/agentor/tracing) for the full guide.
 
 ## Next steps
 

@@ -1,12 +1,12 @@
 ---
 title: "Tracing and Observability"
 sidebarTitle: "Tracing"
-description: "See every Agentor run in the Celesto dashboard — model calls, tool calls, timings, and token counts — with one environment variable."
+description: "See every Agentor run in the Celesto dashboard — model calls, tool calls, timings, and token counts — once you opt in."
 ---
 
 ## What tracing gives you
 
-A trace is a recording of one agent run. Set one environment variable and every run shows up in the Celesto dashboard, so you can:
+A trace is a recording of one agent run. Turn it on and every run shows up in the Celesto dashboard, so you can:
 
 * Follow an agent step by step instead of guessing from logs
 * See what each tool was given and what it returned
@@ -18,7 +18,7 @@ A trace is a recording of one agent run. Set one environment variable and every 
 </Frame>
 
 <Note>
-  Rebuilt in Agentor 0.1.0. Traces are now built from the agent's own event stream, so every run is covered — including streamed runs, resumed runs, and runs that raise.
+  Tracing is opt-in. A trace carries prompts, tool arguments, and tool results, so nothing leaves your process until you ask for it — a Celesto API key alone does not enable it.
 </Note>
 
 ***
@@ -34,8 +34,8 @@ A trace is a recording of one agent run. Set one environment variable and every 
     ```
   </Step>
 
-  <Step title="Run an agent">
-    That is the whole setup. With `CELESTO_API_KEY` set, Agentor traces every run and prints a one-line notice the first time it does.
+  <Step title="Turn tracing on">
+    Pass `enable_tracing=True` when building the agent. Every run it makes is then recorded.
 
     ```python
     from agentor import Agentor
@@ -43,13 +43,12 @@ A trace is a recording of one agent run. Set one environment variable and every 
     agent = Agentor(
         name="Support Agent",
         model="gpt-5-mini",
+        enable_tracing=True,
     )
     result = agent.run("Summarize the latest support tickets.")
     ```
 
-    <Tip>
-      Prefer to be explicit? `Agentor(..., enable_tracing=True)` turns tracing on and raises a clear error if the key is missing, instead of silently doing nothing.
-    </Tip>
+    Agentor raises with a clear message if `enable_tracing=True` is set without `CELESTO_API_KEY`, rather than silently doing nothing.
   </Step>
 
   <Step title="Verify">
@@ -60,6 +59,21 @@ A trace is a recording of one agent run. Set one environment variable and every 
     </Check>
   </Step>
 </Steps>
+
+## Trace one run
+
+`tracing=` on the call overrides whatever the agent was built with. Use it to exempt a sensitive input from an otherwise-traced agent, or to record a single call from an agent that normally does not:
+
+```python
+# Agent has tracing on — skip this one call.
+agent.run("Contains customer data", tracing=False)
+
+# Agent has tracing off — trace just this call.
+debug_agent = Agentor(name="Debug", model="gpt-5-mini")
+debug_agent.run("Why is this failing?", tracing=True)
+```
+
+Pass `None` (the default) to keep the agent's configuration. `tracing=` is accepted by `run`, `arun`, `chat`, and `stream_chat`. A per-run tracer is used for that call only — a single `tracing=True` never enrolls later runs.
 
 ***
 
@@ -128,7 +142,7 @@ result = agent.run("Summarize the latest support tickets.")
   How long to wait for the upload, in seconds.
 </ParamField>
 
-An explicit `tracer=` always wins over the one built from `CELESTO_API_KEY`, so you do not need to disable auto-tracing first.
+An explicit `tracer=` turns tracing on for the agent, so `enable_tracing=` is not needed alongside it.
 
 <Note>
   A tracer is a plain object, safe to share between agents, and it needs no shutdown or flush call. Each run uploads its own trace when it finishes.
@@ -151,8 +165,20 @@ An explicit `tracer=` always wins over the one built from `CELESTO_API_KEY`, so 
     If you iterate `stream_chat()` and break out early, the run never finishes and its trace is not exported. `run()` and `arun()` always drain, so they always export.
   </Accordion>
 
-  <Accordion title="Grouping traces by session is not exposed yet">
-    Traces carry an agent name and timing, but there is no supported way to attach a `group_id` or custom metadata per run from the `Agentor` API. Use distinct agent names if you need to tell workloads apart in the dashboard.
+  <Accordion title="Group traces by session and attach metadata">
+    Set `trace_group_id` and `trace_metadata` on the agent to tag every trace it produces. Traces sharing a `group_id` are grouped together in the dashboard, and metadata comes along for filtering and search.
+
+    ```python
+    agent = Agentor(
+        name="Support Agent",
+        model="gpt-5-mini",
+        enable_tracing=True,
+        trace_group_id="session-42",
+        trace_metadata={"env": "prod", "customer": "acme"},
+    )
+    ```
+
+    Both are optional and default to `None`.
   </Accordion>
 </AccordionGroup>
 
