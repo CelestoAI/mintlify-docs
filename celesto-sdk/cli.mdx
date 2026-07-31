@@ -137,9 +137,11 @@ celesto computer port unpublish einstein --port 8000
 
 | Command | Description |
 |---|---|
-| `celesto computer port publish NAME [--port N]` | Expose a port on the public internet. Defaults to `8000` |
+| `celesto computer port publish NAME [--port N]` | Expose an application port (`1024`–`65535`) on the public internet. Defaults to `8000` |
 | `celesto computer port list NAME` | List published ports for a computer |
 | `celesto computer port unpublish NAME [--port N]` | Stop exposing a port. Defaults to `8000` |
+
+A computer can have up to four ports published at a time, and Celesto system ports are reserved for the platform.
 
 ## Auto-resume stopped computers
 
