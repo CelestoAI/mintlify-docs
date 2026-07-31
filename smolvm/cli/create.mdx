@@ -53,6 +53,10 @@ smolvm sandbox create [OPTIONS]
   Allow writes to every shared folder from this command.
 </ParamField>
 
+<ParamField path="--clipboard / --no-clipboard" type="flag" default="--clipboard">
+  Share the clipboard between your Mac and a macOS sandbox desktop. On by default for macOS guests. Use `--no-clipboard` to keep the two clipboards separate. The choice is saved with the sandbox and applies across stop and start. See [Copy and paste between your Mac and the sandbox](/smolvm/guides/macos-sandboxes#copy-and-paste-between-your-mac-and-the-sandbox).
+</ParamField>
+
 <ParamField path="--yes" type="flag">
   Approve the one-time macOS image download and preparation without an interactive prompt.
 </ParamField>
