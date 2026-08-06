@@ -1,7 +1,7 @@
 ---
 title: "Install SmolVM on Linux or macOS"
 sidebarTitle: "Installation"
-description: "Install SmolVM on Linux or macOS using the install script or pip — sets up the Firecracker or QEMU backend automatically based on your platform."
+description: "Install SmolVM on Linux or macOS using the install script, pip, or build from source — sets up the Firecracker or QEMU backend automatically based on your platform."
 ---
 
 SmolVM runs your code inside a fast, secure virtual machine. Under the hood it uses Firecracker on Linux and QEMU on macOS — both are tools for running isolated virtual machines. You don't need to pick one; SmolVM detects your platform automatically.
@@ -33,6 +33,56 @@ On supported Linux and macOS systems, `pip install smolvm` pulls in the matching
 </Note>
 
 After setup on Linux, activate your new KVM group membership with `newgrp kvm`, or log out and back in.
+
+## Install from source
+
+Build SmolVM from source when you want the latest unreleased changes, or when you plan to modify SmolVM itself. This compiles the Rust helper package (`smolvm-core`) locally instead of downloading a prebuilt wheel.
+
+You need [Git](https://git-scm.com), [uv](https://docs.astral.sh/uv/) (the Python package manager SmolVM uses), and the [Rust toolchain](https://rustup.rs).
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/CelestoAI/SmolVM.git
+    cd SmolVM
+    ```
+  </Step>
+
+  <Step title="Build and install">
+    ```bash
+    uv sync --extra dev
+    ```
+
+    This creates a virtual environment, installs SmolVM's dependencies, and compiles `smolvm-core` from the Rust sources in the checkout.
+
+    <Check>
+      Confirm the local build loaded correctly:
+
+      ```bash
+      uv run python -m smolvm_core
+      ```
+
+      It prints a report of the native helpers available on your machine.
+    </Check>
+  </Step>
+
+  <Step title="Set up the host and verify">
+    ```bash
+    uv run smolvm setup
+    uv run smolvm doctor
+    ```
+
+    `smolvm setup` installs host dependencies — Firecracker on Linux, QEMU on macOS — and configures permissions. `smolvm doctor` confirms your machine is ready to run sandboxes.
+  </Step>
+</Steps>
+
+Run source-built commands with `uv run smolvm ...` from the repository directory, so they use the build in your checkout. To use a plain `smolvm` command instead, activate the environment with `source .venv/bin/activate`.
+
+<Tip>
+  Rebuild after changing Rust code with `uv sync --reinstall-package smolvm-core`, then rerun `uv run python -m smolvm_core` to confirm Python loads your new build.
+</Tip>
+
+For contribution guidelines, tests, and code style checks, see [CONTRIBUTING.md](https://github.com/CelestoAI/SmolVM/blob/main/CONTRIBUTING.md).
 
 ## Requirements
 
