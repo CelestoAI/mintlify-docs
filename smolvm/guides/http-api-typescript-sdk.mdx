@@ -50,6 +50,7 @@ OpenAPI spec: http://127.0.0.1:8000/openapi.json
 | `GET` | `/sandboxes` | List sandboxes on the host |
 | `GET` | `/sandboxes/{id}` | Get one sandbox's state |
 | `POST` | `/sandboxes/{id}/exec` | Run a command inside a sandbox |
+| `GET` | `/sandboxes/{id}/desktop` | Get the sandbox's desktop connection details |
 | `DELETE` | `/sandboxes/{id}` | Stop and delete a sandbox |
 
 ## Create a sandbox with curl
@@ -157,7 +158,36 @@ The wrapper groups operations under `smolvm.sandbox`:
 | `smolvm.sandbox.list()` | `GET /sandboxes` |
 | `smolvm.sandbox.get(id)` | `GET /sandboxes/{id}` |
 | `smolvm.sandbox.exec(id, body)` | `POST /sandboxes/{id}/exec` |
+| `smolvm.sandbox.desktop(id)` | `GET /sandboxes/{id}/desktop` |
 | `smolvm.sandbox.delete(id)` | `DELETE /sandboxes/{id}` |
+
+## Get sandbox desktop connection details
+
+Use `sandbox.desktop(id)` to get the details you need to open a sandbox's desktop viewer from a Node or TypeScript app. This is the SDK equivalent of the [`smolvm sandbox desktop`](/smolvm/guides/macos-sandboxes) CLI command, so you can wire the same workflow into a service or agent instead of shelling out.
+
+```typescript sandbox-desktop.ts
+import { Smolvm } from "smolvm";
+
+const smolvm = new Smolvm({
+  baseUrl: "http://127.0.0.1:8000",
+});
+
+const desktop = await smolvm.sandbox.desktop("vm-a1b2c3d4");
+
+console.log(desktop.protocol);   // "vnc"
+console.log(desktop.host);       // "127.0.0.1"
+console.log(desktop.port);       // e.g. 5900
+console.log(desktop.viewer_url); // URL to open in a desktop viewer
+```
+
+The returned `DesktopResponse` has:
+
+- `protocol` — the desktop protocol, currently `"vnc"`.
+- `host` — the loopback host the desktop is bound to.
+- `port` — the port the desktop is listening on.
+- `viewer_url` — a URL you can hand to a desktop viewer to open the session.
+
+Point your viewer at `viewer_url`, or build your own connection from `host` and `port`. The method throws if the sandbox has no desktop or the server rejects the request.
 
 <Note>
   The docs intentionally avoid an npm install command here. The release source includes the `ts/` package and generated client, but package publication should be verified before documenting a registry install path.
