@@ -11,7 +11,10 @@
     "light": "#FF5722",
     "dark": "#FF5722"
   },
-  "favicon": "favicon.png",
+  "favicon": {
+    "light": "favicon.png",
+    "dark": "/images/logo-v2.png"
+  },
   "banner": {
     "content": "SmolVM is open source. [Support the project with a star on GitHub →](https://github.com/celestoai/smolvm)",
     "dismissible": true
@@ -105,7 +108,7 @@
         ]
       },
       {
-        "tab": "Platform",
+        "tab": "Cloud",
         "groups": [
           {
             "group": "Start Here",
@@ -345,7 +348,6 @@
       "copy",
       "chatgpt",
       "mcp",
-      "cursor",
       "claude"
     ]
   },
@@ -358,15 +360,11 @@
   },
   "integrations": {
     "posthog": {
-      "apiKey": "phc_vjIHlkZ5iOYWdZx0LXiifLKGl53QehS8LjudWiuSRND"
+      "apiKey": "phc_vjIHlkZ5iOYWdZx0LXiifLKGl53QehS8LjudWiuSRND",
+      "sessionRecording": true
     },
     "gtm": {
       "tagId": "G-EYNQCSCZVJ"
-    }
-  },
-  "fonts": {
-    "heading": {
-      "family": "JetBrains Mono"
     }
   },
   "footer": {
