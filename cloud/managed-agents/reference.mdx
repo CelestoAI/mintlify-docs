@@ -1,0 +1,198 @@
+---
+title: "Managed agents SDK reference"
+sidebarTitle: "Reference"
+description: "Every namespace on ManagedAgentsClient — agents, runs, sessions, end users, and settings — and the typed errors they raise."
+---
+
+`ManagedAgentsClient` exposes five namespaces. They are named the same in Python and TypeScript, only cased to match each language.
+
+| Namespace | Python | TypeScript |
+| --- | --- | --- |
+| Agents | `client.agents` | `client.agents` |
+| Runs | `client.runs` | `client.runs` |
+| Sessions | `client.sessions` | `client.sessions` |
+| End users | `client.end_users` | `client.endUsers` |
+| Settings | `client.settings` | `client.settings` |
+
+The Python client is imported from the package root (`from celesto import ManagedAgentsClient`) and lives at `celesto.sdk.runtime`. The TypeScript client is exported from the package root (`import { ManagedAgentsClient } from "@celestoai/sdk"`) and from `@celestoai/sdk/agents`.
+
+Both clients read `CELESTO_API_KEY` from the environment when you do not pass a key. Use the Python client as a context manager, or call `close()` when you are done.
+
+## `agents`
+
+Create and version the agents your end users run. An agent is a named pointer at an immutable definition. Every update cuts a new version and moves the pointer; runs pin the version they started with, so a change never rewrites history.
+
+| Operation | Python | TypeScript |
+| --- | --- | --- |
+| Create an agent (returns version 1). | `agents.create(name=, model=, instructions=, config=, ...)` | `agents.create({ name, model, instructions, config, ... })` |
+| List one page of agents. | `agents.list(limit=, offset=, include_archived=)` | `agents.list({ limit, offset, includeArchived })` |
+| Iterate every agent. | `agents.iter_all()` | `agents.listAll()` |
+| Get an agent at its current version. | `agents.get(agent_id)` | `agents.get(agentId)` |
+| Replace the definition (cuts a new version). | `agents.update(agent_id, name=, model=, ...)` | `agents.update(agentId, { name, model, ... })` |
+| Archive an agent. Archived agents refuse new runs. | `agents.archive(agent_id)` | `agents.archive(agentId)` |
+| List one page of versions, newest first. | `agents.list_versions(agent_id, ...)` | `agents.listVersions(agentId, ...)` |
+| Iterate every version. | `agents.iter_versions(agent_id)` | `agents.listAllVersions(agentId)` |
+| Get one version. | `agents.get_version(agent_id, version_number)` | `agents.getVersion(agentId, versionNumber)` |
+| Roll back to an earlier version. | `agents.activate_version(agent_id, version_number)` | `agents.activateVersion(agentId, versionNumber)` |
+
+### `AgentConfig` is a closed allowlist
+
+`config` accepts only these keys. Any other key is refused before the request leaves your machine, so a typo raises `ConfigKeyNotAllowedError` rather than a 422 from the server:
+
+`temperature`, `top_p`, `max_tokens`, `max_output_tokens`, `frequency_penalty`, `presence_penalty`, `seed`, `stop`, `reasoning_effort`, `verbosity`, `max_turns`.
+
+In TypeScript these keys are camelCase (`topP`, `maxTokens`, `reasoningEffort`, and so on). The type also enforces them at compile time.
+
+## `runs`
+
+Run an agent for one of your end users, and read what happened.
+
+| Operation | Python | TypeScript |
+| --- | --- | --- |
+| Run and wait for the settled run. | `runs.create(agent_id, input=, end_user_id=, ...)` | `runs.create(agentId, { input, endUserId, ... })` |
+| Run and stream events as they happen. | `runs.stream(agent_id, input=, end_user_id=, ...)` | `runs.stream(agentId, { input, endUserId, ... })` |
+| Get a run by id. | `runs.get(run_id)` | `runs.get(runId)` |
+| List one page of stored events. | `runs.list_events(run_id, after_seq=, limit=)` | `runs.listEvents(runId, { afterSeq, limit })` |
+| Iterate every stored event. | `runs.iter_events(run_id)` | `runs.listAllEvents(runId)` |
+
+### Two methods, not one flag
+
+`runs.create` returns the settled run, including `output` and `usage`. `runs.stream` yields events. The return type never depends on an argument — there is no `stream=True` toggle.
+
+A failed run arrives as a `run.failed` event on the stream, not as an exception. Exceptions are reserved for runs that never started (`BudgetExceededError`, `SessionBusyError`, `AgentArchivedError`, and the others below).
+
+### Idempotency and retries
+
+`idempotency_key` / `idempotencyKey` is a first-class argument on `runs.create` and `runs.stream`. Sending the same key again returns the run that already happened instead of running the agent — and charging your end user — twice.
+
+Sessions run one at a time. If a second run arrives while the first is still going, Celesto refuses it with `SessionBusyError`. Pass `max_retries` / `maxRetries` to wait and try again; the SDK generates an idempotency key for you when you ask for retries, so a session-busy retry cannot charge twice.
+
+### Run events
+
+`runs.stream` yields `RunEvent` values. The known event names are:
+
+- `run.started`
+- `message.delta` — partial text, not stored, so it never appears on a replay.
+- `message.completed`
+- `tool.call`
+- `tool.result`
+- `usage` — token counts and cost for one generation.
+- `run.completed`
+- `run.failed`
+
+Event names this SDK does not know are silently ignored, so a server that adds an event tomorrow does not break a client shipped today.
+
+In TypeScript, `RunEvent` is a discriminated union on `name`, so switching on `event.name` narrows `event.data`.
+
+## `sessions`
+
+The conversations your end users have had. A session holds one end user's transcript with one agent. Runs on the same session share history; runs without a session get a fresh one.
+
+| Operation | Python | TypeScript |
+| --- | --- | --- |
+| List one page of an end user's sessions. | `sessions.list(end_user_id=, ...)` | `sessions.list({ endUserId, ... })` |
+| Iterate every session for an end user. | `sessions.iter_all(end_user_id=)` | `sessions.listAll({ endUserId })` |
+| Get a session and a page of its transcript. | `sessions.get(session_id, limit=, before_seq=)` | `sessions.get(sessionId, { limit, beforeSeq })` |
+| Iterate a session's messages, newest first. | `sessions.iter_messages(session_id)` | `sessions.listAllMessages(sessionId)` |
+
+Transcripts page backwards: the most recent messages come first, and `before_seq` / `beforeSeq` asks for what came before a message you already have.
+
+## `end_users` / `endUsers`
+
+Your users, addressed by your own identifier. Celesto never stores a Celesto ID for them; the record is created the first time you run an agent for that string.
+
+| Operation | Python | TypeScript |
+| --- | --- | --- |
+| Get an end user's budget and activity. | `end_users.get(end_user_id)` | `endUsers.get(endUserId)` |
+| Set a budget override or metadata. | `end_users.update(end_user_id, budget_cap_usd=, metadata=)` | `endUsers.update(endUserId, { budgetCapUsd, metadata })` |
+| Drop the override, back to the organization default. | `end_users.clear_budget(end_user_id)` | `endUsers.clearBudget(endUserId)` |
+
+The cap covers a rolling 30-day window that starts the first time that user runs anything. When it runs out, the next run raises `BudgetExceededError`, and a run already in flight stops at its next step with a `run.failed` event.
+
+### Money is exact
+
+Reads return `Decimal` in Python (`cost_usd`, `spent_usd`, `cap_usd`) and `DecimalString` in TypeScript (`costUsd`, `spentUsd`, `capUsd`) — a string such as `"0.000450"`, never a `number`. A single generation can cost a few millionths of a dollar, which a JavaScript number cannot hold exactly.
+
+Writes refuse floats. In Python, `budget_cap_usd=0.1` raises `TypeError`; pass a `Decimal` or a string. In TypeScript, `budgetCapUsd` is typed `string`, so a number fails to compile, and passing one at runtime throws.
+
+## `settings`
+
+Organization-wide defaults for managed agents.
+
+| Operation | Python | TypeScript |
+| --- | --- | --- |
+| Read the default budget every end user starts with. | `settings.get()` | `settings.get()` |
+| Set the default budget. | `settings.update(default_end_user_budget_usd=)` | `settings.update({ defaultEndUserBudgetUsd })` |
+
+Pass `None` in Python or `null` in TypeScript to `default_end_user_budget_usd` / `defaultEndUserBudgetUsd` to remove the default, which leaves end users uncapped unless they have their own override.
+
+## Errors
+
+The API answers a refused request with a machine-readable code, and each code gets its own exception class. Every one is still a `CelestoError` (Python) or `CelestoApiError` (TypeScript), so a single top-level catch keeps working.
+
+All classes below are exported from the package root — `from celesto import ...` in Python, `import { ... } from "@celestoai/sdk"` in TypeScript.
+
+| Class | When it is raised |
+| --- | --- |
+| `BudgetExceededError` | 402 — this end user has spent their cap for the current 30-day window. Raise the cap with `end_users.update(...)` or wait for `budget["window_resets_at"]`. |
+| `SessionBusyError` | 409 — another run holds this session. Retryable. `retry_after` carries the API's `Retry-After` hint. `max_retries` on `runs.create` / `runs.stream` handles this for you. |
+| `IdempotencyConflictError` | 409 — this `Idempotency-Key` was already used with a different body. Use a fresh key, or replay the original body. |
+| `AgentArchivedError` | 409 — the agent is archived and cannot take new runs. Past runs and versions stay readable. |
+| `ProviderNotConnectedError` | 409 — no provider credential is connected for this agent's model. |
+| `SessionAgentMismatchError` | 409 — that session belongs to a different agent. |
+| `SessionEndUserMismatchError` | 422 — that session belongs to a different end user. Pass the session's own `end_user_id`, or omit `session_id` to start a new one. |
+| `ModelRequiresOwnKeyError` | 422 — this model can only run on your own provider key. |
+| `ConfigKeyNotAllowedError` | 422 — the agent `config` carried a key outside the allowlist. |
+| `ManagedAgentError` | Base class. Catch this to handle any managed-agent refusal. |
+
+Handle typed errors alongside the general Celesto errors:
+
+```python errors.py
+from celesto import (
+    BudgetExceededError,
+    ManagedAgentsClient,
+    SessionBusyError,
+)
+
+celesto = ManagedAgentsClient()
+
+try:
+    run = celesto.runs.create(
+        "agt_your_agent_id",
+        input="Where is my order?",
+        end_user_id="usr_8837",
+        max_retries=2,
+    )
+except BudgetExceededError:
+    print("This user is out of budget for the current window.")
+except SessionBusyError:
+    print("Session is still busy after retries.")
+```
+
+```ts errors.ts
+import {
+  BudgetExceededError,
+  ManagedAgentsClient,
+  SessionBusyError,
+} from "@celestoai/sdk";
+
+const celesto = new ManagedAgentsClient({ apiKey: process.env.CELESTO_API_KEY });
+
+try {
+  const run = await celesto.runs.create("agt_your_agent_id", {
+    input: "Where is my order?",
+    endUserId: "usr_8837",
+    maxRetries: 2,
+  });
+} catch (error) {
+  if (error instanceof BudgetExceededError) {
+    console.log("This user is out of budget for the current window.");
+  } else if (error instanceof SessionBusyError) {
+    console.log("Session is still busy after retries.");
+  } else {
+    throw error;
+  }
+}
+```
+
+For general SDK errors (authentication, validation, not found, rate limit, server, network), see [Error handling](/celesto-sdk/errors).

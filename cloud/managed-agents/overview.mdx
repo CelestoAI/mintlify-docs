@@ -1,0 +1,57 @@
+---
+title: "Run agents for your end users"
+sidebarTitle: "Overview"
+description: "Use the Celesto managed agents SDK to run AI agents on behalf of your end users, with per-user budgets, exact cost accounting, and a durable audit trail."
+---
+
+Managed agents let you run AI agents for your end users, with per-user budgets and an audit trail. You define an agent once, then call it on behalf of one of your users each time they interact with your product. Celesto records the run against that user, tracks what it cost, and stops the user from spending more than you allow.
+
+The same client is available in Python (`ManagedAgentsClient` in `celesto`) and TypeScript (`ManagedAgentsClient` from `@celestoai/sdk`). Both wrap five namespaces:
+
+- `agents` — create, version, archive, and roll back agent definitions.
+- `runs` — run an agent, stream what it does, read a settled run's events.
+- `sessions` — the conversations one of your users has had with an agent.
+- `end_users` / `endUsers` — budget, spend, and metadata for one of your users.
+- `settings` — organization-wide defaults, such as the starting budget.
+
+## Use managed agents when
+
+- You are shipping an AI feature to end users and each run should be billed, capped, and audited per user.
+- You want Celesto to keep the transcript, cost, and version history so you do not build that yourself.
+- You want to update prompts or models without rewriting the runs that already happened.
+- You want a typed client that catches config typos and float amounts before the request leaves your machine.
+
+Use [Agentor](/agentor/concepts/overview) instead when you are self-hosting the agent runtime and want to run your own event loop.
+
+## What Celesto tracks per end user
+
+You identify each of your users with a string you already have — a database ID, an email, anything. Celesto stores it as you send it. There is no Celesto user ID to look up and no mapping table to keep.
+
+For every end user, Celesto keeps:
+
+- Every run they were the subject of, including the exact agent version that ran.
+- Their spend in the current 30-day window, as a `Decimal` (never a float).
+- Their budget cap, either the organization default or a per-user override.
+- Their sessions with each agent.
+
+## Contract decisions worth knowing
+
+The SDK is designed so common mistakes fail fast rather than surface as a 422 three layers down.
+
+- **`end_user_id` is your own string.** Celesto never parses it. Send whatever identifier you already have.
+- **`runs.create()` returns the settled run.** `runs.stream()` yields events. Two methods rather than one flag, so the return type never depends on an argument.
+- **Unknown SSE event names are ignored.** The server can add an event tomorrow without breaking a client shipped today.
+- **Money is exact.** `Decimal` in Python and `DecimalString` in TypeScript. Writes reject floats: a Python float raises `TypeError`, and a TypeScript number is a compile error.
+- **`AgentConfig` is a closed allowlist.** Any key outside `temperature`, `top_p`, `max_tokens`, `reasoning_effort`, and the rest is rejected before the request is sent.
+- **`Idempotency-Key` is a first-class argument.** Passing `max_retries` on a run generates one for you so a session-busy retry cannot charge twice.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/celesto-sdk/managed-agents/quickstart">
+    Create an agent, stream a run for one of your users, and read that user's spend.
+  </Card>
+  <Card title="Reference" icon="book" href="/celesto-sdk/managed-agents/reference">
+    Every namespace, every operation, and the typed errors they can raise.
+  </Card>
+</CardGroup>

@@ -1,0 +1,189 @@
+---
+title: "Run a managed agent for one of your users"
+sidebarTitle: "Quickstart"
+description: "Create an agent, stream a run for one of your end users, and read that user's spend, in Python or TypeScript."
+---
+
+This quickstart walks the ten-line path: create an agent, stream a run for one of your end users, and read that user's spend. Use the language selector to switch between Python and TypeScript.
+
+## Before you start
+
+Get an API key from [celesto.ai](https://celesto.ai) under **Settings \> Security**. Set it as `CELESTO_API_KEY` before you run the examples.
+
+Pick a stable string for the end user you are running on behalf of, such as `"usr_8837"` or an email. Celesto uses that string as the record key; you never store a Celesto ID.
+
+<View title="Python" icon="python">
+  ## Install the Python SDK
+
+  ```bash
+  pip install -U celesto
+  ```
+
+  ## Create an agent and stream a run
+
+  Create `managed_agent.py`:
+
+  ```python managed_agent.py
+  import os
+
+  from celesto import ManagedAgentsClient
+
+
+  if not os.environ.get("CELESTO_API_KEY"):
+      raise RuntimeError("Set CELESTO_API_KEY before running this script.")
+
+  celesto = ManagedAgentsClient()
+
+  agent = celesto.agents.create(
+      name="support-bot",
+      model="openai/gpt-5.4-mini",
+      instructions="Answer order questions in one short paragraph.",
+  )
+
+  for event in celesto.runs.stream(
+      agent["id"], input="Where is my order?", end_user_id="usr_8837"
+  ):
+      if event.name == "message.delta":
+          print(event.data.get("text", ""), end="", flush=True)
+
+  budget = celesto.end_users.get("usr_8837")["budget"]
+  print(f"\nSpent {budget['spent_usd']} of {budget['cap_usd']}")
+  ```
+
+  Run it:
+
+  ```bash
+  export CELESTO_API_KEY="your-api-key"
+  python managed_agent.py
+  ```
+
+  <Check>
+    The script prints the agent's answer as it streams, then a summary line showing how much this user has spent and their cap.
+  </Check>
+
+  ## What just happened
+
+  - `agents.create` cut version 1 of `support-bot`. Every later update cuts a new version and leaves the old ones readable.
+  - `runs.stream` yielded `RunEvent` objects: `run.started`, `message.delta` (partial text), `message.completed`, `usage`, and finally `run.completed` or `run.failed`. Event names this SDK does not know are ignored.
+  - `end_users.get` returned the same `"usr_8837"` string you passed in. `spent_usd` and `cap_usd` are `Decimal`, not `float`.
+
+  ## Wait instead of streaming
+
+  `runs.create` waits and hands you the settled run:
+
+  ```python wait.py
+  run = celesto.runs.create(
+      agent["id"], input="Where is my order?", end_user_id="usr_8837"
+  )
+  print(run["output"], run["usage"]["cost_usd"])
+  ```
+
+  ## Set a budget
+
+  Give one user a cap, or set the default for everyone:
+
+  ```python budget.py
+  from decimal import Decimal
+
+  celesto.end_users.update("usr_8837", budget_cap_usd=Decimal("5.00"))
+  celesto.settings.update(default_end_user_budget_usd=Decimal("0.50"))
+  ```
+
+  Passing a `float` raises `TypeError` rather than sending it. Pass a `Decimal` or a string.
+
+  ## Next step
+
+  Read the [managed agents reference](/celesto-sdk/managed-agents/reference) for every namespace and every operation.
+</View>
+
+<View title="TypeScript" icon="js">
+  ## Install the TypeScript SDK
+
+  ```bash
+  npm install @celestoai/sdk@latest
+  npm install --save-dev tsx typescript
+  ```
+
+  ## Create an agent and stream a run
+
+  Create `managed-agent.ts`:
+
+  ```ts managed-agent.ts
+  import { ManagedAgentsClient } from "@celestoai/sdk";
+
+  const apiKey = process.env.CELESTO_API_KEY;
+  if (!apiKey) {
+    throw new Error("Set CELESTO_API_KEY before running this script.");
+  }
+
+  const celesto = new ManagedAgentsClient({ apiKey });
+
+  const agent = await celesto.agents.create({
+    name: "support-bot",
+    model: "openai/gpt-5.4-mini",
+    instructions: "Answer order questions in one short paragraph.",
+  });
+
+  for await (const event of celesto.runs.stream(agent.id, {
+    input: "Where is my order?",
+    endUserId: "usr_8837",
+  })) {
+    if (event.name === "message.delta") {
+      process.stdout.write(event.data.text ?? "");
+    }
+  }
+
+  const { budget } = await celesto.endUsers.get("usr_8837");
+  console.log(`\nSpent ${budget.spentUsd} of ${budget.capUsd}`);
+  ```
+
+  You can also import the client from the `/agents` subpath:
+
+  ```ts
+  import { ManagedAgentsClient } from "@celestoai/sdk/agents";
+  ```
+
+  Run it:
+
+  ```bash
+  export CELESTO_API_KEY="your-api-key"
+  npx tsx managed-agent.ts
+  ```
+
+  <Check>
+    The script prints the agent's answer as it streams, then a summary line showing how much this user has spent and their cap.
+  </Check>
+
+  ## What just happened
+
+  - `agents.create` cut version 1 of `support-bot`. Every later update cuts a new version and leaves the old ones readable.
+  - `runs.stream` returned an async iterator of `RunEvent`. The `RunEvent` type is a discriminated union on `name`, so switching on `event.name` narrows `event.data` for that event. Event names this SDK does not know are ignored.
+  - `endUsers.get` returned the same `"usr_8837"` string you passed in. `spentUsd` and `capUsd` are `DecimalString` values such as `"0.000450"`, never a `number`.
+
+  ## Wait instead of streaming
+
+  `runs.create` returns a promise for the settled run:
+
+  ```ts wait.ts
+  const run = await celesto.runs.create(agent.id, {
+    input: "Where is my order?",
+    endUserId: "usr_8837",
+  });
+  console.log(run.output, run.usage.costUsd);
+  ```
+
+  ## Set a budget
+
+  Give one user a cap, or set the default for everyone:
+
+  ```ts budget.ts
+  await celesto.endUsers.update("usr_8837", { budgetCapUsd: "5.00" });
+  await celesto.settings.update({ defaultEndUserBudgetUsd: "0.50" });
+  ```
+
+  `budgetCapUsd` and `defaultEndUserBudgetUsd` are typed `string`, so passing a number is a compile error. The runtime check throws for plain JavaScript callers.
+
+  ## Next step
+
+  Read the [managed agents reference](/celesto-sdk/managed-agents/reference) for every namespace and every operation.
+</View>
