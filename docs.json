@@ -29,8 +29,7 @@
             "group": "Start Here",
             "pages": [
               "index",
-              "getting-started/why-celesto",
-              "cloud/quickstart"
+              "getting-started/why-celesto"
             ]
           },
           {
