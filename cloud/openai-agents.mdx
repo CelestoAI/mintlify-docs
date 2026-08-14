@@ -94,11 +94,11 @@ Use `CelestoSandboxClient` when you want OpenAI to spin up a fresh Celesto compu
 Pass a `CelestoSandboxClientOptions` to control how the computer is created. Every field is optional. Omit a field to inherit the template's default.
 
 <Note>
-  CPU and memory must match a named Celesto size. Free and Nano plans use Nano (1 vCPU, 512 MB). Builder and Growth can also use Small (1 vCPU, 1 GB), Standard (2 vCPU, 4 GB), and Large (4 vCPU, 12 GB). See [Choose computer size](/celesto-sdk/features/resources).
+  CPU and memory must match a named Celesto size. Free and Nano plans use Nano (1 vCPU, 512 MB). Builder and Growth can also use Small (1 vCPU, 1 GB), Standard (2 vCPU, 4 GB), and Large (4 vCPU, 12 GB). See [Choose computer size](/cloud/features/resources).
 </Note>
 
 <ParamField body="template_id" type="string" default="scratch">
-  Sandbox template to create the computer from. Defaults to `scratch` (a minimal Ubuntu computer). Pass `coding-agent` when your agent needs common coding tools preinstalled. See [Use a template](/celesto-sdk/computers#use-a-template).
+  Sandbox template to create the computer from. Defaults to `scratch` (a minimal Ubuntu computer). Pass `coding-agent` when your agent needs common coding tools preinstalled. See [Use a template](/cloud/computers#use-a-template).
 </ParamField>
 
 <ParamField body="template_version" type="string">
