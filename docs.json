@@ -138,6 +138,14 @@
           {
             "group": "Agents and Integrations",
             "pages": [
+              {
+                "group": "Managed agents",
+                "pages": [
+                  "celesto-sdk/managed-agents/overview",
+                  "celesto-sdk/managed-agents/quickstart",
+                  "celesto-sdk/managed-agents/reference"
+                ]
+              },
               "celesto-sdk/guides/pi-coding-agent",
               "celesto-sdk/deployments",
               "celesto-sdk/openai-agents",
