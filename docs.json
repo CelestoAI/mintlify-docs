@@ -29,8 +29,7 @@
             "group": "Start Here",
             "pages": [
               "index",
-              "getting-started/why-celesto",
-              "celesto-sdk/quickstart"
+              "getting-started/why-celesto"
             ]
           },
           {
@@ -113,26 +112,26 @@
           {
             "group": "Start Here",
             "pages": [
-              "celesto-sdk/overview",
-              "celesto-sdk/quickstart",
-              "celesto-sdk/authentication"
+              "cloud/overview",
+              "cloud/quickstart",
+              "cloud/authentication"
             ]
           },
           {
             "group": "Features",
             "pages": [
-              "celesto-sdk/computers",
-              "celesto-sdk/features/publish-ports",
-              "celesto-sdk/features/lifecycle",
-              "celesto-sdk/features/resources",
-              "celesto-sdk/features/persistence",
-              "celesto-sdk/features/petabyte-storage"
+              "cloud/computers",
+              "cloud/features/publish-ports",
+              "cloud/features/lifecycle",
+              "cloud/features/resources",
+              "cloud/features/persistence",
+              "cloud/features/petabyte-storage"
             ]
           },
           {
             "group": "Guides",
             "pages": [
-              "celesto-sdk/guides/publish-github-app"
+              "cloud/guides/publish-github-app"
             ]
           },
           {
@@ -141,16 +140,16 @@
               {
                 "group": "Managed agents",
                 "pages": [
-                  "celesto-sdk/managed-agents/overview",
-                  "celesto-sdk/managed-agents/quickstart",
-                  "celesto-sdk/managed-agents/reference"
+                  "cloud/managed-agents/overview",
+                  "cloud/managed-agents/quickstart",
+                  "cloud/managed-agents/reference"
                 ]
               },
-              "celesto-sdk/guides/pi-coding-agent",
-              "celesto-sdk/deployments",
-              "celesto-sdk/openai-agents",
-              "celesto-sdk/gatekeeper",
-              "celesto-sdk/errors"
+              "cloud/guides/pi-coding-agent",
+              "cloud/deployments",
+              "cloud/openai-agents",
+              "cloud/gatekeeper",
+              "cloud/errors"
             ]
           }
         ]
@@ -246,7 +245,7 @@
           {
             "group": "Celesto CLI",
             "pages": [
-              "celesto-sdk/cli"
+              "cloud/cli"
             ]
           },
           {
@@ -401,5 +400,26 @@
   },
   "background": {
     "decoration": "grid"
-  }
+  },
+  "redirects": [
+    { "source": "/celesto-sdk/overview", "destination": "/cloud/overview" },
+    { "source": "/celesto-sdk/quickstart", "destination": "/cloud/quickstart" },
+    { "source": "/celesto-sdk/authentication", "destination": "/cloud/authentication" },
+    { "source": "/celesto-sdk/computers", "destination": "/cloud/computers" },
+    { "source": "/celesto-sdk/features/publish-ports", "destination": "/cloud/features/publish-ports" },
+    { "source": "/celesto-sdk/features/lifecycle", "destination": "/cloud/features/lifecycle" },
+    { "source": "/celesto-sdk/features/resources", "destination": "/cloud/features/resources" },
+    { "source": "/celesto-sdk/features/persistence", "destination": "/cloud/features/persistence" },
+    { "source": "/celesto-sdk/features/petabyte-storage", "destination": "/cloud/features/petabyte-storage" },
+    { "source": "/celesto-sdk/guides/publish-github-app", "destination": "/cloud/guides/publish-github-app" },
+    { "source": "/celesto-sdk/managed-agents/overview", "destination": "/cloud/managed-agents/overview" },
+    { "source": "/celesto-sdk/managed-agents/quickstart", "destination": "/cloud/managed-agents/quickstart" },
+    { "source": "/celesto-sdk/managed-agents/reference", "destination": "/cloud/managed-agents/reference" },
+    { "source": "/celesto-sdk/guides/pi-coding-agent", "destination": "/cloud/guides/pi-coding-agent" },
+    { "source": "/celesto-sdk/deployments", "destination": "/cloud/deployments" },
+    { "source": "/celesto-sdk/openai-agents", "destination": "/cloud/openai-agents" },
+    { "source": "/celesto-sdk/gatekeeper", "destination": "/cloud/gatekeeper" },
+    { "source": "/celesto-sdk/errors", "destination": "/cloud/errors" },
+    { "source": "/celesto-sdk/cli", "destination": "/cloud/cli" }
+  ]
 }
