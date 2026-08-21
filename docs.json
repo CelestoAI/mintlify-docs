@@ -285,6 +285,7 @@
               "smolvm/cli/logs",
               "smolvm/cli/stop",
               "smolvm/cli/cleanup",
+              "smolvm/cli/sandbox-prune",
               "smolvm/cli/file",
               "smolvm/cli/env",
               "smolvm/cli/port",

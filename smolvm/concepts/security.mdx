@@ -207,6 +207,12 @@ config = VMConfig(
 )
 ```
 
+When `retain_disk_on_delete=True`, SmolVM writes a `<disk>.retained` marker file next to the disk when the sandbox is deleted. The marker tells [`smolvm sandbox prune`](/smolvm/cli/sandbox-prune) that this disk is deliberately kept, so the reclaim sweep leaves it alone. The marker is cleared automatically when a new sandbox reuses the disk, and restored if a create rolls back before a new row owns it.
+
+<Warning>
+  Disks that were retained on releases before this marker existed carry no marker on disk. `smolvm sandbox prune` will treat them as leftovers unless you preview the sweep with `--dry-run` first, or protect saved disks by omitting `--include-saved`. If you rely on pre-upgrade retained disks, verify the dry-run output before running `sandbox prune` for the first time after upgrading.
+</Warning>
+
 ## Environment variables
 
 SmolVM can inject environment variables into VMs:
