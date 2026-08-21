@@ -74,10 +74,17 @@ smolvm sandbox delete --all --force --json
 
 ## What gets cleaned up
 
-For each target, SmolVM stops the sandbox if needed, removes its runtime state, releases network resources, and deletes the per-sandbox disk state it owns.
+For each target, SmolVM stops the sandbox if needed, removes its runtime state, releases network resources, deletes the per-sandbox disk state it owns, and removes the sandbox's `<vm_id>.log` runtime log.
+
+### Reclaiming a leaked disk
+
+If a sandbox row has already been dropped from the inventory but its per-sandbox disk still exists on disk, `smolvm sandbox delete <id>` reclaims the disk by deriving its path from the sandbox ID instead of failing with "not found". This covers cases where a crash or an interrupted teardown left a disk behind without a matching row.
+
+To sweep leftovers from sandboxes whose IDs you no longer know, use [`smolvm sandbox prune`](/smolvm/cli/sandbox-prune).
 
 ## Related commands
 
 * [`smolvm sandbox list`](/smolvm/cli/list) - Review targets before deleting
 * [`smolvm sandbox stop`](/smolvm/cli/stop) - Stop without deleting
+* [`smolvm sandbox prune`](/smolvm/cli/sandbox-prune) - Sweep disks and logs left behind by deleted sandboxes
 * [`smolvm prune`](/smolvm/cli/prune) - Remove old image caches

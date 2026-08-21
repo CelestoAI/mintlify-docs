@@ -1,0 +1,115 @@
+---
+title: "smolvm sandbox prune"
+description: "Delete disks and logs left behind by sandboxes that no longer exist, with a dry-run preview and a flag to include disks you asked SmolVM to keep."
+---
+
+`smolvm sandbox prune` sweeps the SmolVM data directory for per-sandbox disks and runtime logs whose sandbox row is gone, and deletes them so the space comes back.
+
+A per-sandbox disk normally lives under `disks/` in the SmolVM data directory and is reached through its row in the sandbox inventory. If a crash, a lost inventory, or a partial cleanup drops the row while the file survives, nothing else can find that disk by name. Over time these files accumulate. Run `smolvm sandbox prune` to find and delete them.
+
+<Note>
+  This is different from [`smolvm prune`](/smolvm/cli/prune) (an alias of `smolvm image prune`), which reclaims cached SmolVM images from older releases. `sandbox prune` acts on runtime state left behind by individual sandboxes, not image caches.
+</Note>
+
+## Synopsis
+
+```bash
+smolvm sandbox prune [OPTIONS]
+```
+
+## Options
+
+<ParamField path="--dry-run" type="flag">
+  List the leftover disks and logs that would be deleted, and how much space would be freed, without deleting anything.
+</ParamField>
+
+<ParamField path="--force" type="flag">
+  Skip the interactive confirmation prompt. Required when running non-interactively or with `--json`.
+</ParamField>
+
+<ParamField path="--include-saved" type="flag">
+  Also delete disks kept with `retain_disk_on_delete=True`. By default those are protected and reported under a separate "Kept" panel.
+</ParamField>
+
+<ParamField path="--json" type="flag">
+  Print a JSON envelope instead of formatted text. Combine with `--force` to run unattended.
+</ParamField>
+
+## What gets pruned
+
+For every VM ID that no longer has a row in the inventory, `sandbox prune` considers:
+
+* The per-sandbox disk under `disks/` (`.qcow2` or `.ext4`) and its sidecar files.
+* The `<vm_id>.log` runtime log in the data directory.
+
+It skips:
+
+* Disks flagged as saved by a marker file (see [Retained disks](#retained-disks)) unless you pass `--include-saved`.
+* Disks referenced by a running process, since SDK-driven sandboxes keep their inventory in memory rather than on disk.
+
+## Examples
+
+### Preview what would be deleted
+
+Always safe to run first:
+
+```bash
+smolvm sandbox prune --dry-run
+```
+
+**Example output:**
+
+```
+Would remove (3):
+  vm-abc123   /var/lib/smolvm/disks/vm-abc123.qcow2   412.0 MiB
+  vm-abc123   /var/lib/smolvm/vm-abc123.log             1.2 MiB
+  vm-def456   /var/lib/smolvm/disks/vm-def456.qcow2   508.4 MiB
+
+Prune Summary
+Would free 921.6 MiB
+```
+
+### Delete the leftovers
+
+```bash
+smolvm sandbox prune
+```
+
+You will be asked to confirm before anything is deleted. Pass `--force` to skip the prompt.
+
+### Use in automation
+
+```bash
+smolvm sandbox prune --force --json
+```
+
+The JSON envelope lists the files removed, the files kept because they were marked as saved, and the total bytes freed.
+
+### Also delete saved disks
+
+Disks kept with `retain_disk_on_delete=True` survive `sandbox prune` by design. If you actually want them gone:
+
+```bash
+smolvm sandbox prune --include-saved --force
+```
+
+## Retained disks
+
+When you set [`retain_disk_on_delete=True`](/smolvm/concepts/security#disk-retention) on a sandbox, SmolVM keeps its disk after the sandbox is deleted so a later sandbox with the same ID can pick it back up. To tell a deliberately kept disk apart from a leaked one, SmolVM writes a marker file (`<disk>.retained`) next to the disk when the sandbox is deleted. `sandbox prune` reads that marker and leaves marked disks alone.
+
+<Warning>
+  Disks retained on releases before this behavior existed carry no marker, so `sandbox prune` treats them as leftovers. Before you run `sandbox prune` for the first time after upgrading, run it with `--dry-run` and check the list, or pass no flags at all and inspect the confirmation prompt. If you need to preserve pre-upgrade retained disks that you plan to re-attach, keep them out of the sweep by not running `sandbox prune`, or delete them explicitly with `--include-saved` once you've confirmed the list.
+</Warning>
+
+## Exit codes
+
+| Code | Description                                       |
+| ---- | ------------------------------------------------- |
+| `0`  | Success — leftovers removed, nothing to remove, or dry run completed |
+| `1`  | Refused (no `--force` in non-interactive mode), or one or more files could not be deleted |
+
+## Related commands
+
+* [`smolvm sandbox delete`](/smolvm/cli/cleanup) — delete a specific sandbox and reclaim its disk, even if the inventory row is gone
+* [`smolvm sandbox list`](/smolvm/cli/list) — see which sandboxes still have rows in the inventory
+* [`smolvm prune`](/smolvm/cli/prune) — remove cached images from older SmolVM releases
