@@ -41,7 +41,7 @@ Example: You ship a Gmail MCP Server that already contains the OAuth token requi
 from agentor.tools import GmailTool
 
 # Reads credentials saved by superauth; defaults to GOOGLE_USER_CREDENTIALS
-# or ./credentials.json. Requires `pip install --pre "agentor[google]"`.
+# or ./credentials.json. Requires `pip install "agentor[google]"`.
 tool = GmailTool(credentials_path="credentials.json")
 result = tool.list_messages(limit=10)
 print(result)

@@ -11,7 +11,7 @@ Agentor is an open-source Python framework for building and deploying long-runni
 </Info>
 
 <Note>
-  **Agentor 0.1.0 is a prerelease.** It runs on Agentor's own agent engine, with durable runs, structured output, and any OpenAI-compatible provider built in. Install it with `pip install --pre agentor`; plain `pip install agentor` stays on the stable 0.0.x line. See [Installation](/agentor/installation).
+  **Agentor 0.1.0 is the current stable release.** It runs on Agentor's own agent engine, with durable, forkable runs, structured output, and any OpenAI-compatible provider built in. Install it with `pip install agentor`. See [Installation](/agentor/installation).
 </Note>
 
 ## Quick example
@@ -67,7 +67,7 @@ agent.serve()
   </Card>
 
   <Card title="Durable Runs" icon="floppy-disk" href="/agentor/durable-runs">
-    Save every step of a run so another process can finish it after a crash.
+    Save every step of a run so another process can finish it after a crash, or fork it into a new one.
   </Card>
 
   <Card title="Model Providers" icon="plug" href="/agentor/model-providers">

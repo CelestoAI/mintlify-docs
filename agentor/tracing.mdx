@@ -18,7 +18,7 @@ A trace is a recording of one agent run. Turn it on and every run shows up in th
 </Frame>
 
 <Note>
-  Tracing is opt-in. A trace carries prompts, tool arguments, and tool results, so nothing leaves your process until you ask for it — a Celesto API key alone does not enable it.
+  Tracing is opt-in. A trace carries prompts, tool arguments, tool results, and the model's reasoning when a provider returns it, so nothing leaves your process until you ask for it — a Celesto API key alone does not enable it.
 </Note>
 
 ***
@@ -84,7 +84,7 @@ Each run produces one trace and a small tree of spans:
 | Span | One per | What it records |
 | --- | --- | --- |
 | `agent` | run | Agent name, model, final output, status, total tokens |
-| `generation` | model call | The exact messages sent, the reply, requested tool calls, tokens, timing |
+| `generation` | model call | The exact messages sent, the reply, requested tool calls, tokens, timing, and the model's reasoning when the provider returns it |
 | `function` | tool call | Tool name, arguments, return value, timing, and the error if it raised |
 
 Because a `generation` span keeps the request as it was actually sent, you can see the conversation the model saw at every turn — the part that is hardest to reconstruct after the fact.
@@ -187,10 +187,11 @@ An explicit `tracer=` turns tracing on for the agent, so `enable_tracing=` is no
 ## Security considerations
 
 <Warning>
-  Traces include model inputs and tool outputs. Nothing is sent unless you ask
-  for it, so the safe default needs no action. Where a particular run must not
-  leave the process, pass `tracing=False` on that call - it overrides an agent
-  configured with `enable_tracing=True`.
+  Traces include model inputs, tool outputs, and the model's reasoning when a
+  provider returns it. Nothing is sent unless you ask for it, so the safe
+  default needs no action. Where a particular run must not leave the process,
+  pass `tracing=False` on that call - it overrides an agent configured with
+  `enable_tracing=True`.
 </Warning>
 
 ***

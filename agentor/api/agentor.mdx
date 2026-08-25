@@ -231,6 +231,56 @@ agent.resume(result.run_id)   # after a crash; a finished run is returned as-is
 
 Raises `ValueError` if the agent has no store, and `KeyError` if the store has no run with that id.
 
+### fork
+
+Copy a persisted run to a new id and continue it there — even a run that already finished, which `resume()` refuses to re-execute. See [Durable runs](/agentor/durable-runs#fork-a-run).
+
+```python  theme={null}
+def fork(
+    run_id: str,
+    input: Optional[str | list[dict]] = None,
+    *,
+    fork_id: Optional[str] = None,
+    max_turns: Optional[int] = None,
+    tracing: Optional[bool] = None,
+) -> RunResult
+
+async def afork(
+    run_id: str,
+    input: Optional[str | list[dict]] = None,
+    *,
+    fork_id: Optional[str] = None,
+    max_turns: Optional[int] = None,
+    tracing: Optional[bool] = None,
+) -> RunResult
+```
+
+**Parameters:**
+
+* `run_id` (str): the run to branch from
+* `input` (str | list\[dict] | None): a prompt or message list to continue the fork with right away. `None` just copies the run under a new id — an unfinished parent is completed, a finished one comes back as a snapshot with no model call
+* `fork_id` (str): choose the new run's id yourself. Defaults to a generated one
+* `max_turns` (int): turn budget for this call, same as [`run()`](#run). Applies to the fork's continuation only
+* `tracing` (bool | None): override tracing for this call, same semantics as [`run()`](#run). Applies to the fork's continuation only
+
+**Returns:** a `RunResult` for the new run — `result.run_id` is never the parent's.
+
+```python  theme={null}
+from agentor import Agentor
+from agentor.engine.store import FileStore
+
+agent = Agentor(name="Agent", tools=[...], store=FileStore("runs"))
+
+result = agent.run("Draft a launch plan")
+variant = agent.fork(result.run_id, "Make it punchier")  # new run_id; result is untouched
+```
+
+Raises `ValueError` if the agent has no store, if `fork_id` is already in use, or if `input` is an empty list. Raises `KeyError` if the store has no run with that `run_id`.
+
+<Note>
+  The fork keeps the parent's entire trace — every generation with its reasoning, when the model returned any, every tool call and result — and then lives its own life. Nothing appended to the fork touches the parent, and vice versa.
+</Note>
+
 ### chat
 
 Run the agent, optionally returning a stream.
@@ -383,7 +433,7 @@ Every run returns a `RunResult`:
 </ResponseField>
 
 <ResponseField name="run_id" type="str | None">
-  Set when the agent has a store. Pass it to `resume()`.
+  Set when the agent has a store. Pass it to `resume()` or `fork()`.
 </ResponseField>
 
 <ResponseField name="usage" type="Usage">

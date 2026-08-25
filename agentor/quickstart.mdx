@@ -17,15 +17,9 @@ Before starting, make sure you have:
 
 <Steps>
   <Step title="Install Agentor">
-    Agentor 0.1.0 is a prerelease, so ask for it with `--pre`:
-
     ```bash  theme={null}
-    pip install --pre agentor
+    pip install agentor
     ```
-
-    <Note>
-      Plain `pip install agentor` gives you the stable 0.0.x line instead. See [Installation](/agentor/installation) for the difference.
-    </Note>
   </Step>
 
   <Step title="Set up your API key">
@@ -310,6 +304,18 @@ print(result.run_id)  # cabc9046ac5040298aa362c0d6d2c5c5
 agent.resume(result.run_id)
 ```
 
+## Branch a run
+
+Fork any persisted run into a new, independent one — even a finished one, which `resume()` won't re-run. The original is never touched:
+
+```python  theme={null}
+variant = agent.fork(result.run_id, "How about Paris instead?")
+print(variant.run_id)         # a new id — result.run_id is untouched
+print(variant.final_output)
+```
+
+See [Durable runs](/agentor/durable-runs#fork-a-run) for what forking keeps and when to reach for it instead of `resume()`.
+
 ## Configure model parameters
 
 Fine-tune model behavior with `ModelSettings`:
@@ -346,7 +352,7 @@ Now that you've built your first agent, explore more advanced features:
   </Card>
 
   <Card title="Durable runs" icon="floppy-disk" href="/agentor/durable-runs">
-    Save runs and resume them after a crash
+    Save runs, resume them after a crash, or fork them into new ones
   </Card>
 
   <Card title="Structured output" icon="brackets-curly" href="/agentor/structured-output">
