@@ -14,20 +14,18 @@ Before installing Agentor, make sure you have:
 
 ## Install from PyPI
 
-Agentor 0.1.0 is a **prerelease**. Ask for it explicitly with `--pre`:
-
 ```bash
-pip install --pre agentor
+pip install agentor
 ```
 
 <Warning>
-  Plain `pip install agentor` and `pip install --upgrade agentor` still give you the stable 0.0.x line. That is deliberate: 0.1.0 rebuilt the agent engine, and nobody is moved onto it without asking. See the [0.1.0a1 release notes](https://github.com/CelestoAI/agentor/releases) for what changed.
+  0.1.0 rebuilt the agent engine and is a breaking change from the 0.0.x line — `DurableAgent` is gone and hosted tools were dropped. See the [0.1.0 release notes](https://github.com/CelestoAI/agentor/releases) for what changed and how to migrate.
 </Warning>
 
-To stay on the stable line instead:
+To stay on the old 0.0.x line instead, pin it explicitly:
 
 ```bash
-pip install agentor
+pip install "agentor<0.1"
 ```
 
 <Tip>
@@ -35,7 +33,7 @@ pip install agentor
 
   ```bash
   curl -LsSf https://astral.sh/uv/install.sh | sh
-  uv pip install --prerelease=allow agentor
+  uv pip install agentor
   ```
 </Tip>
 
@@ -57,17 +55,17 @@ The core install stays small. Tools that need a heavyweight SDK live behind an e
 
 | Extra | Install | Needed by |
 | --- | --- | --- |
-| `google` | `pip install --pre "agentor[google]"` | [`GmailTool`](/agentor/api/tools/gmail), [`CalendarTool`](/agentor/api/tools/google-calendar), SuperAuth |
-| `exa` | `pip install --pre "agentor[exa]"` | `ExaSearchTool` |
-| `git` | `pip install --pre "agentor[git]"` | [`GitTool`](/agentor/api/tools/git) |
-| `github` | `pip install --pre "agentor[github]"` | [`GitHubTool`](/agentor/api/tools/github) |
-| `postgres` | `pip install --pre "agentor[postgres]"` | `PostgreSQLTool` |
-| `slack` | `pip install --pre "agentor[slack]"` | `SlackTool` |
-| `scrapegraph` | `pip install --pre "agentor[scrapegraph]"` | [`ScrapeGraphAI`](/agentor/api/tools/scrapegraphai) |
-| `all` | `pip install --pre "agentor[all]"` | Everything above |
+| `google` | `pip install "agentor[google]"` | [`GmailTool`](/agentor/api/tools/gmail), [`CalendarTool`](/agentor/api/tools/google-calendar), SuperAuth |
+| `exa` | `pip install "agentor[exa]"` | `ExaSearchTool` |
+| `git` | `pip install "agentor[git]"` | [`GitTool`](/agentor/api/tools/git) |
+| `github` | `pip install "agentor[github]"` | [`GitHubTool`](/agentor/api/tools/github) |
+| `postgres` | `pip install "agentor[postgres]"` | `PostgreSQLTool` |
+| `slack` | `pip install "agentor[slack]"` | `SlackTool` |
+| `scrapegraph` | `pip install "agentor[scrapegraph]"` | [`ScrapeGraphAI`](/agentor/api/tools/scrapegraphai) |
+| `all` | `pip install "agentor[all]"` | Everything above |
 
 <Info>
-  **Google tools moved in 0.1.0.** The Google API client and SuperAuth are roughly 100 MB and used to be installed for everyone. They are now in the `google` extra. If `GmailTool` or `CalendarTool` raises an `ImportError`, run `pip install --pre "agentor[google]"`.
+  **Google tools moved in 0.1.0.** The Google API client and SuperAuth are roughly 100 MB and used to be installed for everyone. They are now in the `google` extra. If `GmailTool` or `CalendarTool` raises an `ImportError`, run `pip install "agentor[google]"`.
 </Info>
 
 <Info>
@@ -123,7 +121,7 @@ import agentor
 print(agentor.__version__)
 ```
 
-You should see `0.1.0a1` on the prerelease, or a `0.0.x` version on the stable line.
+You should see `0.1.0` (or later), or a `0.0.x` version if you pinned the old line.
 
 <Check>
   `import agentor` should return almost instantly. Heavy dependencies are loaded only when something actually needs them.

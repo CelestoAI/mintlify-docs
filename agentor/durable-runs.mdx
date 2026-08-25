@@ -1,15 +1,15 @@
 ---
-title: "Resume an agent run after a crash"
+title: "Resume or fork an agent run"
 sidebarTitle: "Durable runs"
-description: "Save every step of an Agentor run to disk so a new process can pick the job up by run id and finish it after a crash, restart, or deploy."
+description: "Save every step of an Agentor run to disk so a new process can pick the job up by run id, finish it after a crash, or branch it into a new run with fork()."
 ---
 
 Long jobs get interrupted. A machine reboots, a deploy rolls, a container is evicted — and your agent was halfway through, having already paid for the tokens and called half its tools.
 
-Give the agent a **store** — somewhere to write down what it did — and each step is saved as it happens. A different process, knowing nothing but the run's id, can pick the job up and finish it.
+Give the agent a **store** — somewhere to write down what it did — and each step is saved as it happens. A different process, knowing nothing but the run's id, can pick the job up and finish it, or branch it into an independent run.
 
 <Info>
-  Durable runs are new in Agentor 0.1.0, which ships as a prerelease. Install it with `pip install --pre agentor`.
+  Durable runs, and forking a run into a new one, are part of Agentor's 0.1.0 engine — the current stable release. Plain `pip install agentor` gets you both.
 </Info>
 
 ## Save a run
@@ -99,6 +99,55 @@ final_output: The weather in London is sunny with a temperature of 22°C.
 
 The tool did not run a second time. The saved result was enough.
 
+## Fork a run
+
+`resume()` continues a run in place, and deliberately refuses to re-run one that already finished. `fork()` takes a different approach: it copies a run's whole history — every step, including the model's reasoning where the provider returned it — into a **new** run id, then continues from there. The original run is never touched, whether it is still in progress, finished, or crashed.
+
+That makes fork the way to branch a conversation: try a different instruction from the same starting point without losing the original, or pick up a completed run and keep going, which `resume()` will not do for you.
+
+```python fork.py
+from agentor import Agentor
+from agentor.engine.store import FileStore
+
+agent = Agentor(name="Assistant", model="gpt-5-mini", store=FileStore("runs"))
+
+result = agent.run("Draft a launch plan")
+
+# Branch off with a new instruction — result.run_id is completely untouched.
+variant = agent.fork(result.run_id, "Make it punchier")
+print(variant.run_id)         # a new id, different from result.run_id
+print(variant.final_output)
+```
+
+Use `await agent.afork(...)` from async code.
+
+<Note>
+  As with `resume()`, the agent doing the forking does not have to be the one that made the original run — but if the original run has no system message, the forking agent's `instructions` fill in on the fork.
+</Note>
+
+### Fork without new input
+
+Leave out the second argument and `fork()` just copies the run under a new id:
+
+* If the parent was still unfinished — interrupted mid-run — the fork picks up where it left off and finishes, exactly like `resume()` would.
+* If the parent had already finished, the fork is an identical copy of it. No model call is made.
+
+```python
+snapshot = agent.fork(result.run_id)   # a full copy of result, under a new run_id
+```
+
+### Choosing the new run's id
+
+Pass `fork_id` to name the new run yourself instead of getting a generated one:
+
+```python
+agent.fork(result.run_id, "Make it punchier", fork_id="launch-plan-punchy")
+```
+
+`fork()` raises `ValueError` if that id is already taken.
+
+`max_turns` and `tracing` behave the same as on `run()` — they apply only to the fork's continuation, never to the run being copied.
+
 ## What gets written
 
 The store records the same events the agent emits while it runs, one JSON object per line:
@@ -111,7 +160,9 @@ The store records the same events the agent emits while it runs, one JSON object
 {"type": "run_end", "status": "completed", "text": "...", "usage": {...}}
 ```
 
-Each `generation` records the exact messages that were sent to the model, so rebuilding the conversation is a replay rather than a guess. `FileStore` flushes and fsyncs after every line, because a crash is the case it exists for.
+Each `generation` records the exact messages that were sent to the model — reasoning included, when the provider returns any — so rebuilding the conversation is a replay rather than a guess. `FileStore` flushes and fsyncs after every line, because a crash is the case it exists for.
+
+Forking adds one more line to the copy: a `fork` event naming the run it came from. It is provenance only — replaying the log or checking whether it is complete works exactly as it does for a run that was never forked.
 
 You can read the same events back off any finished result:
 
@@ -171,6 +222,10 @@ for event in result.events:
     ```
 
     Use `Event.to_json()` to serialise and `Event.from_dict()` to read back. `append` is called on a worker thread, so blocking IO inside it will not stall the event loop.
+
+    <Tip>
+      Add a fourth method, `fork(src_run_id, dst_run_id)`, to copy a run in one bulk write instead of the slower event-by-event copy `fork()` uses when it is missing. Raise `ValueError` if `dst_run_id` already exists. `FileStore` and `MemoryStore` both implement it.
+    </Tip>
   </Tab>
 </Tabs>
 
@@ -190,6 +245,10 @@ async for event in agent.stream_chat("What is the weather in Tokyo?"):
 <AccordionGroup>
   <Accordion title="Two workers must not resume the same unfinished run">
     The bundled stores are single-process and take no lock. If two workers both see a run as incomplete, both will continue it, and any tool with a side effect runs twice. Coordinate outside Agentor — a queue with visibility timeouts, a row lock, a lease — if more than one worker can recover the same run.
+  </Accordion>
+
+  <Accordion title="Forking a run still in progress copies whatever has been saved so far">
+    Like resume, fork takes no lock. Fork a run that is actively being written to and you get a copy of whatever prefix of its log had reached the store at that instant — not necessarily its very latest step.
   </Accordion>
 
   <Accordion title="Pausing for human approval is not built in">
