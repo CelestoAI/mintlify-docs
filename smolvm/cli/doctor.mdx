@@ -176,7 +176,7 @@ Doctor result: FAIL
 When validating the Firecracker backend, doctor checks:
 
 * **KVM**: `/dev/kvm` availability (hardware virtualization)
-* **Firecracker binary**: Located in `PATH` or `~/.smolvm/bin`
+* **Firecracker binary**: Located in the folder set by `SMOLVM_FIRECRACKER_DIR` if that variable is set, otherwise in `PATH` or `~/.smolvm/bin`
 * **ip command**: From iproute2 package (network management)
 * **nft command**: From nftables package (firewall rules)
 * **ssh command**: From openssh-client package (VM access)
@@ -221,14 +221,16 @@ When validating the QEMU backend, doctor checks:
 ### Firecracker not found
 
 ```
-[FAIL] firecracker: binary not found in PATH or ~/.smolvm/bin
+[FAIL] firecracker: Not found in PATH or ~/.smolvm/bin
 ```
 
-**Solution**: Run the setup command or manually install Firecracker:
+**Solution**: Run the setup command to install Firecracker:
 
 ```bash  theme={null}
 smolvm setup
 ```
+
+If `SMOLVM_FIRECRACKER_DIR` is set, doctor only checks that folder and reports `Not found at <dir>/firecracker` instead. The suggested fix then includes the matching flag, for example `smolvm setup --firecracker-dir <dir>`.
 
 ### Missing network commands
 

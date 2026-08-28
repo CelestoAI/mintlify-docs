@@ -131,11 +131,11 @@ The `smolvm doctor` command validates:
   </Accordion>
 
   <Accordion title="Firecracker binary not found">
-    **Problem**: The `firecracker` executable is not in PATH.
+    **Problem**: SmolVM cannot find the `firecracker` executable. SmolVM looks in the folder set by `SMOLVM_FIRECRACKER_DIR` (or the `--firecracker-dir` setup flag) if one is configured. Without a configured folder, it checks `PATH` first, then `~/.smolvm/bin/firecracker`.
 
     **Solution**:
 
-    1. Run the setup command:
+    1. Run the setup command, which installs Firecracker to `~/.smolvm/bin` by default:
 
     ```bash  theme={null}
     smolvm setup
@@ -153,8 +153,15 @@ The `smolvm doctor` command validates:
     3. Verify installation:
 
     ```bash  theme={null}
-    which firecracker
-    # Should show /usr/local/bin/firecracker or ~/.smolvm/bin/firecracker
+    smolvm doctor
+    # The firecracker check should show the resolved path,
+    # for example ~/.smolvm/bin/firecracker
+    ```
+
+    If you installed Firecracker to a custom folder that is not on `PATH`, export `SMOLVM_FIRECRACKER_DIR` so SmolVM can find it:
+
+    ```bash  theme={null}
+    export SMOLVM_FIRECRACKER_DIR="$HOME/.local/bin"
     ```
   </Accordion>
 
