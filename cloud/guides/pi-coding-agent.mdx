@@ -73,7 +73,7 @@ You need:
     pi --celesto
     ```
 
-    The extension creates a Celesto computer with an empty `$HOME/workspace` and routes Pi's `read`, `write`, `edit`, and `bash` tools there. Nothing is copied from your machine yet.
+    The extension creates a Celesto computer with an empty `$HOME/workspace` and routes Pi's `read`, `write`, `edit`, and `bash` tools there. Computers created by the extension use a [persistent home](/cloud/features/persistence#keep-the-home-directory-across-restore), so `$HOME` survives stop and restore. Nothing is copied from your machine yet.
 
     <Check>
       Pi reports the computer name and shows `$HOME/workspace` as the active workspace.
@@ -195,7 +195,7 @@ Start Pi with a computer name or ID from that list:
 pi --celesto --celesto-computer curie
 ```
 
-A caller-selected computer is never deleted automatically. Any files already in `$HOME/workspace` remain untouched until you explicitly run `/celesto push` or `/celesto sync`. A non-empty legacy `/workspace` is moved to `$HOME/workspace` automatically when the home workspace is empty.
+A caller-selected computer is never deleted automatically, and the extension does not change its persistence settings. It keeps whatever home persistence it was created with. Any files already in `$HOME/workspace` remain untouched until you explicitly run `/celesto push` or `/celesto sync`. A non-empty legacy `/workspace` is moved to `$HOME/workspace` automatically when the home workspace is empty.
 
 If the remote workspace already contains a project from a previous session, run `/celesto sync` to reconcile it with your local copy. If the remote workspace is empty (or you want to replace it with the current local project), run `/celesto push`.
 
