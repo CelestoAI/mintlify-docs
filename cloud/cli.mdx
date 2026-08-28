@@ -27,6 +27,8 @@ celesto auth status
 celesto auth logout
 ```
 
+`celesto auth status` reports the API URL, the credential source, and the organization the key is bound to. See [Authentication](/cloud/authentication#verify-which-credential-a-command-uses) for how the CLI resolves keys and how to check which organization a command targets.
+
 ## Create your first computer
 
 Create a computer with the default `scratch` template. The command prints a generated name. Use that name in later commands.
@@ -71,10 +73,11 @@ celesto computer stop einstein
 celesto computer start einstein
 ```
 
-Delete the computer when you are done:
+Delete the computer when you are done. The confirmation prompt names the organization the computer belongs to, so you can catch a wrong-tenant delete before it happens. Pass `--force` to skip the prompt in scripts.
 
 ```bash
 celesto computer delete einstein
+# Delete computer einstein in Acme Research (org_123)? [y/N]:
 ```
 
 ## Computer commands
