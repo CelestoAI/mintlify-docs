@@ -300,11 +300,23 @@ A few environment variables on your host machine change how SmolVM itself behave
 When you launch a coding-agent preset, SmolVM forwards a small list of host environment variables into the sandbox so the agent can authenticate without an extra login step.
 
 <ResponseField name="OPENAI_API_KEY" type="string">
-  Forwarded to presets that talk to OpenAI APIs (for example `codex`).
+  Forwarded to presets that talk to OpenAI APIs (for example `codex` and `opencode`).
 </ResponseField>
 
 <ResponseField name="OPENROUTER_API_KEY" type="string">
-  Forwarded to the `openclaw` preset and any preset that supports OpenRouter.
+  Forwarded to the `openclaw` and `opencode` presets and any preset that supports OpenRouter.
+</ResponseField>
+
+<ResponseField name="ANTHROPIC_API_KEY" type="string">
+  Forwarded to the `opencode` preset for Anthropic models.
+</ResponseField>
+
+<ResponseField name="GOOGLE_API_KEY" type="string">
+  Forwarded to the `opencode` preset for Google models. `GEMINI_API_KEY` is forwarded as well.
+</ResponseField>
+
+<ResponseField name="AWS_ACCESS_KEY_ID" type="string">
+  Forwarded to the `opencode` preset for Amazon Bedrock. `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`, and `AWS_REGION` are forwarded together with it.
 </ResponseField>
 
 <ResponseField name="OPENCLAW_GATEWAY_TOKEN" type="string">
