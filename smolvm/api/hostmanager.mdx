@@ -15,6 +15,10 @@ The default installation directory is `~/.smolvm/bin/`.
   Pinned Firecracker version to install when auto-installing (e.g., "v1.14.1").
 </ParamField>
 
+<ParamField path="firecracker_dir" type="str | Path | None" default="None">
+  Folder containing SmolVM's Firecracker binary. An explicit value overrides the `SMOLVM_FIRECRACKER_DIR` environment variable. When neither is set, the default is `~/.smolvm/bin`.
+</ParamField>
+
 ```python  theme={null}
 from smolvm import HostManager
 
@@ -23,6 +27,9 @@ host_mgr = HostManager()
 
 # Specify custom version
 host_mgr = HostManager(firecracker_version="v1.14.1")
+
+# Use a custom Firecracker folder
+host_mgr = HostManager(firecracker_dir="~/.local/bin")
 ```
 
 ## Class Attributes
@@ -102,7 +109,7 @@ if missing:
 def find_firecracker() -> Path | None
 ```
 
-Find the Firecracker binary by searching:
+Find the Firecracker binary. If a folder is configured through the `firecracker_dir` constructor argument or the `SMOLVM_FIRECRACKER_DIR` environment variable, only that folder is checked. Otherwise the search order is:
 
 1. System PATH
 2. `~/.smolvm/bin/firecracker`
@@ -128,7 +135,7 @@ def install_firecracker(version: str | None = None) -> Path
 
 Download and install Firecracker from GitHub releases.
 
-Downloads the official tarball, extracts the firecracker binary, and installs it to `~/.smolvm/bin/`.
+Downloads the official tarball, extracts the firecracker binary, and installs it to the configured folder (`~/.smolvm/bin/` by default).
 
 <ParamField path="version" type="str | None" default="None">
   Version to install (e.g., "v1.14.1"). Defaults to the pinned version from the constructor.

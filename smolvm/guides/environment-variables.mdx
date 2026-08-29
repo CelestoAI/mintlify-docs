@@ -270,6 +270,17 @@ A few environment variables on your host machine change how SmolVM itself behave
   Override the virtual machine monitor SmolVM uses. Accepts `firecracker`, `qemu`, or `auto` (the default). On macOS the default is QEMU; on Linux it is Firecracker.
 </ResponseField>
 
+<ResponseField name="SMOLVM_FIRECRACKER_DIR" type="string">
+  Folder containing the Firecracker binary on Linux. When set, SmolVM installs to and looks for Firecracker only in this folder. When unset, `smolvm setup` installs to `~/.smolvm/bin`, and SmolVM discovery checks `PATH` first, then `~/.smolvm/bin`. Set this when you install Firecracker to a custom folder that is not on `PATH`:
+
+  ```bash  theme={null}
+  export SMOLVM_FIRECRACKER_DIR="$HOME/.local/bin"
+  smolvm setup
+  ```
+
+  The one-off equivalent is `smolvm setup --firecracker-dir <dir>`, which overrides this variable for that run.
+</ResponseField>
+
 <ResponseField name="SMOLVM_USE_PUBLISHED" type="string" default="1">
   Controls the [published-image fast path](/smolvm/concepts/published-images). On by default. Set to `0`, `false`, or `no` to force SmolVM to build images locally instead of downloading pre-built ones. Useful when you're testing changes to a preset's install script.
 </ResponseField>

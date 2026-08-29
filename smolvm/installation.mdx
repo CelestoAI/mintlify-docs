@@ -29,10 +29,40 @@ smolvm doctor
 On supported Linux and macOS systems, `pip install smolvm` pulls in the matching `smolvm-core` wheel automatically — most users do not need Rust installed.
 
 <Note>
-  Linux may prompt for `sudo` during `smolvm setup` to install host dependencies (Firecracker, `nftables`, `iproute2`) and configure runtime permissions. On macOS, setup installs QEMU via Homebrew.
+  Linux may prompt for `sudo` during `smolvm setup` to install host packages (`nftables`, `iproute2`) and configure runtime permissions. Firecracker itself installs into your home directory at `~/.smolvm/bin`, so it needs no system folders. On macOS, setup installs QEMU via Homebrew.
 </Note>
 
 After setup on Linux, activate your new KVM group membership with `newgrp kvm`, or log out and back in.
+
+### Choose where Firecracker is installed
+
+On Linux, `smolvm setup` installs Firecracker into `~/.smolvm/bin` for the user who runs the command. The install is atomic: SmolVM stages the binary in a temporary file and moves it into place, so a partially downloaded binary never replaces a working one. If a `firecracker` binary is already on your `PATH`, SmolVM keeps using it and does not install a duplicate.
+
+To install into a different folder for one setup run, pass `--firecracker-dir`:
+
+```bash
+smolvm setup --firecracker-dir "$HOME/.local/bin"
+```
+
+If that folder is not on your `PATH`, set `SMOLVM_FIRECRACKER_DIR` so later SmolVM commands can find the binary:
+
+```bash
+export SMOLVM_FIRECRACKER_DIR="$HOME/.local/bin"
+smolvm setup
+```
+
+SmolVM looks for Firecracker in this order:
+
+1. The `--firecracker-dir` flag, if passed.
+2. The `SMOLVM_FIRECRACKER_DIR` environment variable. When either of these is set, SmolVM only looks in that folder.
+3. Any `firecracker` binary on `PATH`.
+4. The per-user default, `~/.smolvm/bin/firecracker`.
+
+This setting changes only where Firecracker lives. Images and sandbox state stay in their usual locations.
+
+### Fedora Atomic desktops
+
+Silverblue, Bluefin, and other Fedora Atomic systems work with the normal `smolvm setup` command when the required host tools are already installed. SmolVM never modifies the rpm-ostree deployment itself. If a required tool is missing, setup prints the exact `sudo rpm-ostree install` command to run, and asks you to reboot before retrying.
 
 ## Install from source
 
@@ -88,7 +118,7 @@ For contribution guidelines, tests, and code style checks, see [CONTRIBUTING.md]
 
 <Tabs>
   <Tab title="Linux">
-    - Ubuntu, Debian, or Fedora (other distributions work but `smolvm setup` may not install host dependencies automatically)
+    - Ubuntu, Debian, or Fedora. `smolvm setup` installs missing host packages with `apt` or `dnf`. On rpm-ostree systems such as Fedora Atomic, it prints the `rpm-ostree` command to run instead. Other distributions work but you may need to install host dependencies yourself
     - KVM support — the kernel feature that lets SmolVM run virtual machines. Check with `ls /dev/kvm`
     - x86\_64 architecture
     - Python 3.10\+
