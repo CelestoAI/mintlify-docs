@@ -36,6 +36,29 @@ The CLI resolves the API key in this order:
 3. `.env` file in the current directory
 4. Key saved by `celesto auth login`
 
+## Verify which credential a command uses
+
+Each API key is bound to a single organization. Because the lookup order reads `.env` from the current working directory, the same command can target a different organization depending on where you run it. Run `celesto auth status` to see exactly which key and organization CLI commands use from your current directory:
+
+```bash
+celesto auth status
+# API URL:      https://api.celesto.ai/v1
+# Credential:   your saved login (system keyring)
+# Organization: Acme Research (org_123)
+```
+
+The output reports:
+
+- **API URL**: the endpoint commands target. Pass `--base-url` to check the credential saved for a different environment.
+- **Credential**: the exact source the key came from, such as the `CELESTO_API_KEY` environment variable, a `.env` file, or your saved login.
+- **Organization**: the organization the resolved key is bound to.
+
+When a `.env` file in the current directory holds a different key than your saved login, `celesto auth status` names both organizations and tells you how to switch. Every other CLI command prints a one-time warning on stderr in that situation, naming the `.env` file that overrides the saved login. The warning goes to stderr, so `--json` output on stdout stays parseable.
+
+To use your saved login instead of the `.env` key, run the command from another directory or pass `--api-key` explicitly.
+
+Destructive commands also name the organization they act on: `celesto computer delete` includes it in the confirmation prompt, and `celesto computer stop` includes it in the result message. `--force` and `--json` skip the organization lookup, so scripted calls make no extra request.
+
 <View title="Python" icon="python">
 
 ## Use an environment variable
