@@ -79,6 +79,24 @@ computer.delete()
   Optional immutable template version. Pin this when you want repeatable builds as a template changes over time.
 </ParamField>
 
+<ParamField body="persistent_home" type="boolean" default="false">
+  Keep `/home/ohm` across stop and restore. Set this at create time when you plan to reuse the computer across sessions. This setting cannot be changed after the computer is created.
+</ParamField>
+
+## Create a computer with a persistent home
+
+Computers are ephemeral by default. Pass `persistent_home=True` to keep `/home/ohm` across stop and restore:
+
+```python create_persistent_computer.py
+from celesto import Computer
+
+
+computer = Computer(persistent_home=True)
+print(computer.name)
+```
+
+See [Keep work between sessions](/cloud/features/persistence) for how persistence works.
+
 ## Use a template
 
 A template is a ready-made computer image with extra tools and default CPU, memory, and disk settings. Use `coding-agent` for common coding workflows:
@@ -315,6 +333,23 @@ await computer.delete();
 <ParamField body="templateVersion" type="string">
   Optional immutable template version. Pin this when you want repeatable builds as a template changes over time.
 </ParamField>
+
+<ParamField body="persistentHome" type="boolean" default="false">
+  Keep `/home/ohm` across stop and restore. Set this at create time when you plan to reuse the computer across sessions. This setting cannot be changed after the computer is created.
+</ParamField>
+
+## Create a computer with a persistent home
+
+Computers are ephemeral by default. Pass `persistentHome: true` to keep `/home/ohm` across stop and restore:
+
+```ts create-persistent-computer.ts
+import { Computer } from "@celestoai/sdk";
+
+const computer = await Computer.create({ persistentHome: true });
+console.log(computer.name);
+```
+
+See [Keep work between sessions](/cloud/features/persistence) for how persistence works.
 
 ## Use a template
 
@@ -553,6 +588,10 @@ ws.on("open", () => ws.send("echo hello\n"));
 
 <ResponseField name="template_version" type="string">
   Pinned template version, if one was provided at create time. TypeScript exposes this as `templateVersion`.
+</ResponseField>
+
+<ResponseField name="persistentHome" type="boolean">
+  Whether `/home/ohm` is kept across stop and restore. Available in TypeScript as `persistentHome`. Set at create time and cannot be changed later.
 </ResponseField>
 
 <ResponseField name="connection" type="object">

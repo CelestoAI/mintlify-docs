@@ -80,6 +80,37 @@ celesto computer delete einstein
   The command prints `ready` after the computer starts again, which means the workspace was saved.
 </Check>
 
+## Keep the home directory across restore
+
+Computers are ephemeral by default. Enable a persistent home at create time to keep `/home/ohm` across stop and restore, so dotfiles, credentials caches, and anything else in the home directory survive alongside the workspace.
+
+Enable it when you create the computer:
+
+<CodeGroup>
+
+```python Python
+from celesto import Computer
+
+
+computer = Computer(persistent_home=True)
+```
+
+```ts TypeScript
+import { Computer } from "@celestoai/sdk";
+
+const computer = await Computer.create({ persistentHome: true });
+```
+
+```bash CLI
+celesto computer create --persistent-home
+```
+
+</CodeGroup>
+
+<Warning>
+  A persistent home can only be set at create time. You cannot enable or disable it on an existing computer.
+</Warning>
+
 ## Save the computer ID or name
 
 Use the same computer when you want the same state.
