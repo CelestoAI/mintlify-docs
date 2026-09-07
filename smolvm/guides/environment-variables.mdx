@@ -328,7 +328,7 @@ When you launch a coding-agent preset, SmolVM forwards a small list of host envi
 </ResponseField>
 
 <Tip>
-  Set these in your shell profile (`~/.zshrc`, `~/.bashrc`) so every `smolvm openclaw start` picks them up automatically. They never get baked into a published image — they only travel into a sandbox you boot.
+  Set these variables in the shell that runs `smolvm openclaw start`. SmolVM forwards the selected values into that sandbox, but it does not copy `~/.openclaw/openclaw.json`, `~/.openclaw/.env`, or other OpenClaw state from your machine.
 </Tip>
 
 ## Variable validation
