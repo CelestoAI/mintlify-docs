@@ -48,7 +48,7 @@ No more pressing "accept changes" every few seconds. Let the agent work freely i
 
 Each command creates a sandbox and prepares the selected agent. Most presets forward supported credentials and configuration from your machine when available. OpenClaw starts with fresh configuration and only receives supported credential variables from the shell that starts SmolVM.
 
-Most first launches take 5–10 seconds because SmolVM downloads a pre-built sandbox image instead of installing the agent on every run. See [Published images](/smolvm/concepts/published-images) for how the fast path works and how to opt out.
+Presets with a matching pre-built image skip installation after downloading that image. Download time depends on your connection. OpenClaw and OpenCode currently install inside each new sandbox. See [Published images](/smolvm/concepts/published-images) for details.
 
 ## Work with OpenClaw
 
@@ -62,7 +62,7 @@ OpenClaw includes a browser dashboard. Follow these steps to create a sandbox, f
     smolvm openclaw start --name openclaw-work --no-attach
     ```
 
-    SmolVM installs OpenClaw 2026.9.1 after the sandbox starts, so the first setup can take several minutes. SmolVM shows each installation step while you wait.
+    SmolVM installs OpenClaw 2026.9.1 after the sandbox starts, so creating each new sandbox can take several minutes. SmolVM shows each installation step while you wait.
 
     The sandbox does not inherit `~/.openclaw/openclaw.json`, `~/.openclaw/.env`, or other OpenClaw state from your machine. Set a supported credential variable before starting SmolVM, or run `openclaw onboard` inside the sandbox.
   </Step>
@@ -97,12 +97,26 @@ OpenClaw includes a browser dashboard. Follow these steps to create a sandbox, f
     Use the sandbox name from the list:
 
     ```bash
-    smolvm openclaw open openclaw-work
+    smolvm openclaw open-ui openclaw-work
     ```
 
     SmolVM starts the OpenClaw dashboard service when needed, creates a private connection available only on your machine, and opens a one-time link. On a remote machine, add `--no-browser` to print the link instead.
   </Step>
 </Steps>
+
+<Note>
+  In SmolVM v0.0.31, `smolvm openclaw open-ui` replaces `smolvm openclaw open`. Update existing scripts: the old command is no longer accepted.
+</Note>
+
+To print the one-time dashboard link instead of opening a browser:
+
+```bash
+smolvm openclaw open-ui openclaw-work --no-browser
+```
+
+Treat the link as a credential. Close the local connection with the exact `smolvm sandbox port close` command printed by `open-ui`.
+
+Updating SmolVM leaves OpenClaw inside existing sandboxes unchanged. Before replacing an older sandbox, save a snapshot with [sandbox snapshots](/smolvm/cli/snapshot).
 
 See [Coding-agent preset environment variables](/smolvm/guides/environment-variables#coding-agent-presets) for the credentials that you can explicitly pass to a fresh OpenClaw sandbox.
 
