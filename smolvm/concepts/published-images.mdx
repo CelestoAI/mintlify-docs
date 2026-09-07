@@ -14,7 +14,7 @@ Published images are release assets on the SmolVM GitHub repository. They includ
 - SHA-256 checksums that SmolVM verifies before boot
 - A pinned Rust guest-agent binary for custom image builds from installed wheels
 
-The image release tag uses a date-based format such as `images-2026.06.24.0`. This tag is separate from the Python package version, so SmolVM can publish rebuilt images without pretending the Python API changed.
+The image release tag uses a date-based format such as `images-2026.09.07.0`. This tag is separate from the Python package version, so SmolVM can publish rebuilt images without pretending the Python API changed.
 
 <Tooltip tip="CalVer means calendar versioning. The version includes the release date, which makes image rebuilds easier to track.">
   CalVer
@@ -31,6 +31,10 @@ The image release tag uses a date-based format such as `images-2026.06.24.0`. Th
 | `hermes` | Hermes coding agent |
 | `pi` | Pi coding agent |
 | `ubuntu` | A clean Ubuntu base image |
+
+<Note>
+  SmolVM v0.0.31 uses image release `images-2026.09.07.0`. Publishing an image does not automatically enable it in the CLI: OpenClaw still installs Node.js and OpenClaw inside each new sandbox, and OpenCode images are not yet selected by this release. Allow several minutes for OpenClaw setup.
+</Note>
 
 The public CLI command for `claude-code` is `smolvm claude start`.
 
@@ -80,7 +84,7 @@ When you build images from an installed Python wheel instead of a source checkou
 ```text
 ~/.smolvm/images/
   _guest-agent/
-    images-2026.06.24.0/
+    images-2026.09.07.0/
       arm64/
         smolvm-guest-agent-linux-arm64
 ```
@@ -95,13 +99,13 @@ Published images live under `~/.smolvm/images/`. The release URLs use the CalVer
 
 ```text
 ~/.smolvm/images/
-  codex-v0.0.24.post2-arm64-qemu/
+  codex-v0.0.31-arm64-qemu/
     kernel
     rootfs.ext4.zst
     rootfs.ext4
     rootfs.ext4.from-sha256
 
-  base-kernel-v0.0.24.post2-arm64/
+  base-kernel-v0.0.31-arm64/
     vmlinux.elf
     vmlinux.image
 ```
@@ -113,16 +117,6 @@ Run `smolvm prune` to remove old cached images:
 ```bash
 smolvm prune
 ```
-
-## Opt out for image development
-
-Set `SMOLVM_USE_PUBLISHED=0` when you want to test a local image build or preset install script:
-
-```bash
-SMOLVM_USE_PUBLISHED=0 smolvm codex start
-```
-
-For everyday use, leave this unset so SmolVM can use the verified fast path.
 
 ## Dashboard UI assets
 
