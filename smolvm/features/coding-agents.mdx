@@ -1,9 +1,9 @@
 ---
 title: "Coding Agents in Sandbox"
-description: "Run Claude Code, Codex, OpenCode, Hermes, and Pi coding agents inside a SmolVM sandbox with full permissions — no accept-changes prompts and no host risk."
+description: "Run Claude Code, Codex, OpenCode, OpenClaw, Hermes, and Pi inside a SmolVM sandbox with full permissions — no accept-changes prompts and no host risk."
 ---
 
-SmolVM lets you run coding agents like Claude, Codex, OpenCode, Hermes, and Pi inside an isolated sandbox. The agent gets a full development environment — git credentials, dev tools, terminal access — but nothing it does can affect your host machine.
+SmolVM lets you run coding agents and agent tools like Claude, Codex, OpenCode, OpenClaw, Hermes, and Pi inside an isolated sandbox. The agent gets a full development environment — git credentials, dev tools, terminal access — but nothing it does can affect your host machine.
 
 No more pressing "accept changes" every few seconds. Let the agent work freely in its own computer.
 
@@ -29,6 +29,11 @@ No more pressing "accept changes" every few seconds. Let the agent work freely i
     smolvm opencode start
     ```
   </Tab>
+  <Tab title="OpenClaw">
+    ```bash
+    smolvm openclaw start
+    ```
+  </Tab>
   <Tab title="Hermes">
     ```bash
     smolvm hermes start
@@ -41,9 +46,65 @@ No more pressing "accept changes" every few seconds. Let the agent work freely i
   </Tab>
 </Tabs>
 
-Each command launches a sandbox with the respective coding agent pre-installed and configured. Your existing credentials (from `claude login`, `codex login`, etc.) are forwarded into the sandbox automatically — no re-authentication needed.
+Each command creates a sandbox and prepares the selected agent. Most presets forward supported credentials and configuration from your machine when available. OpenClaw starts with fresh configuration and only receives supported credential variables from the shell that starts SmolVM.
 
-The first launch typically takes 5–10 seconds because SmolVM downloads a pre-built sandbox image instead of installing the agent on every run. See [Published images](/smolvm/concepts/published-images) for how the fast path works and how to opt out.
+Most first launches take 5–10 seconds because SmolVM downloads a pre-built sandbox image instead of installing the agent on every run. See [Published images](/smolvm/concepts/published-images) for how the fast path works and how to opt out.
+
+## Work with OpenClaw
+
+OpenClaw includes a browser dashboard. Follow these steps to create a sandbox, find it later, and open the dashboard.
+
+<Steps>
+  <Step title="Create an OpenClaw sandbox">
+    Create a named sandbox without opening its terminal session:
+
+    ```bash
+    smolvm openclaw start --name openclaw-work --no-attach
+    ```
+
+    SmolVM installs OpenClaw 2026.9.1 after the sandbox starts, so the first setup can take several minutes. SmolVM shows each installation step while you wait.
+
+    The sandbox does not inherit `~/.openclaw/openclaw.json`, `~/.openclaw/.env`, or other OpenClaw state from your machine. Set a supported credential variable before starting SmolVM, or run `openclaw onboard` inside the sandbox.
+  </Step>
+
+  <Step title="Find a running OpenClaw sandbox">
+    List your running OpenClaw sandboxes when you need the name:
+
+    ```bash
+    smolvm openclaw list
+    # NAME              STATUS   PID
+    # openclaw-work     running  12345
+    ```
+  </Step>
+
+  <Step title="Check every state">
+    Include stopped, paused, and errored OpenClaw sandboxes with `--all`:
+
+    ```bash
+    smolvm openclaw list --all
+    ```
+  </Step>
+
+  <Step title="Check for older sandboxes">
+    The filtered list includes sandboxes that current SmolVM releases created with the OpenClaw preset. To look for an older or manually prepared sandbox, view the complete inventory:
+
+    ```bash
+    smolvm sandbox list --all
+    ```
+  </Step>
+
+  <Step title="Open the dashboard">
+    Use the sandbox name from the list:
+
+    ```bash
+    smolvm openclaw open openclaw-work
+    ```
+
+    SmolVM starts the OpenClaw dashboard service when needed, creates a private connection available only on your machine, and opens a one-time link. On a remote machine, add `--no-browser` to print the link instead.
+  </Step>
+</Steps>
+
+See [Coding-agent preset environment variables](/smolvm/guides/environment-variables#coding-agent-presets) for the credentials that you can explicitly pass to a fresh OpenClaw sandbox.
 
 ### OpenCode credentials
 

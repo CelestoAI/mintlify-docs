@@ -1,6 +1,6 @@
 ---
 title: "smolvm sandbox list"
-description: "Use smolvm sandbox list to view running, stopped, paused, and errored sandboxes, filter by lifecycle state, and produce JSON for scripts."
+description: "Use smolvm sandbox list to view sandboxes, filter by state or preset, and produce JSON for scripts."
 ---
 
 `smolvm sandbox list` shows the sandboxes on your machine. Use it to find a sandbox name, check whether one is still running, or feed sandbox data into a script.
@@ -10,24 +10,6 @@ description: "Use smolvm sandbox list to view running, stopped, paused, and erro
 ```bash
 smolvm sandbox list [OPTIONS]
 ```
-
-## Options
-
-<ParamField path="--all" type="flag">
-  Show every sandbox, including stopped, created, paused, and errored sandboxes.
-</ParamField>
-
-<ParamField path="--status" type="string">
-  Show only sandboxes in one lifecycle state. Use one of the states printed by `smolvm sandbox list --all`.
-</ParamField>
-
-<ParamField path="--json" type="flag">
-  Print a JSON envelope instead of a table.
-</ParamField>
-
-<Note>
-  Use either `--all` or `--status`, not both.
-</Note>
 
 ## Examples
 
@@ -49,10 +31,30 @@ smolvm sandbox list --all
 smolvm sandbox list --status stopped
 ```
 
+### Filter by preset
+
+A preset is a ready-made sandbox setup for an agent. Use `--preset` to show only sandboxes created by one preset:
+
+```bash
+smolvm sandbox list --preset openclaw
+# NAME              PRESET     STATUS   PID
+# openclaw-work     openclaw   running  12345
+```
+
+Add `--all` to include that preset's sandboxes in every state:
+
+```bash
+smolvm sandbox list --preset openclaw --all
+```
+
+<Note>
+  Preset filtering uses information saved when SmolVM creates a sandbox. Sandboxes created by older SmolVM releases and manually prepared sandboxes remain available through `smolvm sandbox list --all`, but do not appear in preset-filtered results.
+</Note>
+
 ### Use JSON output
 
 ```bash
-smolvm sandbox list --all --json
+smolvm sandbox list --json
 ```
 
 ```json
@@ -62,12 +64,14 @@ smolvm sandbox list --all --json
   "exit_code": 0,
   "data": {
     "filters": {
-      "all": true,
-      "status": null
+      "all": false,
+      "status": "running",
+      "preset": null
     },
     "vms": [
       {
-        "name": "my-sandbox",
+        "name": "openclaw-work",
+        "preset": "openclaw",
         "status": "running",
         "pid": 12345,
         "ip_address": "172.16.0.2",
@@ -79,6 +83,28 @@ smolvm sandbox list --all --json
   "error": null
 }
 ```
+
+## Options
+
+<ParamField path="--all" type="flag">
+  Show every sandbox, including stopped, created, paused, and errored sandboxes.
+</ParamField>
+
+<ParamField path="--status" type="string">
+  Show only sandboxes in one state. Use one of the states printed by `smolvm sandbox list --all`.
+</ParamField>
+
+<ParamField path="--preset" type="string">
+  Show only sandboxes created by this preset, such as `openclaw` or `codex`. You can combine this with `--all` or `--status`.
+</ParamField>
+
+<ParamField path="--json" type="flag">
+  Print a JSON envelope instead of a table. Each sandbox includes its stored `preset`, and `filters` includes the active `preset` filter.
+</ParamField>
+
+<Note>
+  Use either `--all` or `--status`, not both.
+</Note>
 
 ## Related commands
 

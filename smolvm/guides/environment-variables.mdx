@@ -300,7 +300,7 @@ A few environment variables on your host machine change how SmolVM itself behave
 When you launch a coding-agent preset, SmolVM forwards a small list of host environment variables into the sandbox so the agent can authenticate without an extra login step.
 
 <ResponseField name="OPENAI_API_KEY" type="string">
-  Forwarded to presets that talk to OpenAI APIs (for example `codex` and `opencode`).
+  Forwarded to presets that talk to OpenAI APIs, including `codex`, `opencode`, and `openclaw`.
 </ResponseField>
 
 <ResponseField name="OPENROUTER_API_KEY" type="string">
@@ -328,7 +328,7 @@ When you launch a coding-agent preset, SmolVM forwards a small list of host envi
 </ResponseField>
 
 <Tip>
-  Set these in your shell profile (`~/.zshrc`, `~/.bashrc`) so every `smolvm openclaw start` picks them up automatically. They never get baked into a published image — they only travel into a sandbox you boot.
+  Set these variables in the shell that runs `smolvm openclaw start`. SmolVM forwards the selected values into that sandbox, but it does not copy `~/.openclaw/openclaw.json`, `~/.openclaw/.env`, or other OpenClaw state from your machine.
 </Tip>
 
 ## Variable validation
