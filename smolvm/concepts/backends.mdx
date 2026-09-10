@@ -37,8 +37,8 @@ Use this table when you know what kind of host or workload you have.
 
 | Situation | Best choice | Why |
 | --- | --- | --- |
-| Linux production | `auto` or `firecracker` | Small device model, Linux isolation path, and Firecracker snapshots |
-| Linux CI | `auto` or `firecracker` | Matches the production default and uses KVM |
+| Linux production | The backend you deploy with | QEMU and Firecracker both support accelerated Linux sandboxes; choose for workload and operational fit |
+| Linux CI | The backend you deploy with | Keeps lifecycle, networking, and performance behavior aligned with production |
 | macOS development | `auto` or `qemu` | Firecracker needs Linux KVM; QEMU uses macOS virtualization support |
 | Windows guests | `qemu` | Windows guest support requires QEMU |
 | QEMU performance testing | `qemu` with `qemu_machine="auto"` | Uses QEMU's fast `microvm` path when the guest supports it |
@@ -58,8 +58,10 @@ Use this table when you know what kind of host or workload you have.
 | Device model | Minimal | Broad | Minimal |
 | Snapshot and restore | Supported | Supported | Not yet supported |
 | Pause and resume | Supported | Supported | Not yet supported |
+| Outbound access off | Linux with vsock | Linux and macOS | Not yet supported |
+| IPv4 destination restrictions | Linux with vsock | Linux TAP | Not yet supported |
 | Fast vsock control channel | Supported on Linux | Supported for compatible Linux guests | Experimental |
-| Best fit | Linux production and CI | macOS, Windows guests, and compatibility testing | Runtime experiments |
+| Best fit | Fast Linux sandboxes with a small device model | Linux production, macOS, Windows guests, and broad compatibility | Runtime experiments |
 
 ## Firecracker
 
@@ -151,7 +153,7 @@ smolvm doctor --backend qemu
 ### Limits
 
 - QEMU has a larger device model than Firecracker.
-- QEMU is the compatibility choice for production Linux only when you need its features.
+- Linux QEMU supports production TAP networking with per-sandbox isolation and outbound access controls.
 - `q35` is broader but slower than the QEMU `microvm` path for supported Linux guests.
 
 ### Use QEMU from Python
@@ -204,7 +206,7 @@ QEMU supports two network modes through the `qemu_network` field on [`VMConfig`]
 | Mode | Use it when |
 | --- | --- |
 | `slirp` | You want simple local networking without root privileges. This is the default for QEMU. |
-| `tap` | You want QEMU on Linux to use the same host TAP and nftables isolation path as Firecracker. |
+| `tap` | You run QEMU on Linux and want a private guest IP, host isolation rules, or restricted IPv4 destinations. |
 
 Set `qemu_network="tap"` when you are building a custom image configuration and want Linux QEMU guests to use the host TAP path.
 
@@ -224,6 +226,8 @@ with SmolVM(config) as vm:
 ```
 
 See [network configuration](/smolvm/concepts/networking) for the host setup TAP mode reuses.
+
+QEMU `slirp` supports open access and off mode on macOS and Linux. QEMU TAP supports open, off, and restricted IPv4 destinations on Linux. In both modes, `expose_local()` keeps applications reachable from the host. See [Network controls](/smolvm/features/network-controls).
 
 ## libkrun
 
@@ -297,19 +301,19 @@ If a native helper is unavailable, SmolVM either falls back to the slower Python
 
 ### For Linux production
 
-Use `auto` or `firecracker`.
+Use the backend you run in production. Choose QEMU for QEMU lifecycle and networking parity, or Firecracker for its smaller device model. Both use hardware acceleration through KVM.
 
 ```python
 from smolvm import SmolVM
 
 with SmolVM(
-    backend="firecracker",
+    backend="qemu",
     memory=512,
 ) as vm:
     print(vm.run("echo production-like sandbox").stdout)
 ```
 
-Firecracker keeps the production device model small and uses SmolVM's Linux networking path.
+For QEMU CIDR restrictions on Linux, opt into TAP networking through `VMConfig.qemu_network="tap"`. Keep the default `slirp` network when simple setup and open or off access are enough.
 
 ### For macOS development
 
@@ -329,7 +333,7 @@ QEMU is the stable local backend on macOS.
 
 ### For Linux CI
 
-Use the backend you deploy with. For production parity on Linux, that usually means Firecracker.
+Use the backend you deploy with so CI covers the same machine model, lifecycle, and networking behavior as production.
 
 ```yaml
 steps:

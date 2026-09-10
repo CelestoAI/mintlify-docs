@@ -3,11 +3,7 @@ title: "InternetSettings"
 description: "InternetSettings reference: restrict outbound network access from a SmolVM sandbox to an allowlist of domains using the VMConfig internet_settings field."
 ---
 
-## Overview
-
-`InternetSettings` lets you restrict outbound network access from a sandbox to a specific list of domains. This is useful when you want to give an agent internet access but limit it to trusted services only.
-
-When you set `InternetSettings` on a `VMConfig`, the sandbox can only connect to the domains you allow. All other outbound connections are blocked.
+`InternetSettings` controls outbound network access for supported private sandbox networks. Open access remains the default.
 
 ## Import
 
@@ -17,52 +13,74 @@ from smolvm import InternetSettings
 
 ## Fields
 
-<ParamField path="allowed_domains" type="list[str]" required>
-  List of domain names the sandbox is allowed to connect to. SmolVM automatically normalizes entries by stripping protocols and trailing slashes, so `"https://api.example.com/"` and `"api.example.com"` are treated the same.
+<ParamField path="mode" type='"open" | "off" | "restricted" | None' default="None">
+  Outbound access mode. `open` allows internet access, `off` blocks outbound access, and `restricted` allows only `allowed_cidrs`. Leave unset when using `allowed_domains`.
 </ParamField>
 
-## Examples
+<ParamField path="allowed_cidrs" type="tuple[str, ...]" default="()">
+  IPv4 addresses and network ranges allowed in `restricted` mode. A bare address is stored as a `/32` range. Overlapping ranges are combined.
+</ParamField>
 
-### Allow specific domains
+<ParamField path="allowed_domains" type="tuple[str, ...]" default='("*",)'>
+  Domains resolved to IPv4 addresses during sandbox setup. URL entries are reduced to their hostname. Do not combine this field with `mode`.
+</ParamField>
+
+<ParamField path="allowed_http_methods" type="tuple[str, ...]" default='("*",)'>
+  Reserved field. HTTP-method filtering is not supported, so only the default wildcard is accepted.
+</ParamField>
+
+Input lists are accepted for collection fields. Stored settings are immutable tuples, while saved JSON uses arrays.
+
+## Turn outbound access off
 
 ```python
-from smolvm import SmolVM, VMConfig, InternetSettings
+from smolvm import InternetSettings, SmolVM
+
+with SmolVM(
+    backend="qemu",
+    internet_settings=InternetSettings(mode="off"),
+) as vm:
+    print(vm.run("echo hello").stdout)
+```
+
+QEMU supports off mode with its default network on macOS and Linux.
+
+## Allow IPv4 destinations
+
+```python
+from pathlib import Path
+from smolvm import InternetSettings, SmolVM, VMConfig
 
 config = VMConfig(
-    internet=InternetSettings(
-        allowed_domains=["api.openai.com", "api.anthropic.com"]
-    )
+    kernel_path=Path("/path/to/vmlinux"),
+    rootfs_path=Path("/path/to/rootfs.ext4"),
+    backend="qemu",
+    qemu_network="tap",
+    internet_settings=InternetSettings(
+        mode="restricted",
+        allowed_cidrs=["203.0.113.10", "198.51.100.0/24"],
+    ),
 )
 
 with SmolVM(config=config) as vm:
-    # This works:
-    vm.run("curl -s https://api.openai.com/v1/models")
-
-    # This is blocked:
-    vm.run("curl -s https://malicious-site.example.com")
+    print(vm.run("echo ready").stdout)
 ```
 
-### Agent with restricted internet
+QEMU restricted mode requires explicit TAP networking on Linux. Firecracker restrictions require Linux and the `vsock` command channel. See [Network controls](/smolvm/features/network-controls) for the support matrix and higher-level examples.
 
-```python
-from smolvm import SmolVM, InternetSettings, VMConfig
+## Validation
 
-config = VMConfig(
-    internet=InternetSettings(
-        allowed_domains=[
-            "api.github.com",
-            "pypi.org",
-            "files.pythonhosted.org",
-        ]
-    )
-)
+- `restricted` requires at least one entry in `allowed_cidrs`.
+- `allowed_cidrs` can only be used with `restricted`.
+- IPv6 ranges, sandbox ranges, and link-local ranges are rejected.
+- `allowed_domains` cannot be combined with `mode`.
+- HTTP-method restrictions are rejected.
+- Unknown fields are rejected.
 
-with SmolVM(config=config) as vm:
-    vm.run("pip install requests")  # allowed (pypi.org)
-```
+Direct `InternetSettings` and `VMConfig` construction raises Pydantic's `ValidationError`. Public `SmolVM` creation methods raise `smolvm.ValidationError` for invalid or unsupported combinations.
 
 ## Related
 
-* [VMConfig](/smolvm/api/vmconfig) - Full VM configuration reference
-* [Networking](/smolvm/concepts/networking) - How SmolVM networking works
-* [Security](/smolvm/concepts/security) - Isolation and security model
+- [Network controls](/smolvm/features/network-controls)
+- [VMConfig](/smolvm/api/vmconfig)
+- [Network configuration](/smolvm/concepts/networking)

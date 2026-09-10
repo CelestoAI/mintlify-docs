@@ -19,13 +19,18 @@ SmolVM(
     socket_dir: Path | None = None,
     backend: str | None = None,
     os: GuestOS | str | None = None,
+    qemu_machine: Literal["auto", "microvm", "q35"] = "auto",
     memory: int | None = None,
     disk_size: int | None = None,
     ssh_user: str = "root",
     ssh_key_path: str | None = None,
     ssh_password: str | None = None,
     comm_channel: Literal["ssh", "vsock"] | None = None,
+    internet_settings: InternetSettings | dict | None = None,
+    mounts: list[str] | None = None,
+    writable_mounts: bool = False,
     callbacks: list[Callback] | None = None,
+    state_manager: StateManagerProtocol | None = None,
 )
 ```
 
@@ -66,6 +71,10 @@ SmolVM(
   Runtime backend override. Options: `"firecracker"`, `"qemu"`, or `"auto"`.
 </ParamField>
 
+<ParamField path="qemu_machine" type='Literal["auto", "microvm", "q35"]' default="auto">
+  QEMU machine model. Keep `auto` for normal use so supported Linux guests use the faster `microvm` path.
+</ParamField>
+
 <ParamField path="memory" type="int | None" default="None">
   Guest memory in MiB for auto-config mode (when both `config` and `vm_id` are omitted). Default is 512 MiB.
 </ParamField>
@@ -90,8 +99,24 @@ SmolVM(
   Host-to-guest control channel for `run()`, file transfer, and env var operations. Leave unset for auto-selection (vsock when the SmolVM guest agent answers on a Linux QEMU host, otherwise SSH). Pass `"vsock"` to require vsock — SmolVM raises if the agent does not answer instead of falling back. Pass `"ssh"` to force the SSH path. See [control channel](/smolvm/concepts/control-channel) for details.
 </ParamField>
 
+<ParamField path="internet_settings" type="InternetSettings | dict | None" default="None">
+  Outbound access policy. See [Network controls](/smolvm/features/network-controls) for supported QEMU and Firecracker combinations.
+</ParamField>
+
+<ParamField path="mounts" type="list[str] | None" default="None">
+  Host folders to share with the sandbox. Each entry uses `HOST_PATH[:GUEST_PATH]`.
+</ParamField>
+
+<ParamField path="writable_mounts" type="bool" default="False">
+  Allow the sandbox to write through configured shared folders.
+</ParamField>
+
 <ParamField path="callbacks" type="list[Callback] | None" default="None">
   Callbacks that fire around each `run()` call. Use them to inspect, log, or block commands before they reach the guest. See [Run callbacks and safety hooks](/smolvm/features/callbacks) for the full guide and the [Callback reference](/smolvm/api/callbacks).
+</ParamField>
+
+<ParamField path="state_manager" type="StateManagerProtocol | None" default="None">
+  Inventory used to store and find sandbox state. Pass the same instance to create, reconnect, and restore operations that need to share an inventory.
 </ParamField>
 
 ### Raises
@@ -114,13 +139,18 @@ SmolVM.from_id(
     ssh_key_path: str | None = None,
     ssh_password: str | None = None,
     comm_channel: Literal["ssh", "vsock"] | None = None,
+    state_manager: StateManagerProtocol | None = None,
 ) -> SmolVM
 ```
 
-Reconnect to an existing VM by ID. Pass `ssh_password=` for Windows guests that use password-based SSH. Pass `comm_channel=` to override the host-to-guest control channel — see [control channel](/smolvm/concepts/control-channel).
+Reconnect to an existing VM by ID through the same inventory that created it. Pass `ssh_password=` for Windows guests that use password-based SSH. Pass `comm_channel=` to override the host-to-guest control channel; see [control channel](/smolvm/concepts/control-channel).
 
 <ParamField path="vm_id" type="str" required>
   VM identifier to reconnect to.
+</ParamField>
+
+<ParamField path="state_manager" type="StateManagerProtocol | None" required>
+  Inventory that contains the sandbox. Reuse the exact state manager supplied when the sandbox was created.
 </ParamField>
 
 <ResponseField name="return" type="SmolVM">
@@ -130,6 +160,7 @@ Reconnect to an existing VM by ID. Pass `ssh_password=` for Windows guests that 
 #### Raises
 
 * `VMNotFoundError`: If no VM with this ID exists.
+* `ValueError`: If `state_manager` is omitted.
 
 ### from\_image
 
@@ -142,8 +173,10 @@ SmolVM.from_image(
     name_prefix: str = "sbx",
     data_dir: Path | None = None,
     socket_dir: Path | None = None,
+    state_manager: StateManagerProtocol | None = None,
     backend: str | None = None,
     arch: str | None = None,
+    qemu_machine: Literal["auto", "microvm", "q35"] = "auto",
     vcpus: int = 1,
     memory_mb: int = 512,
     guest_os: GuestOS | str = GuestOS.ALPINE,
@@ -180,10 +213,18 @@ Use this when you have built a custom image (for example with `DockerRootfsBuild
   Prefix used when SmolVM generates a `vm_id`.
 </ParamField>
 
+<ParamField path="state_manager" type="StateManagerProtocol | None" default="None">
+  Inventory used for the new sandbox. Pass the same instance to a later reconnect or snapshot restore.
+</ParamField>
+
 <ParamField path="backend" type="str | None" default="None">
   Runtime backend (`"firecracker"`, `"qemu"`, or `"libkrun"`). Defaults to the backend recorded on the image, otherwise normal auto-selection. Firmware-boot images require `"qemu"`.
 
   SmolVM's public guides focus on Firecracker and QEMU because they have the broadest current support.
+</ParamField>
+
+<ParamField path="qemu_machine" type='Literal["auto", "microvm", "q35"]' default="auto">
+  QEMU machine model. Keep `auto` for the fastest supported default.
 </ParamField>
 
 <ParamField path="arch" type="str | None" default="None">
@@ -240,6 +281,10 @@ Use this when you have built a custom image (for example with `DockerRootfsBuild
 
 <ParamField path="ssh_password" type="str | None" default="None">
   SSH password. Use this for images that ship password-only SSH.
+</ParamField>
+
+<ParamField path="internet_settings" type="InternetSettings | dict | None" default="None">
+  Outbound access policy. QEMU `off` works with the default network on macOS and Linux; `restricted` requires explicit TAP networking on Linux.
 </ParamField>
 
 <ResponseField name="return" type="SmolVM">
@@ -366,6 +411,8 @@ SmolVM.from_snapshot(
     force: bool = False,
     ssh_user: str = "root",
     ssh_key_path: str | None = None,
+    comm_channel: Literal["ssh", "vsock"] | None = None,
+    state_manager: StateManagerProtocol | None = None,
 ) -> SmolVM
 ```
 
@@ -401,6 +448,14 @@ Restore a snapshot and attach a facade to the restored VM.
 
 <ParamField path="ssh_key_path" type="str | None" default="None">
   SSH private key path.
+</ParamField>
+
+<ParamField path="comm_channel" type='Literal["ssh", "vsock"] | None' default="None">
+  Host-to-guest command channel for the restored sandbox.
+</ParamField>
+
+<ParamField path="state_manager" type="StateManagerProtocol | None" default="None">
+  Inventory containing the snapshot. Reuse the state manager supplied to the workflow that created the snapshot.
 </ParamField>
 
 <ResponseField name="return" type="SmolVM">
@@ -705,7 +760,9 @@ Return SmolVM-managed environment variables for a running VM.
 def expose_local(
     self,
     guest_port: int,
-    host_port: int | None = None
+    host_port: int | None = None,
+    *,
+    guest_loopback: bool = False,
 ) -> int
 ```
 
@@ -717,6 +774,10 @@ Expose a guest TCP port on localhost only. Forwards `127.0.0.1:<host_port>` on t
 
 <ParamField path="host_port" type="int | None" default="None">
   Host localhost port. If omitted, an available port is automatically chosen.
+</ParamField>
+
+<ParamField path="guest_loopback" type="bool" default="False">
+  Route to the guest's `127.0.0.1` through an SSH tunnel. Use this only when the application listens on guest loopback instead of its network address.
 </ParamField>
 
 <ResponseField name="return" type="int">
@@ -1046,8 +1107,17 @@ On Windows guests, `vm.run(...)` executes the command in PowerShell, and `vm.upl
 ```python  theme={null}
 from smolvm import SmolVM
 
-# Reconnect to a VM created earlier
-vm = SmolVM.from_id("my-vm")
+from pathlib import Path
+from smolvm.storage import MemoryStateManager
+
+inventory = MemoryStateManager(Path(".smolvm-state"))
+original = SmolVM(state_manager=inventory)
+original.start()
+vm_id = original.vm_id
+original.close()
+
+# Reuse the same inventory when creating a new handle.
+vm = SmolVM.from_id(vm_id, state_manager=inventory)
 result = vm.run("uptime")
 print(result.stdout)
 vm.close()
