@@ -1,0 +1,147 @@
+---
+title: "Control internet access for computers"
+sidebarTitle: "Network Control"
+description: "Choose whether a new Celesto computer can connect to the internet, while keeping commands and terminal sessions available for your agent workflow."
+---
+
+You can decide whether a new Celesto computer can reach the internet. Turn internet access off for work that uses only the computer's files and installed tools. The computer can still run commands and provide a terminal for your agent.
+
+Set the choice when you create a computer. It stays with that computer across stop, start, and restore, so create a new computer when a task needs a different setting.
+
+## Choose an internet setting
+
+| Setting | What your computer can do |
+| --- | --- |
+| `open` | Connect to the internet. This is the default. |
+| `off` | Run commands and use terminal sessions with outbound internet access turned off. |
+
+Network Control currently supports these two settings. Domain and IP allowlists are not available.
+
+## Create an offline computer
+
+Pass `network_policy={"mode": "off"}` when you create a computer with Python, or `networkPolicy: { mode: "off" }` with TypeScript. The CLI provides the same choice through `--no-internet`.
+
+<CodeGroup>
+
+```python Python
+from celesto import Computer
+
+
+computer = Computer(network_policy={"mode": "off"})
+try:
+    result = computer.run("uname -a")
+    print(result["stdout"].strip())
+finally:
+    computer.delete()
+```
+
+```ts TypeScript
+import { Computer } from "@celestoai/sdk";
+
+
+const computer = await Computer.create({ networkPolicy: { mode: "off" } });
+
+try {
+  const result = await computer.run("uname -a");
+  console.log(result.stdout.trim());
+} finally {
+  await computer.delete();
+}
+```
+
+```bash CLI
+celesto computer create --no-internet
+```
+
+</CodeGroup>
+
+<Check>
+  The Python and TypeScript examples print information about the computer's operating system. Commands and terminal sessions remain available while outbound internet access is off.
+</Check>
+
+## Keep the setting with the computer
+
+Internet access is fixed when the computer is created. Stopping, starting, and restoring a computer keeps the same setting. This makes an offline workflow predictable when an agent resumes work later.
+
+You can read the selected setting from the computer response:
+
+<CodeGroup>
+
+```python Python
+from celesto import Computer
+
+
+computer = Computer(network_policy={"mode": "off"})
+try:
+    print(computer.network_policy)
+finally:
+    computer.delete()
+```
+
+```ts TypeScript
+import { Computer } from "@celestoai/sdk";
+
+
+const computer = await Computer.create({ networkPolicy: { mode: "off" } });
+
+try {
+  console.log(computer.networkPolicy);
+} finally {
+  await computer.delete();
+}
+```
+
+</CodeGroup>
+
+Both examples print the following policy:
+
+```json
+{ "mode": "off" }
+```
+
+## Use an offline computer with local home storage
+
+An offline computer uses the default home storage. A persistent home is a saved home folder that uses external storage, and it needs internet access. Keep `persistent_home=False` in Python or `persistentHome: false` in TypeScript when you select `off`.
+
+<Warning>
+  `network_policy={"mode": "off"}` cannot be combined with `persistent_home=True`. The TypeScript equivalents, `networkPolicy: { mode: "off" }` and `persistentHome: true`, cannot be combined either. The SDK validates this before it creates the computer.
+</Warning>
+
+Use the default `open` setting when your workflow needs a persistent home. Learn more about saved work in [Keep work between sessions](/cloud/features/persistence).
+
+## Use Network Control with OpenAI Agents
+
+`CelestoSandboxClientOptions` accepts the same policy when it creates a hosted computer for an OpenAI agent. Install the OpenAI Agents integration first with `pip install "celesto[openai-agents]"`.
+
+```python network_controlled_agent.py
+import asyncio
+
+from celesto.integrations.openai_agents import (
+    CelestoSandboxClient,
+    CelestoSandboxClientOptions,
+)
+
+
+async def main() -> None:
+    client = CelestoSandboxClient()
+    session = await client.create(
+        options=CelestoSandboxClientOptions(
+            network_policy={"mode": "off"},
+        ),
+    )
+    try:
+        print(session.state.computer_id)
+    finally:
+        await client.delete(session)
+
+
+asyncio.run(main())
+```
+
+When you reuse a computer with `computer_id`, the requested policy must match that computer's saved setting. Omit `network_policy` when you want to reuse the computer's existing setting. For a complete agent workflow, see [Sandbox an OpenAI agent with Celesto or SmolVM](/cloud/openai-agents).
+
+## Related pages
+
+- [Create and manage sandboxed computers](/cloud/computers)
+- [Keep work between sessions](/cloud/features/persistence)
+- [Celesto CLI reference](/cloud/cli)

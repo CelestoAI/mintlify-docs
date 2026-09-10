@@ -83,6 +83,12 @@ computer.delete()
   Keep `/home/ohm` across stop and restore. Set this at create time when you plan to reuse the computer across sessions. This setting cannot be changed after the computer is created.
 </ParamField>
 
+<ParamField body="network_policy" type="object" default='{"mode": "open"}'>
+  Outbound internet setting, fixed when you create the computer. Use `{"mode": "off"}` to create an offline computer. Offline computers use the default home storage rather than `persistent_home=True`.
+</ParamField>
+
+See [Network Control](/cloud/features/network-control) for Python, TypeScript, CLI, and OpenAI Agents examples.
+
 ## Create a computer with a persistent home
 
 Computers are ephemeral by default. Pass `persistent_home=True` to keep `/home/ohm` across stop and restore:

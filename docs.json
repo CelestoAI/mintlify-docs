@@ -125,6 +125,7 @@
               "cloud/features/lifecycle",
               "cloud/features/resources",
               "cloud/features/persistence",
+              "cloud/features/network-control",
               "cloud/features/petabyte-storage"
             ]
           },
