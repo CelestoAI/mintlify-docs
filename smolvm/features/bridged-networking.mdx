@@ -3,7 +3,7 @@ title: "Bridged networking"
 description: "Attach a Linux sandbox directly to an existing host bridge so it appears as a regular machine on that network, with its own MAC address and guest-managed IP, instead of sitting behind SmolVM's private NAT."
 ---
 
-By default, every SmolVM sandbox sits behind a private [NAT network](/smolvm/concepts/networking): the host allocates the IP, applies port forwards, and can enforce [outbound-domain controls](/smolvm/features/network-controls). Bridged networking is an opt-in alternative on **Linux hosts** that connects the sandbox directly to an existing host bridge (for example `br10`). The sandbox appears on that network as a separate computer, with its own MAC address and a guest-managed IP (DHCP or static configured inside the guest).
+By default, a SmolVM sandbox uses a private [NAT network](/smolvm/concepts/networking) that provides convenient host access and can enforce [outbound network controls](/smolvm/features/network-controls). Bridged networking is an opt-in alternative on **Linux hosts** that connects the sandbox directly to an existing host bridge (for example `br10`). The sandbox appears on that network as a separate computer, with its own MAC address and a guest-managed IP (DHCP or static configured inside the guest).
 
 Use bridged networking when you need the sandbox to be a first-class peer on your network — for example, to receive inbound connections from other devices on a LAN, get a real DHCP lease from your router, or run services that expect to bind to a routable address.
 
@@ -19,7 +19,7 @@ Stick with the default NAT mode when you need:
 
 - SmolVM's fast host-to-guest SSH channel and automatic port forwarding.
 - Shared workspace mounts from the host.
-- Outbound-domain allow-lists.
+- SmolVM-managed outbound access controls.
 
 ## Requirements and tradeoffs
 
@@ -28,7 +28,7 @@ Bridge mode is only supported on Linux hosts, and it deliberately turns off seve
 - **No SmolVM SSH channel from the host.** `smolvm sandbox ssh` and `expose_local()` do not apply — connect to guest services over the bridged network instead.
 - **No workspace or host mounts.** File sharing that depends on the private network is disabled.
 - **No host port forwards.** `smolvm sandbox port expose` is unavailable.
-- **No outbound-domain allow-lists.** `internet_settings` and `allowed_domains` require the private TAP network and are ignored for bridge-mode sandboxes.
+- **No SmolVM-managed outbound controls.** `internet_settings` is not supported with bridge mode.
 - **No host-visible IP.** `SmolVM.get_ip()` raises a clear error because the guest — not the host — owns the address. Read the address from inside the guest (for example over the fast shell channel).
 
 You can still use `smolvm sandbox shell` in bridge mode; it uses a direct host-to-guest control channel that does not depend on the network.
@@ -143,7 +143,7 @@ Snapshots capture the bridge attachment. On restore, SmolVM re-runs the same bri
 
 ## Related pages
 
-- [Network controls](/smolvm/features/network-controls) — outbound-domain allow-lists for NAT-mode sandboxes
+- [Network controls](/smolvm/features/network-controls) — open, off, and restricted access for private-network sandboxes
 - [Port forwarding](/smolvm/features/port-forwarding) — expose NAT-mode guest ports on the host
 - [Network configuration](/smolvm/concepts/networking) — how SmolVM's default private network works
 - [`smolvm sandbox create`](/smolvm/cli/create) — full CLI reference

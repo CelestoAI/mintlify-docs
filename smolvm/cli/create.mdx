@@ -62,7 +62,7 @@ smolvm sandbox create [OPTIONS]
 </ParamField>
 
 <ParamField path="--network" type="string" default="nat">
-  Network mode for the sandbox. Choices are `nat` (default, private SmolVM network with NAT, port forwarding, and domain controls) and `bridge` (attach directly to an existing host bridge on Linux). See [Bridged networking](/smolvm/features/bridged-networking).
+  Network mode for the sandbox. Choices are `nat` (default, private SmolVM network with NAT, port forwarding, and outbound network controls) and `bridge` (attach directly to an existing host bridge on Linux). See [Bridged networking](/smolvm/features/bridged-networking).
 </ParamField>
 
 <ParamField path="--bridge" type="string">
@@ -119,7 +119,7 @@ smolvm bridge check br10
 smolvm sandbox create --name demo --os alpine --network bridge --bridge br10
 ```
 
-In bridge mode, SSH from the host, host port forwards, workspace mounts, and outbound-domain allow-lists are unavailable — use `smolvm sandbox shell` and connect to guest services over the bridged network instead. See [Bridged networking](/smolvm/features/bridged-networking) for the full setup, tradeoffs, and SDK usage.
+In bridge mode, SSH from the host, host port forwards, workspace mounts, and SmolVM-managed outbound controls are unavailable — use `smolvm sandbox shell` and connect to guest services over the bridged network instead. See [Bridged networking](/smolvm/features/bridged-networking) for the full setup, tradeoffs, and SDK usage.
 
 ### Create a Windows sandbox from a local image
 

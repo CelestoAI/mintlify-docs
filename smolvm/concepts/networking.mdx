@@ -3,11 +3,13 @@ title: "Network configuration"
 description: "How SmolVM networking works — TAP devices, private subnets, NAT, and outbound internet access — so sandboxes stay isolated from each other and the host."
 ---
 
-Every SmolVM sandbox gets its own private network connection. The sandbox can reach the internet, but it cannot talk to other sandboxes or access host network interfaces directly. This page explains how the networking works and what you can configure.
+Every SmolVM sandbox gets a private network connection. Internet access is open by default, and you can turn it off or restrict supported Linux networks to specific destinations. Most applications need no network setup.
 
 ## How it works
 
-When SmolVM creates a sandbox, it sets up a dedicated virtual network interface (called a TAP device) for that sandbox. The sandbox receives a private IP address and uses NAT to reach the internet through your host's network connection.
+QEMU uses `slirp` by default on macOS and Linux. Slirp is a user-mode network built into QEMU, so it needs no administrator privileges or host network device.
+
+Firecracker and explicit QEMU `qemu_network="tap"` use a TAP device on Linux. A TAP device is a virtual network interface connecting one sandbox to the host. The sandbox receives a private IP address and uses network address translation (NAT) to reach the internet through the host.
 
 ```mermaid
 flowchart TB
@@ -29,31 +31,31 @@ flowchart TB
   ETH0 --> Internet["Internet"]
 ```
 
-Each sandbox receives:
+On the Linux TAP path, each sandbox receives:
 
 * **Guest IP**: an address in the `172.16.0.2` – `172.16.0.255` range
 * **Gateway**: `172.16.0.1` (the host side of the TAP device)
 * **Netmask**: `255.255.255.0` (`/24`)
 
-SmolVM assigns these automatically. You do not need to configure networking for most use cases.
+SmolVM assigns these automatically. QEMU only uses this path when you explicitly select TAP.
 
 ## Sandbox isolation
 
-Sandboxes are isolated from each other by default. SmolVM adds a firewall rule that drops all traffic between TAP devices, so one sandbox cannot reach another:
+Sandboxes are isolated from each other by default. On Linux TAP, SmolVM adds a firewall rule that drops traffic between sandbox interfaces:
 
 ```bash
 # This rule is added automatically
 nft add rule inet smolvm_filter forward iifname "tap*" oifname "tap*" counter drop
 ```
 
-Each sandbox can:
+With default open access, a sandbox can:
 
 * Access the internet via NAT
 * Be reached from the host via [port forwarding](/smolvm/features/port-forwarding)
 * **Not** communicate directly with other sandboxes
 
 <Note>
-  Sandboxes can access the internet by default. If you need to restrict outbound traffic, add firewall rules on your host. See [security model](/smolvm/concepts/security) for details.
+  Use [Network controls](/smolvm/features/network-controls) to turn outbound access off or allow specific destinations. QEMU off mode works with the default network on macOS and Linux; restricted IPv4 destinations require explicit TAP networking on Linux.
 </Note>
 
 ## TAP devices
@@ -69,9 +71,9 @@ The lifecycle of a TAP device:
 
 All of this is handled automatically. You only need to interact with TAP devices if you are debugging networking issues.
 
-## NAT and firewall rules
+## Linux TAP NAT and firewall rules
 
-SmolVM uses [nftables](https://wiki.nftables.org/) to manage NAT and firewall rules. It creates two tables:
+For Firecracker and QEMU TAP, SmolVM uses [nftables](https://wiki.nftables.org/) to manage NAT and firewall rules. It creates two tables:
 
 * `ip smolvm_nat` — handles NAT (masquerade for outbound traffic, DNAT for port forwarding)
 * `inet smolvm_filter` — handles forwarding rules and sandbox isolation
@@ -96,13 +98,15 @@ SmolVM supports two types of port forwarding to reach services running inside a 
 
 ### SSH port forwarding
 
-SSH access is set up automatically when a sandbox starts. SmolVM forwards a host port to port 22 inside the guest using nftables DNAT rules. You can connect manually:
+When a sandbox uses SSH, SmolVM makes its SSH port reachable from the host. QEMU `slirp` uses QEMU's built-in host forwarding. Linux TAP uses a localhost nftables rule.
+
+You can connect manually with the assigned host port:
 
 ```bash
 ssh -p <host_port> root@localhost
 ```
 
-Or use the SDK, which handles SSH connections for you through `vm.run()`.
+Or use the SDK, which handles the configured SSH or `vsock` command connection through `vm.run()`.
 
 ### Application port forwarding
 
@@ -117,9 +121,13 @@ with SmolVM() as vm:
     print(f"Service available at http://localhost:{host_port}")
 ```
 
+QEMU `slirp` uses QEMU's built-in forwarding. Linux TAP uses a localhost nftables rule. Both keep the service private to your machine.
+
+The following diagram shows the Linux TAP path:
+
 ```mermaid
 flowchart TB
-  subgraph Host["Host"]
+  subgraph Host["Linux TAP host"]
     Browser["Browser<br/>http://localhost:18080"]
     DNAT["nftables DNAT<br/>127.0.0.1:18080 → 172.16.0.2:8080"]
     TAP["TAP<br/>172.16.0.1"]
@@ -134,11 +142,13 @@ flowchart TB
   `expose_local()` only binds to `127.0.0.1` (localhost). Services are not exposed to your network. If you need external access, set up additional forwarding outside of SmolVM.
 </Warning>
 
+Applications should listen on `0.0.0.0` inside the sandbox. For an application that listens only on guest `127.0.0.1`, pass `guest_loopback=True`; this uses an SSH tunnel.
+
 See the [port forwarding guide](/smolvm/features/port-forwarding) for more examples including automatic port allocation, multiple forwards, and troubleshooting.
 
-## Network prerequisites
+## Linux TAP prerequisites
 
-SmolVM needs the following tools installed on your host (Linux only):
+Firecracker and QEMU TAP need the following tools on Linux:
 
 * `ip` (from iproute2) — manages TAP devices and routes
 * `nft` (from nftables) — manages NAT and firewall rules

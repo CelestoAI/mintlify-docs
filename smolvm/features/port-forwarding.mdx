@@ -26,6 +26,10 @@ host_port = vm.expose_local(guest_port=8080)
 print(f"Guest port 8080 exposed on localhost:{host_port}")
 ```
 
+QEMU keeps `expose_local()` available when outbound access is off or restricted. On the default `slirp` network it uses QEMU forwarding; on Linux TAP it uses localhost forwarding to the guest IP. Ordinary HTTP, WebSocket, and file-transfer traffic does not require SSH or a guest agent.
+
+Have the application listen on `0.0.0.0` inside the sandbox. If it listens only on the guest's `127.0.0.1`, pass `guest_loopback=True`; this option requires guest SSH because it uses an SSH tunnel.
+
 ## Multiple ports
 
 Expose multiple services from the same sandbox:
