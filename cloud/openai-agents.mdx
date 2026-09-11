@@ -126,7 +126,7 @@ Pass a `CelestoSandboxClientOptions` to control how the computer is created. Eve
 </ParamField>
 
 <ParamField body="network_policy" type="object" default='{"mode": "open"}'>
-  Outbound internet setting for a newly created computer. Use `{"mode": "off"}` to create an offline computer. When you reuse `computer_id`, the requested setting must match that computer.
+  Outbound internet setting for a newly created computer. Use `{"mode": "off"}` to create an offline computer. When you reuse `computer_id`, the requested setting must match that computer's saved policy; if it does not, `client.create()` raises `RuntimeError` and does not start the computer. Requires Celesto SDK `0.0.13` or later.
 </ParamField>
 
 <ParamField body="delete_on_close" type="boolean">
