@@ -16,7 +16,7 @@
     "dark": "/images/logo-v2.png"
   },
   "banner": {
-    "content": "SmolVM is open source. [Support the project with a star on GitHub →](https://github.com/celestoai/smolvm)",
+    "content": "SmolVM is open source. ⭐ [Star SmolVM on GitHub →](https://github.com/celestoai/smolvm)",
     "dismissible": true
   },
   "navigation": {
