@@ -33,7 +33,7 @@ smolvm sandbox list --status stopped
 
 ### Filter by preset
 
-A preset is a ready-made sandbox setup for an agent. Use `--preset` to show only sandboxes created by one preset:
+A preset is a ready-made sandbox setup for an agent. Use `--preset` to show only sandboxes created by one preset. The table adds a Preset column so you can tell which agent produced each sandbox:
 
 ```bash
 smolvm sandbox list --preset openclaw
@@ -48,8 +48,10 @@ smolvm sandbox list --preset openclaw --all
 ```
 
 <Note>
-  Preset filtering uses information saved when SmolVM creates a sandbox. Sandboxes created by older SmolVM releases and manually prepared sandboxes remain available through `smolvm sandbox list --all`, but do not appear in preset-filtered results.
+  Preset filtering uses information saved when SmolVM creates a sandbox. Sandboxes created by older SmolVM releases and manually prepared sandboxes remain available through `smolvm sandbox list --all`, but do not appear in preset-filtered results. Their Preset column shows `-`.
 </Note>
+
+For OpenClaw specifically, the shortcut `smolvm openclaw list` shows only OpenClaw sandboxes and accepts the same `--all`, `--status`, and `--json` flags. See [Work with OpenClaw](/smolvm/features/coding-agents#work-with-openclaw) for the full workflow.
 
 ### Use JSON output
 

@@ -62,7 +62,7 @@ OpenClaw includes a browser dashboard. Follow these steps to create a sandbox, f
     smolvm openclaw start --name openclaw-work --no-attach
     ```
 
-    SmolVM installs OpenClaw 2026.9.1 after the sandbox starts, so creating each new sandbox can take several minutes. SmolVM shows each installation step while you wait.
+    SmolVM installs OpenClaw 2026.9.1 on Node.js 24.15.0 or newer after the sandbox starts, so creating each new sandbox can take several minutes. SmolVM shows each installation step while you wait. The OpenClaw preset supports Ubuntu sandboxes only.
 
     The sandbox does not inherit `~/.openclaw/openclaw.json`, `~/.openclaw/.env`, or other OpenClaw state from your machine. Set a supported credential variable before starting SmolVM, or run `openclaw onboard` inside the sandbox.
   </Step>
@@ -78,10 +78,12 @@ OpenClaw includes a browser dashboard. Follow these steps to create a sandbox, f
   </Step>
 
   <Step title="Check every state">
-    Include stopped, paused, and errored OpenClaw sandboxes with `--all`:
+    Include stopped, paused, and errored OpenClaw sandboxes with `--all`, narrow to one state with `--status`, or emit machine-readable output with `--json`:
 
     ```bash
     smolvm openclaw list --all
+    smolvm openclaw list --status stopped
+    smolvm openclaw list --json
     ```
   </Step>
 
@@ -100,7 +102,7 @@ OpenClaw includes a browser dashboard. Follow these steps to create a sandbox, f
     smolvm openclaw open-ui openclaw-work
     ```
 
-    SmolVM starts the OpenClaw dashboard service when needed, creates a private connection available only on your machine, and opens a one-time link. On a remote machine, add `--no-browser` to print the link instead.
+    SmolVM starts the OpenClaw dashboard service when needed, creates a private connection available only on your machine, and opens a one-time link.
   </Step>
 </Steps>
 
@@ -108,10 +110,14 @@ OpenClaw includes a browser dashboard. Follow these steps to create a sandbox, f
   In SmolVM v0.0.31, `smolvm openclaw open-ui` replaces `smolvm openclaw open`. Update existing scripts: the old command is no longer accepted.
 </Note>
 
-To print the one-time dashboard link instead of opening a browser:
+`open-ui` accepts three flags:
+
+- `--host-port PORT` — pin the localhost port that forwards to the dashboard. When omitted, SmolVM chooses a free port.
+- `--no-browser` — print the one-time link instead of launching a browser. Useful on remote or headless machines.
+- `--json` — emit a machine-readable envelope with the sandbox name, dashboard URL, chosen host port, and cleanup command.
 
 ```bash
-smolvm openclaw open-ui openclaw-work --no-browser
+smolvm openclaw open-ui openclaw-work --host-port 8899 --no-browser
 ```
 
 Treat the link as a credential. Close the local connection with the exact `smolvm sandbox port close` command printed by `open-ui`.
