@@ -4,9 +4,13 @@ sidebarTitle: "Network Control"
 description: "Choose whether an agent computer can connect to the internet, while keeping commands and terminal sessions available for your agent workflow."
 ---
 
-You can decide whether a new Celesto computer can reach the internet. Turn internet access off for work that uses only the computer's files and installed tools. The computer can still run commands and provide a terminal for your agent.
+You can decide whether a new Celesto computer can reach the internet. Turn internet access off when you want the computer to work only from files and tools already on disk, for example when an agent runs untrusted code, processes sensitive input that must not leave the sandbox, or reproduces a build with no outside package fetches. The computer can still run commands and provide a terminal for your agent.
 
 Set the choice when you create a computer. It stays with that computer across stop, start, and restore, so create a new computer when a task needs a different setting.
+
+<Note>
+  Network Control requires Celesto SDK **0.0.13** or later for Python and **0.1.5** or later for TypeScript. The `--no-internet` CLI flag ships in the same Python release.
+</Note>
 
 ## Choose an internet setting
 
@@ -138,7 +142,7 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
-When you reuse a computer with `computer_id`, the requested policy must match that computer's saved setting. Omit `network_policy` when you want to reuse the computer's existing setting. For a complete agent workflow, see [Sandbox an OpenAI agent with Celesto or SmolVM](/cloud/openai-agents).
+When you reuse a computer with `computer_id`, the requested policy must match that computer's saved setting. If it does not, the session fails closed: `client.create()` raises `RuntimeError` and does not start the computer, so an agent that expected an offline sandbox never runs against an online one. Omit `network_policy` when you want to accept whatever setting the existing computer was created with. For a complete agent workflow, see [Sandbox an OpenAI agent with Celesto or SmolVM](/cloud/openai-agents).
 
 ## Related pages
 
