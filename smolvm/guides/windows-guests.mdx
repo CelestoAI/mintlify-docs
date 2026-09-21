@@ -1,11 +1,11 @@
 ---
-title: "Windows sandboxes in SmolVM"
+title: "Windows sandboxes in Celesto"
 sidebarTitle: "Windows sandboxes"
-description: "Boot a Windows 11 microVM with SmolVM: run PowerShell over SSH, upload files, and inject environment variables from Python on a Linux host."
-keywords: ["Windows sandbox", "Windows 11 VM", "PowerShell over SSH", "QEMU Windows", "qcow2", "virtual TPM", "Python microVM", "SmolVM Windows guest"]
+description: "Boot a Windows 11 microVM with Celesto: run PowerShell over SSH, upload files, and inject environment variables from Python on a Linux host."
+keywords: ["Windows sandbox", "Windows 11 VM", "PowerShell over SSH", "QEMU Windows", "qcow2", "virtual TPM", "Python microVM", "Celesto Windows guest"]
 ---
 
-SmolVM can boot a Windows 11 sandbox alongside its Linux sandboxes. You bring a pre-installed Windows disk image (a `.qcow2` file), and SmolVM handles the firmware, virtual TPM, QEMU wiring, and SSH plumbing for you.
+Celesto can boot a Windows 11 sandbox alongside its Linux sandboxes. You bring a pre-installed Windows disk image (a `.qcow2` file), and Celesto handles the firmware, virtual TPM, QEMU wiring, and SSH plumbing for you.
 
 You can boot the VM, run PowerShell commands inside it with `vm.run(...)`, and upload files to Windows-style paths with `vm.upload_file(...)` — the same API you use for Linux guests.
 
@@ -23,15 +23,15 @@ A Windows sandbox is a virtual machine that runs the real Windows 11 operating s
 - You're building an agent that needs to drive a Windows desktop or Windows-only application.
 - You want a disposable Windows environment that won't touch your host machine.
 
-The Windows VM boots the same way Linux sandboxes do — with `SmolVM(...)` in Python — and is isolated from your host using KVM hardware virtualization.
+The Windows VM boots the same way Linux sandboxes do — with `Celesto(...)` in Python — and is isolated from your host using KVM hardware virtualization.
 
 ## Before you start
 
 You need three things on the host:
 
 1. **A Linux host with KVM.** Windows guests use QEMU \+ KVM. macOS hosts are not supported yet.
-2. **A Windows 11 `qcow2` disk image with OpenSSH Server.** The easiest way to get one is the [`smolvm windows build-image`](/smolvm/cli/windows) CLI command, which drives an unattended Windows install from a stock Windows ISO \+ the virtio-win driver ISO and produces a ready-to-use `qcow2` (OpenSSH, virtio-win drivers, and a known local admin account all pre-installed). If you already have your own Windows `qcow2`, point SmolVM at that file instead — just make sure the OpenSSH Server feature is installed and running, otherwise `vm.run(...)` and `vm.upload_file(...)` will fail with a connection or auth error.
-3. **OVMF (UEFI firmware) and `swtpm` (software TPM).** Windows 11 requires UEFI Secure Boot and TPM 2.0. SmolVM looks for OVMF in the standard distro install paths and will tell you exactly which package to install if it's missing.
+2. **A Windows 11 `qcow2` disk image with OpenSSH Server.** The easiest way to get one is the [`celesto windows build-image`](/smolvm/cli/windows) CLI command, which drives an unattended Windows install from a stock Windows ISO \+ the virtio-win driver ISO and produces a ready-to-use `qcow2` (OpenSSH, virtio-win drivers, and a known local admin account all pre-installed). If you already have your own Windows `qcow2`, point Celesto at that file instead — just make sure the OpenSSH Server feature is installed and running, otherwise `vm.run(...)` and `vm.upload_file(...)` will fail with a connection or auth error.
+3. **OVMF (UEFI firmware) and `swtpm` (software TPM).** Windows 11 requires UEFI Secure Boot and TPM 2.0. Celesto looks for OVMF in the standard distro install paths and will tell you exactly which package to install if it's missing.
 
 Quick install of the prerequisites:
 
@@ -55,21 +55,21 @@ Quick install of the prerequisites:
 
 ## Build a Windows image
 
-If you don't have a Windows `qcow2` yet, `smolvm windows build-image` produces one for you in a single command. You provide a Windows ISO and the [virtio-win driver ISO](https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso), walk away for 15–30 minutes, and get back a ready-to-boot image:
+If you don't have a Windows `qcow2` yet, `celesto windows build-image` produces one for you in a single command. You provide a Windows ISO and the [virtio-win driver ISO](https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso), walk away for 15–30 minutes, and get back a ready-to-boot image:
 
 ```bash
-smolvm windows build-image \
+celesto windows build-image \
   --iso ./Win11.iso \
   --virtio-win-iso ./virtio-win.iso \
   --output ~/.smolvm/images/win11.qcow2
 ```
 
-The built image has OpenSSH Server installed and running, the virtio-win drivers in place, and a local admin account (`smolvm` / `smolvm` by default — override with `--username` and `--password`). Boot it like any other Windows image:
+The built image has OpenSSH Server installed and running, the virtio-win drivers in place, and a local admin account (`celesto` / `celesto` by default — override with `--username` and `--password`). Boot it like any other Windows image:
 
 ```python
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM(
+with Celesto(
     os="windows",
     image="~/.smolvm/images/win11.qcow2",
     ssh_user="smolvm",
@@ -78,16 +78,16 @@ with SmolVM(
     print(vm.run("hostname").stdout)
 ```
 
-See the [`smolvm windows build-image`](/smolvm/cli/windows) reference for all available flags (edition, hostname, disk size, build timeout) and for using `WindowsImageBuilder` directly from Python.
+See the [`celesto windows build-image`](/smolvm/cli/windows) reference for all available flags (edition, hostname, disk size, build timeout) and for using `WindowsImageBuilder` directly from Python.
 
 ## Launch a Windows sandbox
 
-Point `SmolVM` at your Windows `qcow2` file, pass `os="windows"`, and supply the Windows account credentials that map to the OpenSSH user inside the image:
+Point `Celesto` at your Windows `qcow2` file, pass `os="windows"`, and supply the Windows account credentials that map to the OpenSSH user inside the image:
 
 ```python
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM(
+with Celesto(
     os="windows",
     image="~/win11-vm/disk-baseline.qcow2",
     ssh_user="celesto",
@@ -101,7 +101,7 @@ with SmolVM(
 
 What happens behind the scenes:
 
-- SmolVM copies the OVMF UEFI variable store to a per-VM location so the firmware can persist boot order independently.
+- Celesto copies the OVMF UEFI variable store to a per-VM location so the firmware can persist boot order independently.
 - It starts a per-VM `swtpm` software TPM 2.0 process.
 - It launches QEMU with the right machine type (`q35`), Hyper-V enlightenments for performance, and a `virtio-scsi` root disk.
 - On `stop()` or `delete()`, the `swtpm` sidecar and per-VM firmware state are cleaned up.
@@ -118,21 +118,21 @@ S3 URIs work too, but in this release only the local-path form is meaningful for
 
 ### SSH user and password
 
-Windows OpenSSH does not support the `root` user that SmolVM uses for Linux guests. Pass the local Windows account you set up inside the qcow2:
+Windows OpenSSH does not support the `root` user that Celesto uses for Linux guests. Pass the local Windows account you set up inside the qcow2:
 
 - `ssh_user="..."` — the Windows account name (for example `"Administrator"`, or whatever local user you created).
 - `ssh_password="..."` — that account's password.
 
-When `ssh_password` is set, SmolVM uses paramiko's password-auth path and does not try SSH keys. If you have configured key-based SSH inside the Windows image, drop `ssh_password` and pass `ssh_key_path=` instead.
+When `ssh_password` is set, Celesto uses paramiko's password-auth path and does not try SSH keys. If you have configured key-based SSH inside the Windows image, drop `ssh_password` and pass `ssh_key_path=` instead.
 
 ### Run PowerShell commands
 
 `vm.run(...)` works on Windows guests just like on Linux guests, but the command string is interpreted by PowerShell instead of `sh`:
 
 ```python
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM(
+with Celesto(
     os="windows",
     image="~/win11-vm/disk-baseline.qcow2",
     ssh_user="celesto",
@@ -149,16 +149,16 @@ with SmolVM(
     print(result.stdout.strip())  # 'Windows'
 ```
 
-Under the hood, SmolVM base64-encodes the command and runs it with `powershell.exe -NoProfile -EncodedCommand` so quotes, backticks, and special characters survive the Windows OpenSSH `cmd.exe` layer unchanged. You don't need to escape anything yourself.
+Under the hood, Celesto base64-encodes the command and runs it with `powershell.exe -NoProfile -EncodedCommand` so quotes, backticks, and special characters survive the Windows OpenSSH `cmd.exe` layer unchanged. You don't need to escape anything yourself.
 
 ### Inject environment variables
 
 Pass secrets and configuration into a Windows sandbox the same way you do for Linux — via `env_vars=` on the constructor, or `vm.set_env_vars(...)` / `vm.unset_env_vars(...)` / `vm.list_env_vars(...)` at runtime:
 
 ```python
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM(
+with Celesto(
     os="windows",
     image="~/.smolvm/images/win11.qcow2",
     ssh_user="smolvm",
@@ -179,7 +179,7 @@ with SmolVM(
     print(vm.list_env_vars())  # {'OPENAI_API_KEY': '...', 'DEBUG': '1'}
 ```
 
-On Windows, SmolVM writes the variables into `HKCU\Environment` (the standard per-user environment store) via `[Environment]::SetEnvironmentVariable(name, value, 'User')`. SmolVM tracks which variables it owns through a sentinel key, so `list_env_vars` and `unset_env_vars` only ever touch values SmolVM set — anything you configure inside Windows yourself is left alone.
+On Windows, Celesto writes the variables into `HKCU\Environment` (the standard per-user environment store) via `[Environment]::SetEnvironmentVariable(name, value, 'User')`. Celesto tracks which variables it owns through a sentinel key, so `list_env_vars` and `unset_env_vars` only ever touch values Celesto set — anything you configure inside Windows yourself is left alone.
 
 Variables become visible to **new** processes, not the SSH session that set them. Every `vm.run()` call opens a fresh SSH session, so the very next `vm.run()` after `set_env_vars` will see the new values. See the [environment variables guide](/smolvm/guides/environment-variables) for the full API.
 
@@ -199,33 +199,33 @@ result = vm.run("powershell.exe -File C:\\Users\\celesto\\scripts\\hello.ps1")
 print(result.stdout)
 ```
 
-SmolVM creates missing parent directories on the Windows side using `New-Item -ItemType Directory -Force`, so you can upload straight into a path that doesn't exist yet.
+Celesto creates missing parent directories on the Windows side using `New-Item -ItemType Directory -Force`, so you can upload straight into a path that doesn't exist yet.
 
 ### Memory defaults
 
-Windows 11 defaults to **4096 MiB** of RAM in SmolVM. The minimum that boots is 2 GiB, but Edge and Defender want more. Override with `memory=`:
+Windows 11 defaults to **4096 MiB** of RAM in Celesto. The minimum that boots is 2 GiB, but Edge and Defender want more. Override with `memory=`:
 
 ```python
-SmolVM(os="windows", image="~/win11-vm/disk.qcow2", memory=8192)
+Celesto(os="windows", image="~/win11-vm/disk.qcow2", memory=8192)
 ```
 
 ### Your baseline image stays read-only
 
-When you point `SmolVM` at a Windows `qcow2`, SmolVM does **not** write to that file. Each sandbox gets its own thin scratch disk — a per-VM `qcow2` overlay stacked on top of your baseline — so the original image stays byte-for-byte unchanged across runs.
+When you point `Celesto` at a Windows `qcow2`, Celesto does **not** write to that file. Each sandbox gets its own thin scratch disk — a per-VM `qcow2` overlay stacked on top of your baseline — so the original image stays byte-for-byte unchanged across runs.
 
 This gives you two things for free:
 
-- **Run multiple Windows sandboxes from the same image in parallel.** Each `SmolVM(os="windows", image=...)` call gets a fresh overlay, so concurrent processes don't fight over the disk write lock.
+- **Run multiple Windows sandboxes from the same image in parallel.** Each `Celesto(os="windows", image=...)` call gets a fresh overlay, so concurrent processes don't fight over the disk write lock.
 - **Crashes and Ctrl-C don't corrupt your baseline.** If a sandbox dies mid-run, the only thing lost is its overlay. Your golden image is untouched.
 
 The overlay is created near-instantly with `qemu-img create -b` and lives under `data_dir/disks/{vm_id}.qcow2`. It is deleted automatically when the VM is deleted unless you set `retain_disk_on_delete=True` on the `VMConfig`.
 
 ```python
-from smolvm import SmolVM
+from celesto import Celesto
 
 # Two sandboxes, same baseline image, running side by side — safe.
-with SmolVM(os="windows", image="~/win11-vm/baseline.qcow2") as vm_a, \
-     SmolVM(os="windows", image="~/win11-vm/baseline.qcow2") as vm_b:
+with Celesto(os="windows", image="~/win11-vm/baseline.qcow2") as vm_a, \
+     Celesto(os="windows", image="~/win11-vm/baseline.qcow2") as vm_b:
     vm_a.wait_for_ssh()
     vm_b.wait_for_ssh()
     # Writes inside vm_a and vm_b land in their own overlays.
@@ -236,11 +236,11 @@ If you specifically want writes to land in the baseline — for example, a one-s
 
 ## How `os=` and `image=` work together
 
-SmolVM uses two slightly different rules depending on where the image comes from:
+Celesto uses two slightly different rules depending on where the image comes from:
 
 | Image source | Pass `os=`? | Why |
 | --- | --- | --- |
-| Local file (path or `file://`) | **Yes** | The file alone doesn't tell SmolVM which OS is inside. |
+| Local file (path or `file://`) | **Yes** | The file alone doesn't tell Celesto which OS is inside. |
 | Published S3 image | No | The image manifest already records the OS — passing `os=` errors. |
 
 For Windows today, you always use the local-file form, so always pass `os="windows"`.
@@ -252,15 +252,15 @@ The first release of Windows guest support is deliberately narrow. The following
 - **Linux hosts only.** macOS support comes in a later phase.
 - **No `mounts=`.** Host directory mounts (`virtio-9p`) are Linux-guest only for now.
 - **No `internet_settings=`.** Domain allowlists and egress controls are not yet wired into the Windows network stack.
-- **No snapshots.** `vm.snapshot()` and `SmolVM.from_snapshot()` are rejected for Windows VMs — Windows guests use multiple state artifacts (qcow2 \+ UEFI vars \+ TPM state) that can't be checkpointed atomically yet.
+- **No snapshots.** `vm.snapshot()` and `Celesto.from_snapshot()` are rejected for Windows VMs — Windows guests use multiple state artifacts (qcow2 \+ UEFI vars \+ TPM state) that can't be checkpointed atomically yet.
 
-If you call any of the unsupported features, SmolVM raises `ValueError` with a plain-English message naming the feature and the workaround.
+If you call any of the unsupported features, Celesto raises `ValueError` with a plain-English message naming the feature and the workaround.
 
 ## Troubleshooting
 
 <AccordionGroup>
   <Accordion title="OVMF not found">
-    SmolVM probes the four standard install paths (Debian, Fedora, Arch, Homebrew). If none match, it raises a `ValueError` naming the package to install. Re-run after installing the `ovmf` / `edk2-ovmf` package from the table above.
+    Celesto probes the four standard install paths (Debian, Fedora, Arch, Homebrew). If none match, it raises a `ValueError` naming the package to install. Re-run after installing the `ovmf` / `edk2-ovmf` package from the table above.
   </Accordion>
 
   <Accordion title="`swtpm` not found">
@@ -272,11 +272,11 @@ If you call any of the unsupported features, SmolVM raises `ValueError` with a p
   </Accordion>
 
   <Accordion title="Windows guests need a pre-installed disk image">
-    You passed `os="windows"` without `image=`. SmolVM does not build a Windows image for you yet — point at a `qcow2` you've already installed Windows into.
+    You passed `os="windows"` without `image=`. Celesto does not build a Windows image for you yet — point at a `qcow2` you've already installed Windows into.
   </Accordion>
 
   <Accordion title="`vm.run()` or `vm.wait_for_ssh()` fails with an auth or connection error">
-    SmolVM expects the OpenSSH Server feature to be installed and running inside the Windows image, and the `ssh_user` / `ssh_password` you passed must match a real local Windows account. Install OpenSSH Server (Settings → Apps → Optional features → "OpenSSH Server"), start the `sshd` service, and confirm you can SSH in from the host before retrying.
+    Celesto expects the OpenSSH Server feature to be installed and running inside the Windows image, and the `ssh_user` / `ssh_password` you passed must match a real local Windows account. Install OpenSSH Server (Settings → Apps → Optional features → "OpenSSH Server"), start the `sshd` service, and confirm you can SSH in from the host before retrying.
   </Accordion>
 </AccordionGroup>
 
@@ -284,7 +284,7 @@ If you call any of the unsupported features, SmolVM raises `ValueError` with a p
 
 <CardGroup cols={2}>
   <Card title="Build a Windows image" icon="hammer" href="/smolvm/cli/windows">
-    Run `smolvm windows build-image` to produce a Windows qcow2 unattended
+    Run `celesto windows build-image` to produce a Windows qcow2 unattended
   </Card>
 
   <Card title="Backends" icon="microchip" href="/smolvm/concepts/backends">

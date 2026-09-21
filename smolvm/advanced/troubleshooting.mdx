@@ -1,27 +1,27 @@
 ---
 title: "Troubleshooting guide"
-description: "Troubleshoot common SmolVM issues — KVM permissions, networking failures, image download errors, SSH timeouts — using smolvm doctor and verified fixes."
+description: "Troubleshoot common Celesto issues — KVM permissions, networking failures, image download errors, SSH timeouts — using celesto doctor and verified fixes."
 ---
 
-This guide covers common issues you might encounter when using SmolVM and how to resolve them.
+This guide covers common issues you might encounter when using Celesto and how to resolve them.
 
 ## Diagnostics
 
-SmolVM includes a built-in diagnostic tool to check your system configuration:
+Celesto includes a built-in diagnostic tool to check your system configuration:
 
 ```bash  theme={null}
 # Auto-detect backend and check prerequisites
-smolvm doctor
+celesto doctor
 
 # Check specific backend
-smolvm doctor --backend firecracker
-smolvm doctor --backend qemu
+celesto doctor --backend firecracker
+celesto doctor --backend qemu
 
 # CI-friendly JSON output
-smolvm doctor --json --strict
+celesto doctor --json --strict
 ```
 
-The `smolvm doctor` command validates:
+The `celesto doctor` command validates:
 
 * KVM availability (Linux/Firecracker)
 * Firecracker binary installation
@@ -35,7 +35,7 @@ The `smolvm doctor` command validates:
   <Accordion title="Docker image build fails with daemon errors">
     **Problem**: Image builds fail because Docker is not installed, the daemon is not running, or your user lacks permission to access it.
 
-    SmolVM automatically diagnoses the specific Docker issue and returns a targeted error message. The three most common scenarios are:
+    Celesto automatically diagnoses the specific Docker issue and returns a targeted error message. The three most common scenarios are:
 
     **Docker not installed:**
     ```
@@ -44,7 +44,7 @@ The `smolvm doctor` command validates:
 
     **Daemon not running:**
     ```
-    Docker is installed, but SmolVM could not reach the Docker daemon.
+    Docker is installed, but Celesto could not reach the Docker daemon.
     Start Docker Desktop or the Docker service and try again.
     ```
 
@@ -86,7 +86,7 @@ The `smolvm doctor` command validates:
     You can also check Docker status programmatically before building:
 
     ```python  theme={null}
-    from smolvm.build import ImageBuilder
+    from celesto import ImageBuilder
 
     builder = ImageBuilder()
     if not builder.check_docker():
@@ -125,26 +125,26 @@ The `smolvm doctor` command validates:
     **Alternative**: Use the QEMU backend if KVM is unavailable:
 
     ```python  theme={null}
-    from smolvm import SmolVM
-    vm = SmolVM(backend="qemu")
+    from celesto import Celesto
+    vm = Celesto(backend="qemu")
     ```
   </Accordion>
 
   <Accordion title="Firecracker binary not found">
-    **Problem**: SmolVM cannot find the `firecracker` executable. SmolVM looks in the folder set by `SMOLVM_FIRECRACKER_DIR` (or the `--firecracker-dir` setup flag) if one is configured. Without a configured folder, it checks `PATH` first, then `~/.smolvm/bin/firecracker`.
+    **Problem**: Celesto cannot find the `firecracker` executable. Celesto looks in the folder set by `SMOLVM_FIRECRACKER_DIR` (or the `--firecracker-dir` setup flag) if one is configured. Without a configured folder, it checks `PATH` first, then `~/.smolvm/bin/firecracker`.
 
     **Solution**:
 
     1. Run the setup command, which installs Firecracker to `~/.smolvm/bin` by default:
 
     ```bash  theme={null}
-    smolvm setup
+    celesto setup
     ```
 
     2. Or install manually using the HostManager:
 
     ```python  theme={null}
-    from smolvm.host import HostManager
+    from celesto.host import HostManager
 
     host = HostManager()
     host.install_firecracker()
@@ -153,12 +153,12 @@ The `smolvm doctor` command validates:
     3. Verify installation:
 
     ```bash  theme={null}
-    smolvm doctor
+    celesto doctor
     # The firecracker check should show the resolved path,
     # for example ~/.smolvm/bin/firecracker
     ```
 
-    If you installed Firecracker to a custom folder that is not on `PATH`, export `SMOLVM_FIRECRACKER_DIR` so SmolVM can find it:
+    If you installed Firecracker to a custom folder that is not on `PATH`, export `SMOLVM_FIRECRACKER_DIR` so Celesto can find it:
 
     ```bash  theme={null}
     export SMOLVM_FIRECRACKER_DIR="$HOME/.local/bin"
@@ -173,7 +173,7 @@ The `smolvm doctor` command validates:
     1. Run the setup command:
 
     ```bash  theme={null}
-    smolvm setup
+    celesto setup
     ```
 
     2. Or configure manually:
@@ -202,9 +202,9 @@ The `smolvm doctor` command validates:
     1. Check VM status:
 
     ```python  theme={null}
-    from smolvm import SmolVM
+    from celesto import Celesto
 
-    vm = SmolVM.from_id("vm-xxxxx")
+    vm = Celesto.from_id("vm-xxxxx")
     info = vm.info
     print(f"Status: {info.status}")
     if info.network:
@@ -238,9 +238,9 @@ The `smolvm doctor` command validates:
     5. Increase the startup wait time:
 
     ```python  theme={null}
-    from smolvm import SmolVM
+    from celesto import Celesto
 
-    vm = SmolVM()
+    vm = Celesto()
     vm.start(boot_timeout=120)
     print(vm.run("echo ready").stdout)
     vm.close()
@@ -252,10 +252,10 @@ The `smolvm doctor` command validates:
 
     **Solution**:
 
-    1. Check that the sandbox uses a recent SmolVM image:
+    1. Check that the sandbox uses a recent Celesto image:
 
     ```bash
-    smolvm sandbox info my-vm
+    celesto sandbox info my-vm
     ```
 
     2. On Linux QEMU hosts, verify the vsock device exists:
@@ -268,8 +268,8 @@ The `smolvm doctor` command validates:
     3. Try the SSH compatibility path for file or environment operations:
 
     ```bash
-    smolvm sandbox env list my-vm --comm-channel ssh
-    smolvm sandbox file upload my-vm ./report.txt /tmp/report.txt --comm-channel ssh
+    celesto sandbox env list my-vm --comm-channel ssh
+    celesto sandbox file upload my-vm ./report.txt /tmp/report.txt --comm-channel ssh
     ```
 
     4. Inspect the sandbox log and guest-agent log output:
@@ -281,28 +281,28 @@ The `smolvm doctor` command validates:
     5. Recreate the sandbox with a current published image if the log says the guest agent is missing:
 
     ```bash
-    smolvm sandbox delete my-vm
-    smolvm sandbox create --name my-vm
+    celesto sandbox delete my-vm
+    celesto sandbox create --name my-vm
     ```
   </Accordion>
 
   <Accordion title="Snapshot creation times out before any snapshot files appear">
-    **Problem**: Snapshot creation fails before SmolVM writes a disk, memory, or state artifact.
+    **Problem**: Snapshot creation fails before Celesto writes a disk, memory, or state artifact.
 
-    This usually means SmolVM could not finish the guest sync step. SmolVM asks the guest to save pending file changes before it pauses the sandbox.
+    This usually means Celesto could not finish the guest sync step. Celesto asks the guest to save pending file changes before it pauses the sandbox.
 
     **Solution**:
 
     1. Confirm the sandbox can run a simple command:
 
     ```bash
-    smolvm sandbox shell my-vm
+    celesto sandbox shell my-vm
     ```
 
     2. If the fast shell fails, test SSH directly:
 
     ```bash
-    smolvm sandbox ssh my-vm
+    celesto sandbox ssh my-vm
     ```
 
     3. Retry with a current image or recreate the sandbox. Recent images include the guest-agent `/sync` endpoint used before snapshot capture.
@@ -315,7 +315,7 @@ The `smolvm doctor` command validates:
   </Accordion>
 
   <Accordion title="DatabaseError: database is locked">
-    **Problem**: Multiple SmolVM processes trying to access the state database simultaneously.
+    **Problem**: Multiple Celesto processes trying to access the state database simultaneously.
 
     **Solution**:
 
@@ -331,13 +331,13 @@ The `smolvm doctor` command validates:
     3. Clean up stale resources using the CLI:
 
     ```bash  theme={null}
-    smolvm sandbox delete --all --force
+    celesto sandbox delete --all --force
     ```
 
     4. If persistent, manually remove the lock:
 
     ```bash  theme={null}
-    # WARNING: Only do this if no SmolVM processes are running
+    # WARNING: Only do this if no Celesto processes are running
     rm ~/.local/state/smolvm/smolvm.db-wal
     rm ~/.local/state/smolvm/smolvm.db-shm
     ```
@@ -351,13 +351,13 @@ The `smolvm doctor` command validates:
     1. List all VMs:
 
     ```bash  theme={null}
-    smolvm sandbox list
+    celesto sandbox list
     ```
 
     2. Clean up stopped or stale VMs:
 
     ```bash  theme={null}
-    smolvm sandbox delete --all --force
+    celesto sandbox delete --all --force
     ```
 
     3. The IP pool supports 253 concurrent VMs (`172.16.0.2` through `172.16.0.254`). If you need more, consider implementing a custom IP allocator.
@@ -395,13 +395,13 @@ The `smolvm doctor` command validates:
     cat ~/.local/state/smolvm/vm-xxxxx.log
     ```
 
-    5. Use auto-config mode to let SmolVM pick a compatible kernel and rootfs:
+    5. Use auto-config mode to let Celesto pick a compatible kernel and rootfs:
 
     ```python  theme={null}
-    from smolvm import SmolVM
+    from celesto import Celesto
 
     # Auto-config handles kernel/rootfs selection
-    with SmolVM() as vm:
+    with Celesto() as vm:
         result = vm.run("echo works")
         print(result.stdout)
     ```
@@ -415,9 +415,9 @@ The `smolvm doctor` command validates:
     1. Check VM details:
 
     ```python  theme={null}
-    from smolvm import SmolVM
+    from celesto import Celesto
 
-    vm = SmolVM.from_id("vm-xxxxx")
+    vm = Celesto.from_id("vm-xxxxx")
     info = vm.info
     print(f"Status: {info.status}")
     print(f"PID: {info.pid}")
@@ -434,12 +434,12 @@ The `smolvm doctor` command validates:
 
     ```python  theme={null}
     # Delete the failed VM
-    vm = SmolVM.from_id("vm-xxxxx")
+    vm = Celesto.from_id("vm-xxxxx")
     vm.delete()
     vm.close()
 
     # Create a fresh VM
-    with SmolVM() as new_vm:
+    with Celesto() as new_vm:
         result = new_vm.run("echo 'back in business'")
         print(result.stdout)
     ```
@@ -447,12 +447,12 @@ The `smolvm doctor` command validates:
     4. Run cleanup to remove all stale resources:
 
     ```bash  theme={null}
-    smolvm sandbox delete --all --force
+    celesto sandbox delete --all --force
     ```
   </Accordion>
 
   <Accordion title="RuntimeError: Unable to find writable data directory">
-    **Problem**: SmolVM cannot create or write to any data directory.
+    **Problem**: Celesto cannot create or write to any data directory.
 
     **Solution**:
 
@@ -474,10 +474,10 @@ The `smolvm doctor` command validates:
 
     ```python  theme={null}
     from pathlib import Path
-    from smolvm import SmolVM
+    from celesto import Celesto
 
     data_dir = Path("/tmp/smolvm-data")
-    manager = SmolVM(data_dir=data_dir)
+    manager = Celesto(data_dir=data_dir)
     ```
 
     4. Use environment variable:
@@ -500,10 +500,10 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
-from smolvm import SmolVM
+from celesto import Celesto
 
 # Now you'll see detailed debug output
-with SmolVM() as vm:
+with Celesto() as vm:
     vm.run("echo hello")
 ```
 
@@ -512,7 +512,7 @@ with SmolVM() as vm:
 Manually query the Firecracker API:
 
 ```python  theme={null}
-from smolvm.api import FirecrackerClient
+from celesto.api import FirecrackerClient
 from pathlib import Path
 
 socket_path = Path("/tmp/fc-vm-xxxxx.sock")
@@ -556,7 +556,7 @@ top -p $(pgrep -d',' firecracker)
 If you're still experiencing issues:
 
 1. Check the [GitHub Issues](https://github.com/celestoai/smolvm/issues) for similar problems
-2. Run `smolvm doctor --json` and include the output in your bug report
+2. Run `celesto doctor --json` and include the output in your bug report
 3. Include relevant logs from `~/.local/state/smolvm/*.log`
 4. Join the [Celesto AI Discord](https://discord.gg/KNb5UkrAmm) community
 

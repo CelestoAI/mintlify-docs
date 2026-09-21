@@ -1,16 +1,16 @@
 ---
 title: "BootImage and boot helpers"
-description: "BootImage, DirectKernelBoot, and FirmwareBoot reference for describing custom SmolVM disk images and the kernel or firmware boot path the VM should use."
+description: "BootImage, DirectKernelBoot, and FirmwareBoot reference for describing custom Celesto disk images and the kernel or firmware boot path the VM should use."
 ---
 
-Use `BootImage` to tell SmolVM which disk image to boot and how to boot it. It is a description only: SmolVM creates the VM, networking, and per-VM disk later when you pass the image to [`SmolVM.from_image()`](/smolvm/api/smolvm#from-image).
+Use `BootImage` to tell Celesto which disk image to boot and how to boot it. It is a description only: Celesto creates the VM, networking, and per-VM disk later when you pass the image to [`Celesto.from_image()`](/smolvm/api/smolvm#from-image).
 
 ## BootImage
 
 ```python
 from pathlib import Path
 
-from smolvm import BootImage, DirectKernelBoot
+from celesto import BootImage, DirectKernelBoot
 
 image = BootImage(
     name="alpine-tools",
@@ -35,7 +35,7 @@ image = BootImage(
 </ParamField>
 
 <ParamField path="kernel_path" type="Path | None" default="None">
-  Kernel image path for direct-kernel boot. Direct-kernel images may omit this; `SmolVM.from_image(...)` resolves SmolVM's cached base kernel for the selected backend.
+  Kernel image path for direct-kernel boot. Direct-kernel images may omit this; `Celesto.from_image(...)` resolves Celesto's cached base kernel for the selected backend.
 </ParamField>
 
 <ParamField path="initrd_path" type="Path | None" default="None">
@@ -55,11 +55,11 @@ image = BootImage(
 </ParamField>
 
 <ParamField path="arch" type='Literal["amd64", "arm64"] | None' default="None">
-  Guest CPU architecture. Leave unset when `SmolVM.from_image(...)` should use the host architecture.
+  Guest CPU architecture. Leave unset when `Celesto.from_image(...)` should use the host architecture.
 </ParamField>
 
 <ParamField path="ssh_capable" type="bool" default="False">
-  Whether the image starts SSH and accepts the credentials you pass to SmolVM. Set this to `True` only when command helpers such as `vm.run(...)` can connect.
+  Whether the image starts SSH and accepts the credentials you pass to Celesto. Set this to `True` only when command helpers such as `vm.run(...)` can connect.
 </ParamField>
 
 ## Validation rules
@@ -89,10 +89,10 @@ print(image.render_boot_args(backend="qemu", arch="amd64"))
 
 ## DirectKernelBoot
 
-Use `DirectKernelBoot` when SmolVM should load a Linux kernel directly.
+Use `DirectKernelBoot` when Celesto should load a Linux kernel directly.
 
 ```python
-from smolvm import DirectKernelBoot
+from celesto import DirectKernelBoot
 
 boot = DirectKernelBoot(
     root="/dev/vda",
@@ -129,7 +129,7 @@ print(boot.render(backend="qemu", arch="host"))
 </ParamField>
 
 <ParamField path="safe_trims" type="bool" default="True">
-  Add SmolVM's safe boot defaults such as `tsc=reliable` and `no_timer_check`.
+  Add Celesto's safe boot defaults such as `tsc=reliable` and `no_timer_check`.
 </ParamField>
 
 <ParamField path="quiet" type="bool | None" default="None">
@@ -147,7 +147,7 @@ Use `FirmwareBoot` for QEMU images that already contain their own bootloader, su
 ```python
 from pathlib import Path
 
-from smolvm import BootImage, FirmwareBoot
+from celesto import BootImage, FirmwareBoot
 
 image = BootImage(
     name="ubuntu-cloud",

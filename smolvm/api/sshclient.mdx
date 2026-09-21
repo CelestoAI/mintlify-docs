@@ -1,6 +1,6 @@
 ---
 title: "SSHClient"
-description: "SSHClient reference: run commands on SmolVM guest VMs through persistent paramiko SSH connections, eliminating the per-call ssh process overhead."
+description: "SSHClient reference: run commands on Celesto guest VMs through persistent paramiko SSH connections, eliminating the per-call ssh process overhead."
 ---
 
 ## Overview
@@ -58,7 +58,7 @@ SSHClient(
 </ParamField>
 
 ```python  theme={null}
-from smolvm import SSHClient
+from celesto import SSHClient
 
 # Basic usage with IP
 client = SSHClient(host="172.16.0.2")
@@ -154,11 +154,11 @@ If the connection is not yet established or has been lost, it is (re)created tra
 <ResponseField name="raises">
   * `ValueError`: If command is empty
   * `OperationTimeoutError`: If the command exceeds timeout
-  * `SmolVMError`: If the SSH connection cannot be established
+  * `CelestoError`: If the SSH connection cannot be established
 </ResponseField>
 
 ```python  theme={null}
-from smolvm import SSHClient
+from celesto import SSHClient
 
 client = SSHClient(host="172.16.0.2")
 
@@ -214,7 +214,7 @@ Uses a two-phase approach for fast detection:
 </ResponseField>
 
 ```python  theme={null}
-from smolvm import SSHClient
+from celesto import SSHClient
 
 client = SSHClient(host="172.16.0.2")
 
@@ -254,7 +254,7 @@ finally:
 ### Basic Command Execution
 
 ```python  theme={null}
-from smolvm import SSHClient
+from celesto import SSHClient
 
 client = SSHClient(host="172.16.0.2")
 
@@ -274,7 +274,7 @@ client.close()
 ### Error Handling
 
 ```python  theme={null}
-from smolvm import SSHClient, OperationTimeoutError, SmolVMError
+from celesto import SSHClient, OperationTimeoutError, CelestoError
 
 client = SSHClient(host="172.16.0.2")
 
@@ -290,18 +290,18 @@ try:
         
 except OperationTimeoutError as e:
     print(f"Timeout: {e}")
-except SmolVMError as e:
+except CelestoError as e:
     print(f"SSH error: {e}")
 finally:
     client.close()
 ```
 
-### Using with SmolVM
+### Using with Celesto
 
 ```python  theme={null}
-from smolvm import SmolVM, SSHClient
+from celesto import Celesto, SSHClient
 
-with SmolVM() as vm:
+with Celesto() as vm:
     # Get the VM's IP
     ip = vm.get_ip()
     
@@ -323,7 +323,7 @@ with SmolVM() as vm:
 ### Persistent Connection Benefits
 
 ```python  theme={null}
-from smolvm import SSHClient
+from celesto import SSHClient
 import time
 
 client = SSHClient(host="172.16.0.2")
@@ -350,7 +350,7 @@ client.close()
 ### Shell Modes
 
 ```python  theme={null}
-from smolvm import SSHClient
+from celesto import SSHClient
 
 client = SSHClient(host="172.16.0.2")
 client.wait_for_ssh()
@@ -379,4 +379,4 @@ For workloads that execute many commands, this can reduce total execution time b
 ## Related
 
 * [CommandResult](/smolvm/api/commandresult) - Result object returned by `run()`
-* [SmolVM](/smolvm/api/smolvm) - High-level VM facade that uses SSHClient internally
+* [Celesto](/smolvm/api/smolvm) - High-level VM facade that uses SSHClient internally

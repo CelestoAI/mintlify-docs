@@ -1,26 +1,26 @@
 ---
-title: "SmolVM architecture overview"
-description: "Architecture overview of SmolVM — how each sandbox boots a microVM, sets up isolated networking, runs your code over vsock or SSH, and tears itself down."
+title: "Celesto architecture overview"
+description: "Architecture overview of Celesto — how each sandbox boots a microVM, sets up isolated networking, runs your code over vsock or SSH, and tears itself down."
 ---
 
-When you run code through SmolVM, your commands execute inside a separate virtual machine — not on your host. This page explains the moving parts and why they are designed this way.
+When you run code through Celesto, your commands execute inside a separate virtual machine — not on your host. This page explains the moving parts and why they are designed this way.
 
 ## What happens when you run code
 
-When you call `SmolVM()` and run a command, five things happen behind the scenes:
+When you call `Celesto()` and run a command, five things happen behind the scenes:
 
-1. **SmolVM builds or reuses a lightweight Linux image** — a published preset such as Ubuntu, or a custom filesystem with your own tools.
+1. **Celesto builds or reuses a lightweight Linux image** — a published preset such as Ubuntu, or a custom filesystem with your own tools.
 2. **A microVM boots** using Firecracker on Linux or QEMU on macOS and Linux.
 3. **A private network is created** so the sandbox can reach the internet but is isolated from other sandboxes.
-4. **SmolVM connects to the sandbox** — over SSH, or a faster [vsock channel](/smolvm/concepts/control-channel) when available — to execute your commands and return the output.
+4. **Celesto connects to the sandbox** — over SSH, or a faster [vsock channel](/smolvm/concepts/control-channel) when available — to execute your commands and return the output.
 5. **Everything is torn down** when you exit the `with` block.
 
 On the latest Linux benchmark timeline, the QEMU + vsock path reaches readiness in 413.1 ms and warm commands return in about 1 ms.
 
 ```python
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM(memory=2048) as vm:
+with Celesto(memory=2048) as vm:
     result = vm.run("free -m")
     print(result.stdout)
 # Sandbox automatically stopped and cleaned up
@@ -30,7 +30,7 @@ with SmolVM(memory=2048) as vm:
 
 AI agents and applications often need to run code that comes from a language model — Python scripts, shell commands, or browser automation. Running that code directly on your host or inside a container can be risky because containers share the host kernel.
 
-SmolVM uses **KVM-backed microVMs**, which provide hardware-level isolation:
+Celesto uses **KVM-backed microVMs**, which provide hardware-level isolation:
 
 * **Stronger boundary** — each sandbox runs its own kernel, so a breakout would require a hypervisor exploit, not just a kernel vulnerability
 * **Fast startup** — QEMU + vsock published Ubuntu sandboxes reach readiness in under half a second on the latest Linux benchmark
@@ -38,11 +38,11 @@ SmolVM uses **KVM-backed microVMs**, which provide hardware-level isolation:
 
 ## Key components
 
-### SDK (`SmolVM` class)
+### SDK (`Celesto` class)
 
-The main interface you import in Python. It handles VM lifecycle (create, start, stop, delete), command execution via `vm.run()`, auto-configuration so you can get started with zero config, and reconnection to existing sandboxes via `SmolVM.from_id()`.
+The main interface you import in Python. It handles VM lifecycle (create, start, stop, delete), command execution via `vm.run()`, auto-configuration so you can get started with zero config, and reconnection to existing sandboxes via `Celesto.from_id()`.
 
-### CLI (`smolvm` command)
+### CLI (`celesto` command)
 
 A terminal interface for creating sandboxes, starting browser sessions, running diagnostics, and managing snapshots. Useful for scripting, debugging, and quick exploration.
 
@@ -52,7 +52,7 @@ Each sandbox gets a dedicated TAP device, a private IP address in the `172.16.0.
 
 ### State store
 
-SmolVM tracks sandbox metadata, network assignments, and process state in a local SQLite database at `~/.local/state/smolvm/smolvm.db`. This lets you reconnect to running sandboxes across Python sessions.
+Celesto tracks sandbox metadata, network assignments, and process state in a local SQLite database at `~/.local/state/smolvm/smolvm.db`. This lets you reconnect to running sandboxes across Python sessions.
 
 ### Image builder
 
@@ -69,7 +69,7 @@ Builds Alpine Linux root filesystems with SSH pre-configured. You can also [crea
 
 ```python
 # Customize resources
-with SmolVM(memory=2048, disk_size=4096) as vm:
+with Celesto(memory=2048, disk_size=4096) as vm:
     vm.run("echo 'more room to work'")
 ```
 

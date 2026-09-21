@@ -1,6 +1,6 @@
 ---
 title: "ImageManager"
-description: "ImageManager reference: download pre-built SmolVM kernel and rootfs images, cache them locally, and verify integrity with SHA-256 checksums."
+description: "ImageManager reference: download pre-built Celesto kernel and rootfs images, cache them locally, and verify integrity with SHA-256 checksums."
 ---
 
 `ImageManager` handles fetching and caching VM images from remote sources. It provides atomic downloads with SHA-256 verification to ensure image integrity.
@@ -20,7 +20,7 @@ Initialize the image manager.
 </ParamField>
 
 ```python  theme={null}
-from smolvm import ImageManager
+from celesto import ImageManager
 from pathlib import Path
 
 # Use default settings
@@ -94,7 +94,7 @@ Downloads are atomic: files are written to a temporary location, SHA-256 verifie
 * `ImageError` - If the image is not in the registry, download fails, or checksum verification fails
 
 ```python  theme={null}
-from smolvm import ImageManager, SmolVM, VMConfig
+from celesto import ImageManager, Celesto, VMConfig
 
 manager = ImageManager()
 
@@ -103,20 +103,20 @@ image = manager.ensure_image("hello")
 print(f"Kernel: {image.kernel_path}")
 print(f"Rootfs: {image.rootfs_path}")
 
-# Use the image with SmolVM
+# Use the image with Celesto
 config = VMConfig(
     kernel_path=image.kernel_path,
     rootfs_path=image.rootfs_path,
 )
 
-with SmolVM(config) as vm:
+with Celesto(config) as vm:
     vm.start()
     # VM is now running with the "hello" image
 ```
 
 ## Built-in Image Registry
 
-SmolVM includes a registry of pre-built images from Firecracker's official sources:
+Celesto includes a registry of pre-built images from Firecracker's official sources:
 
 ### `hello`
 
@@ -141,7 +141,7 @@ Ubuntu Bionic (18.04) image for x86\_64 architecture.
 You can define custom images by providing your own registry:
 
 ```python  theme={null}
-from smolvm import ImageManager, ImageSource
+from celesto import ImageManager, ImageSource
 
 custom_registry = {
     "my-custom-image": ImageSource(
@@ -184,8 +184,8 @@ assert image1.rootfs_path == image2.rootfs_path
 ## Error Handling
 
 ```python  theme={null}
-from smolvm import ImageManager
-from smolvm.exceptions import ImageError
+from celesto import ImageManager
+from celesto.exceptions import ImageError
 
 manager = ImageManager()
 

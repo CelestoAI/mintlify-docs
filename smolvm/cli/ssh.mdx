@@ -1,14 +1,14 @@
 ---
-title: "smolvm sandbox ssh"
-description: "Use smolvm sandbox ssh to open a real SSH session into a sandbox when you need SSH behavior instead of the faster SmolVM shell."
+title: "celesto sandbox ssh"
+description: "Use celesto sandbox ssh to open a real SSH session into a sandbox when you need SSH behavior instead of the faster Celesto shell."
 ---
 
-`smolvm sandbox ssh` opens an interactive SSH session to a sandbox. Use it when you need SSH-specific behavior, such as SSH agent forwarding, a custom key, or a user account other than `root`.
+`celesto sandbox ssh` opens an interactive SSH session to a sandbox. Use it when you need SSH-specific behavior, such as SSH agent forwarding, a custom key, or a user account other than `root`.
 
 ## Synopsis
 
 ```bash
-smolvm sandbox ssh <sandbox> [OPTIONS]
+celesto sandbox ssh <sandbox> [OPTIONS]
 ```
 
 ## Arguments
@@ -28,7 +28,7 @@ smolvm sandbox ssh <sandbox> [OPTIONS]
 </ParamField>
 
 <ParamField path="--boot-timeout" type="number" default="30">
-  Seconds to wait if SmolVM needs to start the sandbox before connecting.
+  Seconds to wait if Celesto needs to start the sandbox before connecting.
 </ParamField>
 
 ## Examples
@@ -36,27 +36,27 @@ smolvm sandbox ssh <sandbox> [OPTIONS]
 ### Connect to a sandbox
 
 ```bash
-smolvm sandbox ssh my-sandbox
+celesto sandbox ssh my-sandbox
 ```
 
 ### Use a custom key
 
 ```bash
-smolvm sandbox ssh my-sandbox --ssh-key ~/.ssh/work_sandbox
+celesto sandbox ssh my-sandbox --ssh-key ~/.ssh/work_sandbox
 ```
 
 ### Connect as another user
 
 ```bash
-smolvm sandbox ssh ubuntu-box --ssh-user ubuntu
+celesto sandbox ssh ubuntu-box --ssh-user ubuntu
 ```
 
 ## Shell versus SSH
 
-Use [`smolvm sandbox shell`](/smolvm/cli/shell) for the fastest interactive shell on recent Linux images. It uses the SmolVM guest agent when available. Use `smolvm sandbox ssh` when you specifically need SSH.
+Use [`celesto sandbox shell`](/smolvm/cli/shell) for the fastest interactive shell on recent Linux images. It uses the Celesto guest agent when available. Use `celesto sandbox ssh` when you specifically need SSH.
 
 ## Related commands
 
-* [`smolvm sandbox shell`](/smolvm/cli/shell) - Open the fast shell
-* [`smolvm sandbox create`](/smolvm/cli/create) - Create a sandbox
-* [`smolvm sandbox list`](/smolvm/cli/list) - Find sandbox names
+* [`celesto sandbox shell`](/smolvm/cli/shell) - Open the fast shell
+* [`celesto sandbox create`](/smolvm/cli/create) - Create a sandbox
+* [`celesto sandbox list`](/smolvm/cli/list) - Find sandbox names

@@ -1,27 +1,27 @@
 ---
 title: "Browser and desktop sandboxes"
-description: "Start browser and desktop sandboxes with SmolVM.browser() and SmolVM.desktop(), then connect automation tools or open a live viewer."
+description: "Start browser and desktop sandboxes with Celesto.browser() and Celesto.desktop(), then connect automation tools or open a live viewer."
 ---
 
 ## Overview
 
-SmolVM can start a browser or a full desktop inside a disposable sandbox. You can give an agent a connection address for automation, open a web viewer to watch the screen, or connect a desktop-control tool.
+Celesto can start a browser or a full desktop inside a disposable sandbox. You can give an agent a connection address for automation, open a web viewer to watch the screen, or connect a desktop-control tool.
 
-Use `SmolVM.browser()` when your agent needs Chromium for web tasks. Use `SmolVM.desktop()` when your agent needs the whole desktop environment, such as a window manager, visible apps, or a VNC-compatible computer-use driver. VNC means Virtual Network Computing, a standard way for tools to view and control a remote screen.
+Use `Celesto.browser()` when your agent needs Chromium for web tasks. Use `Celesto.desktop()` when your agent needs the whole desktop environment, such as a window manager, visible apps, or a VNC-compatible computer-use driver. VNC means Virtual Network Computing, a standard way for tools to view and control a remote screen.
 
 ## Import
 
 ```python
-from smolvm import SmolVM
+from celesto import Celesto
 ```
 
 ## Choose a mode
 
 | Factory | Best for | URLs returned |
 | --- | --- | --- |
-| `SmolVM.browser(headless=True)` | Browser automation with Playwright or another automation client | `cdp_url` |
-| `SmolVM.browser(headless=False)` | Browser automation plus a visible screen | `cdp_url`, `viewer_url`, `display_url` |
-| `SmolVM.desktop()` | Full desktop computer-use agents | `viewer_url`, `display_url` |
+| `Celesto.browser(headless=True)` | Browser automation with Playwright or another automation client | `cdp_url` |
+| `Celesto.browser(headless=False)` | Browser automation plus a visible screen | `cdp_url`, `viewer_url`, `display_url` |
+| `Celesto.desktop()` | Full desktop computer-use agents | `viewer_url`, `display_url` |
 
 <Tip>
   <Tooltip tip="Chrome DevTools Protocol, a local connection address used by Playwright and browser automation tools">CDP</Tooltip> is for browser automation. <Tooltip tip="Virtual Network Computing, a standard way for tools and viewers to control a remote screen">VNC</Tooltip> is for screen viewing and desktop control.
@@ -32,9 +32,9 @@ from smolvm import SmolVM
 Headless browser mode gives automation tools a Chromium connection address. It is the smallest browser mode because it does not start the live screen viewer.
 
 ```python browser_headless.py
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM.browser(headless=True) as browser:
+with Celesto.browser(headless=True) as browser:
     print(browser.cdp_url)
 ```
 
@@ -47,9 +47,9 @@ with SmolVM.browser(headless=True) as browser:
 Visible browser mode gives you both automation and a live screen. Use it when you want an agent to drive Chromium while a person can watch what happens.
 
 ```python browser_visible.py
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM.browser(headless=False) as browser:
+with Celesto.browser(headless=False) as browser:
     print(browser.cdp_url)
     print(browser.viewer_url)
     print(browser.display_url)
@@ -68,24 +68,24 @@ with SmolVM.browser(headless=False) as browser:
 Desktop mode starts the full display environment instead of only Chromium. Use it for agents that need desktop apps, window focus, or a VNC-compatible driver such as a computer-use agent driver.
 
 ```python desktop.py
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM.desktop() as desktop:
+with Celesto.desktop() as desktop:
     print(desktop.viewer_url)
     print(desktop.display_url)
 ```
 
 <Note>
-  Desktop sandboxes focus on screen access. They return `None` for `cdp_url`; use `SmolVM.browser()` when you need a browser automation address.
+  Desktop sandboxes focus on screen access. They return `None` for `cdp_url`; use `Celesto.browser()` when you need a browser automation address.
 </Note>
 
 ## Class methods
 
-### SmolVM.browser
+### Celesto.browser
 
 ```python  theme={null}
 @classmethod
-SmolVM.browser(
+Celesto.browser(
     *,
     headless: bool = True,
     session_id: str | None = None,
@@ -177,11 +177,11 @@ Starts a Chromium browser sandbox and returns it when it is ready.
 </ParamField>
 
 <ParamField path="data_dir" type="Path | None" default="None">
-  Local directory for sandbox state. Omit it to use SmolVM's default state directory.
+  Local directory for sandbox state. Omit it to use Celesto's default state directory.
 </ParamField>
 
 <ParamField path="socket_dir" type="Path | None" default="None">
-  Local directory for runtime sockets. Omit it to use SmolVM's default socket directory.
+  Local directory for runtime sockets. Omit it to use Celesto's default socket directory.
 </ParamField>
 
 <ParamField path="ssh_key_path" type="str | None" default="None">
@@ -192,11 +192,11 @@ Starts a Chromium browser sandbox and returns it when it is ready.
   Callback that receives progress messages while the sandbox starts.
 </ParamField>
 
-### SmolVM.desktop
+### Celesto.desktop
 
 ```python  theme={null}
 @classmethod
-SmolVM.desktop(
+Celesto.desktop(
     *,
     session_id: str | None = None,
     backend: Literal["firecracker", "qemu", "libkrun", "auto"] = "auto",
@@ -220,14 +220,14 @@ SmolVM.desktop(
 ) -> DisplaySandboxProtocol
 ```
 
-Starts a full desktop sandbox and returns it when the viewer and VNC display endpoint are ready. It accepts the same resource, viewport, persistence, and artifact options as `SmolVM.browser()`.
+Starts a full desktop sandbox and returns it when the viewer and VNC display endpoint are ready. It accepts the same resource, viewport, persistence, and artifact options as `Celesto.browser()`.
 
 ## Use Playwright with browser mode
 
 ```python playwright_browser.py
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM.browser(headless=True) as sandbox:
+with Celesto.browser(headless=True) as sandbox:
     browser = sandbox.connect_playwright()
     page = browser.new_page()
     page.goto("https://example.com")
@@ -243,5 +243,5 @@ with SmolVM.browser(headless=True) as sandbox:
 
 * [Browser and desktop options](/smolvm/api/browsersessionconfig) - Configure viewport, resources, profiles, and recording
 * [Display sandbox object](/smolvm/api/browsersessioninfo) - Read returned URLs and lifecycle state
-* [SmolVM](/smolvm/api/smolvm) - General sandbox management
-* [AI agent integration](/smolvm/guides/ai-agent-integration) - Use SmolVM with agent frameworks
+* [Celesto](/smolvm/api/smolvm) - General sandbox management
+* [AI agent integration](/smolvm/guides/ai-agent-integration) - Use Celesto with agent frameworks

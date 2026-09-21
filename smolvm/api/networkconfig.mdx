@@ -7,7 +7,7 @@ description: "NetworkConfig reference: an immutable Pydantic model defining a gu
 
 `NetworkConfig` is a Pydantic model that defines the network configuration for a microVM. It specifies the guest IP, gateway, TAP device, MAC address, and optional SSH port forwarding.
 
-This model is immutable (frozen) and is typically created automatically by SmolVM when starting a VM.
+This model is immutable (frozen) and is typically created automatically by Celesto when starting a VM.
 
 ## Attributes
 
@@ -42,7 +42,7 @@ This model is immutable (frozen) and is typically created automatically by SmolV
 ### Creating a NetworkConfig
 
 ```python  theme={null}
-from smolvm import NetworkConfig
+from celesto import NetworkConfig
 
 network = NetworkConfig(
     guest_ip="172.16.0.2",
@@ -61,14 +61,14 @@ print(f"TAP device: {network.tap_device}")
 ### Accessing Network Info from a VM
 
 ```python  theme={null}
-from smolvm import SmolVM, VMConfig
+from celesto import Celesto, VMConfig
 
 config = VMConfig(
     kernel_path="/path/to/vmlinux",
     rootfs_path="/path/to/rootfs.ext4"
 )
 
-vm = SmolVM(config)
+vm = Celesto(config)
 vm.start()
 
 info = vm.info
@@ -82,9 +82,9 @@ if info.network:
 ### Using with the High-Level API
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM() as vm:
+with Celesto() as vm:
     # Network is automatically configured
     ip = vm.get_ip()
     print(f"VM IP: {ip}")
@@ -98,7 +98,7 @@ with SmolVM() as vm:
 
 ## Network Architecture
 
-SmolVM uses the following networking setup:
+Celesto uses the following networking setup:
 
 1. **TAP Device**: A virtual network interface on the host (e.g., `smol0`)
 2. **Guest IP**: Private IP address in the `172.16.0.0/16` range by default
@@ -108,7 +108,7 @@ SmolVM uses the following networking setup:
 
 ### Default IP Range
 
-By default, SmolVM assigns guest IPs from `172.16.0.0/16`:
+By default, Celesto assigns guest IPs from `172.16.0.0/16`:
 
 * Gateway: `172.16.0.1`
 * Guest VMs: `172.16.0.2`, `172.16.0.3`, etc.
@@ -131,7 +131,7 @@ This is useful when:
 ## Example: Custom Network Configuration
 
 ```python  theme={null}
-from smolvm import NetworkConfig
+from celesto import NetworkConfig
 
 # Create a custom network config
 network = NetworkConfig(
@@ -169,4 +169,4 @@ To change network settings, create a new `NetworkConfig` instance.
 
 * [VMConfig](/smolvm/api/vmconfig) - VM configuration including network settings
 * [VMInfo](/smolvm/api/vminfo) - Runtime VM information including network state
-* [SmolVM](/smolvm/api/smolvm) - High-level VM API that uses NetworkConfig internally
+* [Celesto](/smolvm/api/smolvm) - High-level VM API that uses NetworkConfig internally

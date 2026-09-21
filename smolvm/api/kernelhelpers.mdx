@@ -1,21 +1,21 @@
 ---
 title: "Kernel helpers"
-description: "ensure_base_kernel_for_backend reference for resolving, downloading, and caching the SmolVM base kernel matching a chosen backend and CPU architecture."
+description: "ensure_base_kernel_for_backend reference for resolving, downloading, and caching the Celesto base kernel matching a chosen backend and CPU architecture."
 ---
 
-Use `ensure_base_kernel_for_backend(...)` when you bring your own root filesystem but want SmolVM's verified base kernel. The helper picks the right kernel artifact for the backend, downloads it on first use, verifies it, and returns the local path.
+Use `ensure_base_kernel_for_backend(...)` when you bring your own root filesystem but want Celesto's verified base kernel. The helper picks the right kernel artifact for the backend, downloads it on first use, verifies it, and returns the local path.
 
 ## ensure_base_kernel_for_backend
 
 ```python
-from smolvm import ensure_base_kernel_for_backend
+from celesto import ensure_base_kernel_for_backend
 
 kernel = ensure_base_kernel_for_backend("qemu", arch="host")
 print(kernel)
 ```
 
 <ParamField path="backend" type="str | None" default="None">
-  Backend that will boot the kernel. Use `"firecracker"` or `"qemu"` for documented SmolVM backends. When omitted, SmolVM uses normal backend selection.
+  Backend that will boot the kernel. Use `"firecracker"` or `"qemu"` for documented Celesto backends. When omitted, Celesto uses normal backend selection.
 </ParamField>
 
 <ParamField path="arch" type='Literal["host", "amd64", "arm64", "x86_64", "aarch64"] | str' default="host">
@@ -27,12 +27,12 @@ print(kernel)
 </ParamField>
 
 <ResponseField name="return" type="Path">
-  Local path to the verified SmolVM base kernel.
+  Local path to the verified Celesto base kernel.
 </ResponseField>
 
 ## What it selects
 
-SmolVM publishes the same kernel build in different container formats:
+Celesto publishes the same kernel build in different container formats:
 
 | Backend | Kernel artifact |
 | --- | --- |

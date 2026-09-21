@@ -1,6 +1,6 @@
 ---
-title: "Snapshot and restore SmolVM sandboxes"
-description: "Snapshot and restore running SmolVM sandboxes to checkpoint agents, preserve configured environments, retry failed steps, and skip cold-start setup."
+title: "Snapshot and restore Celesto sandboxes"
+description: "Snapshot and restore running Celesto sandboxes to checkpoint agents, preserve configured environments, retry failed steps, and skip cold-start setup."
 sidebarTitle: "Snapshot and Restore Sandboxes"
 ---
 
@@ -24,14 +24,14 @@ A full snapshot captures the VM's CPU state, memory, and disk. When you restore 
 
 ## Create a snapshot
 
-To create a snapshot, the VM must be running or paused. SmolVM pauses the VM during snapshot creation and optionally resumes it afterward.
+To create a snapshot, the VM must be running or paused. Celesto pauses the VM during snapshot creation and optionally resumes it afterward.
 
 <Tabs>
   <Tab title="Python SDK">
     ```python  theme={null}
-    from smolvm import SmolVM
+    from celesto import Celesto
 
-    vm = SmolVM()
+    vm = Celesto()
     vm.start()
 
     # Install packages and configure the environment
@@ -56,21 +56,21 @@ To create a snapshot, the VM must be running or paused. SmolVM pauses the VM dur
     result = vm.run("echo 'still running'")
     ```
 
-    If you omit `snapshot_id`, SmolVM generates one automatically (for example, `snap-my-vm-1717012345`).
+    If you omit `snapshot_id`, Celesto generates one automatically (for example, `snap-my-vm-1717012345`).
   </Tab>
 
   <Tab title="CLI">
     ```bash  theme={null}
-    smolvm sandbox snapshot create my-vm --snapshot-id my-checkpoint
+    celesto sandbox snapshot create my-vm --snapshot-id my-checkpoint
     ```
 
     To keep the source VM running after the snapshot:
 
     ```bash  theme={null}
-    smolvm sandbox snapshot create my-vm --snapshot-id my-checkpoint --resume-source
+    celesto sandbox snapshot create my-vm --snapshot-id my-checkpoint --resume-source
     ```
 
-    If you skip `--snapshot-id`, SmolVM generates a unique name automatically.
+    If you skip `--snapshot-id`, Celesto generates a unique name automatically.
   </Tab>
 </Tabs>
 
@@ -79,7 +79,7 @@ To create a snapshot, the VM must be running or paused. SmolVM pauses the VM dur
 When you create a snapshot, you can pick how much of the VM to store:
 
 - **`full`** (default) — Saves a complete, self-contained disk copy plus the guest's memory and CPU state. Use this when you want to resume the sandbox exactly where you left off.
-- **`diff`** — Saves a smaller disk artifact. On QEMU, the snapshot state is stored inside the qcow2 artifact and the backing image must still exist at restore time. On Firecracker, SmolVM still captures memory and VM state in full, and uses a copy-on-write disk copy when the host filesystem supports it.
+- **`diff`** — Saves a smaller disk artifact. On QEMU, the snapshot state is stored inside the qcow2 artifact and the backing image must still exist at restore time. On Firecracker, Celesto still captures memory and VM state in full, and uses a copy-on-write disk copy when the host filesystem supports it.
 - **`disk`** — Saves only the disk and skips the memory dump. Restoring boots the sandbox fresh from that disk instead of resuming the exact running process state. Use this when you only need filesystem state and a cold boot is acceptable.
 
 On Firecracker, `full` and `diff` snapshots capture VM state and memory. `disk` snapshots copy only the managed disk, so they restore with a fresh boot.
@@ -91,9 +91,9 @@ On Firecracker, `full` and `diff` snapshots capture VM state and memory. `disk` 
 <Tabs>
   <Tab title="Python SDK">
     ```python  theme={null}
-    from smolvm import SmolVM
+    from celesto import Celesto
 
-    vm = SmolVM()
+    vm = Celesto()
     vm.start()
 
     # Space-saving snapshot — stores only what changed since the base image
@@ -109,7 +109,7 @@ On Firecracker, `full` and `diff` snapshots capture VM state and memory. `disk` 
     You can also pass the `SnapshotType` enum for type safety:
 
     ```python  theme={null}
-    from smolvm import SnapshotType
+    from celesto import SnapshotType
 
     snapshot = vm.snapshot(snapshot_type=SnapshotType.DIFF)
     ```
@@ -118,13 +118,13 @@ On Firecracker, `full` and `diff` snapshots capture VM state and memory. `disk` 
   <Tab title="CLI">
     ```bash  theme={null}
     # Space-saving snapshot
-    smolvm sandbox snapshot create my-vm --snapshot-type diff
+    celesto sandbox snapshot create my-vm --snapshot-type diff
 
     # QEMU disk-only snapshot — fast, no RAM dump, restores as a cold boot
-    smolvm sandbox snapshot create my-vm --snapshot-type disk
+    celesto sandbox snapshot create my-vm --snapshot-type disk
 
     # Full snapshot (default — same as omitting the flag)
-    smolvm sandbox snapshot create my-vm --snapshot-type full
+    celesto sandbox snapshot create my-vm --snapshot-type full
     ```
   </Tab>
 </Tabs>
@@ -132,9 +132,9 @@ On Firecracker, `full` and `diff` snapshots capture VM state and memory. `disk` 
 Take a QEMU `disk` snapshot when you want to save the filesystem state quickly and don't need to resume the running process state:
 
 ```python  theme={null}
-from smolvm import SmolVM, SnapshotType
+from celesto import Celesto, SnapshotType
 
-vm = SmolVM(backend="qemu")
+vm = Celesto(backend="qemu")
 vm.start()
 vm.run("apk add python3")
 
@@ -145,17 +145,17 @@ snapshot = vm.snapshot(
 )
 
 # Later — restoring boots the sandbox fresh from the saved disk
-vm = SmolVM.from_snapshot("cold-boot-checkpoint", resume_vm=True)
+vm = Celesto.from_snapshot("cold-boot-checkpoint", resume_vm=True)
 result = vm.run("python3 --version")  # python3 is already installed
 ```
 
 <Note>
-  If the backing image for a QEMU diff snapshot is missing at restore time, SmolVM raises a clear error pointing to the missing path and suggesting you take a `full` snapshot instead. To stay safe, keep backing images in place while their diff snapshots exist.
+  If the backing image for a QEMU diff snapshot is missing at restore time, Celesto raises a clear error pointing to the missing path and suggesting you take a `full` snapshot instead. To stay safe, keep backing images in place while their diff snapshots exist.
 </Note>
 
 ## Keep a running QEMU sandbox available
 
-By default, snapshot creation may briefly pause a running sandbox while SmolVM captures state. For QEMU disk snapshots, live capture keeps the guest running throughout — SmolVM copies the disk in the background without stopping the VM. If the installed QEMU cannot do a live block backup, the command fails rather than silently falling back to a pause.
+By default, snapshot creation may briefly pause a running sandbox while Celesto captures state. For QEMU disk snapshots, live capture keeps the guest running throughout — Celesto copies the disk in the background without stopping the VM. If the installed QEMU cannot do a live block backup, the command fails rather than silently falling back to a pause.
 
 Use live capture when a sandbox must stay reachable during the snapshot — for example, a long-running agent or an interactive session you don't want to interrupt.
 
@@ -168,9 +168,9 @@ Live capture has three requirements:
 <Tabs>
   <Tab title="Python SDK">
     ```python  theme={null}
-    from smolvm import SmolVM, SnapshotCapturePolicy, SnapshotType
+    from celesto import Celesto, SnapshotCapturePolicy, SnapshotType
 
-    vm = SmolVM(backend="qemu")
+    vm = Celesto(backend="qemu")
     vm.start()
 
     snapshot = vm.snapshot(
@@ -201,7 +201,7 @@ Live capture has three requirements:
 
   <Tab title="CLI">
     ```bash  theme={null}
-    smolvm sandbox snapshot create my-sandbox \
+    celesto sandbox snapshot create my-sandbox \
       --snapshot-id live-checkpoint \
       --snapshot-type disk \
       --resume-source \
@@ -218,7 +218,7 @@ Live capture has three requirements:
 
 ## Control the guest flush before a disk snapshot
 
-Before a disk snapshot, SmolVM asks the guest agent to flush pending filesystem writes so the copied disk includes recent changes. `flush_policy` decides what happens if that flush fails:
+Before a disk snapshot, Celesto asks the guest agent to flush pending filesystem writes so the copied disk includes recent changes. `flush_policy` decides what happens if that flush fails:
 
 - **`required`** (default) — Fail the snapshot if the flush cannot succeed. Safest for workflows that need up-to-date disk state.
 - **`best-effort`** — Try to flush, but continue and take a crash-consistent snapshot if the flush fails. Useful when the guest agent may be unavailable but you still want a snapshot.
@@ -229,7 +229,7 @@ Before a disk snapshot, SmolVM asks the guest agent to flush pending filesystem 
 <Tabs>
   <Tab title="Python SDK">
     ```python  theme={null}
-    from smolvm import SmolVM, GuestFlushPolicy, SnapshotCapturePolicy, SnapshotType
+    from celesto import Celesto, GuestFlushPolicy, SnapshotCapturePolicy, SnapshotType
 
     snapshot = vm.snapshot(
         snapshot_type=SnapshotType.DISK,
@@ -242,7 +242,7 @@ Before a disk snapshot, SmolVM asks the guest agent to flush pending filesystem 
 
   <Tab title="CLI">
     ```bash  theme={null}
-    smolvm sandbox snapshot create my-sandbox \
+    celesto sandbox snapshot create my-sandbox \
       --snapshot-type disk \
       --resume-source \
       --live-only \
@@ -251,21 +251,21 @@ Before a disk snapshot, SmolVM asks the guest agent to flush pending filesystem 
   </Tab>
 </Tabs>
 
-## How SmolVM prepares the guest
+## How Celesto prepares the guest
 
-Before SmolVM captures a disk snapshot, it asks the guest to save pending filesystem changes. Recent SmolVM images use the Rust guest agent over vsock for this sync step. You can adjust this behavior with `flush_policy` (see [Control the guest flush before a disk snapshot](#control-the-guest-flush-before-a-disk-snapshot)).
+Before Celesto captures a disk snapshot, it asks the guest to save pending filesystem changes. Recent Celesto images use the Rust guest agent over vsock for this sync step. You can adjust this behavior with `flush_policy` (see [Control the guest flush before a disk snapshot](#control-the-guest-flush-before-a-disk-snapshot)).
 
-The sync path matters because it happens before SmolVM creates snapshot files:
+The sync path matters because it happens before Celesto creates snapshot files:
 
 <Steps>
-  <Step title="SmolVM reaches the guest">
-    SmolVM uses the selected control channel. On recent Linux images, this is usually vsock. On compatibility paths, it can be SSH.
+  <Step title="Celesto reaches the guest">
+    Celesto uses the selected control channel. On recent Linux images, this is usually vsock. On compatibility paths, it can be SSH.
   </Step>
   <Step title="The guest saves file changes">
     The guest agent exposes a dedicated `/sync` endpoint. Older compatibility paths may use a raw command to ask the guest to flush files.
   </Step>
-  <Step title="SmolVM pauses and captures state">
-    After sync succeeds, SmolVM pauses the sandbox and writes the snapshot artifacts for the selected snapshot type.
+  <Step title="Celesto pauses and captures state">
+    After sync succeeds, Celesto pauses the sandbox and writes the snapshot artifacts for the selected snapshot type.
   </Step>
 </Steps>
 
@@ -280,10 +280,10 @@ Restoring a snapshot recreates the original VM with the saved state. The restore
 <Tabs>
   <Tab title="Python SDK">
     ```python  theme={null}
-    from smolvm import SmolVM
+    from celesto import Celesto
 
     # Restore and resume the VM in one step
-    vm = SmolVM.from_snapshot("my-checkpoint", resume_vm=True)
+    vm = Celesto.from_snapshot("my-checkpoint", resume_vm=True)
     print(f"Restored VM: {vm.vm_id}")
     print(f"Status: {vm.status}")  # VMState.RUNNING
 
@@ -297,7 +297,7 @@ Restoring a snapshot recreates the original VM with the saved state. The restore
 
   <Tab title="CLI">
     ```bash  theme={null}
-    smolvm sandbox snapshot restore my-checkpoint --resume
+    celesto sandbox snapshot restore my-checkpoint --resume
     ```
   </Tab>
 </Tabs>
@@ -307,13 +307,13 @@ A snapshot can only be restored once by default. If you need to restore the same
 <Tabs>
   <Tab title="Python SDK">
     ```python  theme={null}
-    vm = SmolVM.from_snapshot("my-checkpoint", resume_vm=True, force=True)
+    vm = Celesto.from_snapshot("my-checkpoint", resume_vm=True, force=True)
     ```
   </Tab>
 
   <Tab title="CLI">
     ```bash  theme={null}
-    smolvm sandbox snapshot restore my-checkpoint --resume --force
+    celesto sandbox snapshot restore my-checkpoint --resume --force
     ```
   </Tab>
 </Tabs>
@@ -323,9 +323,9 @@ A snapshot can only be restored once by default. If you need to restore the same
 <Tabs>
   <Tab title="Python SDK">
     ```python  theme={null}
-    from smolvm import SmolVMManager
+    from celesto import CelestoManager
 
-    with SmolVMManager() as sdk:
+    with CelestoManager() as sdk:
         snapshots = sdk.list_snapshots()
         for snap in snapshots:
             print(f"{snap.snapshot_id}  vm={snap.vm_id}  restored={snap.restored}")
@@ -340,13 +340,13 @@ A snapshot can only be restored once by default. If you need to restore the same
 
   <Tab title="CLI">
     ```bash  theme={null}
-    smolvm sandbox snapshot list
+    celesto sandbox snapshot list
     ```
 
     Filter by VM:
 
     ```bash  theme={null}
-    smolvm sandbox snapshot list --vm-id my-vm
+    celesto sandbox snapshot list --vm-id my-vm
     ```
   </Tab>
 </Tabs>
@@ -358,22 +358,22 @@ Deleting a snapshot removes the saved state files and metadata. You cannot delet
 <Tabs>
   <Tab title="Python SDK">
     ```python  theme={null}
-    from smolvm import SmolVMManager
+    from celesto import CelestoManager
 
-    with SmolVMManager() as sdk:
+    with CelestoManager() as sdk:
         sdk.delete_snapshot("my-checkpoint")
     ```
   </Tab>
 
   <Tab title="CLI">
     ```bash  theme={null}
-    smolvm sandbox snapshot delete my-checkpoint
+    celesto sandbox snapshot delete my-checkpoint
     ```
   </Tab>
 </Tabs>
 
 <Warning>
-  Deleting a snapshot is permanent. SmolVM removes the saved files for that snapshot, including any disk, VM state, and memory artifacts that snapshot type created.
+  Deleting a snapshot is permanent. Celesto removes the saved files for that snapshot, including any disk, VM state, and memory artifacts that snapshot type created.
 </Warning>
 
 ## Full example: checkpoint and retry
@@ -381,10 +381,10 @@ Deleting a snapshot removes the saved state files and metadata. You cannot delet
 This example shows how an agent can checkpoint a sandbox before running untrusted code, then roll back if something fails.
 
 ```python  theme={null}
-from smolvm import SmolVM, SmolVMError
+from celesto import Celesto, CelestoError
 
 # Set up a sandbox
-vm = SmolVM()
+vm = Celesto()
 vm.start()
 vm.run("apk add python3")
 
@@ -393,7 +393,7 @@ snapshot = vm.snapshot(snapshot_id="before-experiment")
 vm.close()
 
 # Restore and try the experiment
-vm = SmolVM.from_snapshot("before-experiment", resume_vm=True)
+vm = Celesto.from_snapshot("before-experiment", resume_vm=True)
 result = vm.run("python3 -c 'import this_will_fail'")
 
 if not result.ok:
@@ -402,7 +402,7 @@ if not result.ok:
     vm.delete()
 
     # Restore from checkpoint and try a different approach
-    vm = SmolVM.from_snapshot("before-experiment", resume_vm=True, force=True)
+    vm = Celesto.from_snapshot("before-experiment", resume_vm=True, force=True)
     result = vm.run("python3 -c 'print(42)'")
     print(result.output)  # 42
 
@@ -411,32 +411,32 @@ vm.close()
 
 ## Snapshot ID rules
 
-Snapshot IDs must contain only lowercase letters, numbers, hyphens, and underscores. SmolVM validates this on creation and raises an error for invalid IDs.
+Snapshot IDs must contain only lowercase letters, numbers, hyphens, and underscores. Celesto validates this on creation and raises an error for invalid IDs.
 
 Valid examples: `my-checkpoint`, `snap-agent-001`, `pre-deploy-v2`
 
 ## Error handling
 
-SmolVM provides specific exceptions for snapshot operations:
+Celesto provides specific exceptions for snapshot operations:
 
 ```python  theme={null}
-from smolvm import (
-    SmolVM,
+from celesto import (
+    Celesto,
     SnapshotAlreadyExistsError,
     SnapshotNotFoundError,
     SnapshotType,
-    SmolVMError,
+    CelestoError,
 )
 
 try:
     snapshot = vm.snapshot(snapshot_id="my-checkpoint")
 except SnapshotAlreadyExistsError:
     print("A snapshot with this ID already exists")
-except SmolVMError as e:
+except CelestoError as e:
     print(f"Snapshot failed: {e.message}")
 
 try:
-    vm = SmolVM.from_snapshot("missing-snapshot")
+    vm = Celesto.from_snapshot("missing-snapshot")
 except SnapshotNotFoundError:
     print("Snapshot not found")
 ```

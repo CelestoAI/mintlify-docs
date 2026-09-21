@@ -1,20 +1,20 @@
 ---
-title: "smolvm sandbox create"
-description: "Use smolvm sandbox create to start a new sandbox from the command line, name it, choose an operating system or image, share folders, and get JSON output for scripts."
+title: "celesto sandbox create"
+description: "Use celesto sandbox create to start a new sandbox from the command line, name it, choose an operating system or image, share folders, and get JSON output for scripts."
 ---
 
-`smolvm sandbox create` starts a new sandbox and leaves it running. Give it a name when you want to use the same sandbox in later commands, or let SmolVM generate one for you.
+`celesto sandbox create` starts a new sandbox and leaves it running. Give it a name when you want to use the same sandbox in later commands, or let Celesto generate one for you.
 
 ## Synopsis
 
 ```bash
-smolvm sandbox create [OPTIONS]
+celesto sandbox create [OPTIONS]
 ```
 
 ## Options
 
 <ParamField path="--name, -n" type="string">
-  Name for the sandbox. If you omit it, SmolVM creates a unique name.
+  Name for the sandbox. If you omit it, Celesto creates a unique name.
 </ParamField>
 
 <ParamField path="--os" type="string">
@@ -34,7 +34,7 @@ smolvm sandbox create [OPTIONS]
 </ParamField>
 
 <ParamField path="--backend" type="string">
-  Runtime backend. Choices are `auto`, `firecracker`, `qemu`, `libkrun`, and `vz`. SmolVM selects `vz` automatically for macOS guests.
+  Runtime backend. Choices are `auto`, `firecracker`, `qemu`, `libkrun`, and `vz`. Celesto selects `vz` automatically for macOS guests.
 </ParamField>
 
 <ParamField path="--qemu-machine" type="string" default="auto">
@@ -62,11 +62,11 @@ smolvm sandbox create [OPTIONS]
 </ParamField>
 
 <ParamField path="--network" type="string" default="nat">
-  Network mode for the sandbox. Choices are `nat` (default, private SmolVM network with NAT, port forwarding, and outbound network controls) and `bridge` (attach directly to an existing host bridge on Linux). See [Bridged networking](/smolvm/features/bridged-networking).
+  Network mode for the sandbox. Choices are `nat` (default, private Celesto network with NAT, port forwarding, and outbound network controls) and `bridge` (attach directly to an existing host bridge on Linux). See [Bridged networking](/smolvm/features/bridged-networking).
 </ParamField>
 
 <ParamField path="--bridge" type="string">
-  Name of the Linux bridge to attach to. Required with `--network bridge` and rejected otherwise. Run [`smolvm bridge check BRIDGE`](/smolvm/features/bridged-networking#check-a-bridge-before-you-use-it) first to verify the bridge.
+  Name of the Linux bridge to attach to. Required with `--network bridge` and rejected otherwise. Run [`celesto bridge check BRIDGE`](/smolvm/features/bridged-networking#check-a-bridge-before-you-use-it) first to verify the bridge.
 </ParamField>
 
 <ParamField path="--boot-timeout" type="number" default="30">
@@ -82,19 +82,19 @@ smolvm sandbox create [OPTIONS]
 ### Create a default sandbox
 
 ```bash
-smolvm sandbox create
+celesto sandbox create
 ```
 
 ### Create a named Ubuntu sandbox
 
 ```bash
-smolvm sandbox create --name dev-env --os ubuntu --disk-size 4096
+celesto sandbox create --name dev-env --os ubuntu --disk-size 4096
 ```
 
 ### Share a project folder
 
 ```bash
-smolvm sandbox create \
+celesto sandbox create \
   --name code-review \
   --mount ~/Projects/my-app:/workspace
 ```
@@ -104,7 +104,7 @@ By default, shared folders are read-only. Add `--writable-mounts` only when the 
 ### Use QEMU microvm explicitly
 
 ```bash
-smolvm sandbox create \
+celesto sandbox create \
   --name qemu-fast-path \
   --backend qemu \
   --qemu-machine microvm
@@ -115,16 +115,16 @@ smolvm sandbox create \
 On Linux, connect the sandbox directly to an existing bridge so it appears as a regular machine on that network with its own MAC and guest-managed IP:
 
 ```bash
-smolvm bridge check br10
-smolvm sandbox create --name demo --os alpine --network bridge --bridge br10
+celesto bridge check br10
+celesto sandbox create --name demo --os alpine --network bridge --bridge br10
 ```
 
-In bridge mode, SSH from the host, host port forwards, workspace mounts, and SmolVM-managed outbound controls are unavailable — use `smolvm sandbox shell` and connect to guest services over the bridged network instead. See [Bridged networking](/smolvm/features/bridged-networking) for the full setup, tradeoffs, and SDK usage.
+In bridge mode, SSH from the host, host port forwards, workspace mounts, and Celesto-managed outbound controls are unavailable — use `celesto sandbox shell` and connect to guest services over the bridged network instead. See [Bridged networking](/smolvm/features/bridged-networking) for the full setup, tradeoffs, and SDK usage.
 
 ### Create a Windows sandbox from a local image
 
 ```bash
-smolvm sandbox create \
+celesto sandbox create \
   --name win11-test \
   --os windows \
   --image ~/.smolvm/images/win11.qcow2
@@ -135,35 +135,35 @@ See [Windows sandboxes](/smolvm/guides/windows-guests) before running Windows gu
 ### Create a macOS desktop sandbox
 
 ```bash
-smolvm sandbox create --os macos --name nimble-mac
+celesto sandbox create --os macos --name nimble-mac
 ```
 
 The sandbox starts immediately when a prepared macOS image is available. The output shows its `running` status and the next command:
 
 ```text
-Next: smolvm sandbox desktop nimble-mac
-Info: smolvm sandbox info nimble-mac
+Next: celesto sandbox desktop nimble-mac
+Info: celesto sandbox info nimble-mac
 ```
 
 Open the desktop:
 
 ```bash
-smolvm sandbox desktop nimble-mac
+celesto sandbox desktop nimble-mac
 ```
 
 The first macOS sandbox asks before downloading and preparing a local image. See [Disposable macOS environments](/smolvm/guides/macos-sandboxes) for host requirements, one-time setup, and preview limits.
 
 ## What happens
 
-1. SmolVM resolves the image, backend, and control channel.
+1. Celesto resolves the image, backend, and control channel.
 2. It creates a per-sandbox disk and network configuration.
 3. It starts the sandbox and waits for the guest to be ready.
 4. It prints the sandbox name and suggested next commands.
 
 ## Related commands
 
-* [`smolvm sandbox shell`](/smolvm/cli/shell) - Open the fast shell
-* [`smolvm sandbox ssh`](/smolvm/cli/ssh) - Open an SSH session
-* [`smolvm sandbox desktop`](/smolvm/guides/macos-sandboxes) - Open a macOS sandbox in Screen Sharing
-* [`smolvm sandbox list`](/smolvm/cli/list) - View sandboxes
-* [`smolvm sandbox delete`](/smolvm/cli/cleanup) - Delete one or more sandboxes
+* [`celesto sandbox shell`](/smolvm/cli/shell) - Open the fast shell
+* [`celesto sandbox ssh`](/smolvm/cli/ssh) - Open an SSH session
+* [`celesto sandbox desktop`](/smolvm/guides/macos-sandboxes) - Open a macOS sandbox in Screen Sharing
+* [`celesto sandbox list`](/smolvm/cli/list) - View sandboxes
+* [`celesto sandbox delete`](/smolvm/cli/cleanup) - Delete one or more sandboxes

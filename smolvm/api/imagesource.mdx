@@ -1,6 +1,6 @@
 ---
 title: "ImageSource"
-description: "ImageSource reference: define metadata for downloadable SmolVM kernel and rootfs images, including URLs, file names, and SHA-256 verification hashes."
+description: "ImageSource reference: define metadata for downloadable Celesto kernel and rootfs images, including URLs, file names, and SHA-256 verification hashes."
 ---
 
 `ImageSource` defines the metadata for a downloadable VM image, including URLs and SHA-256 checksums for verification.
@@ -32,7 +32,7 @@ description: "ImageSource reference: define metadata for downloadable SmolVM ker
 ### Usage
 
 ```python  theme={null}
-from smolvm import ImageSource
+from celesto import ImageSource
 
 # Define an image with checksum verification
 image = ImageSource(
@@ -52,7 +52,7 @@ print(image.kernel_url)
 You can skip SHA-256 verification by omitting the checksum fields:
 
 ```python  theme={null}
-from smolvm import ImageSource
+from celesto import ImageSource
 
 # No checksum verification
 image = ImageSource(
@@ -71,7 +71,7 @@ image = ImageSource(
 Use `ImageSource` to define custom images for `ImageManager`:
 
 ```python  theme={null}
-from smolvm import ImageManager, ImageSource
+from celesto import ImageManager, ImageSource
 
 custom_images = {
     "alpine-minimal": ImageSource(
@@ -113,12 +113,12 @@ image = manager.ensure_image("alpine-minimal")
 ### Usage
 
 ```python  theme={null}
-from smolvm import ImageManager, VMConfig, SmolVM
+from celesto import ImageManager, VMConfig, Celesto
 
 manager = ImageManager()
 image = manager.ensure_image("hello")
 
-print(type(image))  # <class 'smolvm.images.LocalImage'>
+print(type(image))  # <class 'celesto.images.manager.LocalImage'>
 print(image.name)   # hello
 print(image.kernel_path)  # PosixPath('/home/user/.smolvm/images/hello/vmlinux.bin')
 print(image.rootfs_path)  # PosixPath('/home/user/.smolvm/images/hello/rootfs.ext4')
@@ -129,7 +129,7 @@ config = VMConfig(
     rootfs_path=image.rootfs_path,
 )
 
-with SmolVM(config) as vm:
+with Celesto(config) as vm:
     vm.start()
 ```
 
@@ -138,7 +138,7 @@ with SmolVM(config) as vm:
 Both `ImageSource` and `LocalImage` are immutable (frozen) Pydantic models:
 
 ```python  theme={null}
-from smolvm import ImageSource
+from celesto import ImageSource
 
 image = ImageSource(
     name="test",
@@ -168,10 +168,10 @@ python3 -c "import hashlib; print(hashlib.sha256(open('vmlinux.bin', 'rb').read(
 
 ## Built-in Images
 
-SmolVM includes these built-in `ImageSource` definitions:
+Celesto includes these built-in `ImageSource` definitions:
 
 ```python  theme={null}
-from smolvm.images import BUILTIN_IMAGES
+from celesto.images.manager import BUILTIN_IMAGES
 
 for name, source in BUILTIN_IMAGES.items():
     print(f"{name}:")

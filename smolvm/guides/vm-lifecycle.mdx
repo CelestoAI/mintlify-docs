@@ -1,9 +1,9 @@
 ---
 title: "VM lifecycle management"
-description: "Manage the full SmolVM sandbox lifecycle — created, running, paused, and stopped states — and learn when to use the context manager versus manual control."
+description: "Manage the full Celesto sandbox lifecycle — created, running, paused, and stopped states — and learn when to use the context manager versus manual control."
 ---
 
-Every SmolVM sandbox follows a simple lifecycle: you create it, start it, run your work, and tear it down. Most of the time the context manager (`with SmolVM() as vm`) handles all of this for you. This guide covers the full lifecycle for cases where you need more control.
+Every Celesto sandbox follows a simple lifecycle: you create it, start it, run your work, and tear it down. Most of the time the context manager (`with Celesto() as vm`) handles all of this for you. This guide covers the full lifecycle for cases where you need more control.
 
 ## Lifecycle states
 
@@ -18,23 +18,23 @@ A sandbox progresses through these states:
 ## Creating a sandbox
 
 <Steps>
-  <Step title="Import SmolVM">
+  <Step title="Import Celesto">
     ```python  theme={null}
-    from smolvm import SmolVM
+    from celesto import Celesto
     ```
   </Step>
 
   <Step title="Create VM instance">
     ```python  theme={null}
     # Auto-configuration mode
-    vm = SmolVM()
+    vm = Celesto()
     print(f"Created VM: {vm.vm_id}")
     print(f"Status: {vm.status}")  # VMState.CREATED
     ```
   </Step>
 
   <Step title="Verify VM is created">
-    The VM is now registered in SmolVM's state database but not yet running.
+    The VM is now registered in Celesto's state database but not yet running.
   </Step>
 </Steps>
 
@@ -43,9 +43,9 @@ A sandbox progresses through these states:
 Start the sandbox to boot the guest operating system:
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
-vm = SmolVM()
+vm = Celesto()
 vm.start(boot_timeout=30.0)
 print(f"VM started: {vm.status}")  # VMState.RUNNING
 print(f"IP address: {vm.get_ip()}")
@@ -53,7 +53,7 @@ print(f"IP address: {vm.get_ip()}")
 
 ### Boot process
 
-When you call `start()`, SmolVM:
+When you call `start()`, Celesto:
 
 1. Launches the Firecracker/QEMU process
 2. Boots the kernel with configured boot arguments
@@ -63,7 +63,7 @@ When you call `start()`, SmolVM:
 ### Method signature
 
 ```python  theme={null}
-def start(self, boot_timeout: float = 30.0) -> SmolVM:
+def start(self, boot_timeout: float = 30.0) -> Celesto:
     """Start the VM.
 
     Args:
@@ -97,7 +97,7 @@ The `stop()` method:
 ### Method signature
 
 ```python  theme={null}
-def stop(self, timeout: float = 3.0) -> SmolVM:
+def stop(self, timeout: float = 3.0) -> Celesto:
     """Stop the VM.
 
     Args:
@@ -148,9 +148,9 @@ vm.delete()
 The recommended way to manage the lifecycle is with Python's `with` statement:
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM() as vm:
+with Celesto() as vm:
     # VM automatically starts on context entry
     print(f"VM running: {vm.vm_id}")
     result = vm.run("hostname")
@@ -162,28 +162,28 @@ with SmolVM() as vm:
 
 <Tabs>
   <Tab title="New VMs (owns_vm=True)">
-    When you create a VM with `SmolVM(config)` or `SmolVM()`:
+    When you create a VM with `Celesto(config)` or `Celesto()`:
 
     * `__enter__`: Automatically starts the VM
     * `__exit__`: Stops AND deletes the VM
 
     ```python  theme={null}
     # VM is created, started, and cleaned up automatically
-    with SmolVM() as vm:
+    with Celesto() as vm:
         vm.run("echo 'hello'")
     # VM is now deleted
     ```
   </Tab>
 
   <Tab title="Reconnected VMs (owns_vm=False)">
-    When you reconnect with `SmolVM.from_id(vm_id)`:
+    When you reconnect with `Celesto.from_id(vm_id)`:
 
     * `__enter__`: Does NOT start the VM (preserves state)
     * `__exit__`: Stops but does NOT delete
 
     ```python  theme={null}
     # Reconnect to existing VM
-    with SmolVM.from_id("my-vm") as vm:
+    with Celesto.from_id("my-vm") as vm:
         vm.run("echo 'hello'")
     # VM is stopped but still exists
     ```
@@ -195,16 +195,16 @@ with SmolVM() as vm:
 Reconnect to a sandbox that was created earlier:
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
 # Create a VM without context manager
-vm = SmolVM()
+vm = Celesto()
 vm.start()
 vm_id = vm.vm_id
 vm.close()  # Release resources but don't delete
 
 # Later, reconnect to the same VM
-vm2 = SmolVM.from_id(vm_id)
+vm2 = Celesto.from_id(vm_id)
 print(f"Reconnected to {vm2.vm_id}")
 print(f"Status: {vm2.status}")  # VMState.RUNNING
 
@@ -226,7 +226,7 @@ def from_id(
     backend: str | None = None,
     ssh_user: str = "root",
     ssh_key_path: str | None = None,
-) -> SmolVM:
+) -> Celesto:
     """Reconnect to an existing VM by ID."""
 ```
 
@@ -235,11 +235,11 @@ def from_id(
 For advanced use cases where you need explicit control:
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
 try:
     # Create but don't start
-    vm = SmolVM()
+    vm = Celesto()
     print(f"VM created: {vm.vm_id} (status: {vm.status})")
 
     # Manually start when ready
@@ -267,8 +267,8 @@ For persistent sandboxes that survive across Python sessions:
 <Steps>
   <Step title="Create a VM with a stable ID">
     ```python  theme={null}
-    from smolvm import SmolVM, VMConfig
-    from smolvm.build import ImageBuilder, SSH_BOOT_ARGS
+    from celesto import Celesto, VMConfig
+    from celesto import ImageBuilder, SSH_BOOT_ARGS
 
     builder = ImageBuilder()
     kernel, rootfs = builder.build_alpine_ssh()
@@ -282,7 +282,7 @@ For persistent sandboxes that survive across Python sessions:
         boot_args=SSH_BOOT_ARGS,
     )
 
-    vm = SmolVM(config)
+    vm = Celesto(config)
     vm.start()
     print(f"Created persistent VM: {vm.vm_id}")
     vm.close()  # Release SDK resources, keep VM running
@@ -291,10 +291,10 @@ For persistent sandboxes that survive across Python sessions:
 
   <Step title="Reconnect in another session">
     ```python  theme={null}
-    from smolvm import SmolVM
+    from celesto import Celesto
 
     # In a different Python session or script
-    vm = SmolVM.from_id("persistent-agent-vm")
+    vm = Celesto.from_id("persistent-agent-vm")
     print(f"Reconnected to {vm.vm_id}")
     print(f"Status: {vm.status}")
 
@@ -305,7 +305,7 @@ For persistent sandboxes that survive across Python sessions:
 
   <Step title="Clean up when done">
     ```python  theme={null}
-    vm = SmolVM.from_id("persistent-agent-vm")
+    vm = Celesto.from_id("persistent-agent-vm")
     vm.stop()
     vm.delete()
     print("VM permanently deleted")
@@ -318,7 +318,7 @@ For persistent sandboxes that survive across Python sessions:
 You can explicitly wait for SSH to become available:
 
 ```python  theme={null}
-vm = SmolVM()
+vm = Celesto()
 vm.start()
 
 # Wait up to 60 seconds for SSH
@@ -339,7 +339,7 @@ print(result.output)
 Properties like `status` and `info` are cached. Refresh them from the state store:
 
 ```python  theme={null}
-vm = SmolVM.from_id("my-vm")
+vm = Celesto.from_id("my-vm")
 print(vm.status)  # Cached value
 
 vm.refresh()
@@ -355,7 +355,7 @@ You can save the full state of a running VM and restore it later using snapshots
 snapshot = vm.snapshot(snapshot_id="my-checkpoint")
 
 # Later, restore it
-restored_vm = SmolVM.from_snapshot("my-checkpoint", resume_vm=True)
+restored_vm = Celesto.from_snapshot("my-checkpoint", resume_vm=True)
 ```
 
 See the [Snapshots guide](/smolvm/features/snapshots) for full details.

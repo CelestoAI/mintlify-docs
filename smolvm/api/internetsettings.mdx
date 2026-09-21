@@ -1,6 +1,6 @@
 ---
 title: "InternetSettings"
-description: "InternetSettings reference: restrict outbound network access from a SmolVM sandbox to an allowlist of domains using the VMConfig internet_settings field."
+description: "InternetSettings reference: restrict outbound network access from a Celesto sandbox to an allowlist of domains using the VMConfig internet_settings field."
 ---
 
 `InternetSettings` controls outbound network access for supported private sandbox networks. Open access remains the default.
@@ -8,7 +8,7 @@ description: "InternetSettings reference: restrict outbound network access from 
 ## Import
 
 ```python
-from smolvm import InternetSettings
+from celesto import InternetSettings
 ```
 
 ## Fields
@@ -34,9 +34,9 @@ Input lists are accepted for collection fields. Stored settings are immutable tu
 ## Turn outbound access off
 
 ```python
-from smolvm import InternetSettings, SmolVM
+from celesto import InternetSettings, Celesto
 
-with SmolVM(
+with Celesto(
     backend="qemu",
     internet_settings=InternetSettings(mode="off"),
 ) as vm:
@@ -49,7 +49,7 @@ QEMU supports off mode with its default network on macOS and Linux.
 
 ```python
 from pathlib import Path
-from smolvm import InternetSettings, SmolVM, VMConfig
+from celesto import InternetSettings, Celesto, VMConfig
 
 config = VMConfig(
     kernel_path=Path("/path/to/vmlinux"),
@@ -62,7 +62,7 @@ config = VMConfig(
     ),
 )
 
-with SmolVM(config=config) as vm:
+with Celesto(config=config) as vm:
     print(vm.run("echo ready").stdout)
 ```
 
@@ -77,7 +77,7 @@ QEMU restricted mode requires explicit TAP networking on Linux. Firecracker rest
 - HTTP-method restrictions are rejected.
 - Unknown fields are rejected.
 
-Direct `InternetSettings` and `VMConfig` construction raises Pydantic's `ValidationError`. Public `SmolVM` creation methods raise `smolvm.ValidationError` for invalid or unsupported combinations.
+Direct `InternetSettings` and `VMConfig` construction raises Pydantic's `ValidationError`. Public `Celesto` creation methods raise `celesto.ValidationError` for invalid or unsupported combinations.
 
 ## Related
 

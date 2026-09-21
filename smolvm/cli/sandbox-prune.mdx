@@ -1,20 +1,20 @@
 ---
-title: "smolvm sandbox prune"
-description: "Delete disks and logs left behind by sandboxes that no longer exist, with a dry-run preview and a flag to include disks you asked SmolVM to keep."
+title: "celesto sandbox prune"
+description: "Delete disks and logs left behind by sandboxes that no longer exist, with a dry-run preview and a flag to include disks you asked Celesto to keep."
 ---
 
-`smolvm sandbox prune` sweeps the SmolVM data directory for per-sandbox disks and runtime logs whose sandbox row is gone, and deletes them so the space comes back.
+`celesto sandbox prune` sweeps the Celesto data directory for per-sandbox disks and runtime logs whose sandbox row is gone, and deletes them so the space comes back.
 
-A per-sandbox disk normally lives under `disks/` in the SmolVM data directory and is reached through its row in the sandbox inventory. If a crash, a lost inventory, or a partial cleanup drops the row while the file survives, nothing else can find that disk by name. Over time these files accumulate. Run `smolvm sandbox prune` to find and delete them.
+A per-sandbox disk normally lives under `disks/` in the Celesto data directory and is reached through its row in the sandbox inventory. If a crash, a lost inventory, or a partial cleanup drops the row while the file survives, nothing else can find that disk by name. Over time these files accumulate. Run `celesto sandbox prune` to find and delete them.
 
 <Note>
-  This is different from [`smolvm prune`](/smolvm/cli/prune) (an alias of `smolvm image prune`), which reclaims cached SmolVM images from older releases. `sandbox prune` acts on runtime state left behind by individual sandboxes, not image caches.
+  This is different from [`celesto prune`](/smolvm/cli/prune) (an alias of `celesto image prune`), which reclaims cached Celesto images from older releases. `sandbox prune` acts on runtime state left behind by individual sandboxes, not image caches.
 </Note>
 
 ## Synopsis
 
 ```bash
-smolvm sandbox prune [OPTIONS]
+celesto sandbox prune [OPTIONS]
 ```
 
 ## Options
@@ -54,7 +54,7 @@ It skips:
 Always safe to run first:
 
 ```bash
-smolvm sandbox prune --dry-run
+celesto sandbox prune --dry-run
 ```
 
 **Example output:**
@@ -72,7 +72,7 @@ Would free 921.6 MiB
 ### Delete the leftovers
 
 ```bash
-smolvm sandbox prune
+celesto sandbox prune
 ```
 
 You will be asked to confirm before anything is deleted. Pass `--force` to skip the prompt.
@@ -80,7 +80,7 @@ You will be asked to confirm before anything is deleted. Pass `--force` to skip 
 ### Use in automation
 
 ```bash
-smolvm sandbox prune --force --json
+celesto sandbox prune --force --json
 ```
 
 The JSON envelope lists the files removed, the files kept because they were marked as saved, and the total bytes freed.
@@ -90,12 +90,12 @@ The JSON envelope lists the files removed, the files kept because they were mark
 Disks kept with `retain_disk_on_delete=True` survive `sandbox prune` by design. If you actually want them gone:
 
 ```bash
-smolvm sandbox prune --include-saved --force
+celesto sandbox prune --include-saved --force
 ```
 
 ## Retained disks
 
-When you set [`retain_disk_on_delete=True`](/smolvm/concepts/security#disk-retention) on a sandbox, SmolVM keeps its disk after the sandbox is deleted so a later sandbox with the same ID can pick it back up. To tell a deliberately kept disk apart from a leaked one, SmolVM writes a marker file (`<disk>.retained`) next to the disk when the sandbox is deleted. `sandbox prune` reads that marker and leaves marked disks alone.
+When you set [`retain_disk_on_delete=True`](/smolvm/concepts/security#disk-retention) on a sandbox, Celesto keeps its disk after the sandbox is deleted so a later sandbox with the same ID can pick it back up. To tell a deliberately kept disk apart from a leaked one, Celesto writes a marker file (`<disk>.retained`) next to the disk when the sandbox is deleted. `sandbox prune` reads that marker and leaves marked disks alone.
 
 <Warning>
   Disks retained on releases before this behavior existed carry no marker, so `sandbox prune` treats them as leftovers. Before you run `sandbox prune` for the first time after upgrading, run it with `--dry-run` and check the list, or pass no flags at all and inspect the confirmation prompt. If you need to preserve pre-upgrade retained disks that you plan to re-attach, keep them out of the sweep by not running `sandbox prune`, or delete them explicitly with `--include-saved` once you've confirmed the list.
@@ -110,6 +110,6 @@ When you set [`retain_disk_on_delete=True`](/smolvm/concepts/security#disk-reten
 
 ## Related commands
 
-* [`smolvm sandbox delete`](/smolvm/cli/cleanup) — delete a specific sandbox and reclaim its disk, even if the inventory row is gone
-* [`smolvm sandbox list`](/smolvm/cli/list) — see which sandboxes still have rows in the inventory
-* [`smolvm prune`](/smolvm/cli/prune) — remove cached images from older SmolVM releases
+* [`celesto sandbox delete`](/smolvm/cli/cleanup) — delete a specific sandbox and reclaim its disk, even if the inventory row is gone
+* [`celesto sandbox list`](/smolvm/cli/list) — see which sandboxes still have rows in the inventory
+* [`celesto prune`](/smolvm/cli/prune) — remove cached images from older Celesto releases

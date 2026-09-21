@@ -1,6 +1,6 @@
 ---
 title: "Mount Folders and Data"
-description: "Share local folders and project files with a SmolVM sandbox using read-only or writable host mounts so agents can explore code without copying it first."
+description: "Share local folders and project files with a Celesto sandbox using read-only or writable host mounts so agents can explore code without copying it first."
 ---
 
 Host mounts let a sandbox read files from your local machine without copying them. This is useful when an agent needs to explore a codebase or process data that already lives on your host.
@@ -12,23 +12,23 @@ By default, the host folder is read-only — the sandbox can read every file, bu
 Mount a directory when creating a sandbox:
 
 ```bash
-smolvm sandbox create --mount ~/Projects/my-app
-smolvm sandbox ssh my-sandbox
+celesto sandbox create --mount ~/Projects/my-app
+celesto sandbox ssh my-sandbox
 ls /workspace   # your host files appear here
 ```
 
 Mount multiple directories at custom paths:
 
 ```bash
-smolvm sandbox create --mount ~/Projects/my-app:/code --mount ~/data:/mnt/data
+celesto sandbox create --mount ~/Projects/my-app:/code --mount ~/data:/mnt/data
 ```
 
 ## Python SDK
 
 ```python
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM(mounts=["~/Projects/my-app"]) as vm:
+with Celesto(mounts=["~/Projects/my-app"]) as vm:
     result = vm.run("ls /workspace")
     print(result.stdout)
 ```
@@ -36,7 +36,7 @@ with SmolVM(mounts=["~/Projects/my-app"]) as vm:
 You can also specify custom mount paths:
 
 ```python
-with SmolVM(mounts=["~/Projects/my-app:/code", "~/data:/mnt/data"]) as vm:
+with Celesto(mounts=["~/Projects/my-app:/code", "~/data:/mnt/data"]) as vm:
     result = vm.run("ls /code")
     print(result.stdout)
 ```
@@ -48,7 +48,7 @@ By default, mounts are read-only. Add `--writable-mounts` to let the sandbox wri
 ### CLI
 
 ```bash
-smolvm sandbox create --mount ~/Projects/my-app --writable-mounts
+celesto sandbox create --mount ~/Projects/my-app --writable-mounts
 ```
 
 Any file the sandbox creates or modifies inside the mount point appears on your host immediately.
@@ -56,9 +56,9 @@ Any file the sandbox creates or modifies inside the mount point appears on your 
 ### Python SDK
 
 ```python
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM(mounts=["~/Projects/my-app"], writable_mounts=True) as vm:
+with Celesto(mounts=["~/Projects/my-app"], writable_mounts=True) as vm:
     vm.run("echo 'hello' > /workspace/new-file.txt")
     # new-file.txt now exists on the host at ~/Projects/my-app/new-file.txt
 ```

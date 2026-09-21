@@ -1,13 +1,13 @@
 ---
-title: "Run your first SmolVM microVM sandbox"
+title: "Run your first Celesto microVM sandbox"
 sidebarTitle: "Quickstart"
-description: "Install SmolVM and run your first isolated microVM sandbox in under five minutes — execute commands, check outputs, and tear it down with a context manager."
+description: "Install Celesto and run your first isolated microVM sandbox in under five minutes — execute commands, check outputs, and tear it down with a context manager."
 ---
 
 By the end of this guide you'll have an isolated Linux sandbox running on your machine, ready to execute commands safely.
 
 <Steps>
-  <Step title="Install SmolVM">
+  <Step title="Install Celesto">
     ```bash
     curl -sSL https://celesto.ai/install.sh | bash
     ```
@@ -18,9 +18,9 @@ By the end of this guide you'll have an isolated Linux sandbox running on your m
     Create `quickstart.py`:
 
     ```python quickstart.py
-    from smolvm import SmolVM
+    from celesto import Celesto
     
-    vm = SmolVM()
+    vm = Celesto()
     result = vm.run("echo 'Hello from the sandbox!'")
     print(result.stdout.strip())
     vm.stop()
@@ -49,9 +49,9 @@ By the end of this guide you'll have an isolated Linux sandbox running on your m
 You can do the same thing without writing any Python:
 
 ```bash
-smolvm sandbox create --name my-sandbox
-smolvm sandbox ssh my-sandbox       # opens a shell inside the sandbox — type `exit` to leave
-smolvm sandbox stop my-sandbox
+celesto sandbox create --name my-sandbox
+celesto sandbox ssh my-sandbox       # opens a shell inside the sandbox — type `exit` to leave
+celesto sandbox stop my-sandbox
 ```
 
 ## Customize resources
@@ -59,9 +59,9 @@ smolvm sandbox stop my-sandbox
 Configure memory and disk for heavier workloads (defaults: 512 MiB memory, 512 MiB disk):
 
 ```python
-from smolvm import SmolVM
+from celesto import Celesto
 
-vm = SmolVM(memory=2048, disk_size=4096)
+vm = Celesto(memory=2048, disk_size=4096)
 result = vm.run("free -m")
 print(result.stdout)
 vm.stop()
@@ -71,7 +71,7 @@ vm.stop()
 
 <CardGroup cols={2}>
   <Card title="AI agent integration" icon="robot" href="/smolvm/guides/ai-agent-integration">
-    Plug SmolVM into PydanticAI, OpenAI Agents, LangChain, and more
+    Plug Celesto into PydanticAI, OpenAI Agents, LangChain, and more
   </Card>
 
   <Card title="Port forwarding" icon="network-wired" href="/smolvm/features/port-forwarding">
@@ -83,7 +83,7 @@ vm.stop()
   </Card>
 
   <Card title="API reference" icon="book" href="/smolvm/api/smolvm">
-    Explore the complete SmolVM API
+    Explore the complete Celesto API
   </Card>
 </CardGroup>
 

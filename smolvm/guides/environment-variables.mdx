@@ -1,11 +1,11 @@
 ---
-title: "Environment variables in SmolVM sandboxes"
+title: "Environment variables in Celesto sandboxes"
 sidebarTitle: "Environment variables"
-description: "Inject API keys, secrets, and config into SmolVM sandboxes at boot or at runtime with one Python API that works on Linux and Windows guests."
-keywords: ["environment variables", "sandbox secrets", "API keys VM", "SmolVM env_vars", "Linux Windows env", "set_env_vars", "Python sandbox config"]
+description: "Inject API keys, secrets, and config into Celesto sandboxes at boot or at runtime with one Python API that works on Linux and Windows guests."
+keywords: ["environment variables", "sandbox secrets", "API keys VM", "Celesto env_vars", "Linux Windows env", "set_env_vars", "Python sandbox config"]
 ---
 
-You can pass configuration values, API keys, and other settings into a sandbox using environment variables. SmolVM supports two approaches: setting variables when you create the sandbox, or adding them at runtime while the sandbox is running.
+You can pass configuration values, API keys, and other settings into a sandbox using environment variables. Celesto supports two approaches: setting variables when you create the sandbox, or adding them at runtime while the sandbox is running.
 
 The same Python API (`env_vars=`, `vm.set_env_vars(...)`, `vm.unset_env_vars(...)`, `vm.list_env_vars(...)`) works for both Linux and Windows guests. On Linux the variables are written to `/etc/profile.d/smolvm_env.sh` and picked up by new login shells; on Windows they're written to `HKCU\Environment` and picked up by new processes. See [Windows guests](#windows-guests) below for the details specific to Windows.
 
@@ -14,8 +14,8 @@ The same Python API (`env_vars=`, `vm.set_env_vars(...)`, `vm.unset_env_vars(...
 Set environment variables when creating a VM:
 
 ```python  theme={null}
-from smolvm import SmolVM, VMConfig
-from smolvm.build import ImageBuilder, SSH_BOOT_ARGS
+from celesto import Celesto, VMConfig
+from celesto import ImageBuilder, SSH_BOOT_ARGS
 
 builder = ImageBuilder()
 kernel, rootfs = builder.build_alpine_ssh()
@@ -34,7 +34,7 @@ config = VMConfig(
     },
 )
 
-with SmolVM(config) as vm:
+with Celesto(config) as vm:
     # Variables are automatically injected during start()
     result = vm.run("echo $APP_MODE")
     print(result.output)  # "production"
@@ -45,7 +45,7 @@ with SmolVM(config) as vm:
 When `env_vars` is set in `VMConfig`:
 
 1. VM boots normally
-2. SmolVM waits for SSH to become available
+2. Celesto waits for SSH to become available
 3. Variables are written to `/etc/profile.d/smolvm_env.sh`
 4. All subsequent login shells source these variables
 
@@ -58,9 +58,9 @@ When `env_vars` is set in `VMConfig`:
 You can also add, update, and remove variables while a sandbox is running:
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM() as vm:
+with Celesto() as vm:
     # Set environment variables
     vm.set_env_vars({"APP_MODE": "dev", "DEBUG": "1"})
 
@@ -86,9 +86,9 @@ with SmolVM() as vm:
 Environment variables work for Windows sandboxes too, using the same API. The only difference is where the values are stored.
 
 ```python
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM(
+with Celesto(
     os="windows",
     image="~/.smolvm/images/win11.qcow2",
     ssh_user="smolvm",
@@ -107,10 +107,10 @@ with SmolVM(
 
 How it works on Windows:
 
-* SmolVM runs `[Environment]::SetEnvironmentVariable(name, value, 'User')` over SSH, which writes the value into the `HKCU\Environment` registry hive — the standard per-user environment store on Windows.
+* Celesto runs `[Environment]::SetEnvironmentVariable(name, value, 'User')` over SSH, which writes the value into the `HKCU\Environment` registry hive — the standard per-user environment store on Windows.
 * New processes inherit the updated environment automatically. The SSH session that issued the change does **not** — `vm.run(...)` opens a fresh session every call, so the next `vm.run(...)` sees the new value.
-* SmolVM tracks which keys it owns via a `SMOLVM_ENV_MANAGED_KEYS` sentinel value. `list_env_vars()` and `unset_env_vars()` only ever touch variables SmolVM set; anything you configured inside Windows yourself is left untouched.
-* Values are passed through verbatim — spaces, embedded quotes, and special characters are escaped safely by SmolVM before the PowerShell call.
+* Celesto tracks which keys it owns via a `SMOLVM_ENV_MANAGED_KEYS` sentinel value. `list_env_vars()` and `unset_env_vars()` only ever touch variables Celesto set; anything you configured inside Windows yourself is left untouched.
+* Values are passed through verbatim — spaces, embedded quotes, and special characters are escaped safely by Celesto before the PowerShell call.
 
 <Note>
   Variable changes are visible to new processes, not the current one. Inside a single SSH session you can verify the change by spawning a fresh process — for example `start-process powershell -wait`, or simply rely on the fact that the next `vm.run(...)` call will see the new value.
@@ -155,7 +155,7 @@ vm.set_env_vars({"ONLY_VAR": "value"}, merge=False)
 
 ```python  theme={null}
 def list_env_vars(self) -> dict[str, str]:
-    """Return SmolVM-managed environment variables for a running VM."""
+    """Return Celesto-managed environment variables for a running VM."""
 ```
 
 **Example:**
@@ -193,10 +193,10 @@ print(f"Removed: {removed}")
 From `examples/env_injection.py`:
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
 def main() -> int:
-    with SmolVM() as vm:
+    with Celesto() as vm:
         print(f"VM started: {vm.vm_id}")
 
         print("\n1) Set environment variables")
@@ -225,8 +225,8 @@ You can forward environment variables from your host machine into the sandbox. T
 
 ```python  theme={null}
 import os
-from smolvm import SmolVM, VMConfig
-from smolvm.build import ImageBuilder, SSH_BOOT_ARGS
+from celesto import Celesto, VMConfig
+from celesto import ImageBuilder, SSH_BOOT_ARGS
 
 def collect_host_env() -> dict[str, str]:
     """Collect API keys from host environment."""
@@ -253,43 +253,43 @@ config = VMConfig(
     env_vars=collect_host_env(),  # Inject host environment
 )
 
-with SmolVM(config) as vm:
+with Celesto(config) as vm:
     result = vm.run("env | grep API_KEY")
     print(result.output)
 ```
 
 This pattern is used in `examples/openclaw.py` to inject `OPENROUTER_API_KEY` and `OPENAI_API_KEY` from the host.
 
-## Host-side variables SmolVM reads
+## Host-side variables Celesto reads
 
-A few environment variables on your host machine change how SmolVM itself behaves. Set these in your shell, not inside the sandbox.
+A few environment variables on your host machine change how Celesto itself behaves. Set these in your shell, not inside the sandbox.
 
-### SmolVM behavior
+### Celesto behavior
 
 <ResponseField name="SMOLVM_BACKEND" type="string">
-  Override the virtual machine monitor SmolVM uses. Accepts `firecracker`, `qemu`, or `auto` (the default). On macOS the default is QEMU; on Linux it is Firecracker.
+  Override the virtual machine monitor Celesto uses. Accepts `firecracker`, `qemu`, or `auto` (the default). On macOS the default is QEMU; on Linux it is Firecracker.
 </ResponseField>
 
 <ResponseField name="SMOLVM_FIRECRACKER_DIR" type="string">
-  Folder containing the Firecracker binary on Linux. When set, SmolVM installs to and looks for Firecracker only in this folder. When unset, `smolvm setup` installs to `~/.smolvm/bin`, and SmolVM discovery checks `PATH` first, then `~/.smolvm/bin`. Set this when you install Firecracker to a custom folder that is not on `PATH`:
+  Folder containing the Firecracker binary on Linux. When set, Celesto installs to and looks for Firecracker only in this folder. When unset, `celesto setup` installs to `~/.smolvm/bin`, and Celesto discovery checks `PATH` first, then `~/.smolvm/bin`. Set this when you install Firecracker to a custom folder that is not on `PATH`:
 
   ```bash  theme={null}
   export SMOLVM_FIRECRACKER_DIR="$HOME/.local/bin"
-  smolvm setup
+  celesto setup
   ```
 
-  The one-off equivalent is `smolvm setup --firecracker-dir <dir>`, which overrides this variable for that run.
+  The one-off equivalent is `celesto setup --firecracker-dir <dir>`, which overrides this variable for that run.
 </ResponseField>
 
 <ResponseField name="SMOLVM_USE_PUBLISHED" type="string" default="1">
-  Controls the [published-image fast path](/smolvm/concepts/published-images). On by default. Set to `0`, `false`, or `no` to force SmolVM to build images locally instead of downloading pre-built ones. Useful when you're testing changes to a preset's install script.
+  Controls the [published-image fast path](/smolvm/concepts/published-images). On by default. Set to `0`, `false`, or `no` to force Celesto to build images locally instead of downloading pre-built ones. Useful when you're testing changes to a preset's install script.
 </ResponseField>
 
 <ResponseField name="SMOLVM_VERBOSE_BOOT" type="string">
-  Show the guest kernel's full boot log on the serial console. Off by default — SmolVM appends `quiet` to the kernel command line so boots stay fast and clean. Set to `1`, `true`, `yes`, or `on` to drop `quiet` and surface every kernel message, which is the first thing to try when a sandbox hangs during start or panics before the agent answers.
+  Show the guest kernel's full boot log on the serial console. Off by default — Celesto appends `quiet` to the kernel command line so boots stay fast and clean. Set to `1`, `true`, `yes`, or `on` to drop `quiet` and surface every kernel message, which is the first thing to try when a sandbox hangs during start or panics before the agent answers.
 
   ```bash  theme={null}
-  SMOLVM_VERBOSE_BOOT=1 smolvm run "echo hello"
+  SMOLVM_VERBOSE_BOOT=1 celesto sandbox create --name verbose-boot
   ```
 
   This only affects sandboxes that use the default low-latency boot profile (`MICROVM_DIRECT`). It does not change behaviour after the guest is up.
@@ -297,7 +297,7 @@ A few environment variables on your host machine change how SmolVM itself behave
 
 ### Coding-agent presets
 
-When you launch a coding-agent preset, SmolVM forwards a small list of host environment variables into the sandbox so the agent can authenticate without an extra login step.
+When you launch a coding-agent preset, Celesto forwards a small list of host environment variables into the sandbox so the agent can authenticate without an extra login step.
 
 <ResponseField name="OPENAI_API_KEY" type="string">
   Forwarded to presets that talk to OpenAI APIs, including `codex`, `opencode`, and `openclaw`.
@@ -320,7 +320,7 @@ When you launch a coding-agent preset, SmolVM forwards a small list of host envi
 </ResponseField>
 
 <ResponseField name="OPENCLAW_GATEWAY_TOKEN" type="string">
-  Forwarded to the `openclaw` preset. OpenClaw rejects boot with a clear error message if neither this nor `OPENCLAW_GATEWAY_PASSWORD` is set, so populate one of the two before running `smolvm openclaw start`.
+  Forwarded to the `openclaw` preset. OpenClaw rejects boot with a clear error message if neither this nor `OPENCLAW_GATEWAY_PASSWORD` is set, so populate one of the two before running `celesto openclaw start`.
 </ResponseField>
 
 <ResponseField name="OPENCLAW_GATEWAY_PASSWORD" type="string">
@@ -328,15 +328,15 @@ When you launch a coding-agent preset, SmolVM forwards a small list of host envi
 </ResponseField>
 
 <Tip>
-  Set these variables in the shell that runs `smolvm openclaw start`. SmolVM forwards the selected values into that sandbox, but it does not copy `~/.openclaw/openclaw.json`, `~/.openclaw/.env`, or other OpenClaw state from your machine.
+  Set these variables in the shell that runs `celesto openclaw start`. Celesto forwards the selected values into that sandbox, but it does not copy `~/.openclaw/openclaw.json`, `~/.openclaw/.env`, or other OpenClaw state from your machine.
 </Tip>
 
 ## Variable validation
 
-SmolVM validates environment variable keys:
+Celesto validates environment variable keys:
 
 ```python  theme={null}
-from smolvm.env import validate_env_key
+from celesto.env import validate_env_key
 
 # Valid keys
 validate_env_key("MY_VAR")      # OK
@@ -361,7 +361,7 @@ Variables are stored in `/etc/profile.d/smolvm_env.sh` inside the guest:
 # Inside the VM
 $ cat /etc/profile.d/smolvm_env.sh
 #!/bin/sh
-# SmolVM managed environment variables
+# Celesto managed environment variables
 
 export APP_MODE='production'
 export DATABASE_URL='postgres://localhost:5432/mydb'
@@ -373,7 +373,7 @@ All writes are atomic (write to temp file → `mv` into place) to prevent partia
 
 ### Quoting and escaping
 
-SmolVM uses `shlex.quote()` to safely handle special characters:
+Celesto uses `shlex.quote()` to safely handle special characters:
 
 ```python  theme={null}
 vm.set_env_vars({
@@ -406,7 +406,7 @@ config = VMConfig(
 ```python  theme={null}
 import os
 
-with SmolVM() as vm:
+with Celesto() as vm:
     # Inject secrets from host environment or secrets manager
     vm.set_env_vars({
         "API_KEY": os.getenv("API_KEY", "default-key"),
@@ -419,7 +419,7 @@ with SmolVM() as vm:
 ### Dynamic configuration updates
 
 ```python  theme={null}
-with SmolVM() as vm:
+with Celesto() as vm:
     # Start in dev mode
     vm.set_env_vars({"APP_MODE": "dev"})
     vm.run("start-app")

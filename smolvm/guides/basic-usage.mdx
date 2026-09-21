@@ -1,23 +1,23 @@
 ---
 title: "Basic usage"
-description: "Day-to-day SmolVM workflows — create sandboxes, run shell commands, check exit codes and output, and handle errors using the Python SDK."
+description: "Day-to-day Celesto workflows — create sandboxes, run shell commands, check exit codes and output, and handle errors using the Python SDK."
 ---
 
-This page covers the everyday operations you need to work with SmolVM: creating a sandbox, running commands inside it, reading the output, and handling errors. If you have not installed SmolVM yet, start with the [quickstart](/smolvm/quickstart).
+This page covers the everyday operations you need to work with Celesto: creating a sandbox, running commands inside it, reading the output, and handling errors. If you have not installed Celesto yet, start with the [quickstart](/smolvm/quickstart).
 
 ## Quick start
 
-The simplest way to use SmolVM is the auto-configuration mode:
+The simplest way to use Celesto is the auto-configuration mode:
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM() as vm:
+with Celesto() as vm:
     result = vm.run("uname -r")
     print(result.stdout)
 ```
 
-When you create a `SmolVM()` with no arguments, it automatically:
+When you create a `Celesto()` with no arguments, it automatically:
 
 * Generates SSH keys (stored in `~/.smolvm/keys/`)
 * Builds an Alpine Linux image with SSH pre-configured
@@ -31,22 +31,22 @@ You can create a sandbox with sensible defaults or customize the configuration.
 <Tabs>
   <Tab title="Auto-config (Recommended)">
     ```python  theme={null}
-    from smolvm import SmolVM
+    from celesto import Celesto
 
     # Minimal configuration
-    with SmolVM() as vm:
+    with Celesto() as vm:
         print(f"VM running at {vm.get_ip()}")
 
     # Custom memory and disk size
-    with SmolVM(memory=1024, disk_size=1024) as vm:
+    with Celesto(memory=1024, disk_size=1024) as vm:
         print(f"VM ID: {vm.vm_id}")
     ```
   </Tab>
 
   <Tab title="Manual Configuration">
     ```python  theme={null}
-    from smolvm import SmolVM, VMConfig
-    from smolvm.build import ImageBuilder, SSH_BOOT_ARGS
+    from celesto import Celesto, VMConfig
+    from celesto import ImageBuilder, SSH_BOOT_ARGS
 
     # Build custom image
     builder = ImageBuilder()
@@ -62,8 +62,8 @@ You can create a sandbox with sensible defaults or customize the configuration.
         boot_args=SSH_BOOT_ARGS,
     )
 
-    with SmolVM(config) as vm:
-        result = vm.run("echo 'Hello from SmolVM'")
+    with Celesto(config) as vm:
+        result = vm.run("echo 'Hello from Celesto'")
         print(result.output)
     ```
   </Tab>
@@ -74,9 +74,9 @@ You can create a sandbox with sensible defaults or customize the configuration.
 The `run()` method executes commands via SSH and returns a `CommandResult` object:
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM() as vm:
+with Celesto() as vm:
     # Basic command execution
     result = vm.run("ls -la /")
     print(result.stdout)  # Command output
@@ -94,7 +94,7 @@ with SmolVM() as vm:
 
 ### Shell modes
 
-SmolVM supports two command execution modes:
+Celesto supports two command execution modes:
 
 ```python  theme={null}
 # Login shell mode (default) - runs through guest login shell
@@ -109,7 +109,7 @@ result = vm.run("/bin/ls", shell="raw")
 Access VM information through properties:
 
 ```python  theme={null}
-with SmolVM() as vm:
+with Celesto() as vm:
     print(vm.vm_id)        # VM identifier
     print(vm.status)       # Current state (VMState.RUNNING)
     print(vm.get_ip())     # Guest IP address
@@ -126,7 +126,7 @@ with SmolVM() as vm:
 Not all VM images support command execution. You can check before running commands:
 
 ```python  theme={null}
-with SmolVM() as vm:
+with Celesto() as vm:
     if vm.can_run_commands():
         result = vm.run("whoami")
         print(result.output)
@@ -143,7 +143,7 @@ with SmolVM() as vm:
 Retrieve SSH commands for manual connection:
 
 ```python  theme={null}
-with SmolVM() as vm:
+with Celesto() as vm:
     ssh_cmds = vm.ssh_commands()
     print(ssh_cmds["direct"])     # SSH to guest IP
     print(ssh_cmds["localhost"])  # SSH via localhost (if forwarded)
@@ -151,26 +151,26 @@ with SmolVM() as vm:
 
 ## Error handling
 
-SmolVM raises specific exceptions for different failure scenarios:
+Celesto raises specific exceptions for different failure scenarios:
 
 ```python  theme={null}
-from smolvm import SmolVM
-from smolvm.exceptions import (
-    SmolVMError,
+from celesto import Celesto
+from celesto.exceptions import (
+    CelestoError,
     CommandExecutionUnavailableError,
     OperationTimeoutError,
 )
 
 try:
-    with SmolVM() as vm:
+    with Celesto() as vm:
         result = vm.run("some-command", timeout=5)
 except CommandExecutionUnavailableError as e:
     print(f"SSH not available: {e.reason}")
     print(f"Remediation: {e.remediation}")
 except OperationTimeoutError as e:
     print(f"Operation timed out: {e.message}")
-except SmolVMError as e:
-    print(f"SmolVM error: {e}")
+except CelestoError as e:
+    print(f"Celesto error: {e}")
 ```
 
 ## Next steps

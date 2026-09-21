@@ -1,6 +1,6 @@
 ---
 title: "VMInfo"
-description: "VMInfo reference: a Pydantic model exposing a SmolVM's lifecycle state, configuration, networking details, process IDs, and runtime metadata."
+description: "VMInfo reference: a Pydantic model exposing a Celesto's lifecycle state, configuration, networking details, process IDs, and runtime metadata."
 ---
 
 ## Overview
@@ -104,9 +104,9 @@ See the [VMConfig documentation](/smolvm/api/vmconfig) for complete field detail
 ### Accessing VM Information
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM() as vm:
+with Celesto() as vm:
     info = vm.info
     
     print(f"VM ID: {info.vm_id}")
@@ -125,9 +125,9 @@ with SmolVM() as vm:
 ### Checking VM Status
 
 ```python  theme={null}
-from smolvm import SmolVM, VMState
+from celesto import Celesto, VMState
 
-with SmolVM() as vm:
+with Celesto() as vm:
     info = vm.info
     
     if info.status == VMState.RUNNING:
@@ -144,9 +144,9 @@ with SmolVM() as vm:
 ### Accessing Network Configuration
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM() as vm:
+with Celesto() as vm:
     info = vm.info
     
     if info.network:
@@ -164,9 +164,9 @@ with SmolVM() as vm:
 ### Inspecting VM Configuration
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM() as vm:
+with Celesto() as vm:
     config = vm.info.config
     
     print(f"Kernel: {config.kernel_path}")
@@ -184,10 +184,10 @@ with SmolVM() as vm:
 ### Refreshing VM Information
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 import time
 
-vm = SmolVM()
+vm = Celesto()
 vm.start()
 
 print(f"Initial status: {vm.info.status.value}")
@@ -210,7 +210,7 @@ vm.close()
 ### Using VMInfo Outside Context Manager
 
 ```python  theme={null}
-from smolvm import SmolVM, VMConfig
+from celesto import Celesto, VMConfig
 from pathlib import Path
 
 config = VMConfig(
@@ -221,7 +221,7 @@ config = VMConfig(
     rootfs_path=Path("/path/to/rootfs.ext4"),
 )
 
-vm = SmolVM(config)
+vm = Celesto(config)
 info = vm.info
 
 print(f"Created VM: {info.vm_id}")
@@ -240,10 +240,10 @@ vm.close()
 ### Monitoring VM Process
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 import psutil
 
-with SmolVM() as vm:
+with Celesto() as vm:
     info = vm.info
     
     if info.pid:
@@ -259,9 +259,9 @@ with SmolVM() as vm:
 ### Accessing Socket Path
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM() as vm:
+with Celesto() as vm:
     info = vm.info
     
     if info.socket_path:
@@ -274,10 +274,10 @@ with SmolVM() as vm:
 ### Comparing VM Configurations
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
-vm1 = SmolVM(memory=512)
-vm2 = SmolVM(memory=1024)
+vm1 = Celesto(memory=512)
+vm2 = Celesto(memory=1024)
 
 vm1.start()
 vm2.start()
@@ -301,10 +301,10 @@ vm2.close()
 ### Persisting VM Information
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 import json
 
-with SmolVM() as vm:
+with Celesto() as vm:
     info = vm.info
     
     # Convert to dict for serialization
@@ -327,10 +327,10 @@ with SmolVM() as vm:
 ### Reconnecting Using VMInfo
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
 # First session: create and use VM
-with SmolVM() as vm:
+with Celesto() as vm:
     vm_id = vm.info.vm_id
     print(f"Created VM: {vm_id}")
     vm.run("echo 'First session'")
@@ -338,7 +338,7 @@ with SmolVM() as vm:
 # Second session: reconnect to the same VM
 # (Note: The VM was deleted by the context manager above,
 # so this is just for illustration)
-reconnected_vm = SmolVM.from_id(vm_id)
+reconnected_vm = Celesto.from_id(vm_id)
 info = reconnected_vm.info
 
 print(f"Reconnected to: {info.vm_id}")
@@ -352,7 +352,7 @@ reconnected_vm.close()
 VMInfo instances are frozen and cannot be modified:
 
 ```python  theme={null}
-with SmolVM() as vm:
+with Celesto() as vm:
     info = vm.info
     
     # This raises an error

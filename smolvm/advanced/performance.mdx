@@ -1,13 +1,13 @@
 ---
 title: "Performance benchmarks"
-description: "SmolVM benchmark numbers for boot time, control-channel readiness, and command latency, plus tuning tips for fast agent workloads."
+description: "Celesto benchmark numbers for boot time, control-channel readiness, and command latency, plus tuning tips for fast agent workloads."
 ---
 
-SmolVM is optimized for low-latency agent workflows: fresh sandboxes can be ready quickly on Linux, and follow-up commands return in milliseconds.
+Celesto is optimized for low-latency agent workflows: fresh sandboxes can be ready quickly on Linux, and follow-up commands return in milliseconds.
 
 ## Latest QEMU published Ubuntu medians
 
-These warm-cache medians come from the SmolVM benchmark timeline for the published Ubuntu image on June 23, 2026. "Total ready" measures the time until the sandbox control channel is ready. "First command" measures the first command after readiness. "Warm exec" measures repeated command latency.
+These warm-cache medians come from the Celesto benchmark timeline for the published Ubuntu image on June 23, 2026. "Total ready" measures the time until the sandbox control channel is ready. "First command" measures the first command after readiness. "Warm exec" measures repeated command latency.
 
 | Backend | Transport | Total ready | First command | Warm exec | Context |
 | --- | --- | ---: | ---: | ---: | --- |
@@ -45,11 +45,11 @@ uv run python scripts/benchmarks/disk_io.py \
 
 ### Boot performance
 
-* **Sandbox creation**: SmolVM allocates names, IPs, disk metadata, and network rules in tens of milliseconds.
+* **Sandbox creation**: Celesto allocates names, IPs, disk metadata, and network rules in tens of milliseconds.
 * **Time to ready**: QEMU + vsock reaches readiness in 413.1 ms on the latest published Ubuntu run; QEMU + SSH reaches readiness in 1152.2 ms.
 * **QEMU microvm default**: On Linux x86_64 direct-kernel guests, QEMU uses the smaller `microvm` machine by default.
-* **Hardware virtualization**: SmolVM uses KVM on Linux and Hypervisor.framework on macOS for near-native performance.
-* **Safe boot trims**: The default `MICROVM_DIRECT` profile appends `tsc=reliable no_timer_check quiet` to the kernel command line. Set [`SMOLVM_VERBOSE_BOOT=1`](/smolvm/guides/environment-variables#host-side-variables-smolvm-reads) to drop `quiet` when debugging a stuck boot.
+* **Hardware virtualization**: Celesto uses KVM on Linux and Hypervisor.framework on macOS for near-native performance.
+* **Safe boot trims**: The default `MICROVM_DIRECT` profile appends `tsc=reliable no_timer_check quiet` to the kernel command line. Set [`SMOLVM_VERBOSE_BOOT=1`](/smolvm/guides/environment-variables#host-side-variables-celesto-reads) to drop `quiet` when debugging a stuck boot.
 
 ### Runtime performance
 
@@ -60,9 +60,9 @@ uv run python scripts/benchmarks/disk_io.py \
 
 ### Native helper performance
 
-The `smolvm-core` wheel gives SmolVM Rust-backed helpers for the host operations that happen around each sandbox:
+The `smolvm-core` wheel gives Celesto Rust-backed helpers for the host operations that happen around each sandbox:
 
-* **Networking**: TAP setup, route changes, and sysctls can use direct Linux calls when SmolVM has the right permissions.
+* **Networking**: TAP setup, route changes, and sysctls can use direct Linux calls when Celesto has the right permissions.
 * **Disk I/O**: zstd decompression uses a native path, while sparse copy keeps the host's `cp` fast path when it is already best.
 * **QEMU control**: Pause, resume, and snapshot control use a native QMP client.
 * **Firecracker control**: Firecracker API socket requests use the native transport.
@@ -84,7 +84,7 @@ python -m smolvm_core
 
 ### Teardown performance
 
-* **Graceful shutdown**: SmolVM asks the backend to stop cleanly before removing local state.
+* **Graceful shutdown**: Celesto asks the backend to stop cleanly before removing local state.
 * **Resource Cleanup**: Network rules, TAP devices, and disk images are cleaned up automatically
 * **Fast Path for Ephemeral VMs**: SIGKILL-based teardown for sandbox VMs that don't need state preservation
 
@@ -95,9 +95,9 @@ python -m smolvm_core
 Instead of creating a new VM for each command, reuse the same VM:
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM() as vm:
+with Celesto() as vm:
     # The context manager starts the VM automatically
     result1 = vm.run("apk add py3-requests")
     result2 = vm.run("python3 script.py")
@@ -111,14 +111,14 @@ This amortizes the fresh-sandbox ready time across many operations. On the lates
 Configure CPU and memory based on your workload:
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
 # Lightweight workload
-with SmolVM(memory=256) as vm:
+with Celesto(memory=256) as vm:
     print(vm.run("echo small").stdout)
 
 # Heavy workload
-with SmolVM(memory=2048) as vm:
+with Celesto(memory=2048) as vm:
     print(vm.run("python3 --version").stdout)
 ```
 
@@ -131,9 +131,9 @@ with SmolVM(memory=2048) as vm:
 For workloads requiring specific dependencies, build a custom rootfs image with pre-installed packages using `ImageBuilder`:
 
 ```python  theme={null}
-from smolvm.build import ImageBuilder
-from smolvm import SmolVM, VMConfig
-from smolvm.utils import ensure_ssh_key
+from celesto import ImageBuilder
+from celesto import Celesto, VMConfig
+from celesto.utils import ensure_ssh_key
 
 private_key, public_key = ensure_ssh_key()
 builder = ImageBuilder()
@@ -148,7 +148,7 @@ config = VMConfig(
     boot_args="console=ttyS0 reboot=k panic=1 init=/init",
 )
 
-with SmolVM(config, ssh_key_path=str(private_key)) as vm:
+with Celesto(config, ssh_key_path=str(private_key)) as vm:
     vm.run("apk add python3 py3-requests py3-numpy")
 ```
 
@@ -176,18 +176,18 @@ Use shared mode only for custom `VMConfig` flows where the root filesystem image
 
 ### 5. Backend selection
 
-SmolVM supports multiple backends with different performance characteristics:
+Celesto supports multiple backends with different performance characteristics:
 
 * **Firecracker (Linux)**: Low overhead and a narrow device model, recommended for Linux production.
 * **QEMU (macOS/Linux)**: Broad compatibility, Windows guest support, and a faster `microvm` path on Linux x86_64.
 * **libkrun**: Experimental runtime testing. It does not support snapshots yet.
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
 # Explicitly choose backend
-vm = SmolVM(backend="firecracker")  # Linux only
-vm = SmolVM(backend="qemu")         # macOS/Linux
+vm = Celesto(backend="firecracker")  # Linux only
+vm = Celesto(backend="qemu")         # macOS/Linux
 ```
 
 ## Performance monitoring
@@ -197,15 +197,15 @@ vm = SmolVM(backend="qemu")         # macOS/Linux
 Use the CLI to list all running VMs and their status:
 
 ```bash  theme={null}
-smolvm sandbox list
+celesto sandbox list
 ```
 
 Or check a specific VM from Python:
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
-vm = SmolVM.from_id("my-vm")
+vm = Celesto.from_id("my-vm")
 info = vm.info
 print(f"VM {vm.vm_id}: {info.status}")
 print(f"  PID: {info.pid}")
@@ -219,14 +219,14 @@ vm.close()
 Remove VMs marked as running but whose processes have died:
 
 ```bash  theme={null}
-smolvm sandbox delete --all --force
+celesto sandbox delete --all --force
 ```
 
 ## Scalability considerations
 
 ### IP address pool
 
-By default, SmolVM allocates IPs from `172.16.0.2` to `172.16.0.254`, supporting **253 concurrent VMs**.
+By default, Celesto allocates IPs from `172.16.0.2` to `172.16.0.254`, supporting **253 concurrent VMs**.
 
 ### SSH port pool
 
@@ -254,11 +254,11 @@ ulimit -u
 
 ```python  theme={null}
 import time
-from smolvm import SmolVM
+from celesto import Celesto
 
 # Create + start phase
 start = time.time()
-vm = SmolVM()
+vm = Celesto()
 vm.start()
 print(f"Create + Start: {time.time() - start:.3f}s")
 
@@ -280,9 +280,9 @@ Measure network roundtrip time:
 
 ```python  theme={null}
 import time
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM() as vm:
+with Celesto() as vm:
     start = time.time()
     result = vm.run("echo pong")
     elapsed = (time.time() - start) * 1000
