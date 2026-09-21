@@ -1,18 +1,18 @@
 ---
 title: "DockerRootfsBuilder"
-description: "DockerRootfsBuilder reference: build and cache raw ext4 root filesystems from Dockerfiles and return BootImage metadata for SmolVM.from_image."
+description: "DockerRootfsBuilder reference: build and cache raw ext4 root filesystems from Dockerfiles and return BootImage metadata for Celesto.from_image."
 ---
 
-Use `DockerRootfsBuilder` when you want a Dockerfile to be the source of truth for a custom SmolVM image. It builds a raw ext4 root filesystem, caches it by build inputs, and returns a [`BootImage`](/smolvm/api/bootimage).
+Use `DockerRootfsBuilder` when you want a Dockerfile to be the source of truth for a custom Celesto image. It builds a raw ext4 root filesystem, caches it by build inputs, and returns a [`BootImage`](/smolvm/api/bootimage).
 
 <Warning>
-  `DockerRootfsBuilder` does not install SSH or the SmolVM guest agent. Add your own guest control service, or use `ImageBuilder` when you need `vm.run(...)` immediately.
+  `DockerRootfsBuilder` does not install SSH or the Celesto guest agent. Add your own guest control service, or use `ImageBuilder` when you need `vm.run(...)` immediately.
 </Warning>
 
 ## Constructor
 
 ```python
-from smolvm import DockerRootfsBuilder
+from celesto import DockerRootfsBuilder
 
 builder = DockerRootfsBuilder(
     name="worker-rootfs",
@@ -56,17 +56,17 @@ builder = DockerRootfsBuilder(
 </ParamField>
 
 <ParamField path="docker_platform" type="str | None" default="None">
-  Docker target platform override. When omitted, SmolVM selects `linux/amd64` or `linux/arm64` from the requested architecture.
+  Docker target platform override. When omitted, Celesto selects `linux/amd64` or `linux/arm64` from the requested architecture.
 </ParamField>
 
 <ParamField path="ssh_capable" type="bool" default="False">
-  Whether the image starts SSH and accepts the credentials you pass to SmolVM.
+  Whether the image starts SSH and accepts the credentials you pass to Celesto.
 </ParamField>
 
 ## ensure
 
 ```python
-from smolvm import DirectKernelBoot, SmolVM
+from celesto import DirectKernelBoot, Celesto
 
 image = builder.ensure(
     backend="qemu",
@@ -74,7 +74,7 @@ image = builder.ensure(
     boot=DirectKernelBoot(root="/dev/vda", init="/init"),
 )
 
-with SmolVM.from_image(image, memory_mb=1024) as vm:
+with Celesto.from_image(image, memory_mb=1024) as vm:
     print(vm.vm_id)
 ```
 
@@ -95,7 +95,7 @@ with SmolVM.from_image(image, memory_mb=1024) as vm:
 </ParamField>
 
 <ResponseField name="return" type="BootImage">
-  A `BootImage` with `rootfs_format="raw-ext4"`, the built rootfs path, the matching SmolVM base kernel, backend, arch, and `ssh_capable` flag.
+  A `BootImage` with `rootfs_format="raw-ext4"`, the built rootfs path, the matching Celesto base kernel, backend, arch, and `ssh_capable` flag.
 </ResponseField>
 
 ## Cache behavior
@@ -113,6 +113,6 @@ The cache key includes the Dockerfile, build context, build args, target archite
 
 ## Related
 
-* [`smolvm image build`](/smolvm/cli/image#build) — the same Dockerfile-to-rootfs pipeline exposed as a CLI command.
+* [`celesto image build`](/smolvm/cli/image#build) — the same Dockerfile-to-rootfs pipeline exposed as a CLI command.
 * [ImageBuilder](/smolvm/api/imagebuilder) — build Alpine or Debian rootfs images programmatically.
 

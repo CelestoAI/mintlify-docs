@@ -1,20 +1,20 @@
 ---
 title: "Callback hooks Python reference"
-description: "Reference for SmolVM's Callback base class, RunContext dataclass, and CommandBlockedError — the pre-run, post-run, and error hooks that fire around run()."
+description: "Reference for Celesto's Callback base class, RunContext dataclass, and CommandBlockedError — the pre-run, post-run, and error hooks that fire around run()."
 ---
 
 ## Overview
 
-Callbacks let you hook into the SmolVM command lifecycle. You subclass `Callback`, override the hooks you care about, and pass instances to `SmolVM(callbacks=[...])`. Every other hook is a no-op by default.
+Callbacks let you hook into the Celesto command lifecycle. You subclass `Callback`, override the hooks you care about, and pass instances to `Celesto(callbacks=[...])`. Every other hook is a no-op by default.
 
 For a task-oriented walkthrough, see [Run callbacks and safety hooks](/smolvm/features/callbacks).
 
 ## Callback
 
-Base class for SmolVM command-lifecycle callbacks. Subclass it and override only the hooks you need.
+Base class for Celesto command-lifecycle callbacks. Subclass it and override only the hooks you need.
 
 ```python  theme={null}
-from smolvm import Callback
+from celesto import Callback
 
 class MyCallback(Callback):
     def on_pre_run(self, ctx): ...
@@ -54,7 +54,7 @@ Called when the transport raised while executing a command. `ctx.error` is popul
 
 ## RunContext
 
-Dataclass passed to every hook for a single `SmolVM.run()` call. Using one object means new fields can be added later without changing any callback's method signature.
+Dataclass passed to every hook for a single `Celesto.run()` call. Using one object means new fields can be added later without changing any callback's method signature.
 
 ```python  theme={null}
 @dataclass
@@ -93,10 +93,10 @@ class RunContext:
 
 ## CommandBlockedError
 
-Exception type for vetoing a command from `on_pre_run`. Inherits from [`SmolVMError`](/smolvm/api/exceptions#smolvmerror).
+Exception type for vetoing a command from `on_pre_run`. Inherits from [`CelestoError`](/smolvm/api/exceptions#celestoerror).
 
 ```python  theme={null}
-class CommandBlockedError(SmolVMError):
+class CommandBlockedError(CelestoError):
     def __init__(
         self,
         message: str,
@@ -129,7 +129,7 @@ class CommandBlockedError(SmolVMError):
 A pre-run hook that blocks a few known-dangerous commands, plus a post-run hook that logs every command:
 
 ```python  theme={null}
-from smolvm import SmolVM, Callback, CommandBlockedError
+from celesto import Celesto, Callback, CommandBlockedError
 
 class SafetyGuard(Callback):
     DENY = ("rm -rf /", "mkfs", ":(){ :|:& };:")
@@ -146,7 +146,7 @@ class AuditLog(Callback):
     def on_post_run(self, ctx):
         print(f"[{ctx.vm_id}] {ctx.command!r} -> exit={ctx.result.exit_code}")
 
-with SmolVM(callbacks=[SafetyGuard(), AuditLog()]) as vm:
+with Celesto(callbacks=[SafetyGuard(), AuditLog()]) as vm:
     vm.run("echo hello")
     try:
         vm.run("rm -rf /")

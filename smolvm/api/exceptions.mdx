@@ -1,14 +1,14 @@
 ---
 title: "Exceptions"
-description: "Reference for SmolVM exception classes — SmolVMError, ValidationError, VMNotFoundError, NetworkError, FirecrackerAPIError — for robust error handling."
+description: "Reference for Celesto exception classes — CelestoError, ValidationError, VMNotFoundError, NetworkError, FirecrackerAPIError — for robust error handling."
 ---
 
-SmolVM provides a comprehensive exception hierarchy for handling various error conditions. All exceptions inherit from the base `SmolVMError` class, making it easy to catch all SmolVM-related errors or handle specific error types.
+Celesto provides a comprehensive exception hierarchy for handling various error conditions. All exceptions inherit from the base `CelestoError` class, making it easy to catch all Celesto-related errors or handle specific error types.
 
 ## Exception Hierarchy
 
 ```
-SmolVMError (base)
+CelestoError (base)
 ├── ValidationError
 ├── VMAlreadyExistsError
 ├── VMNotFoundError
@@ -25,9 +25,9 @@ SmolVMError (base)
 
 ## Base Exception
 
-### SmolVMError
+### CelestoError
 
-Base exception for all SmolVM errors. All other exceptions inherit from this class.
+Base exception for all Celesto errors. All other exceptions inherit from this class.
 
 **Attributes:**
 
@@ -37,12 +37,12 @@ Base exception for all SmolVM errors. All other exceptions inherit from this cla
 **Example:**
 
 ```python  theme={null}
-from smolvm import SmolVM, SmolVMError
+from celesto import Celesto, CelestoError
 
 try:
-    vm = SmolVM.from_id("my-vm")
-except SmolVMError as e:
-    print(f"SmolVM error: {e.message}")
+    vm = Celesto.from_id("my-vm")
+except CelestoError as e:
+    print(f"Celesto error: {e.message}")
     print(f"Details: {e.details}")
 ```
 
@@ -65,14 +65,14 @@ Raised when attempting to create a VM with an ID that already exists.
 **Example:**
 
 ```python  theme={null}
-from smolvm import SmolVM, VMAlreadyExistsError
+from celesto import Celesto, VMAlreadyExistsError
 
 try:
-    vm = SmolVM(vm_id="existing-vm")
+    vm = Celesto(vm_id="existing-vm")
 except VMAlreadyExistsError as e:
     print(f"VM {e.vm_id} already exists")
     # Either use the existing VM or choose a different ID
-    vm = SmolVM.from_id(e.vm_id)
+    vm = Celesto.from_id(e.vm_id)
 ```
 
 ### VMNotFoundError
@@ -87,20 +87,20 @@ Raised when attempting to access a VM that doesn't exist.
 
 **When raised:**
 
-* Calling `SmolVM.from_id()` with a non-existent VM ID
+* Calling `Celesto.from_id()` with a non-existent VM ID
 * Attempting operations on a deleted VM
 
 **Example:**
 
 ```python  theme={null}
-from smolvm import SmolVM, VMNotFoundError
+from celesto import Celesto, VMNotFoundError
 
 try:
-    vm = SmolVM.from_id("non-existent-vm")
+    vm = Celesto.from_id("non-existent-vm")
 except VMNotFoundError as e:
     print(f"VM {e.vm_id} not found")
     # Create a new VM instead
-    vm = SmolVM(vm_id=e.vm_id)
+    vm = Celesto(vm_id=e.vm_id)
 ```
 
 ## Snapshot Exceptions
@@ -122,7 +122,7 @@ Raised when attempting to create a snapshot with an ID that already exists.
 **Example:**
 
 ```python  theme={null}
-from smolvm import SmolVM, SnapshotAlreadyExistsError
+from celesto import Celesto, SnapshotAlreadyExistsError
 
 try:
     snapshot = vm.snapshot(snapshot_id="my-checkpoint")
@@ -142,16 +142,16 @@ Raised when attempting to access a snapshot that doesn't exist.
 
 **When raised:**
 
-* Calling `SmolVM.from_snapshot()` with a non-existent snapshot ID
+* Calling `Celesto.from_snapshot()` with a non-existent snapshot ID
 * Attempting to delete or restore a missing snapshot
 
 **Example:**
 
 ```python  theme={null}
-from smolvm import SmolVM, SnapshotNotFoundError
+from celesto import Celesto, SnapshotNotFoundError
 
 try:
-    vm = SmolVM.from_snapshot("missing-snapshot")
+    vm = Celesto.from_snapshot("missing-snapshot")
 except SnapshotNotFoundError as e:
     print(f"Snapshot {e.snapshot_id} not found")
 ```
@@ -172,7 +172,7 @@ Raised when input validation fails, such as invalid configuration parameters.
 **Example:**
 
 ```python  theme={null}
-from smolvm import SmolVM, VMConfig, ValidationError
+from celesto import Celesto, VMConfig, ValidationError
 
 try:
     config = VMConfig(
@@ -199,10 +199,10 @@ Raised when network operations fail, including TAP device creation, NAT configur
 **Example:**
 
 ```python  theme={null}
-from smolvm import SmolVM, NetworkError
+from celesto import Celesto, NetworkError
 
 try:
-    vm = SmolVM()
+    vm = Celesto()
     vm.start()
 except NetworkError as e:
     print(f"Network setup failed: {e.message}")
@@ -226,7 +226,7 @@ Raised when host environment checks fail, such as missing KVM support, dependenc
 **Example:**
 
 ```python  theme={null}
-from smolvm import HostManager, HostError
+from celesto import HostManager, HostError
 
 try:
     host = HostManager()
@@ -252,7 +252,7 @@ Raised when image operations fail, including download errors, checksum validatio
 **Example:**
 
 ```python  theme={null}
-from smolvm import ImageManager, ImageError
+from celesto import ImageManager, ImageError
 
 try:
     manager = ImageManager()
@@ -283,10 +283,10 @@ Raised when Firecracker API calls fail.
 **Example:**
 
 ```python  theme={null}
-from smolvm import SmolVM, FirecrackerAPIError
+from celesto import Celesto, FirecrackerAPIError
 
 try:
-    vm = SmolVM()
+    vm = Celesto()
     vm.start()
 except FirecrackerAPIError as e:
     print(f"Firecracker API error: {e.message}")
@@ -316,10 +316,10 @@ Raised when an operation exceeds its timeout duration.
 **Example:**
 
 ```python  theme={null}
-from smolvm import SmolVM, OperationTimeoutError
+from celesto import Celesto, OperationTimeoutError
 
 try:
-    vm = SmolVM()
+    vm = Celesto()
     vm.start()
     vm.wait_for_ssh(timeout=30)
 except OperationTimeoutError as e:
@@ -354,10 +354,10 @@ Raised when command execution is not available for a VM, typically because the V
 **Example:**
 
 ```python  theme={null}
-from smolvm import SmolVM, CommandExecutionUnavailableError
+from celesto import Celesto, CommandExecutionUnavailableError
 
 try:
-    vm = SmolVM()
+    vm = Celesto()
     vm.start()
     result = vm.run("echo 'Hello'")
 except CommandExecutionUnavailableError as e:
@@ -368,7 +368,7 @@ except CommandExecutionUnavailableError as e:
 
 ### CommandBlockedError
 
-Raised by `SmolVM.run()` when an `on_pre_run` [callback](/smolvm/features/callbacks) vetoes a command before it reaches the guest.
+Raised by `Celesto.run()` when an `on_pre_run` [callback](/smolvm/features/callbacks) vetoes a command before it reaches the guest.
 
 **Attributes:**
 
@@ -385,7 +385,7 @@ Raised by `SmolVM.run()` when an `on_pre_run` [callback](/smolvm/features/callba
 **Example:**
 
 ```python  theme={null}
-from smolvm import SmolVM, Callback, CommandBlockedError
+from celesto import Celesto, Callback, CommandBlockedError
 
 class DenyRm(Callback):
     def on_pre_run(self, ctx):
@@ -396,7 +396,7 @@ class DenyRm(Callback):
                 command=ctx.command,
             )
 
-with SmolVM(callbacks=[DenyRm()]) as vm:
+with Celesto(callbacks=[DenyRm()]) as vm:
     try:
         vm.run("rm -rf /tmp/data")
     except CommandBlockedError as e:
@@ -412,8 +412,8 @@ See the [Callback reference](/smolvm/api/callbacks) for full details on the hook
 Catch specific exceptions when you can handle them appropriately:
 
 ```python  theme={null}
-from smolvm import (
-    SmolVM,
+from celesto import (
+    Celesto,
     VMNotFoundError,
     VMAlreadyExistsError,
     NetworkError,
@@ -423,10 +423,10 @@ from smolvm import (
 vm_id = "my-agent-vm"
 
 try:
-    vm = SmolVM.from_id(vm_id)
+    vm = Celesto.from_id(vm_id)
 except VMNotFoundError:
     # VM doesn't exist, create it
-    vm = SmolVM(vm_id=vm_id)
+    vm = Celesto(vm_id=vm_id)
 
 try:
     vm.start()
@@ -443,20 +443,20 @@ except OperationTimeoutError as e:
     raise
 ```
 
-### Catch All SmolVM Errors
+### Catch All Celesto Errors
 
-Use the base `SmolVMError` to catch all SmolVM-related errors:
+Use the base `CelestoError` to catch all Celesto-related errors:
 
 ```python  theme={null}
-from smolvm import SmolVM, SmolVMError
+from celesto import Celesto, CelestoError
 
 try:
-    with SmolVM() as vm:
+    with Celesto() as vm:
         result = vm.run("my-command")
         print(result.stdout)
-except SmolVMError as e:
-    # Handle any SmolVM error
-    print(f"SmolVM error: {e.message}")
+except CelestoError as e:
+    # Handle any Celesto error
+    print(f"Celesto error: {e.message}")
     if e.details:
         print(f"Additional context: {e.details}")
 ```
@@ -466,12 +466,12 @@ except SmolVMError as e:
 All exceptions provide a `details` dictionary with additional context:
 
 ```python  theme={null}
-from smolvm import SmolVM, SmolVMError
+from celesto import Celesto, CelestoError
 
 try:
-    vm = SmolVM()
+    vm = Celesto()
     vm.start()
-except SmolVMError as e:
+except CelestoError as e:
     # Access structured error information
     print(f"Error: {e.message}")
     for key, value in e.details.items():
@@ -483,14 +483,14 @@ except SmolVMError as e:
 Always clean up resources when errors occur:
 
 ```python  theme={null}
-from smolvm import SmolVM, SmolVMError
+from celesto import Celesto, CelestoError
 
 vm = None
 try:
-    vm = SmolVM(vm_id="temp-vm")
+    vm = Celesto(vm_id="temp-vm")
     vm.start()
     # Do work...
-except SmolVMError as e:
+except CelestoError as e:
     print(f"Error: {e.message}")
     raise
 finally:
@@ -501,13 +501,13 @@ finally:
 Or use context managers for automatic cleanup:
 
 ```python  theme={null}
-from smolvm import SmolVM, SmolVMError
+from celesto import Celesto, CelestoError
 
 try:
-    with SmolVM() as vm:
+    with Celesto() as vm:
         # VM is automatically cleaned up on exit
         result = vm.run("my-command")
-except SmolVMError as e:
+except CelestoError as e:
     print(f"Error: {e.message}")
     # VM is still cleaned up
 ```

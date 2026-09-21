@@ -1,6 +1,6 @@
 ---
 title: "Port Forwarding"
-description: "Forward ports from a SmolVM sandbox to your host so you can reach web servers, databases, and APIs running inside the sandbox as if they were local."
+description: "Forward ports from a Celesto sandbox to your host so you can reach web servers, databases, and APIs running inside the sandbox as if they were local."
 ---
 
 When you run a web server, database, or API inside a sandbox, port forwarding lets you access it from your host machine as if it were running locally.
@@ -10,16 +10,16 @@ When you run a web server, database, or API inside a sandbox, port forwarding le
 Start a service inside the sandbox and expose it to your host:
 
 ```python
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM() as vm:
+with Celesto() as vm:
     vm.run("python3 -m http.server 8000 &")
 
     host_port = vm.expose_local(guest_port=8000, host_port=8000)
     print(f"Service available at http://127.0.0.1:{host_port}/")
 ```
 
-Omit `host_port` to let SmolVM pick an available port automatically:
+Omit `host_port` to let Celesto pick an available port automatically:
 
 ```python
 host_port = vm.expose_local(guest_port=8080)
@@ -35,7 +35,7 @@ Have the application listen on `0.0.0.0` inside the sandbox. If it listens only 
 Expose multiple services from the same sandbox:
 
 ```python
-with SmolVM() as vm:
+with Celesto() as vm:
     vm.run("python3 -m http.server 8000 &")
     vm.run("python3 -m http.server 9000 &")
 
@@ -63,9 +63,9 @@ vm.unexpose_local(host_port=8080, guest_port=8080)
 If you already have a running sandbox, you can forward ports from your terminal — no Python required:
 
 ```bash
-smolvm sandbox port expose my-vm 8080:3000
-smolvm sandbox port list my-vm
-smolvm sandbox port close my-vm 8080:3000
+celesto sandbox port expose my-vm 8080:3000
+celesto sandbox port list my-vm
+celesto sandbox port close my-vm 8080:3000
 ```
 
-CLI forwards are non-blocking and persist after the command exits. See [`smolvm sandbox port`](/smolvm/cli/port) for the full reference.
+CLI forwards are non-blocking and persist after the command exits. See [`celesto sandbox port`](/smolvm/cli/port) for the full reference.

@@ -1,6 +1,6 @@
 ---
 title: "CommandResult"
-description: "CommandResult reference: an immutable Pydantic model with exit_code, stdout, stderr, and helper properties returned by SmolVM SSH command execution."
+description: "CommandResult reference: an immutable Pydantic model with exit_code, stdout, stderr, and helper properties returned by Celesto SSH command execution."
 ---
 
 ## Overview
@@ -62,9 +62,9 @@ Convenience alias for stripped standard output.
 ### Basic Command Execution
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM() as vm:
+with Celesto() as vm:
     result = vm.run("echo 'Hello, World!'")
     
     print(f"Exit code: {result.exit_code}")  # 0
@@ -76,9 +76,9 @@ with SmolVM() as vm:
 ### Checking Command Success
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM() as vm:
+with Celesto() as vm:
     result = vm.run("test -f /etc/passwd")
     
     if result.ok:
@@ -90,9 +90,9 @@ with SmolVM() as vm:
 ### Handling Command Errors
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM() as vm:
+with Celesto() as vm:
     result = vm.run("ls /nonexistent")
     
     if not result.ok:
@@ -105,9 +105,9 @@ with SmolVM() as vm:
 ### Capturing Multi-line Output
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM() as vm:
+with Celesto() as vm:
     result = vm.run("cat /etc/os-release")
     
     if result.ok:
@@ -118,9 +118,9 @@ with SmolVM() as vm:
 ### Using the output Property
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM() as vm:
+with Celesto() as vm:
     result = vm.run("hostname")
     
     # result.stdout might be "localhost\n"
@@ -132,9 +132,9 @@ with SmolVM() as vm:
 ### Conditional Execution Based on Results
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM() as vm:
+with Celesto() as vm:
     # Check if Python is installed
     python_check = vm.run("which python3")
     
@@ -153,10 +153,10 @@ with SmolVM() as vm:
 ### Parsing Command Output
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 import json
 
-with SmolVM() as vm:
+with Celesto() as vm:
     # Get process list as JSON
     result = vm.run("ps aux | awk '{print $1, $2, $11}' | tail -n +2")
     
@@ -169,9 +169,9 @@ with SmolVM() as vm:
 ### Error Handling Pattern
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
-def run_command_safe(vm: SmolVM, command: str) -> str:
+def run_command_safe(vm: Celesto, command: str) -> str:
     """Run a command and raise an exception on failure."""
     result = vm.run(command)
     
@@ -183,7 +183,7 @@ def run_command_safe(vm: SmolVM, command: str) -> str:
     
     return result.output
 
-with SmolVM() as vm:
+with Celesto() as vm:
     try:
         output = run_command_safe(vm, "uname -r")
         print(f"Kernel version: {output}")
@@ -194,10 +194,10 @@ with SmolVM() as vm:
 ### Working with Binary Output
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 import base64
 
-with SmolVM() as vm:
+with Celesto() as vm:
     # Read a binary file and encode it
     result = vm.run("base64 /bin/busybox | head -n 1")
     
@@ -209,9 +209,9 @@ with SmolVM() as vm:
 ### Chaining Commands with Result Checks
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM() as vm:
+with Celesto() as vm:
     # Create directory
     result = vm.run("mkdir -p /tmp/myapp")
     if not result.ok:
@@ -230,9 +230,9 @@ with SmolVM() as vm:
 ### Shell Mode Comparison
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM() as vm:
+with Celesto() as vm:
     # Login shell mode (default) - runs through login shell
     result1 = vm.run("echo $HOME", shell="login")
     print(f"Login shell HOME: {result1.output}")  # /root

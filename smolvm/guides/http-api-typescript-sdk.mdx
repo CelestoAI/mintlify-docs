@@ -1,10 +1,10 @@
 ---
-title: "Use the SmolVM HTTP API and TypeScript SDK"
+title: "Use the Celesto HTTP API and TypeScript SDK"
 sidebarTitle: "HTTP API and TypeScript SDK"
-description: "Start the local SmolVM HTTP API, create and manage sandboxes over REST, and use the generated TypeScript Smolvm client from a project that includes the SDK package."
+description: "Start the local Celesto HTTP API, create and manage sandboxes over REST, and use the generated TypeScript Smolvm client from a project that includes the SDK package."
 ---
 
-SmolVM can run a local HTTP server so another process can create sandboxes and run commands without importing Python. This is useful for web apps, local tools, TypeScript services, and agent runtimes that already speak HTTP.
+Celesto can run a local HTTP server so another process can create sandboxes and run commands without importing Python. This is useful for web apps, local tools, TypeScript services, and agent runtimes that already speak HTTP.
 
 ## When to use the HTTP API
 
@@ -13,28 +13,28 @@ Use the HTTP API when:
 - A JavaScript or TypeScript process needs to create and control sandboxes.
 - A local service needs a stable REST interface instead of Python objects.
 - You want to generate clients from the OpenAPI spec.
-- You want to keep one SmolVM server process alive while several tools make requests.
+- You want to keep one Celesto server process alive while several tools make requests.
 
-For Python-only workflows, the [`SmolVM` class](/smolvm/api/smolvm) is still the shortest path.
+For Python-only workflows, the [`Celesto` class](/smolvm/api/smolvm) is still the shortest path.
 
 ## Start the server
 
 Install the web dependencies:
 
 ```bash
-pip install "smolvm[dashboard]"
+pip install "celesto[dashboard]"
 ```
 
 Start the local server:
 
 ```bash
-smolvm server start --host 127.0.0.1 --port 8000
+celesto server start --host 127.0.0.1 --port 8000
 ```
 
 You should see:
 
 ```text
-SmolVM HTTP API listening on http://127.0.0.1:8000
+Celesto HTTP API listening on http://127.0.0.1:8000
 OpenAPI spec: http://127.0.0.1:8000/openapi.json
 ```
 
@@ -70,7 +70,7 @@ Example response:
 }
 ```
 
-The request body mirrors the auto-config options of the Python `SmolVM(...)` constructor.
+The request body mirrors the auto-config options of the Python `Celesto(...)` constructor.
 
 <ParamField body="os" type='"alpine" | "ubuntu" | "windows"'>
   Guest operating system. Omit it for the default Linux sandbox.
@@ -124,12 +124,12 @@ Example response:
 
 ## Use the TypeScript client
 
-The SmolVM repository includes a generated TypeScript client and a small wrapper class named `Smolvm`. In a project where that TypeScript package is available, point it at the local server:
+The Celesto repository includes a generated TypeScript client and a small wrapper class named `SmolVM`. In a project where that TypeScript package is available, point it at the local server:
 
 ```typescript smolvm-client.ts
-import { Smolvm } from "smolvm";
+import { SmolVM } from "@celestoai/smolvm";
 
-const smolvm = new Smolvm({
+const smolvm = new SmolVM({
   baseUrl: "http://127.0.0.1:8000",
 });
 
@@ -163,12 +163,12 @@ The wrapper groups operations under `smolvm.sandbox`:
 
 ## Get sandbox desktop connection details
 
-Use `sandbox.desktop(id)` to get the details you need to open a sandbox's desktop viewer from a Node or TypeScript app. This is the SDK equivalent of the [`smolvm sandbox desktop`](/smolvm/guides/macos-sandboxes) CLI command, so you can wire the same workflow into a service or agent instead of shelling out.
+Use `sandbox.desktop(id)` to get the details you need to open a sandbox's desktop viewer from a Node or TypeScript app. This is the SDK equivalent of the [`celesto sandbox desktop`](/smolvm/guides/macos-sandboxes) CLI command, so you can wire the same workflow into a service or agent instead of shelling out.
 
 ```typescript sandbox-desktop.ts
-import { Smolvm } from "smolvm";
+import { SmolVM } from "@celestoai/smolvm";
 
-const smolvm = new Smolvm({
+const smolvm = new SmolVM({
   baseUrl: "http://127.0.0.1:8000",
 });
 
@@ -210,8 +210,8 @@ Use that URL with your client generator of choice when you need another language
     Install the web extra, then start the server again:
 
     ```bash
-    pip install "smolvm[dashboard]"
-    smolvm server start --host 127.0.0.1 --port 8000
+    pip install "celesto[dashboard]"
+    celesto server start --host 127.0.0.1 --port 8000
     ```
   </Accordion>
 
@@ -219,7 +219,7 @@ Use that URL with your client generator of choice when you need another language
     Pick another port:
 
     ```bash
-    smolvm server start --port 8001
+    celesto server start --port 8001
     ```
   </Accordion>
 
@@ -231,10 +231,10 @@ Use that URL with your client generator of choice when you need another language
 ## Related
 
 <CardGroup cols={2}>
-  <Card title="smolvm server" icon="server" href="/smolvm/cli/server">
+  <Card title="celesto server" icon="server" href="/smolvm/cli/server">
     CLI reference for the local API server
   </Card>
-  <Card title="SmolVM Python API" icon="code" href="/smolvm/api/smolvm">
-    Use SmolVM directly from Python
+  <Card title="Celesto Python API" icon="code" href="/smolvm/api/smolvm">
+    Use Celesto directly from Python
   </Card>
 </CardGroup>

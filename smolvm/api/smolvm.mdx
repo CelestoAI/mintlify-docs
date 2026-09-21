@@ -1,16 +1,16 @@
 ---
-title: "SmolVM Python class reference"
-description: "SmolVM class reference: the Python API for creating microVM sandboxes, running commands over the selected control channel, and managing the full sandbox lifecycle."
+title: "Celesto Python class reference"
+description: "Celesto class reference: the Python API for creating microVM sandboxes, running commands over the selected control channel, and managing the full sandbox lifecycle."
 ---
 
 ## Overview
 
-The `SmolVM` class provides a user-friendly interface for creating and managing microVMs. It supports automatic configuration, context manager usage, and command execution over the selected control channel.
+The `Celesto` class provides a user-friendly interface for creating and managing microVMs. It supports automatic configuration, context manager usage, and command execution over the selected control channel.
 
 ## Constructor
 
 ```python  theme={null}
-SmolVM(
+Celesto(
     config: VMConfig | None = None,
     *,
     vm_id: str | None = None,
@@ -35,7 +35,7 @@ SmolVM(
 ```
 
 <ParamField path="config" type="VMConfig | None" default="None">
-  VM configuration. Mutually exclusive with `vm_id`. If omitted (and `vm_id` is omitted), SmolVM auto-creates a default configuration that can run commands over vsock or SSH.
+  VM configuration. Mutually exclusive with `vm_id`. If omitted (and `vm_id` is omitted), Celesto auto-creates a default configuration that can run commands over vsock or SSH.
 </ParamField>
 
 <ParamField path="vm_id" type="str | None" default="None">
@@ -55,7 +55,7 @@ SmolVM(
   Guest operating system. Valid values: `"alpine"`, `"ubuntu"`, `"windows"`.
 
   * For auto-config mode (no `image=`), selects the Linux distribution.
-  * For local images, **required** — tells SmolVM which OS is inside the file. Must be `"windows"` for the local-image path in this release.
+  * For local images, **required** — tells Celesto which OS is inside the file. Must be `"windows"` for the local-image path in this release.
   * For S3 images, must be omitted — the image manifest already records the OS.
 </ParamField>
 
@@ -88,15 +88,15 @@ SmolVM(
 </ParamField>
 
 <ParamField path="ssh_key_path" type="str | None" default="None">
-  SSH private key path. If omitted, SmolVM first tries default SSH auth, then falls back to `~/.smolvm/keys/id_ed25519`.
+  SSH private key path. If omitted, Celesto first tries default SSH auth, then falls back to `~/.smolvm/keys/id_ed25519`.
 </ParamField>
 
 <ParamField path="ssh_password" type="str | None" default="None">
-  SSH password. Use this when the guest only accepts password authentication — common for Windows qcow2s that ship with OpenSSH Server but no preinstalled key. When set, SmolVM skips key-based auth so paramiko does not silently prefer a key over your password.
+  SSH password. Use this when the guest only accepts password authentication — common for Windows qcow2s that ship with OpenSSH Server but no preinstalled key. When set, Celesto skips key-based auth so paramiko does not silently prefer a key over your password.
 </ParamField>
 
 <ParamField path="comm_channel" type='Literal["ssh", "vsock"] | None' default="None">
-  Host-to-guest control channel for `run()`, file transfer, and env var operations. Leave unset for auto-selection (vsock when the SmolVM guest agent answers on a Linux QEMU host, otherwise SSH). Pass `"vsock"` to require vsock — SmolVM raises if the agent does not answer instead of falling back. Pass `"ssh"` to force the SSH path. See [control channel](/smolvm/concepts/control-channel) for details.
+  Host-to-guest control channel for `run()`, file transfer, and env var operations. Leave unset for auto-selection (vsock when the Celesto guest agent answers on a Linux QEMU host, otherwise SSH). Pass `"vsock"` to require vsock — Celesto raises if the agent does not answer instead of falling back. Pass `"ssh"` to force the SSH path. See [control channel](/smolvm/concepts/control-channel) for details.
 </ParamField>
 
 <ParamField path="internet_settings" type="InternetSettings | dict | None" default="None">
@@ -129,7 +129,7 @@ SmolVM(
 
 ```python  theme={null}
 @classmethod
-SmolVM.from_id(
+Celesto.from_id(
     vm_id: str,
     *,
     data_dir: Path | None = None,
@@ -140,7 +140,7 @@ SmolVM.from_id(
     ssh_password: str | None = None,
     comm_channel: Literal["ssh", "vsock"] | None = None,
     state_manager: StateManagerProtocol | None = None,
-) -> SmolVM
+) -> Celesto
 ```
 
 Reconnect to an existing VM by ID through the same inventory that created it. Pass `ssh_password=` for Windows guests that use password-based SSH. Pass `comm_channel=` to override the host-to-guest control channel; see [control channel](/smolvm/concepts/control-channel).
@@ -153,8 +153,8 @@ Reconnect to an existing VM by ID through the same inventory that created it. Pa
   Inventory that contains the sandbox. Reuse the exact state manager supplied when the sandbox was created.
 </ParamField>
 
-<ResponseField name="return" type="SmolVM">
-  A SmolVM instance bound to the existing VM.
+<ResponseField name="return" type="Celesto">
+  A Celesto instance bound to the existing VM.
 </ResponseField>
 
 #### Raises
@@ -166,7 +166,7 @@ Reconnect to an existing VM by ID through the same inventory that created it. Pa
 
 ```python  theme={null}
 @classmethod
-SmolVM.from_image(
+Celesto.from_image(
     image: BootImage,
     *,
     vm_id: str | None = None,
@@ -194,7 +194,7 @@ SmolVM.from_image(
     mounts: list[str] | None = None,
     writable_mounts: bool = False,
     callbacks: list[Callback] | None = None,
-) -> SmolVM
+) -> Celesto
 ```
 
 Launch a VM from a custom [`BootImage`](/smolvm/guides/custom-images#describe-a-bootable-image) without writing a `VMConfig` by hand. The image supplies the rootfs, kernel, and boot arguments; `from_image` resolves the backend, architecture, and any missing base kernel, then applies the per-VM runtime knobs you pass in.
@@ -202,7 +202,7 @@ Launch a VM from a custom [`BootImage`](/smolvm/guides/custom-images#describe-a-
 Use this when you have built a custom image (for example with `DockerRootfsBuilder`) and want a one-line launcher that still lets you tune memory, networking, port forwards, vsock, and the host-to-guest control channel.
 
 <ParamField path="image" type="BootImage" required>
-  Image to boot. Direct-kernel images may omit `kernel_path` — SmolVM downloads the matching base kernel automatically. Custom images without an SSH server can still boot, but command helpers such as `vm.run(...)` require an SSH-capable image or guest agent.
+  Image to boot. Direct-kernel images may omit `kernel_path` — Celesto downloads the matching base kernel automatically. Custom images without an SSH server can still boot, but command helpers such as `vm.run(...)` require an SSH-capable image or guest agent.
 </ParamField>
 
 <ParamField path="vm_id" type="str | None" default="None">
@@ -210,7 +210,7 @@ Use this when you have built a custom image (for example with `DockerRootfsBuild
 </ParamField>
 
 <ParamField path="name_prefix" type="str" default="sbx">
-  Prefix used when SmolVM generates a `vm_id`.
+  Prefix used when Celesto generates a `vm_id`.
 </ParamField>
 
 <ParamField path="state_manager" type="StateManagerProtocol | None" default="None">
@@ -220,7 +220,7 @@ Use this when you have built a custom image (for example with `DockerRootfsBuild
 <ParamField path="backend" type="str | None" default="None">
   Runtime backend (`"firecracker"`, `"qemu"`, or `"libkrun"`). Defaults to the backend recorded on the image, otherwise normal auto-selection. Firmware-boot images require `"qemu"`.
 
-  SmolVM's public guides focus on Firecracker and QEMU because they have the broadest current support.
+  Celesto's public guides focus on Firecracker and QEMU because they have the broadest current support.
 </ParamField>
 
 <ParamField path="qemu_machine" type='Literal["auto", "microvm", "q35"]' default="auto">
@@ -240,7 +240,7 @@ Use this when you have built a custom image (for example with `DockerRootfsBuild
 </ParamField>
 
 <ParamField path="guest_os" type="GuestOS | str" default="GuestOS.ALPINE">
-  Guest OS hint used by SmolVM's lifecycle helpers (`"alpine"`, `"ubuntu"`, or `"windows"`).
+  Guest OS hint used by Celesto's lifecycle helpers (`"alpine"`, `"ubuntu"`, or `"windows"`).
 </ParamField>
 
 <ParamField path="network" type='Literal["tap", "slirp"] | None' default="None">
@@ -264,7 +264,7 @@ Use this when you have built a custom image (for example with `DockerRootfsBuild
 </ParamField>
 
 <ParamField path="disk_size_mb" type="int | None" default="None">
-  Target size in MiB for the per-VM disk. SmolVM only grows the disk — pick a value at least as large as the image's current size. Requires `disk_mode="isolated"` (the default); shared base images are never resized. Works for both `raw-ext4` and `qcow2` rootfs formats.
+  Target size in MiB for the per-VM disk. Celesto only grows the disk — pick a value at least as large as the image's current size. Requires `disk_mode="isolated"` (the default); shared base images are never resized. Works for both `raw-ext4` and `qcow2` rootfs formats.
 </ParamField>
 
 <ParamField path="grow_filesystem" type="bool" default="False">
@@ -287,19 +287,19 @@ Use this when you have built a custom image (for example with `DockerRootfsBuild
   Outbound access policy. QEMU `off` works with the default network on macOS and Linux; `restricted` requires explicit TAP networking on Linux.
 </ParamField>
 
-<ResponseField name="return" type="SmolVM">
-  A SmolVM instance bound to the new VM. Call `start()` (or use the context manager) to boot it.
+<ResponseField name="return" type="Celesto">
+  A Celesto instance bound to the new VM. Call `start()` (or use the context manager) to boot it.
 </ResponseField>
 
 #### Raises
 
 * `ValueError`: If the requested backend, arch, network mode, or `port_forwards` are incompatible with the image (for example, `port_forwards` outside QEMU slirp, or a firmware image on Firecracker).
-* `SmolVMError`: If a disk resize is requested but cannot be honored — for example, `disk_mode="shared"`, `grow_filesystem=True` on a qcow2 image, a `disk_size_mb` smaller than the current disk, or `e2fsprogs` missing on the host.
+* `CelestoError`: If a disk resize is requested but cannot be honored — for example, `disk_mode="shared"`, `grow_filesystem=True` on a qcow2 image, a `disk_size_mb` smaller than the current disk, or `e2fsprogs` missing on the host.
 
 #### Example
 
 ```python  theme={null}
-from smolvm import SmolVM, DirectKernelBoot, DockerRootfsBuilder
+from celesto import Celesto, DirectKernelBoot, DockerRootfsBuilder
 
 builder = DockerRootfsBuilder(
     name="my-app",
@@ -320,7 +320,7 @@ image = builder.ensure(
     boot=DirectKernelBoot(root="/dev/vda", init="/init"),
 )
 
-with SmolVM.from_image(image, memory_mb=1024, vcpus=2) as vm:
+with Celesto.from_image(image, memory_mb=1024, vcpus=2) as vm:
     print(f"Started {vm.vm_id}")
 ```
 
@@ -328,7 +328,7 @@ with SmolVM.from_image(image, memory_mb=1024, vcpus=2) as vm:
 
 ```python  theme={null}
 @classmethod
-SmolVM.browser(
+Celesto.browser(
     *,
     headless: bool = True,
     session_id: str | None = None,
@@ -365,7 +365,7 @@ See [Browser and desktop sandboxes](/smolvm/api/browsersession) for the full opt
 
 ```python  theme={null}
 @classmethod
-SmolVM.desktop(
+Celesto.desktop(
     *,
     session_id: str | None = None,
     backend: Literal["firecracker", "qemu", "libkrun", "auto"] = "auto",
@@ -401,7 +401,7 @@ See [Browser and desktop sandboxes](/smolvm/api/browsersession) for desktop exam
 
 ```python  theme={null}
 @classmethod
-SmolVM.from_snapshot(
+Celesto.from_snapshot(
     snapshot_id: str,
     *,
     data_dir: Path | None = None,
@@ -413,7 +413,7 @@ SmolVM.from_snapshot(
     ssh_key_path: str | None = None,
     comm_channel: Literal["ssh", "vsock"] | None = None,
     state_manager: StateManagerProtocol | None = None,
-) -> SmolVM
+) -> Celesto
 ```
 
 Restore a snapshot and attach a facade to the restored VM.
@@ -458,21 +458,21 @@ Restore a snapshot and attach a facade to the restored VM.
   Inventory containing the snapshot. Reuse the state manager supplied to the workflow that created the snapshot.
 </ParamField>
 
-<ResponseField name="return" type="SmolVM">
-  A SmolVM instance bound to the restored VM.
+<ResponseField name="return" type="Celesto">
+  A Celesto instance bound to the restored VM.
 </ResponseField>
 
 #### Raises
 
 * `SnapshotNotFoundError`: If no snapshot with this ID exists.
-* `SmolVMError`: If the snapshot was already restored (use `force=True` to override).
+* `CelestoError`: If the snapshot was already restored (use `force=True` to override).
 
 ## Lifecycle Methods
 
 ### start
 
 ```python  theme={null}
-def start(self, boot_timeout: float = 30.0) -> SmolVM
+def start(self, boot_timeout: float = 30.0) -> Celesto
 ```
 
 Start the VM. If the VM config contains `env_vars`, they are injected into the guest via SSH after boot completes.
@@ -481,18 +481,18 @@ Start the VM. If the VM config contains `env_vars`, they are injected into the g
   Maximum seconds to wait for boot to complete.
 </ParamField>
 
-<ResponseField name="return" type="SmolVM">
+<ResponseField name="return" type="Celesto">
   Returns `self` for method chaining.
 </ResponseField>
 
 #### Raises
 
-* `SmolVMError`: If `env_vars` is set but the image does not support SSH (missing `init=/init` in boot args).
+* `CelestoError`: If `env_vars` is set but the image does not support SSH (missing `init=/init` in boot args).
 
 ### stop
 
 ```python  theme={null}
-def stop(self, timeout: float = 3.0) -> SmolVM
+def stop(self, timeout: float = 3.0) -> Celesto
 ```
 
 Stop the VM gracefully.
@@ -501,7 +501,7 @@ Stop the VM gracefully.
   Seconds to wait for graceful shutdown.
 </ParamField>
 
-<ResponseField name="return" type="SmolVM">
+<ResponseField name="return" type="Celesto">
   Returns `self` for method chaining.
 </ResponseField>
 
@@ -516,34 +516,34 @@ Delete the VM and release all resources.
 ### pause
 
 ```python  theme={null}
-def pause(self) -> SmolVM
+def pause(self) -> Celesto
 ```
 
 Pause a running VM. The VM's memory and CPU state are frozen in place. Use `resume()` to continue execution.
 
-<ResponseField name="return" type="SmolVM">
+<ResponseField name="return" type="Celesto">
   Returns `self` for method chaining.
 </ResponseField>
 
 #### Raises
 
-* `SmolVMError`: If the VM is not in a pausable state (must be running).
+* `CelestoError`: If the VM is not in a pausable state (must be running).
 
 ### resume
 
 ```python  theme={null}
-def resume(self) -> SmolVM
+def resume(self) -> Celesto
 ```
 
 Resume a paused VM. Execution continues from the exact point where it was paused.
 
-<ResponseField name="return" type="SmolVM">
+<ResponseField name="return" type="Celesto">
   Returns `self` for method chaining.
 </ResponseField>
 
 #### Raises
 
-* `SmolVMError`: If the VM is not paused.
+* `CelestoError`: If the VM is not paused.
 
 ### snapshot
 
@@ -557,10 +557,10 @@ def snapshot(
 ) -> SnapshotInfo
 ```
 
-Create a snapshot of the VM. The VM must be running or paused. If running, SmolVM pauses it during snapshot creation unless `resume_source=True` is set.
+Create a snapshot of the VM. The VM must be running or paused. If running, Celesto pauses it during snapshot creation unless `resume_source=True` is set.
 
 <ParamField path="snapshot_id" type="str | None" default="None">
-  Custom snapshot identifier. If omitted, SmolVM generates one automatically (for example, `snap-my-vm-1717012345`). Must contain only lowercase letters, numbers, hyphens, and underscores.
+  Custom snapshot identifier. If omitted, Celesto generates one automatically (for example, `snap-my-vm-1717012345`). Must contain only lowercase letters, numbers, hyphens, and underscores.
 </ParamField>
 
 <ParamField path="snapshot_type" type="SnapshotType | str" default="SnapshotType.FULL">
@@ -570,7 +570,7 @@ Create a snapshot of the VM. The VM must be running or paused. If running, SmolV
   * `"diff"` — smaller disk artifact. QEMU diff snapshots need their backing image at restore time.
   * `"disk"` — disk-only on QEMU; restores as a cold boot.
 
-  On Firecracker, SmolVM captures memory and VM state for every snapshot type.
+  On Firecracker, Celesto captures memory and VM state for every snapshot type.
 </ParamField>
 
 <ParamField path="resume_source" type="bool" default="False">
@@ -584,7 +584,7 @@ Create a snapshot of the VM. The VM must be running or paused. If running, SmolV
 #### Raises
 
 * `SnapshotAlreadyExistsError`: If a snapshot with this ID already exists.
-* `SmolVMError`: If the VM is not in a snapshotable state, uses a Windows guest, uses shared disk mode, has extra drives, has workspace mounts, or is a QEMU raw disk created for filesystem growth.
+* `CelestoError`: If the VM is not in a snapshotable state, uses a Windows guest, uses shared disk mode, has extra drives, has workspace mounts, or is a QEMU raw disk created for filesystem growth.
 
 ## Command Execution Methods
 
@@ -622,14 +622,14 @@ Execute a command on the guest via SSH. Lazily creates an SSH client on first ca
 
 #### Raises
 
-* `SmolVMError`: If the VM is not running or has no network.
+* `CelestoError`: If the VM is not running or has no network.
 * `CommandExecutionUnavailableError`: If SSH is not available on the guest.
 * `CommandBlockedError`: If an `on_pre_run` callback vetoes the command. Any other exception raised by a pre-run callback also propagates from `run()`.
 
 ### add\_callback
 
 ```python  theme={null}
-def add_callback(self, callback: Callback) -> SmolVM
+def add_callback(self, callback: Callback) -> Celesto
 ```
 
 Register a [`Callback`](/smolvm/api/callbacks) on this sandbox after construction. Returns `self` so calls can be chained.
@@ -638,7 +638,7 @@ Register a [`Callback`](/smolvm/api/callbacks) on this sandbox after constructio
   A `Callback` instance to attach. Its hooks will fire on subsequent `run()` calls.
 </ParamField>
 
-<ResponseField name="return" type="SmolVM">
+<ResponseField name="return" type="Celesto">
   Returns `self` for method chaining.
 </ResponseField>
 
@@ -649,7 +649,7 @@ Register a [`Callback`](/smolvm/api/callbacks) on this sandbox after constructio
 ### wait\_for\_ssh
 
 ```python  theme={null}
-def wait_for_ssh(self, timeout: float = 60.0) -> SmolVM
+def wait_for_ssh(self, timeout: float = 60.0) -> Celesto
 ```
 
 Wait for SSH to become available on the guest.
@@ -658,14 +658,14 @@ Wait for SSH to become available on the guest.
   Maximum seconds to wait.
 </ParamField>
 
-<ResponseField name="return" type="SmolVM">
+<ResponseField name="return" type="Celesto">
   Returns `self` for method chaining.
 </ResponseField>
 
 #### Raises
 
 * `OperationTimeoutError`: If SSH is not available within the timeout.
-* `SmolVMError`: If the VM is not running.
+* `CelestoError`: If the VM is not running.
 
 ### ssh\_commands
 
@@ -746,7 +746,7 @@ Remove environment variables from a running VM.
 def list_env_vars(self) -> dict[str, str]
 ```
 
-Return SmolVM-managed environment variables for a running VM.
+Return Celesto-managed environment variables for a running VM.
 
 <ResponseField name="return" type="dict[str, str]">
   Dictionary of environment variable names to values.
@@ -786,13 +786,13 @@ Expose a guest TCP port on localhost only. Forwards `127.0.0.1:<host_port>` on t
 
 #### Raises
 
-* `SmolVMError`: If the VM is not running or has no network.
+* `CelestoError`: If the VM is not running or has no network.
 * `ValueError`: If port numbers are out of valid range (1-65535).
 
 ### unexpose\_local
 
 ```python  theme={null}
-def unexpose_local(self, host_port: int, guest_port: int) -> SmolVM
+def unexpose_local(self, host_port: int, guest_port: int) -> Celesto
 ```
 
 Remove a previously configured localhost-only port forward.
@@ -805,7 +805,7 @@ Remove a previously configured localhost-only port forward.
   Guest TCP port (1-65535).
 </ParamField>
 
-<ResponseField name="return" type="SmolVM">
+<ResponseField name="return" type="Celesto">
   Returns `self` for method chaining.
 </ResponseField>
 
@@ -863,17 +863,17 @@ Return the guest IP address.
 
 #### Raises
 
-* `SmolVMError`: If the VM has no network configuration.
+* `CelestoError`: If the VM has no network configuration.
 
 ### refresh
 
 ```python  theme={null}
-def refresh(self) -> SmolVM
+def refresh(self) -> Celesto
 ```
 
 Refresh cached VM info from the state store.
 
-<ResponseField name="return" type="SmolVM">
+<ResponseField name="return" type="Celesto">
   Returns `self` for method chaining.
 </ResponseField>
 
@@ -883,7 +883,7 @@ Refresh cached VM info from the state store.
 def can_run_commands(self) -> bool
 ```
 
-Whether this VM config supports command execution via SSH. Command execution requires SmolVM's SSH init flow, enabled by booting with `init=/init`.
+Whether this VM config supports command execution via SSH. Command execution requires Celesto's SSH init flow, enabled by booting with `init=/init`.
 
 <ResponseField name="return" type="bool">
   True if SSH command execution is supported, False otherwise.
@@ -899,12 +899,12 @@ Release underlying SDK resources for this facade instance.
 
 ## Async methods
 
-SmolVM provides async versions of lifecycle and command methods for use in async applications.
+Celesto provides async versions of lifecycle and command methods for use in async applications.
 
 ### async\_start
 
 ```python  theme={null}
-async def async_start(self, boot_timeout: float = 30.0) -> SmolVM
+async def async_start(self, boot_timeout: float = 30.0) -> Celesto
 ```
 
 Async version of `start()`. Starts the VM without blocking the event loop.
@@ -912,7 +912,7 @@ Async version of `start()`. Starts the VM without blocking the event loop.
 ### async\_stop
 
 ```python  theme={null}
-async def async_stop(self, timeout: float = 3.0) -> SmolVM
+async def async_stop(self, timeout: float = 3.0) -> Celesto
 ```
 
 Async version of `stop()`.
@@ -933,7 +933,7 @@ Async version of `run()`. Executes a command on the guest without blocking.
 ### async\_wait\_for\_ssh
 
 ```python  theme={null}
-async def async_wait_for_ssh(self, timeout: float = 60.0) -> SmolVM
+async def async_wait_for_ssh(self, timeout: float = 60.0) -> Celesto
 ```
 
 Async version of `wait_for_ssh()`.
@@ -949,7 +949,7 @@ async def async_create_many(
     memory: int | None = None,
     disk_size: int | None = None,
     backend: str | None = None,
-) -> list[SmolVM]
+) -> list[Celesto]
 ```
 
 Create multiple sandboxes concurrently. Each sandbox is auto-configured and started.
@@ -966,18 +966,18 @@ Create multiple sandboxes concurrently. Each sandbox is auto-configured and star
   Disk size for each sandbox in MiB.
 </ParamField>
 
-<ResponseField name="return" type="list[SmolVM]">
-  List of started SmolVM instances.
+<ResponseField name="return" type="list[Celesto]">
+  List of started Celesto instances.
 </ResponseField>
 
 **Example:**
 
 ```python
 import asyncio
-from smolvm import SmolVM
+from celesto import Celesto
 
 async def main():
-    vms = await SmolVM.async_create_many(3)
+    vms = await Celesto.async_create_many(3)
     for vm in vms:
         result = await vm.async_run("hostname")
         print(result.stdout.strip())
@@ -990,14 +990,14 @@ asyncio.run(main())
 
 ## Async context manager
 
-SmolVM also works as an async context manager:
+Celesto also works as an async context manager:
 
 ```python
 import asyncio
-from smolvm import SmolVM
+from celesto import Celesto
 
 async def main():
-    async with SmolVM() as vm:
+    async with Celesto() as vm:
         result = await vm.async_run("echo 'Hello from async'")
         print(result.stdout.strip())
 
@@ -1006,10 +1006,10 @@ asyncio.run(main())
 
 ## Context manager
 
-SmolVM implements the context manager protocol for automatic lifecycle management:
+Celesto implements the context manager protocol for automatic lifecycle management:
 
 ```python  theme={null}
-with SmolVM() as vm:
+with Celesto() as vm:
     # VM auto-starts on context entry
     result = vm.run("uname -r")
     print(result.stdout)
@@ -1033,10 +1033,10 @@ On context exit (`__exit__`):
 Create an SSH-ready VM with default settings:
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM() as vm:
-    result = vm.run("echo 'Hello from SmolVM'")
+with Celesto() as vm:
+    result = vm.run("echo 'Hello from Celesto'")
     print(result.stdout.strip())
 ```
 
@@ -1045,9 +1045,9 @@ with SmolVM() as vm:
 Create a VM with specific resources:
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM(memory=1024, disk_size=1024) as vm:
+with Celesto(memory=1024, disk_size=1024) as vm:
     result = vm.run("free -m")
     print(result.stdout)
 ```
@@ -1055,7 +1055,7 @@ with SmolVM(memory=1024, disk_size=1024) as vm:
 ### Manual Lifecycle Management
 
 ```python  theme={null}
-from smolvm import SmolVM, VMConfig
+from celesto import Celesto, VMConfig
 from pathlib import Path
 
 config = VMConfig(
@@ -1067,7 +1067,7 @@ config = VMConfig(
     boot_args="console=ttyS0 reboot=k panic=1 init=/init"
 )
 
-vm = SmolVM(config)
+vm = Celesto(config)
 vm.start()
 
 result = vm.run("hostname")
@@ -1083,9 +1083,9 @@ vm.close()
 Boot a pre-installed Windows 11 `qcow2` image, run a PowerShell command, and upload a file. Requires a Linux host with KVM, the OVMF + `swtpm` packages installed, and an image with OpenSSH Server set up. See the [Windows guests guide](/smolvm/guides/windows-guests) for prerequisites and limitations.
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM(
+with Celesto(
     os="windows",
     image="~/win11-vm/disk-baseline.qcow2",
     ssh_user="celesto",
@@ -1105,19 +1105,19 @@ On Windows guests, `vm.run(...)` executes the command in PowerShell, and `vm.upl
 ### Reconnecting to Existing VM
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
 from pathlib import Path
-from smolvm.storage import MemoryStateManager
+from celesto.storage import MemoryStateManager
 
 inventory = MemoryStateManager(Path(".smolvm-state"))
-original = SmolVM(state_manager=inventory)
+original = Celesto(state_manager=inventory)
 original.start()
 vm_id = original.vm_id
 original.close()
 
 # Reuse the same inventory when creating a new handle.
-vm = SmolVM.from_id(vm_id, state_manager=inventory)
+vm = Celesto.from_id(vm_id, state_manager=inventory)
 result = vm.run("uptime")
 print(result.stdout)
 vm.close()
@@ -1126,9 +1126,9 @@ vm.close()
 ### Port Forwarding
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM() as vm:
+with Celesto() as vm:
     # Install and start a web server
     vm.run("apk add python3")
     vm.run("python3 -m http.server 8000 &")
@@ -1147,9 +1147,9 @@ with SmolVM() as vm:
 ### Pause and Resume
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
-vm = SmolVM()
+vm = Celesto()
 vm.start()
 
 # Run some setup
@@ -1171,9 +1171,9 @@ vm.close()
 ### Environment Variables
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM() as vm:
+with Celesto() as vm:
     # Set environment variables
     vm.set_env_vars({"API_KEY": "secret", "ENV": "production"})
     

@@ -1,22 +1,22 @@
 ---
 title: "Custom Sandbox Images with Docker"
-description: "Build SmolVM sandboxes from Dockerfiles, SSH-ready Linux images, or existing disk images so your agents start with the tools they need."
+description: "Build Celesto sandboxes from Dockerfiles, SSH-ready Linux images, or existing disk images so your agents start with the tools they need."
 ---
 
-Custom images let you start SmolVM with your own tools already inside. You can add packages and files once, then reuse that setup every time you create an isolated machine.
+Custom images let you start Celesto with your own tools already inside. You can add packages and files once, then reuse that setup every time you create an isolated machine.
 
 This guide starts with one working path. After that, it shows how to run commands inside the image, how the CLI fits in, and where to go when you need deeper control.
 
 ## What You Can Build
 
-Use custom images when the default SmolVM images need extra software or a different startup process.
+Use custom images when the default Celesto images need extra software or a different startup process.
 
 | Goal | Best starting point |
 | --- | --- |
-| Boot a Linux image built from your Dockerfile | `DockerRootfsBuilder` with `SmolVM.from_image(...)` |
+| Boot a Linux image built from your Dockerfile | `DockerRootfsBuilder` with `Celesto.from_image(...)` |
 | Run `vm.run(...)` and file commands right away | `ImageBuilder`, which adds SSH for you |
 | Boot an existing disk image | `BootImage` |
-| Build a reusable Windows image from an ISO | `smolvm windows build-image` |
+| Build a reusable Windows image from an ISO | `celesto windows build-image` |
 
 <Info>
   A root filesystem, often shortened to rootfs, is the disk image that contains the operating system files inside the sandbox.
@@ -27,13 +27,13 @@ Use custom images when the default SmolVM images need extra software or a differ
 You need:
 
 * Docker installed and running, because the Linux image builders use Docker to assemble files.
-* A working VM runner. SmolVM calls this a backend. Use QEMU for the broadest local path on macOS and Linux. Use Firecracker on Linux when you want the production Linux runner.
-* Python with `smolvm` installed.
+* A working VM runner. Celesto calls this a backend. Use QEMU for the broadest local path on macOS and Linux. Use Firecracker on Linux when you want the production Linux runner.
+* Python with `celesto` installed.
 
 Check the host before building:
 
 ```bash
-smolvm doctor --backend qemu
+celesto doctor --backend qemu
 ```
 
 ## Boot One Dockerfile Image
@@ -42,10 +42,10 @@ In this chapter, you build a tiny Alpine image and boot it. The image starts and
 
 <Steps>
   <Step title="Create a Python file">
-    Create `custom_image.py` in any directory where your Python environment can import `smolvm`.
+    Create `custom_image.py` in any directory where your Python environment can import `celesto`.
 
     ```python custom_image.py
-    from smolvm import DirectKernelBoot, DockerRootfsBuilder, SmolVM
+    from celesto import DirectKernelBoot, DockerRootfsBuilder, Celesto
 
     dockerfile = """FROM alpine:3.20
     RUN echo '#!/bin/sh' > /init
@@ -64,7 +64,7 @@ In this chapter, you build a tiny Alpine image and boot it. The image starts and
         boot=DirectKernelBoot(),
     )
 
-    with SmolVM.from_image(image, memory_mb=512) as vm:
+    with Celesto.from_image(image, memory_mb=512) as vm:
         print(f"Started {vm.vm_id}")
     ```
   </Step>
@@ -85,19 +85,19 @@ In this chapter, you build a tiny Alpine image and boot it. The image starts and
 What happened:
 
 * `DockerRootfsBuilder` turned the Dockerfile into a raw ext4 disk.
-* `DirectKernelBoot()` used SmolVM's default Linux boot settings, including `/init`.
-* `SmolVM.from_image(...)` created a private per-VM disk and started the sandbox.
+* `DirectKernelBoot()` used Celesto's default Linux boot settings, including `/init`.
+* `Celesto.from_image(...)` created a private per-VM disk and started the sandbox.
 
 ## Run Commands Inside The Image
 
-The Dockerfile image above proves that a custom disk can boot. To run commands from the host with `vm.run(...)`, the guest, which is the operating system inside the sandbox, needs a control path. The easiest path is `ImageBuilder`, which creates an SSH-ready Linux image. SSH is the standard remote shell protocol SmolVM can use to send commands into the sandbox.
+The Dockerfile image above proves that a custom disk can boot. To run commands from the host with `vm.run(...)`, the guest, which is the operating system inside the sandbox, needs a control path. The easiest path is `ImageBuilder`, which creates an SSH-ready Linux image. SSH is the standard remote shell protocol Celesto can use to send commands into the sandbox.
 
 <Steps>
   <Step title="Create a command-ready image">
     Create `command_ready_image.py`:
 
     ```python command_ready_image.py
-    from smolvm import ImageBuilder, SSH_BOOT_ARGS, SmolVM, VMConfig
+    from celesto import ImageBuilder, SSH_BOOT_ARGS, Celesto, VMConfig
 
     builder = ImageBuilder()
     kernel, rootfs = builder.build_alpine_ssh(name="ssh-ready-alpine")
@@ -108,7 +108,7 @@ The Dockerfile image above proves that a custom disk can boot. To run commands f
         boot_args=SSH_BOOT_ARGS,
     )
 
-    with SmolVM(config) as vm:
+    with Celesto(config) as vm:
         result = vm.run("echo hello-from-custom-image")
         print(result.stdout.strip())
     ```
@@ -134,15 +134,15 @@ Use the SDK, which is the Python API, for Dockerfile-backed Linux images. Use th
 Create and inspect a built-in Ubuntu sandbox from the CLI:
 
 ```bash
-smolvm sandbox create --os ubuntu --name custom-ubuntu --disk-size 4096
-smolvm sandbox info custom-ubuntu
-smolvm sandbox delete custom-ubuntu
+celesto sandbox create --os ubuntu --name custom-ubuntu --disk-size 4096
+celesto sandbox info custom-ubuntu
+celesto sandbox delete custom-ubuntu
 ```
 
 For Windows image building, start with the built-in help:
 
 ```bash
-smolvm windows build-image --help
+celesto windows build-image --help
 ```
 
 See the [Windows image CLI reference](/smolvm/cli/windows) for the full ISO-to-qcow2 flow.
@@ -164,17 +164,17 @@ Important options:
 | `context` | Extra files copied beside the Dockerfile, such as an `/init` script |
 | `rootfs_size_mb` | Initial rootfs size in MB |
 | `build_args` | Docker `--build-arg` values |
-| `ssh_capable` | Whether the image starts SSH and accepts the credentials passed to SmolVM |
+| `ssh_capable` | Whether the image starts SSH and accepts the credentials passed to Celesto |
 
 <Warning>
-  Set `ssh_capable=True` only when your image starts SSH during boot and accepts the `ssh_user`, `ssh_key_path`, or `ssh_password` you pass to SmolVM.
+  Set `ssh_capable=True` only when your image starts SSH during boot and accepts the `ssh_user`, `ssh_key_path`, or `ssh_password` you pass to Celesto.
 </Warning>
 
 ### Launch A BootImage
 
 `BootImage` is a small Python object that describes a bootable disk. `DockerRootfsBuilder.ensure(...)` returns one for you.
 
-Pass that image to `SmolVM.from_image(...)` when you want normal VM settings:
+Pass that image to `Celesto.from_image(...)` when you want normal VM settings:
 
 * `memory_mb` for memory size
 * `vcpus` for CPU count
@@ -183,7 +183,7 @@ Pass that image to `SmolVM.from_image(...)` when you want normal VM settings:
 * `disk_size_mb` to grow the per-VM disk
 * `grow_filesystem=True` to expand raw ext4 filesystems on the host
 
-For qcow2 images, SmolVM can grow the virtual disk size. The guest operating system remains responsible for growing its partition or filesystem.
+For qcow2 images, Celesto can grow the virtual disk size. The guest operating system remains responsible for growing its partition or filesystem.
 
 ### Boot An Existing Disk
 
@@ -191,26 +191,26 @@ Use `BootImage` directly when you already have a disk image on the host.
 
 Common cases:
 
-* Raw ext4 Linux image with a kernel loaded by SmolVM
+* Raw ext4 Linux image with a kernel loaded by Celesto
 * QEMU qcow2 cloud image that boots through firmware
-* Windows qcow2 image built with `smolvm windows build-image`
+* Windows qcow2 image built with `celesto windows build-image`
 
 See the [`BootImage` API reference](/smolvm/api/bootimage) for complete constructor fields and validation rules.
 
 ### Keep Builds Fast
 
-SmolVM caches built images under `~/.smolvm/images/`. Reusing the same Dockerfile, build args, context files, target architecture, and rootfs size reuses the cached rootfs.
+Celesto caches built images under `~/.smolvm/images/`. Reusing the same Dockerfile, build args, context files, target architecture, and rootfs size reuses the cached rootfs.
 
 Run this when old release caches take up space:
 
 ```bash
-smolvm prune --dry-run
+celesto prune --dry-run
 ```
 
 If the preview looks right, run:
 
 ```bash
-smolvm prune
+celesto prune
 ```
 
 ## Boot Settings
@@ -227,7 +227,7 @@ Related references:
 
 * [`BootImage` and boot helpers](/smolvm/api/bootimage)
 * [`DockerRootfsBuilder`](/smolvm/api/dockerrootfsbuilder)
-* [`SmolVM.from_image(...)`](/smolvm/api/smolvm#from-image)
+* [`Celesto.from_image(...)`](/smolvm/api/smolvm#from-image)
 * [`VMConfig`](/smolvm/api/vmconfig)
 
 ## Troubleshooting
@@ -264,7 +264,7 @@ Related references:
     Build and cache raw ext4 root filesystems from Dockerfiles.
   </Card>
 
-  <Card title="SmolVM API" icon="code" href="/smolvm/api/smolvm#from-image">
+  <Card title="Celesto API" icon="code" href="/smolvm/api/smolvm#from-image">
     Launch custom images with CPU, memory, networking, and disk sizing options.
   </Card>
 

@@ -1,16 +1,16 @@
 ---
-title: "smolvm sandbox port"
-description: "Use smolvm sandbox port to share a service running inside a sandbox on localhost, list active forwards, and close them when finished."
+title: "celesto sandbox port"
+description: "Use celesto sandbox port to share a service running inside a sandbox on localhost, list active forwards, and close them when finished."
 ---
 
-`smolvm sandbox port` lets your host reach a service running inside a sandbox. Use it for dev servers, local APIs, databases, and preview apps.
+`celesto sandbox port` lets your host reach a service running inside a sandbox. Use it for dev servers, local APIs, databases, and preview apps.
 
 ## Synopsis
 
 ```bash
-smolvm sandbox port expose <sandbox> [host-port:]sandbox-port [OPTIONS]
-smolvm sandbox port list <sandbox> [OPTIONS]
-smolvm sandbox port close <sandbox> host-port:sandbox-port [OPTIONS]
+celesto sandbox port expose <sandbox> [host-port:]sandbox-port [OPTIONS]
+celesto sandbox port list <sandbox> [OPTIONS]
+celesto sandbox port close <sandbox> host-port:sandbox-port [OPTIONS]
 ```
 
 <Warning>
@@ -20,11 +20,11 @@ smolvm sandbox port close <sandbox> host-port:sandbox-port [OPTIONS]
 ## Shared options
 
 <ParamField path="--ssh-key" type="string">
-  Path to an SSH private key when SmolVM needs SSH for the forward.
+  Path to an SSH private key when Celesto needs SSH for the forward.
 </ParamField>
 
 <ParamField path="--ssh-user" type="string" default="root">
-  SSH user when SmolVM needs SSH for the forward.
+  SSH user when Celesto needs SSH for the forward.
 </ParamField>
 
 <ParamField path="--comm-channel" type="string">
@@ -40,13 +40,13 @@ smolvm sandbox port close <sandbox> host-port:sandbox-port [OPTIONS]
 Share a sandbox port on localhost:
 
 ```bash
-smolvm sandbox port expose my-sandbox 8080:3000
+celesto sandbox port expose my-sandbox 8080:3000
 ```
 
-Let SmolVM pick the host port:
+Let Celesto pick the host port:
 
 ```bash
-smolvm sandbox port expose my-sandbox 3000
+celesto sandbox port expose my-sandbox 3000
 ```
 
 The mapping format is:
@@ -54,14 +54,14 @@ The mapping format is:
 | Form | Meaning |
 | --- | --- |
 | `8080:3000` | Host port `8080` forwards to sandbox port `3000` |
-| `3000` | SmolVM picks a free host port for sandbox port `3000` |
+| `3000` | Celesto picks a free host port for sandbox port `3000` |
 
 ## list
 
 Show active forwards:
 
 ```bash
-smolvm sandbox port list my-sandbox
+celesto sandbox port list my-sandbox
 ```
 
 ## close
@@ -69,24 +69,24 @@ smolvm sandbox port list my-sandbox
 Close a forward:
 
 ```bash
-smolvm sandbox port close my-sandbox 8080:3000
+celesto sandbox port close my-sandbox 8080:3000
 ```
 
 ## Common workflow
 
 ```bash
-smolvm sandbox shell my-sandbox
+celesto sandbox shell my-sandbox
 # inside the sandbox:
 # cd /app && npm run dev -- --host 0.0.0.0
 
-smolvm sandbox port expose my-sandbox 3000:3000
+celesto sandbox port expose my-sandbox 3000:3000
 ```
 
 Open `http://127.0.0.1:3000` from your host browser.
 
 ## Transports
 
-SmolVM chooses the best forwarding transport for your host:
+Celesto chooses the best forwarding transport for your host:
 
 * `nftables` when the host can route directly to the guest.
 * `ssh_tunnel` when a background SSH tunnel is the safest path, such as on macOS.
@@ -96,5 +96,5 @@ You do not need to choose the transport yourself.
 ## Related commands
 
 * [Port forwarding](/smolvm/features/port-forwarding) - Use `vm.expose_local(...)` from Python
-* [`smolvm sandbox shell`](/smolvm/cli/shell) - Start the service inside the sandbox
-* [`smolvm sandbox stop`](/smolvm/cli/stop) - Stop the sandbox and release forwards
+* [`celesto sandbox shell`](/smolvm/cli/shell) - Start the service inside the sandbox
+* [`celesto sandbox stop`](/smolvm/cli/stop) - Stop the sandbox and release forwards

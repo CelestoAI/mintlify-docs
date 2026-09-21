@@ -2,7 +2,7 @@
 title: "Disposable macOS environments"
 sidebarTitle: "macOS sandboxes"
 description: "Create a disposable macOS desktop on an Apple Silicon Mac, open it with Screen Sharing, share local folders, and delete it when you finish."
-keywords: ["macOS sandbox", "disposable macOS environment", "macOS virtual machine", "Apple Silicon VM", "macOS desktop sandbox", "SmolVM macOS"]
+keywords: ["macOS sandbox", "disposable macOS environment", "macOS virtual machine", "Apple Silicon VM", "macOS desktop sandbox", "Celesto macOS"]
 ---
 
 A macOS sandbox gives you a temporary Mac desktop for testing apps, opening installers, and trying changes away from your everyday system. It runs locally on your Apple Silicon Mac and opens in Apple's built-in Screen Sharing app.
@@ -20,7 +20,7 @@ A macOS sandbox gives you a temporary Mac desktop for testing apps, opening inst
 - Delete the sandbox to discard its apps, files, and changes.
 - Reuse one prepared macOS image to create later sandboxes quickly.
 
-SmolVM keeps System Integrity Protection, Gatekeeper, and normal macOS permission prompts enabled. Apps behave as they would on a regular Mac.
+Celesto keeps System Integrity Protection, Gatekeeper, and normal macOS permission prompts enabled. Apps behave as they would on a regular Mac.
 
 ## Before you start
 
@@ -30,7 +30,7 @@ You need:
 - macOS 14 or newer
 - About 50 GB of free space for the first image preparation
 - An APFS volume, the standard file system on modern Macs
-- SmolVM installed locally using the [installation guide](/smolvm/installation)
+- Celesto installed locally using the [installation guide](/smolvm/installation)
 
 The first image preparation downloads an Apple restore file of about 15–18 GB. Download and installation usually take 20–40 minutes, depending on your connection and Mac.
 
@@ -48,13 +48,13 @@ After the one-time setup, you only need two commands: create the sandbox, then o
     Install the tested macOS desktop runtime:
 
     ```bash
-    smolvm setup --macos
+    celesto setup --macos
     ```
 
     Check that your Mac is ready:
 
     ```bash
-    smolvm doctor --backend vz
+    celesto doctor --backend vz
     ```
 
     `vz` is the local runtime that uses Apple's built-in virtualization support.
@@ -68,13 +68,13 @@ After the one-time setup, you only need two commands: create the sandbox, then o
     Create a sandbox named `nimble-mac`:
 
     ```bash
-    smolvm sandbox create --os macos --name nimble-mac
+    celesto sandbox create --os macos --name nimble-mac
     ```
 
-    On the first run, SmolVM asks before downloading and preparing macOS. Enter `y` to continue. The progress bar follows the download, installation, and desktop setup.
+    On the first run, Celesto asks before downloading and preparing macOS. Enter `y` to continue. The progress bar follows the download, installation, and desktop setup.
 
     ```text
-    No local macOS image is ready. SmolVM will download macOS from Apple...
+    No local macOS image is ready. Celesto will download macOS from Apple...
     Continue? [y/N]: y
     ```
 
@@ -91,12 +91,12 @@ After the one-time setup, you only need two commands: create the sandbox, then o
     │ OS      │ macos                   │
     │ Started │ 2026-07-24 18:08:50 UTC │
     └─────────┴─────────────────────────┘
-    Next: smolvm sandbox desktop nimble-mac
-    Info: smolvm sandbox info nimble-mac
+    Next: celesto sandbox desktop nimble-mac
+    Info: celesto sandbox info nimble-mac
     ```
 
     <Tip>
-      If installation fails after the download completes, run the same command again. SmolVM keeps the completed restore file and reuses it instead of downloading another copy.
+      If installation fails after the download completes, run the same command again. Celesto keeps the completed restore file and reuses it instead of downloading another copy.
     </Tip>
   </Step>
 
@@ -104,16 +104,16 @@ After the one-time setup, you only need two commands: create the sandbox, then o
     Run the `Next` command from the create output:
 
     ```bash
-    smolvm sandbox desktop nimble-mac
+    celesto sandbox desktop nimble-mac
     ```
 
-    SmolVM opens Screen Sharing and confirms the connection:
+    Celesto opens Screen Sharing and confirms the connection:
 
     ```text
     Opened the desktop for sandbox 'nimble-mac'.
     ```
 
-    SmolVM supplies the private Screen Sharing password automatically. At the macOS login screen, use:
+    Celesto supplies the private Screen Sharing password automatically. At the macOS login screen, use:
 
     - **Username:** `lume`
     - **Password:** `lume`
@@ -131,7 +131,7 @@ Copy and paste works in both directions between your Mac and a macOS sandbox out
 If you would rather keep the two clipboards separate, turn clipboard sync off when you create the sandbox:
 
 ```bash
-smolvm sandbox create --os macos --name private-mac --no-clipboard
+celesto sandbox create --os macos --name private-mac --no-clipboard
 ```
 
 The choice is saved with the sandbox, so stopping and starting it later keeps the same setting.
@@ -145,7 +145,7 @@ The choice is saved with the sandbox, so stopping and starting it later keeps th
 Create a new sandbox that can read your current folder:
 
 ```bash
-smolvm sandbox create --os macos --name shared-mac --mount "$PWD"
+celesto sandbox create --os macos --name shared-mac --mount "$PWD"
 ```
 
 Open Finder inside the sandbox to access the shared folder. The sandbox receives read-only access by default.
@@ -153,7 +153,7 @@ Open Finder inside the sandbox to access the shared folder. The sandbox receives
 Allow changes only when the sandbox needs to edit your local files:
 
 ```bash
-smolvm sandbox create --os macos --name editing-mac --mount "$PWD" --writable-mounts
+celesto sandbox create --os macos --name editing-mac --mount "$PWD" --writable-mounts
 ```
 
 <Warning>
@@ -165,19 +165,19 @@ smolvm sandbox create --os macos --name editing-mac --mount "$PWD" --writable-mo
 Stop the sandbox when you want to keep its private files for later:
 
 ```bash
-smolvm sandbox stop nimble-mac
+celesto sandbox stop nimble-mac
 ```
 
 Start it and open the desktop again:
 
 ```bash
-smolvm sandbox desktop nimble-mac --start
+celesto sandbox desktop nimble-mac --start
 ```
 
 Delete it when you want to discard its installed apps, files, and other changes:
 
 ```bash
-smolvm sandbox delete nimble-mac
+celesto sandbox delete nimble-mac
 ```
 
 The reusable macOS image remains after deletion, so the next sandbox starts much faster.
@@ -191,32 +191,32 @@ The reusable macOS image remains after deletion, so the next sandbox starts much
 Run the long preparation step before you need your first sandbox:
 
 ```bash
-smolvm image build --os macos --ipsw latest -t macos-latest
+celesto image build --os macos --ipsw latest -t macos-latest
 ```
 
 <Note>
-  SmolVM uses the macOS image's fixed size and selects `vz` automatically. Run the command as shown; `--size-mb` and `--backend` are available for Linux image builds instead.
+  Celesto uses the macOS image's fixed size and selects `vz` automatically. Run the command as shown; `--size-mb` and `--backend` are available for Linux image builds instead.
 </Note>
 
-SmolVM downloads the latest compatible restore file from Apple, installs it locally, and prepares the desktop account. Later `sandbox create` commands reuse this image.
+Celesto downloads the latest compatible restore file from Apple, installs it locally, and prepares the desktop account. Later `sandbox create` commands reuse this image.
 
 List local images:
 
 ```bash
-smolvm image list
+celesto image list
 ```
 
 Remove the reusable macOS image when you no longer need it:
 
 ```bash
-smolvm image rm macos-latest
+celesto image rm macos-latest
 ```
 
 Removing the image frees its local storage. The next macOS sandbox must prepare a new image.
 
 ## How it works
 
-SmolVM keeps one reusable macOS base image. Each sandbox receives a fast APFS clone, a private copy that stores only its own changes.
+Celesto keeps one reusable macOS base image. Each sandbox receives a fast APFS clone, a private copy that stores only its own changes.
 
 This means:
 
@@ -225,19 +225,19 @@ This means:
 - Stopping a sandbox keeps its changes.
 - Deleting a sandbox discards its private clone.
 
-The Screen Sharing connection listens on `127.0.0.1`, an address that only your Mac can reach. Screen Sharing uses <Tooltip tip="Virtual Network Computing, a standard way to view and control another computer's screen">VNC</Tooltip>. SmolVM stores the generated connection password in the sandbox's private files and keeps it out of commands, logs, and API responses.
+The Screen Sharing connection listens on `127.0.0.1`, an address that only your Mac can reach. Screen Sharing uses <Tooltip tip="Virtual Network Computing, a standard way to view and control another computer's screen">VNC</Tooltip>. Celesto stores the generated connection password in the sandbox's private files and keeps it out of commands, logs, and API responses.
 
 ### Lume
 
-SmolVM uses [Lume](https://github.com/trycua/cua/tree/main/libs/lume) behind the scenes to prepare and run the macOS desktop. Lume is an open-source project that works with Apple's built-in system for running virtual Macs.
+Celesto uses [Lume](https://github.com/trycua/cua/tree/main/libs/lume) behind the scenes to prepare and run the macOS desktop. Lume is an open-source project that works with Apple's built-in system for running virtual Macs.
 
-`smolvm setup --macos` installs the tested Lume version for you, and SmolVM handles it through the commands in this guide. The `lume` login name comes from the desktop account that Lume creates during automatic setup.
+`celesto setup --macos` installs the tested Lume version for you, and Celesto handles it through the commands in this guide. The `lume` login name comes from the desktop account that Lume creates during automatic setup.
 
 ## Preview limits
 
 - You can run at most two macOS sandboxes at the same time.
 - Each sandbox uses 4 CPU cores, 8 GB of memory, and an 80 GB logical disk. Custom sizes are not available yet.
-- Shell commands, SSH sessions, file transfer commands, and SSH tunnels are not available through SmolVM for macOS guests yet.
+- Shell commands, SSH sessions, file transfer commands, and SSH tunnels are not available through Celesto for macOS guests yet.
 - Bridge networking, outbound-domain rules, pause and resume, snapshots, and browser sessions are not available for macOS guests yet.
 - The prepared image and sandbox clones remain tied to the local Mac.
 
@@ -250,28 +250,28 @@ Review [Apple's software license agreements](https://www.apple.com/legal/sla/) a
     Enter only `y` or `n` at `Continue? [y/N]:`. For unattended scripts, approve the one-time image preparation explicitly:
 
     ```bash
-    smolvm sandbox create --os macos --name nimble-mac --yes
+    celesto sandbox create --os macos --name nimble-mac --yes
     ```
   </Accordion>
 
   <Accordion title="Image installation failed after the download">
-    Run the create command again. SmolVM stores a completed restore download under `~/.smolvm/images/macos/.downloads/` and reuses it for the next installation attempt.
+    Run the create command again. Celesto stores a completed restore download under `~/.smolvm/images/macos/.downloads/` and reuses it for the next installation attempt.
   </Accordion>
 
   <Accordion title="Screen Sharing did not open">
     Confirm that the sandbox is running, then allow more time for startup:
 
     ```bash
-    smolvm sandbox desktop nimble-mac --start --boot-timeout 120
+    celesto sandbox desktop nimble-mac --start --boot-timeout 120
     ```
   </Accordion>
 
-  <Accordion title="SmolVM reports an unsupported or unreadable runtime">
+  <Accordion title="Celesto reports an unsupported or unreadable runtime">
     Reinstall the tested runtime and check it again:
 
     ```bash
-    smolvm setup --macos
-    smolvm doctor --backend vz
+    celesto setup --macos
+    celesto doctor --backend vz
     ```
   </Accordion>
 
@@ -279,7 +279,7 @@ Review [Apple's software license agreements](https://www.apple.com/legal/sla/) a
     Apple allows at most two running macOS virtual machines on supported hardware. Stop one sandbox, then start the other:
 
     ```bash
-    smolvm sandbox stop nimble-mac
+    celesto sandbox stop nimble-mac
     ```
   </Accordion>
 </AccordionGroup>

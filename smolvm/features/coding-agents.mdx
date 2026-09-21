@@ -1,9 +1,9 @@
 ---
 title: "Coding Agents in Sandbox"
-description: "Run Claude Code, Codex, OpenCode, OpenClaw, Hermes, and Pi inside a SmolVM sandbox with full permissions — no accept-changes prompts and no host risk."
+description: "Run Claude Code, Codex, OpenCode, OpenClaw, Hermes, and Pi inside a Celesto sandbox with full permissions — no accept-changes prompts and no host risk."
 ---
 
-SmolVM lets you run coding agents and agent tools like Claude, Codex, OpenCode, OpenClaw, Hermes, and Pi inside an isolated sandbox. The agent gets a full development environment — git credentials, dev tools, terminal access — but nothing it does can affect your host machine.
+Celesto lets you run coding agents and agent tools like Claude, Codex, OpenCode, OpenClaw, Hermes, and Pi inside an isolated sandbox. The agent gets a full development environment — git credentials, dev tools, terminal access — but nothing it does can affect your host machine.
 
 No more pressing "accept changes" every few seconds. Let the agent work freely in its own computer.
 
@@ -16,37 +16,37 @@ No more pressing "accept changes" every few seconds. Let the agent work freely i
 <Tabs>
   <Tab title="Claude">
     ```bash
-    smolvm claude start
+    celesto claude start
     ```
   </Tab>
   <Tab title="Codex">
     ```bash
-    smolvm codex start
+    celesto codex start
     ```
   </Tab>
   <Tab title="OpenCode">
     ```bash
-    smolvm opencode start
+    celesto opencode start
     ```
   </Tab>
   <Tab title="OpenClaw">
     ```bash
-    smolvm openclaw start
+    celesto openclaw start
     ```
   </Tab>
   <Tab title="Hermes">
     ```bash
-    smolvm hermes start
+    celesto hermes start
     ```
   </Tab>
   <Tab title="Pi">
     ```bash
-    smolvm pi start
+    celesto pi start
     ```
   </Tab>
 </Tabs>
 
-Each command creates a sandbox and prepares the selected agent. Most presets forward supported credentials and configuration from your machine when available. OpenClaw starts with fresh configuration and only receives supported credential variables from the shell that starts SmolVM.
+Each command creates a sandbox and prepares the selected agent. Most presets forward supported credentials and configuration from your machine when available. OpenClaw starts with fresh configuration and only receives supported credential variables from the shell that starts Celesto.
 
 Presets with a matching pre-built image skip installation after downloading that image. Download time depends on your connection. OpenClaw and OpenCode currently install inside each new sandbox. See [Published images](/smolvm/concepts/published-images) for details.
 
@@ -59,19 +59,19 @@ OpenClaw includes a browser dashboard. Follow these steps to create a sandbox, f
     Create a named sandbox without opening its terminal session:
 
     ```bash
-    smolvm openclaw start --name openclaw-work --no-attach
+    celesto openclaw start --name openclaw-work --no-attach
     ```
 
-    SmolVM installs OpenClaw 2026.9.1 on Node.js 24.15.0 or newer after the sandbox starts, so creating each new sandbox can take several minutes. SmolVM shows each installation step while you wait. The OpenClaw preset supports Ubuntu sandboxes only.
+    Celesto installs OpenClaw 2026.9.1 on Node.js 24.15.0 or newer after the sandbox starts, so creating each new sandbox can take several minutes. Celesto shows each installation step while you wait. The OpenClaw preset supports Ubuntu sandboxes only.
 
-    The sandbox does not inherit `~/.openclaw/openclaw.json`, `~/.openclaw/.env`, or other OpenClaw state from your machine. Set a supported credential variable before starting SmolVM, or run `openclaw onboard` inside the sandbox.
+    The sandbox does not inherit `~/.openclaw/openclaw.json`, `~/.openclaw/.env`, or other OpenClaw state from your machine. Set a supported credential variable before starting Celesto, or run `openclaw onboard` inside the sandbox.
   </Step>
 
   <Step title="Find a running OpenClaw sandbox">
     List your running OpenClaw sandboxes when you need the name:
 
     ```bash
-    smolvm openclaw list
+    celesto openclaw list
     # NAME              STATUS   PID
     # openclaw-work     running  12345
     ```
@@ -81,17 +81,17 @@ OpenClaw includes a browser dashboard. Follow these steps to create a sandbox, f
     Include stopped, paused, and errored OpenClaw sandboxes with `--all`, narrow to one state with `--status`, or emit machine-readable output with `--json`:
 
     ```bash
-    smolvm openclaw list --all
-    smolvm openclaw list --status stopped
-    smolvm openclaw list --json
+    celesto openclaw list --all
+    celesto openclaw list --status stopped
+    celesto openclaw list --json
     ```
   </Step>
 
   <Step title="Check for older sandboxes">
-    The filtered list includes sandboxes that current SmolVM releases created with the OpenClaw preset. To look for an older or manually prepared sandbox, view the complete inventory:
+    The filtered list includes sandboxes that current Celesto releases created with the OpenClaw preset. To look for an older or manually prepared sandbox, view the complete inventory:
 
     ```bash
-    smolvm sandbox list --all
+    celesto sandbox list --all
     ```
   </Step>
 
@@ -99,30 +99,30 @@ OpenClaw includes a browser dashboard. Follow these steps to create a sandbox, f
     Use the sandbox name from the list:
 
     ```bash
-    smolvm openclaw open-ui openclaw-work
+    celesto openclaw open-ui openclaw-work
     ```
 
-    SmolVM starts the OpenClaw dashboard service when needed, creates a private connection available only on your machine, and opens a one-time link.
+    Celesto starts the OpenClaw dashboard service when needed, creates a private connection available only on your machine, and opens a one-time link.
   </Step>
 </Steps>
 
 <Note>
-  In SmolVM v0.0.31, `smolvm openclaw open-ui` replaces `smolvm openclaw open`. Update existing scripts: the old command is no longer accepted.
+  In Celesto v0.0.31, `celesto openclaw open-ui` replaces `celesto openclaw open`. Update existing scripts: the old command is no longer accepted.
 </Note>
 
 `open-ui` accepts three flags:
 
-- `--host-port PORT` — pin the localhost port that forwards to the dashboard. When omitted, SmolVM chooses a free port.
+- `--host-port PORT` — pin the localhost port that forwards to the dashboard. When omitted, Celesto chooses a free port.
 - `--no-browser` — print the one-time link instead of launching a browser. Useful on remote or headless machines.
 - `--json` — emit a machine-readable envelope with the sandbox name, dashboard URL, chosen host port, and cleanup command.
 
 ```bash
-smolvm openclaw open-ui openclaw-work --host-port 8899 --no-browser
+celesto openclaw open-ui openclaw-work --host-port 8899 --no-browser
 ```
 
-Treat the link as a credential. Close the local connection with the exact `smolvm sandbox port close` command printed by `open-ui`.
+Treat the link as a credential. Close the local connection with the exact `celesto sandbox port close` command printed by `open-ui`.
 
-Updating SmolVM leaves OpenClaw inside existing sandboxes unchanged. Before replacing an older sandbox, save a snapshot with [sandbox snapshots](/smolvm/cli/snapshot).
+Updating Celesto leaves OpenClaw inside existing sandboxes unchanged. Before replacing an older sandbox, save a snapshot with [sandbox snapshots](/smolvm/cli/snapshot).
 
 See [Coding-agent preset environment variables](/smolvm/guides/environment-variables#coding-agent-presets) for the credentials that you can explicitly pass to a fresh OpenClaw sandbox.
 
@@ -139,7 +139,7 @@ If none of these are present on your host, start the sandbox anyway and run `ope
 
 ```bash
 export ANTHROPIC_API_KEY=your-key
-smolvm opencode start
+celesto opencode start
 ```
 
 ## What you get
@@ -156,7 +156,7 @@ Each coding agent sandbox comes with:
 You can share folders from your machine so the coding agent can see your existing code. By default, shared folders are read-only — the agent can read your files but cannot modify the originals.
 
 ```bash
-smolvm claude start --mount ~/Projects/my-app
+celesto claude start --mount ~/Projects/my-app
 ```
 
 The agent sees your project files inside the sandbox at `/workspace`.
@@ -164,7 +164,7 @@ The agent sees your project files inside the sandbox at `/workspace`.
 To let the agent write changes back to your machine, add `--writable-mounts`:
 
 ```bash
-smolvm claude start --mount ~/Projects/my-app --writable-mounts
+celesto claude start --mount ~/Projects/my-app --writable-mounts
 ```
 
 <Warning>

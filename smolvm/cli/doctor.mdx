@@ -1,17 +1,17 @@
 ---
-title: "smolvm doctor"
-description: "Run smolvm doctor to verify your host meets all SmolVM prerequisites — KVM access, required binaries, network tools, and the chosen Firecracker or QEMU backend."
+title: "celesto doctor"
+description: "Run celesto doctor to verify your host meets all Celesto prerequisites — KVM access, required binaries, network tools, and the chosen Firecracker or QEMU backend."
 ---
 
 ## Synopsis
 
 ```bash  theme={null}
-smolvm doctor [OPTIONS]
+celesto doctor [OPTIONS]
 ```
 
 ## Description
 
-The `doctor` command runs comprehensive diagnostics on your system to verify that all prerequisites for running SmolVM are met. It checks for required binaries, permissions, KVM availability, and network configuration.
+The `doctor` command runs comprehensive diagnostics on your system to verify that all prerequisites for running Celesto are met. It checks for required binaries, permissions, KVM availability, and network configuration.
 
 ## Options
 
@@ -38,13 +38,13 @@ The `doctor` command runs comprehensive diagnostics on your system to verify tha
 Run diagnostics with auto-detected backend:
 
 ```bash  theme={null}
-smolvm doctor
+celesto doctor
 ```
 
 **Example output:**
 
 ```
-SmolVM Doctor
+Celesto Doctor
 Backend: firecracker (requested: auto)
 Platform: Linux x86_64
 
@@ -65,19 +65,19 @@ Doctor result: OK
 Check Firecracker-specific requirements:
 
 ```bash  theme={null}
-smolvm doctor --backend firecracker
+celesto doctor --backend firecracker
 ```
 
 Check QEMU-specific requirements:
 
 ```bash  theme={null}
-smolvm doctor --backend qemu
+celesto doctor --backend qemu
 ```
 
 **Example output (macOS):**
 
 ```
-SmolVM Doctor
+Celesto Doctor
 Backend: qemu (requested: qemu)
 Platform: Darwin arm64
 
@@ -93,7 +93,7 @@ Doctor result: OK
 Get machine-readable output for automation:
 
 ```bash  theme={null}
-smolvm doctor --json
+celesto doctor --json
 ```
 
 **Example output:**
@@ -150,13 +150,13 @@ smolvm doctor --json
 Fail on warnings:
 
 ```bash  theme={null}
-smolvm doctor --strict
+celesto doctor --strict
 ```
 
 **Example output:**
 
 ```
-SmolVM Doctor
+Celesto Doctor
 Backend: firecracker (requested: auto)
 Platform: Linux x86_64
 
@@ -227,10 +227,10 @@ When validating the QEMU backend, doctor checks:
 **Solution**: Run the setup command to install Firecracker:
 
 ```bash  theme={null}
-smolvm setup
+celesto setup
 ```
 
-If `SMOLVM_FIRECRACKER_DIR` is set, doctor only checks that folder and reports `Not found at <dir>/firecracker` instead. The suggested fix then includes the matching flag, for example `smolvm setup --firecracker-dir <dir>`.
+If `SMOLVM_FIRECRACKER_DIR` is set, doctor only checks that folder and reports `Not found at <dir>/firecracker` instead. The suggested fix then includes the matching flag, for example `celesto setup --firecracker-dir <dir>`.
 
 ### Missing network commands
 
@@ -250,4 +250,4 @@ sudo dnf install nftables
 
 ## Related Commands
 
-* [`smolvm sandbox delete`](/smolvm/cli/cleanup) - Delete sandboxes after diagnosing issues
+* [`celesto sandbox delete`](/smolvm/cli/cleanup) - Delete sandboxes after diagnosing issues

@@ -1,18 +1,18 @@
 ---
 title: "Technical architecture"
-description: "Deep dive into SmolVM's layered architecture — facade, lifecycle manager, Firecracker and QEMU backends, networking layer, and image management internals."
+description: "Deep dive into Celesto's layered architecture — facade, lifecycle manager, Firecracker and QEMU backends, networking layer, and image management internals."
 ---
 
-SmolVM is built as a layered system that abstracts Firecracker and QEMU microVMs into a simple Python API. This guide explains the internal architecture and how components interact.
+Celesto is built as a layered system that abstracts Firecracker and QEMU microVMs into a simple Python API. This guide explains the internal architecture and how components interact.
 
 ## Architecture Overview
 
-SmolVM follows a clean layered architecture:
+Celesto follows a clean layered architecture:
 
 ```mermaid
 flowchart TB
-  User["User Application"] --> Facade["facade.py<br/>(SmolVM class)<br/>High-level API"]
-  Facade --> VM["vm.py<br/>(SmolVMManager)<br/>Lifecycle orchestration"]
+  User["User Application"] --> Facade["facade.py<br/>(Celesto class)<br/>High-level API"]
+  Facade --> VM["vm.py<br/>(CelestoManager)<br/>Lifecycle orchestration"]
 
   VM --> API["api.py"]
   VM --> Storage["storage.py"]
@@ -29,15 +29,15 @@ flowchart TB
 
 | Component    | Responsibility                                                                         |
 | ------------ | -------------------------------------------------------------------------------------- |
-| `facade.py`  | User-facing `SmolVM` class with context managers and convenience methods               |
-| `vm.py`      | Core orchestrator (`SmolVMManager` class) managing VM lifecycle, networking, and state |
+| `facade.py`  | User-facing `Celesto` class with context managers and convenience methods               |
+| `vm.py`      | Core orchestrator (`CelestoManager` class) managing VM lifecycle, networking, and state |
 | `api.py`     | Low-level Firecracker HTTP API client over Unix sockets                                |
 | `storage.py` | SQLite-based state persistence for VMs, IPs, and port mappings                         |
 | `network.py` | Linux networking (TAP devices, NAT, port forwarding via nftables)                      |
 | `host.py`    | Environment validation and Firecracker binary management                               |
 
 <Note>
-  The `SmolVMManager` class in `vm.py` is exported as part of the public API but is primarily for advanced use cases. Most users should use the high-level `SmolVM` facade class instead.
+  The `CelestoManager` class in `vm.py` is exported as part of the public API but is primarily for advanced use cases. Most users should use the high-level `Celesto` facade class instead.
 </Note>
 
 ## Data Flow
@@ -45,16 +45,16 @@ flowchart TB
 ### VM Creation Flow
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
-vm = SmolVM()  # Creates facade.SmolVM instance
+vm = Celesto()  # Creates facade.Celesto instance
 vm.start()     # Triggers creation and start
 ```
 
 **Internal Flow**:
 
-1. **facade.SmolVM** → Initializes `vm.SmolVMManager`
-2. **vm.SmolVMManager.create()** →
+1. **facade.Celesto** → Initializes `vm.CelestoManager`
+2. **vm.CelestoManager.create()** →
    * Validates configuration
    * Determines effective backend (Firecracker/QEMU)
    * Materializes rootfs (isolated copy if needed)
@@ -80,10 +80,10 @@ vm.start()     # Triggers creation and start
 
 **Firecracker Backend**:
 
-1. **vm.SmolVMManager.start()** →
+1. **vm.CelestoManager.start()** →
    * Retrieves VM info from database
    * Validates VM is in `CREATED` or `STOPPED` state
-2. **vm.SmolVMManager.\_start\_firecracker()** →
+2. **vm.CelestoManager.\_start\_firecracker()** →
    * Spawns `firecracker --api-sock /tmp/fc-vm-xxxxx.sock`
    * Redirects stdout/stderr to log file
    * Detaches from terminal using `start_new_session=True`
@@ -107,7 +107,7 @@ vm.start()     # Triggers creation and start
 
 **QEMU Backend**:
 
-1. **vm.SmolVMManager.\_start\_qemu()** →
+1. **vm.CelestoManager.\_start\_qemu()** →
    * Finds `qemu-system-aarch64` or `qemu-system-x86_64` binary
    * Builds command line arguments
    * Configures user-mode networking (`-netdev user,hostfwd=tcp:...`)
@@ -125,7 +125,7 @@ vm.start()     # Triggers creation and start
 result = vm.run("echo hello")
 ```
 
-1. **facade.SmolVM.run()** →
+1. **facade.Celesto.run()** →
    * Delegates to SSH executor
 2. **ssh.SSHExecutor.execute()** →
    * Connects to `localhost:<ssh_host_port>` (QEMU)
@@ -142,7 +142,7 @@ vm.stop()
 vm.delete()  # Or automatic on context manager exit
 ```
 
-1. **vm.SmolVMManager.stop()** →
+1. **vm.CelestoManager.stop()** →
    * Retrieves VM info
    * Validates VM is `RUNNING`
 2. **Firecracker shutdown**:
@@ -157,7 +157,7 @@ vm.delete()  # Or automatic on context manager exit
 4. **storage.StateManager.update\_vm()** →
    * Sets status to `STOPPED`
    * Clears PID field
-5. **vm.SmolVMManager.delete()** →
+5. **vm.CelestoManager.delete()** →
    * Calls `stop()` if running
    * `vm._cleanup_resources()` →
      * Removes nftables rules (Firecracker)
@@ -170,7 +170,7 @@ vm.delete()  # Or automatic on context manager exit
 
 ## State Management
 
-SmolVM uses SQLite for durable state persistence across process restarts.
+Celesto uses SQLite for durable state persistence across process restarts.
 
 ### Database Schema
 
@@ -228,7 +228,7 @@ stateDiagram-v2
 
 ### Concurrency Safety
 
-SmolVM uses SQLite's `EXCLUSIVE` transaction mode for writes to ensure atomic IP/port allocation:
+Celesto uses SQLite's `EXCLUSIVE` transaction mode for writes to ensure atomic IP/port allocation:
 
 ```python  theme={null}
 # storage.py:63-86
@@ -296,11 +296,11 @@ qemu-system-aarch64 \
 
 ## Disk Management
 
-SmolVM gives each sandbox its own writable disk by default. That keeps one sandbox's changes from affecting the image you built or another sandbox that starts from the same image.
+Celesto gives each sandbox its own writable disk by default. That keeps one sandbox's changes from affecting the image you built or another sandbox that starts from the same image.
 
 ### Isolated Mode (Default)
 
-In isolated mode, SmolVM creates a per-VM disk under the local state directory:
+In isolated mode, Celesto creates a per-VM disk under the local state directory:
 
 ```
 ~/.local/state/smolvm/disks/
@@ -309,13 +309,13 @@ In isolated mode, SmolVM creates a per-VM disk under the local state directory:
 └── vm-ghi789.ext4
 ```
 
-SmolVM chooses the disk strategy from the backend and root filesystem format:
+Celesto chooses the disk strategy from the backend and root filesystem format:
 
 * **Firecracker** uses a private raw ext4 disk copied from the base rootfs.
 * **QEMU with qcow2** creates a thin per-VM qcow2 disk backed by the base image.
-* **QEMU with raw ext4** normally creates a qcow2 overlay. When `grow_filesystem=True`, SmolVM uses a raw per-VM disk so host-side ext4 growth can run safely.
+* **QEMU with raw ext4** normally creates a qcow2 overlay. When `grow_filesystem=True`, Celesto uses a raw per-VM disk so host-side ext4 growth can run safely.
 
-When you set `disk_size_mib`, SmolVM grows the per-VM disk before boot. For raw ext4 images, `grow_filesystem=True` also expands the filesystem with `e2fsck` and `resize2fs`. For qcow2 images, SmolVM can grow the virtual disk size, and the guest remains responsible for growing its partition or filesystem.
+When you set `disk_size_mib`, Celesto grows the per-VM disk before boot. For raw ext4 images, `grow_filesystem=True` also expands the filesystem with `e2fsck` and `resize2fs`. For qcow2 images, Celesto can grow the virtual disk size, and the guest remains responsible for growing its partition or filesystem.
 
 **Benefits**:
 
@@ -330,10 +330,10 @@ When you set `disk_size_mib`, SmolVM grows the per-VM disk before boot. For raw 
 
 ### Shared Mode
 
-In shared mode, SmolVM boots directly from `rootfs_path`:
+In shared mode, Celesto boots directly from `rootfs_path`:
 
 ```python  theme={null}
-from smolvm import VMConfig
+from celesto import VMConfig
 
 config = VMConfig(
     rootfs_path="/path/to/base.ext4",
@@ -345,7 +345,7 @@ config = VMConfig(
 
 1. Firecracker or QEMU mounts `config.rootfs_path` directly.
 2. Changes persist in the base image.
-3. SmolVM leaves the disk size unchanged.
+3. Celesto leaves the disk size unchanged.
 
 **Use cases**:
 
@@ -361,7 +361,7 @@ config = VMConfig(
 
 ## Backend Abstraction
 
-SmolVM abstracts the runtime backend behind one SDK and CLI. Most users leave the backend on `auto`, and SmolVM selects the right runtime for the host.
+Celesto abstracts the runtime backend behind one SDK and CLI. Most users leave the backend on `auto`, and Celesto selects the right runtime for the host.
 
 ### Firecracker Backend
 
@@ -390,13 +390,13 @@ SmolVM abstracts the runtime backend behind one SDK and CLI. Most users leave th
 ### Backend Selection
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
 # Auto-selects Firecracker on Linux and QEMU on macOS.
-vm = SmolVM()
+vm = Celesto()
 
 # Explicit override.
-qemu_vm = SmolVM(backend="qemu")
+qemu_vm = Celesto(backend="qemu")
 ```
 
 Backend resolution order:
@@ -431,7 +431,7 @@ Backend resolution order:
 ### SSH Trust Model
 
 <Warning>
-  SmolVM uses `paramiko.AutoAddPolicy` by default, which accepts any SSH host key without verification. This is intentional for local development but **should not be used** in production or multi-tenant environments.
+  Celesto uses `paramiko.AutoAddPolicy` by default, which accepts any SSH host key without verification. This is intentional for local development but **should not be used** in production or multi-tenant environments.
 </Warning>
 
 See `SECURITY.md` in the source repository for full security policy.
@@ -443,10 +443,10 @@ See `SECURITY.md` in the source repository for full security policy.
 Replace SQLite with your own database:
 
 ```python  theme={null}
-from smolvm.storage import StateManager
-from smolvm.types import VMInfo, VMConfig
+from celesto.storage import StateManagerProtocol
+from celesto.types import VMInfo, VMConfig
 
-class RedisStateManager(StateManager):
+class RedisStateManager(StateManagerProtocol):
     def create_vm(self, config: VMConfig) -> VMInfo:
         # Store in Redis
         pass
@@ -461,7 +461,7 @@ class RedisStateManager(StateManager):
 Implement alternative networking (e.g., OVS, CNI):
 
 ```python  theme={null}
-from smolvm.network import NetworkManager
+from celesto.host.network import NetworkManager
 
 class OVSNetworkManager(NetworkManager):
     def create_tap(self, tap_name: str, user: str) -> None:
@@ -474,9 +474,9 @@ class OVSNetworkManager(NetworkManager):
 Add support for other hypervisors (e.g., Cloud Hypervisor, crosvm):
 
 ```python  theme={null}
-from smolvm.vm import SmolVMManager
+from celesto.vm import CelestoManager
 
-class CloudHypervisorManager(SmolVMManager):
+class CloudHypervisorManager(CelestoManager):
     def _start_vm(self, vm_info: VMInfo) -> subprocess.Popen:
         # Launch cloud-hypervisor instead of firecracker
         pass

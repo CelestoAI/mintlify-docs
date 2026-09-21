@@ -1,80 +1,80 @@
 ---
 title: "CLI overview"
-description: "Overview of the SmolVM command-line interface for creating sandboxes, opening shells, managing snapshots, starting the HTTP server, and launching browser or desktop sessions."
+description: "Overview of the Celesto command-line interface for creating sandboxes, opening shells, managing snapshots, starting the HTTP server, and launching browser or desktop sessions."
 ---
 
-The SmolVM CLI lets you create and manage disposable computers from your terminal. Use it when you want to start a sandbox, open a shell, move files, expose a local port, or run the dashboard without writing Python code.
+The Celesto CLI lets you create and manage disposable computers from your terminal. Use it when you want to start a sandbox, open a shell, move files, expose a local port, or run the dashboard without writing Python code.
 
 ## Install
 
 Install the base CLI:
 
 ```bash
-pip install smolvm
+pip install celesto
 ```
 
 Install the dashboard and HTTP server dependencies:
 
 ```bash
-pip install "smolvm[dashboard]"
+pip install "celesto[dashboard]"
 ```
 
 ## Command groups
 
 | Command | What you can do |
 | --- | --- |
-| `smolvm sandbox` | Create, inspect, start, stop, pause, resume, connect to, and delete sandboxes; open macOS desktops with `sandbox desktop` |
-| `smolvm sandbox exec` | Run one command inside a running sandbox from a script or agent |
-| `smolvm sandbox logs` | Show a sandbox's host boot and console log |
-| `smolvm sandbox snapshot` | Save and restore sandbox state |
-| `smolvm sandbox file` | Copy files into or out of a sandbox |
-| `smolvm sandbox env` | Set, remove, and list sandbox environment variables |
-| `smolvm sandbox port` | Share a sandbox port on `127.0.0.1` |
-| `smolvm openclaw` | Create and list OpenClaw sandboxes; open the browser dashboard with `open-ui` ([guide](/smolvm/features/coding-agents#work-with-openclaw)) |
-| `smolvm browser` | Start browser and desktop-style browser sessions |
-| `smolvm windows` | Build a reusable Windows 11 `qcow2` image |
-| `smolvm server` | Start the local SmolVM HTTP API |
-| `smolvm ui` | Start the local dashboard |
-| `smolvm bridge` | Check host Linux bridges before using [bridged networking](/smolvm/features/bridged-networking) |
-| `smolvm completion` | Install shell tab completion for `bash`, `zsh`, or `fish` |
-| `smolvm doctor` | Check whether your host can run SmolVM |
-| `smolvm update` | Upgrade SmolVM to the latest stable release |
-| `smolvm image` | Pull, list, inspect, build, save, load, and prune cached sandbox images |
-| `smolvm images` | Alias of `smolvm image list` |
-| `smolvm prune` | Alias of `smolvm image prune` — remove image caches from older releases |
+| `celesto sandbox` | Create, inspect, start, stop, pause, resume, connect to, and delete sandboxes; open macOS desktops with `sandbox desktop` |
+| `celesto sandbox exec` | Run one command inside a running sandbox from a script or agent |
+| `celesto sandbox logs` | Show a sandbox's host boot and console log |
+| `celesto sandbox snapshot` | Save and restore sandbox state |
+| `celesto sandbox file` | Copy files into or out of a sandbox |
+| `celesto sandbox env` | Set, remove, and list sandbox environment variables |
+| `celesto sandbox port` | Share a sandbox port on `127.0.0.1` |
+| `celesto openclaw` | Create and list OpenClaw sandboxes; open the browser dashboard with `open-ui` ([guide](/smolvm/features/coding-agents#work-with-openclaw)) |
+| `celesto browser` | Start browser and desktop-style browser sessions |
+| `celesto windows` | Build a reusable Windows 11 `qcow2` image |
+| `celesto server` | Start the local Celesto HTTP API |
+| `celesto ui` | Start the local dashboard |
+| `celesto bridge` | Check host Linux bridges before using [bridged networking](/smolvm/features/bridged-networking) |
+| `celesto completion` | Install shell tab completion for `bash`, `zsh`, or `fish` |
+| `celesto doctor` | Check whether your host can run Celesto |
+| `celesto update` | Upgrade Celesto to the latest stable release |
+| `celesto image` | Pull, list, inspect, build, save, load, and prune cached sandbox images |
+| `celesto images` | Alias of `celesto image list` |
+| `celesto prune` | Alias of `celesto image prune` — remove image caches from older releases |
 
 ## Everyday sandbox workflow
 
 Create a sandbox, open the fast shell, then stop it when you are done:
 
 ```bash
-smolvm sandbox create --name my-sandbox
-smolvm sandbox shell my-sandbox
-smolvm sandbox stop my-sandbox
+celesto sandbox create --name my-sandbox
+celesto sandbox shell my-sandbox
+celesto sandbox stop my-sandbox
 ```
 
 Use SSH when you specifically need a real SSH session:
 
 ```bash
-smolvm sandbox ssh my-sandbox
+celesto sandbox ssh my-sandbox
 ```
 
 List your sandboxes:
 
 ```bash
-smolvm sandbox list --all
+celesto sandbox list --all
 ```
 
-Run a single command in a sandbox from a script or agent — the guest's exit code becomes `smolvm`'s exit code:
+Run a single command in a sandbox from a script or agent — the guest's exit code becomes `celesto`'s exit code:
 
 ```bash
-smolvm sandbox exec my-sandbox -- python --version
+celesto sandbox exec my-sandbox -- python --version
 ```
 
 Read the host boot and console log when something goes wrong at startup:
 
 ```bash
-smolvm sandbox logs my-sandbox --follow
+celesto sandbox logs my-sandbox --follow
 ```
 
 ## macOS desktop workflow
@@ -82,20 +82,20 @@ smolvm sandbox logs my-sandbox --follow
 On an Apple Silicon Mac, create a disposable macOS environment:
 
 ```bash
-smolvm sandbox create --os macos --name nimble-mac
+celesto sandbox create --os macos --name nimble-mac
 ```
 
 The create output confirms that the sandbox is running and includes the next command:
 
 ```text
-Next: smolvm sandbox desktop nimble-mac
-Info: smolvm sandbox info nimble-mac
+Next: celesto sandbox desktop nimble-mac
+Info: celesto sandbox info nimble-mac
 ```
 
 Run the `Next` command to open the sandbox in Screen Sharing:
 
 ```bash
-smolvm sandbox desktop nimble-mac
+celesto sandbox desktop nimble-mac
 ```
 
 ```text
@@ -106,21 +106,21 @@ The first run prepares a reusable local image. See [Disposable macOS environment
 
 ## Tab completion
 
-Turn on tab completion so your shell can finish `smolvm` commands, options, and the names of your existing sandboxes:
+Turn on tab completion so your shell can finish `celesto` commands, options, and the names of your existing sandboxes:
 
 ```bash
-smolvm completion bash --install   # also: zsh, fish
+celesto completion bash --install   # also: zsh, fish
 ```
 
-See [`smolvm completion`](/smolvm/cli/completion) for the manual setup and per-shell details.
+See [`celesto completion`](/smolvm/cli/completion) for the manual setup and per-shell details.
 
 ## Snapshot workflow
 
 Create a checkpoint before a risky change, then restore it later:
 
 ```bash
-smolvm sandbox snapshot create my-sandbox --snapshot-id before-change --resume-source
-smolvm sandbox snapshot restore before-change --resume
+celesto sandbox snapshot create my-sandbox --snapshot-id before-change --resume-source
+celesto sandbox snapshot restore before-change --resume
 ```
 
 ## File, env, and port workflow
@@ -128,9 +128,9 @@ smolvm sandbox snapshot restore before-change --resume
 Copy files, set environment variables, and expose a sandbox service:
 
 ```bash
-smolvm sandbox file upload my-sandbox ./prompt.txt /workspace/prompt.txt
-smolvm sandbox env set my-sandbox MODEL=gpt-4.1
-smolvm sandbox port expose my-sandbox 8080:3000
+celesto sandbox file upload my-sandbox ./prompt.txt /workspace/prompt.txt
+celesto sandbox env set my-sandbox MODEL=gpt-4.1
+celesto sandbox port expose my-sandbox 8080:3000
 ```
 
 ## Browser workflow
@@ -138,23 +138,23 @@ smolvm sandbox port expose my-sandbox 8080:3000
 Start a browser sandbox with a live viewer:
 
 ```bash
-smolvm browser start --live --json
+celesto browser start --live --json
 ```
 
 The JSON response includes the session ID and viewer URLs. Use the session ID with other browser commands:
 
 ```bash
-smolvm browser list
-smolvm browser open <session_id>
-smolvm browser stop <session_id>
+celesto browser list
+celesto browser open <session_id>
+celesto browser stop <session_id>
 ```
 
 ## HTTP API workflow
 
-Start the local API server when you want another process, script, or TypeScript client to manage SmolVM:
+Start the local API server when you want another process, script, or TypeScript client to manage Celesto:
 
 ```bash
-smolvm server start --host 127.0.0.1 --port 8000
+celesto server start --host 127.0.0.1 --port 8000
 ```
 
 See [HTTP API and TypeScript SDK](/smolvm/guides/http-api-typescript-sdk) for endpoint and client examples.
@@ -164,15 +164,15 @@ See [HTTP API and TypeScript SDK](/smolvm/guides/http-api-typescript-sdk) for en
 Display help for the main command:
 
 ```bash
-smolvm --help
+celesto --help
 ```
 
 Display help for a subcommand:
 
 ```bash
-smolvm sandbox create --help
-smolvm sandbox snapshot create --help
-smolvm server start --help
+celesto sandbox create --help
+celesto sandbox snapshot create --help
+celesto server start --help
 ```
 
 ## Next steps

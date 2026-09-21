@@ -51,7 +51,7 @@
         ]
       },
       {
-        "tab": "SmolVM",
+        "tab": "Celesto",
         "groups": [
           {
             "group": "Get Started",
@@ -250,7 +250,7 @@
             ]
           },
           {
-            "group": "SmolVM API",
+            "group": "Celesto API",
             "pages": [
               "smolvm/api/smolvm",
               "smolvm/api/browsersession",
@@ -275,7 +275,7 @@
             ]
           },
           {
-            "group": "SmolVM CLI",
+            "group": "Celesto CLI",
             "pages": [
               "smolvm/cli/overview",
               "smolvm/cli/create",

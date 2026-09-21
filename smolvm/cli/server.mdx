@@ -1,22 +1,22 @@
 ---
-title: "smolvm server"
-description: "Use smolvm server start to run the local SmolVM HTTP API for scripts, service integrations, and the TypeScript SDK."
+title: "celesto server"
+description: "Use celesto server start to run the local Celesto HTTP API for scripts, service integrations, and the TypeScript SDK."
 ---
 
-`smolvm server start` runs a local HTTP API that can create sandboxes, list them, delete them, and run commands inside them. Use it when another process needs to control SmolVM without importing the Python SDK.
+`celesto server start` runs a local HTTP API that can create sandboxes, list them, delete them, and run commands inside them. Use it when another process needs to control Celesto without importing the Python SDK.
 
 ## Install dependencies
 
 The server uses the same web dependencies as the dashboard:
 
 ```bash
-pip install "smolvm[dashboard]"
+pip install "celesto[dashboard]"
 ```
 
 ## Synopsis
 
 ```bash
-smolvm server start [OPTIONS]
+celesto server start [OPTIONS]
 ```
 
 ## Options
@@ -32,13 +32,13 @@ smolvm server start [OPTIONS]
 ## Start the server
 
 ```bash
-smolvm server start --host 127.0.0.1 --port 8000
+celesto server start --host 127.0.0.1 --port 8000
 ```
 
 The command prints the API URL and OpenAPI spec URL:
 
 ```text
-SmolVM HTTP API listening on http://127.0.0.1:8000
+Celesto HTTP API listening on http://127.0.0.1:8000
 OpenAPI spec: http://127.0.0.1:8000/openapi.json
 ```
 
@@ -84,5 +84,5 @@ curl -s -X POST "http://127.0.0.1:8000/sandboxes/${sandbox_id}/exec" \
 ## Related
 
 * [HTTP API and TypeScript SDK](/smolvm/guides/http-api-typescript-sdk) - Build against the API
-* [`smolvm ui`](/smolvm/cli/ui) - Start the dashboard
-* [`smolvm sandbox create`](/smolvm/cli/create) - Create sandboxes from the CLI
+* [`celesto ui`](/smolvm/cli/ui) - Start the dashboard
+* [`celesto sandbox create`](/smolvm/cli/create) - Create sandboxes from the CLI

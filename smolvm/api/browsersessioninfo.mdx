@@ -1,11 +1,11 @@
 ---
 title: "Display sandbox object"
-description: "Reference for the object returned by SmolVM.browser() and SmolVM.desktop(), including URLs, IDs, lifecycle methods, and browser helpers."
+description: "Reference for the object returned by Celesto.browser() and Celesto.desktop(), including URLs, IDs, lifecycle methods, and browser helpers."
 ---
 
 ## Overview
 
-`SmolVM.browser()` and `SmolVM.desktop()` return a sandbox object that is ready to use. Read its URLs to connect tools, use its lifecycle methods to stop it, and use browser helpers when the sandbox runs Chromium.
+`Celesto.browser()` and `Celesto.desktop()` return a sandbox object that is ready to use. Read its URLs to connect tools, use its lifecycle methods to stop it, and use browser helpers when the sandbox runs Chromium.
 
 The same object works as a context manager, so the sandbox stops when the `with` block exits.
 
@@ -16,7 +16,7 @@ The same object works as a context manager, so the sandbox stops when the `with`
 </ResponseField>
 
 <ResponseField name="vm_id" type="str">
-  ID of the underlying SmolVM sandbox.
+  ID of the underlying Celesto sandbox.
 </ResponseField>
 
 <ResponseField name="cdp_url" type="str | None">
@@ -59,7 +59,7 @@ Stops the sandbox and releases its VM resources.
 def delete() -> None
 ```
 
-Alias for `stop()`. Use it when you want the same naming style as regular `SmolVM` sandboxes.
+Alias for `stop()`. Use it when you want the same naming style as regular `Celesto` sandboxes.
 
 ### close
 
@@ -79,7 +79,7 @@ Opens `viewer_url` in your default browser and returns whether the local browser
 
 ## Browser helpers
 
-These helpers are available when the object came from `SmolVM.browser()`.
+These helpers are available when the object came from `Celesto.browser()`.
 
 ### connect_playwright
 
@@ -144,9 +144,9 @@ Returns recent host and guest logs for the sandbox.
 ## Example
 
 ```python display_sandbox.py
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM.browser(headless=False) as browser:
+with Celesto.browser(headless=False) as browser:
     print(browser.session_id)
     print(browser.cdp_url)
     print(browser.viewer_url)

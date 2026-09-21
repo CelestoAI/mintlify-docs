@@ -1,16 +1,16 @@
 ---
-title: "smolvm update"
-description: "Upgrade SmolVM to the latest stable release with one command. Check for updates without installing, or pipe machine-readable JSON output into scripts."
+title: "celesto update"
+description: "Upgrade Celesto to the latest stable release with one command. Check for updates without installing, or pipe machine-readable JSON output into scripts."
 ---
 
-`smolvm update` upgrades your installed SmolVM to the latest stable release from PyPI. You don't need to remember whether you installed SmolVM with `pip` or as a `uv` tool — the command detects how you installed it and runs the matching upgrade for you.
+`celesto update` upgrades your installed Celesto to the latest stable release from PyPI. You don't need to remember whether you installed Celesto with `pip` or as a `uv` tool — the command detects how you installed it and runs the matching upgrade for you.
 
 Run it any time you want to pick up the newest release, or use `--check` first to see whether an update is available before installing it.
 
 ## Synopsis
 
 ```bash  theme={null}
-smolvm update [OPTIONS]
+celesto update [OPTIONS]
 ```
 
 ## Options
@@ -30,37 +30,37 @@ smolvm update [OPTIONS]
 See whether a newer release is available without changing anything:
 
 ```bash  theme={null}
-smolvm update --check
+celesto update --check
 ```
 
 **Example output when an update is available:**
 
 ```
-Update available: 0.0.14 → 0.0.15. Run smolvm update to install.
+Update available: 0.0.14 → 0.0.15. Run celesto update to install.
 ```
 
 **Example output when you're already up to date:**
 
 ```
-smolvm 0.0.15 is up to date.
+celesto 0.0.15 is up to date.
 ```
 
 ### Upgrade to the latest release
 
-Run the upgrade. SmolVM picks the right package manager based on how it was installed:
+Run the upgrade. Celesto picks the right package manager based on how it was installed:
 
 ```bash  theme={null}
-smolvm update
+celesto update
 ```
 
-If you installed SmolVM with `uv tool install smolvm`, this runs `uv tool upgrade smolvm`. Otherwise it runs `pip install --upgrade smolvm`. Output from the underlying package manager streams live to your terminal.
+If you installed Celesto with `uv tool install celesto`, this runs `uv tool upgrade celesto`. Otherwise it runs `pip install --upgrade celesto`. Output from the underlying package manager streams live to your terminal.
 
 ### JSON output for automation
 
 Get a structured response you can parse from a script:
 
 ```bash  theme={null}
-smolvm update --json
+celesto update --json
 ```
 
 The response includes the previous version, the version now installed, whether an upgrade happened, and the raw output from the underlying package manager:
@@ -81,19 +81,19 @@ The response includes the previous version, the version now installed, whether a
 Combine `--check` and `--json` to script update detection:
 
 ```bash  theme={null}
-smolvm update --check --json | jq '.data.update_available'
+celesto update --check --json | jq '.data.update_available'
 ```
 
 The check response includes `current`, `latest`, and an `update_available` boolean.
 
 ## How install detection works
 
-`smolvm update` looks for `smolvm` in the list returned by `uv tool list`. If it's there, the upgrade goes through `uv`. Otherwise it falls back to `pip install --upgrade smolvm` running under the same Python interpreter that started the CLI.
+`celesto update` looks for `celesto` in the list returned by `uv tool list`. If it's there, the upgrade goes through `uv`. Otherwise it falls back to `pip install --upgrade celesto` running under the same Python interpreter that started the CLI.
 
-If the upgrade fails (for example, because the network is unreachable), SmolVM prints a recovery command you can run manually:
+If the upgrade fails (for example, because the network is unreachable), Celesto prints a recovery command you can run manually:
 
 ```bash  theme={null}
-pip install --upgrade smolvm
+pip install --upgrade celesto
 ```
 
 ## Exit codes
@@ -105,5 +105,5 @@ pip install --upgrade smolvm
 
 ## Related commands
 
-* [`smolvm prune`](/smolvm/cli/prune) — reclaim disk space from older releases after an upgrade
-* [`smolvm doctor`](/smolvm/cli/doctor) — verify your install after an upgrade
+* [`celesto prune`](/smolvm/cli/prune) — reclaim disk space from older releases after an upgrade
+* [`celesto doctor`](/smolvm/cli/doctor) — verify your install after an upgrade

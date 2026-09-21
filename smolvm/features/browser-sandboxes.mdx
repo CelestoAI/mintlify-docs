@@ -1,10 +1,10 @@
 ---
 title: "Browser sandboxes"
 sidebarTitle: "Browser Sandboxes"
-description: "Run a real browser inside an isolated SmolVM sandbox for agents, Playwright automation, live viewing, and computer-use workflows."
+description: "Run a real browser inside an isolated Celesto sandbox for agents, Playwright automation, live viewing, and computer-use workflows."
 ---
 
-SmolVM can start a real browser in a throwaway computer for your agent. The agent can open websites, click buttons, fill forms, take screenshots, and download files while your own browser and files stay separate.
+Celesto can start a real browser in a throwaway computer for your agent. The agent can open websites, click buttons, fill forms, take screenshots, and download files while your own browser and files stay separate.
 
 Use browser sandboxes when an agent needs to work through a website instead of an API. This is useful for web research, scraping pages with JavaScript, testing web apps, filling forms, and building computer-use workflows where a model sees the screen and sends back actions.
 
@@ -20,9 +20,9 @@ Use browser sandboxes when an agent needs to work through a website instead of a
 
 | Need | Use | Returned URLs |
 | --- | --- | --- |
-| Fast browser automation | `SmolVM.browser(headless=True)` | `cdp_url` |
-| Browser automation with a live screen | `SmolVM.browser(headless=False)` | `cdp_url`, `viewer_url`, `display_url` |
-| Full desktop screen control | `SmolVM.desktop()` | `viewer_url`, `display_url` |
+| Fast browser automation | `Celesto.browser(headless=True)` | `cdp_url` |
+| Browser automation with a live screen | `Celesto.browser(headless=False)` | `cdp_url`, `viewer_url`, `display_url` |
+| Full desktop screen control | `Celesto.desktop()` | `viewer_url`, `display_url` |
 
 Headless browser mode has the smallest browser surface because it only exposes the browser automation endpoint. Visible browser mode starts the live viewer and VNC display as well. Use desktop mode when your agent needs the whole desktop, not just Chromium.
 
@@ -31,9 +31,9 @@ Headless browser mode has the smallest browser surface because it only exposes t
 <Tabs>
   <Tab title="Python">
     ```python browser_sandbox.py
-    from smolvm import SmolVM
+    from celesto import Celesto
 
-    with SmolVM.browser(
+    with Celesto.browser(
         headless=False,
         viewport={"width": 1440, "height": 900},
     ) as browser:
@@ -44,10 +44,10 @@ Headless browser mode has the smallest browser surface because it only exposes t
   </Tab>
   <Tab title="CLI">
     ```bash
-    smolvm browser start --live
-    smolvm browser list
-    smolvm browser open <session_id>
-    smolvm browser stop <session_id>
+    celesto browser start --live
+    celesto browser list
+    celesto browser open <session_id>
+    celesto browser stop <session_id>
     ```
   </Tab>
 </Tabs>
@@ -59,9 +59,9 @@ Headless browser mode has the smallest browser surface because it only exposes t
 Use `connect_playwright()` when you want Python code to drive the sandbox browser.
 
 ```python playwright_browser.py
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM.browser(headless=True) as sandbox:
+with Celesto.browser(headless=True) as sandbox:
     browser = sandbox.connect_playwright()
     page = browser.new_page()
     page.goto("https://example.com")
@@ -78,9 +78,9 @@ with SmolVM.browser(headless=True) as sandbox:
 Visible browser mode gives you a live web viewer:
 
 ```python live_view.py
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM.browser(headless=False) as browser:
+with Celesto.browser(headless=False) as browser:
     browser.open_viewer()
     print(browser.viewer_url)
 ```
@@ -94,9 +94,9 @@ This is especially useful for computer-use agents. The model can use screenshots
 Use `profile_id` when a workflow needs cookies, local storage, or login state again later. Each profile gets its own sandbox browser state.
 
 ```python browser_profile.py
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM.browser(profile_id="vendor-portal") as browser:
+with Celesto.browser(profile_id="vendor-portal") as browser:
     print(browser.cdp_url)
 ```
 
@@ -107,9 +107,9 @@ Use separate profile IDs for separate accounts or customers. That keeps sessions
 Browser sandboxes can save screenshots and collect session files before the sandbox stops.
 
 ```python browser_artifacts.py
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM.browser(
+with Celesto.browser(
     headless=False,
     record_video=True,
     allow_downloads=True,

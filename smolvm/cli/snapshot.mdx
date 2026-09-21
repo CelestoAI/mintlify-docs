@@ -1,17 +1,17 @@
 ---
-title: "smolvm sandbox snapshot"
-description: "Use smolvm sandbox snapshot to save, restore, list, and delete sandbox checkpoints for retries, handoffs, and long-running agent workflows."
+title: "celesto sandbox snapshot"
+description: "Use celesto sandbox snapshot to save, restore, list, and delete sandbox checkpoints for retries, handoffs, and long-running agent workflows."
 ---
 
-`smolvm sandbox snapshot` saves sandbox state so you can return to it later. Use snapshots before risky commands, before handing a sandbox to an agent, or after installing expensive dependencies.
+`celesto sandbox snapshot` saves sandbox state so you can return to it later. Use snapshots before risky commands, before handing a sandbox to an agent, or after installing expensive dependencies.
 
 ## Synopsis
 
 ```bash
-smolvm sandbox snapshot create <sandbox> [OPTIONS]
-smolvm sandbox snapshot restore <snapshot> [OPTIONS]
-smolvm sandbox snapshot list [OPTIONS]
-smolvm sandbox snapshot delete <snapshot> [OPTIONS]
+celesto sandbox snapshot create <sandbox> [OPTIONS]
+celesto sandbox snapshot restore <snapshot> [OPTIONS]
+celesto sandbox snapshot list [OPTIONS]
+celesto sandbox snapshot delete <snapshot> [OPTIONS]
 ```
 
 <Note>
@@ -23,7 +23,7 @@ smolvm sandbox snapshot delete <snapshot> [OPTIONS]
 Save a running or paused sandbox.
 
 ```bash
-smolvm sandbox snapshot create <sandbox> \
+celesto sandbox snapshot create <sandbox> \
   [--snapshot-id <id>] \
   [--snapshot-type full|diff|disk] \
   [--resume-source] \
@@ -37,7 +37,7 @@ smolvm sandbox snapshot create <sandbox> \
 </ParamField>
 
 <ParamField path="--snapshot-id" type="string">
-  Custom snapshot ID. If omitted, SmolVM creates one.
+  Custom snapshot ID. If omitted, Celesto creates one.
 </ParamField>
 
 <ParamField path="--snapshot-type" type="string" default="full">
@@ -57,7 +57,7 @@ smolvm sandbox snapshot create <sandbox> \
 </ParamField>
 
 ```bash
-smolvm sandbox snapshot create my-sandbox \
+celesto sandbox snapshot create my-sandbox \
   --snapshot-id before-deploy \
   --resume-source
 ```
@@ -65,13 +65,13 @@ smolvm sandbox snapshot create my-sandbox \
 Create a QEMU disk-only snapshot:
 
 ```bash
-smolvm sandbox snapshot create my-sandbox --snapshot-type disk
+celesto sandbox snapshot create my-sandbox --snapshot-type disk
 ```
 
 Take a live disk snapshot of a running QEMU sandbox without pausing the guest:
 
 ```bash
-smolvm sandbox snapshot create my-sandbox \
+celesto sandbox snapshot create my-sandbox \
   --snapshot-id live-checkpoint \
   --snapshot-type disk \
   --resume-source \
@@ -81,7 +81,7 @@ smolvm sandbox snapshot create my-sandbox \
 Use `--flush-policy` to trade durability for speed. This example keeps a sandbox running through a live snapshot and doesn't fail if the guest agent can't flush:
 
 ```bash
-smolvm sandbox snapshot create my-sandbox \
+celesto sandbox snapshot create my-sandbox \
   --snapshot-type disk \
   --resume-source \
   --live-only \
@@ -93,7 +93,7 @@ smolvm sandbox snapshot create my-sandbox \
 Restore a snapshot back into its sandbox identity.
 
 ```bash
-smolvm sandbox snapshot restore <snapshot> [--resume] [--force] [--json]
+celesto sandbox snapshot restore <snapshot> [--resume] [--force] [--json]
 ```
 
 <ParamField path="snapshot" type="string" required>
@@ -105,11 +105,11 @@ smolvm sandbox snapshot restore <snapshot> [--resume] [--force] [--json]
 </ParamField>
 
 <ParamField path="--force" type="flag">
-  Restore a snapshot even if SmolVM has already marked it restored.
+  Restore a snapshot even if Celesto has already marked it restored.
 </ParamField>
 
 ```bash
-smolvm sandbox snapshot restore before-deploy --resume
+celesto sandbox snapshot restore before-deploy --resume
 ```
 
 ## list
@@ -117,11 +117,11 @@ smolvm sandbox snapshot restore before-deploy --resume
 List snapshots, optionally filtered by source sandbox.
 
 ```bash
-smolvm sandbox snapshot list [--vm-id <sandbox>] [--json]
+celesto sandbox snapshot list [--vm-id <sandbox>] [--json]
 ```
 
 ```bash
-smolvm sandbox snapshot list --vm-id my-sandbox
+celesto sandbox snapshot list --vm-id my-sandbox
 ```
 
 ## delete
@@ -129,7 +129,7 @@ smolvm sandbox snapshot list --vm-id my-sandbox
 Delete a snapshot and its files.
 
 ```bash
-smolvm sandbox snapshot delete <snapshot> [--json]
+celesto sandbox snapshot delete <snapshot> [--json]
 ```
 
 <Warning>
@@ -138,7 +138,7 @@ smolvm sandbox snapshot delete <snapshot> [--json]
 
 ## Guest sync before disk snapshots
 
-For disk snapshots, SmolVM asks the guest to flush filesystem state before it copies the disk. Recent images answer this through the SmolVM guest agent over the control channel, with SSH as a fallback where needed.
+For disk snapshots, Celesto asks the guest to flush filesystem state before it copies the disk. Recent images answer this through the Celesto guest agent over the control channel, with SSH as a fallback where needed.
 
 Use `--flush-policy` to tune this step: `required` (default) fails the snapshot if the flush cannot succeed, `best-effort` continues with a crash-consistent copy, and `skip` bypasses the flush entirely.
 
@@ -146,6 +146,6 @@ If snapshot creation times out during guest sync, check [Control channel](/smolv
 
 ## Related commands
 
-* [`smolvm sandbox list`](/smolvm/cli/list) - Find sandbox names
-* [`smolvm sandbox shell`](/smolvm/cli/shell) - Inspect a restored sandbox
+* [`celesto sandbox list`](/smolvm/cli/list) - Find sandbox names
+* [`celesto sandbox shell`](/smolvm/cli/shell) - Inspect a restored sandbox
 * [Snapshot and restore sandboxes](/smolvm/features/snapshots) - Learn when to use each snapshot type

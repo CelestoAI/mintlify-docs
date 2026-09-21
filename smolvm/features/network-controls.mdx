@@ -3,7 +3,7 @@ title: "Network Controls"
 description: "Cut off a sandbox's internet, or allow only specific IPv4 destinations, using the internet_settings policy on Firecracker and QEMU sandboxes."
 ---
 
-Use `internet_settings` when a sandbox should run with no outbound access, or should only reach a short list of IPv4 destinations. SmolVM enforces the policy on both Firecracker and QEMU, validates it before allocating any resources, and preserves it across the sandbox's lifetime.
+Use `internet_settings` when a sandbox should run with no outbound access, or should only reach a short list of IPv4 destinations. Celesto enforces the policy on both Firecracker and QEMU, validates it before allocating any resources, and preserves it across the sandbox's lifetime.
 
 ## Choose a mode
 
@@ -16,7 +16,7 @@ Use `internet_settings` when a sandbox should run with no outbound access, or sh
 Copy-paste a policy declaration:
 
 ```python
-from smolvm import InternetSettings
+from celesto import InternetSettings
 
 policy = InternetSettings(
     mode="restricted",
@@ -24,7 +24,7 @@ policy = InternetSettings(
 )
 ```
 
-You can also pass a plain dict as `internet_settings={"mode": "off"}` or `{"mode": "restricted", "allowed_cidrs": [...]}` on `SmolVM(...)`, `SmolVM.from_image(...)`, or `VMConfig(...)`.
+You can also pass a plain dict as `internet_settings={"mode": "off"}` or `{"mode": "restricted", "allowed_cidrs": [...]}` on `Celesto(...)`, `Celesto.from_image(...)`, or `VMConfig(...)`.
 
 ## Platform coverage
 
@@ -34,16 +34,16 @@ You can also pass a plain dict as `internet_settings={"mode": "off"}` or `{"mode
 | QEMU `slirp` (default) | `open`, `off` | `open`, `off` | None |
 | QEMU `tap` (explicit) | Not supported | `open`, `off`, `restricted` | Existing Linux TAP setup |
 
-These controls apply to Linux guests. Windows and macOS guests are not included. SmolVM never switches a QEMU sandbox to TAP automatically; opt in with `network="tap"` on `SmolVM.from_image` or `qemu_network="tap"` on `VMConfig`.
+These controls apply to Linux guests. Windows and macOS guests are not included. Celesto never switches a QEMU sandbox to TAP automatically; opt in with `network="tap"` on `Celesto.from_image` or `qemu_network="tap"` on `VMConfig`.
 
 ## Turn outbound access off
 
 QEMU can block outbound access on both macOS and Linux while keeping local application access and shared folders available:
 
 ```python
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM(
+with Celesto(
     backend="qemu",
     internet_settings={"mode": "off"},
 ) as vm:
@@ -55,7 +55,7 @@ QEMU `slirp` uses QEMU's built-in restriction and disables IPv6. Launch-time por
 On Linux, Firecracker also supports off mode when commands and files use the direct `vsock` connection:
 
 ```python
-with SmolVM(
+with Celesto(
     backend="firecracker",
     comm_channel="vsock",
     internet_settings={"mode": "off"},
@@ -72,9 +72,9 @@ Use `restricted` with the addresses or network ranges the task needs. This mode 
 With a prepared `BootImage` named `image`:
 
 ```python
-from smolvm import SmolVM
+from celesto import Celesto
 
-vm = SmolVM.from_image(
+vm = Celesto.from_image(
     image,
     backend="qemu",
     network="tap",
@@ -95,13 +95,13 @@ In off and restricted TAP modes, the sandbox can reply to IPv4 TCP connections i
 
 ## Validate before allocating resources
 
-SmolVM validates a policy before it prepares images, boots the VM, or reserves host resources. Invalid settings raise `smolvm.ValidationError` from public `SmolVM` methods, and Pydantic's `ValidationError` from direct `InternetSettings` or `VMConfig` construction:
+Celesto validates a policy before it prepares images, boots the VM, or reserves host resources. Invalid settings raise `celesto.ValidationError` from public `Celesto` methods, and Pydantic's `ValidationError` from direct `InternetSettings` or `VMConfig` construction:
 
 ```python
-from smolvm import SmolVM, ValidationError
+from celesto import Celesto, ValidationError
 
 try:
-    SmolVM(internet_settings={"mode": "restricted"})
+    Celesto(internet_settings={"mode": "restricted"})
 except ValidationError as error:
     print(error)  # restricted requires allowed_cidrs
     print(error.details.get("errors", []))
@@ -123,7 +123,7 @@ Unsupported combinations fail with an explanatory message that names the recover
 - **Shared folders and exposed ports.** Firecracker `off` and `restricted` do not support shared folders or exposed ports; omit `mounts`, `port_forwards`, and `workspace_mounts`. QEMU keeps both available: `slirp` retains configured launch-time `port_forwards` across restart and snapshot restore, and TAP applications use their guest IP or `expose_local()` instead.
 - **SSH command channel.** Firecracker `off` and `restricted` require `comm_channel="vsock"`. SSH cannot reach a sandbox with no outbound path back to your machine.
 - **Bridged networking.** Bridge mode ignores private-network policy; `internet_settings` other than `open` is rejected.
-- **Legacy `allowed_domains`.** Existing callers can still pass `allowed_domains` on Firecracker private networking or QEMU TAP. SmolVM resolves each name to IPv4 addresses at setup and allows traffic to those addresses on any port. Do not combine `allowed_domains` with `mode`; HTTP-method restrictions are rejected.
+- **Legacy `allowed_domains`.** Existing callers can still pass `allowed_domains` on Firecracker private networking or QEMU TAP. Celesto resolves each name to IPv4 addresses at setup and allows traffic to those addresses on any port. Do not combine `allowed_domains` with `mode`; HTTP-method restrictions are rejected.
 
 ## Reach an application inside the sandbox
 
@@ -145,7 +145,7 @@ The policy is saved with the sandbox and stays unchanged across `start`, network
 
 Policy changes apply only to newly created sandboxes. Existing sandboxes keep their prior policy; to change a running sandbox, create a new one with the desired `internet_settings`.
 
-After upgrading SmolVM, running sandboxes keep their current network rules until SmolVM repairs their networking or they restart. Restart them to apply the updated baseline isolation.
+After upgrading Celesto, running sandboxes keep their current network rules until Celesto repairs their networking or they restart. Restart them to apply the updated baseline isolation.
 
 ## Snapshots and imported disks
 
@@ -156,8 +156,8 @@ QEMU shared folders continue to work with `off` and `restricted`. Their normal s
 If custom create and restore workflows share an inventory, pass the same state manager:
 
 ```python
-vm = SmolVM.from_image(image, state_manager=inventory)
-restored = SmolVM.from_snapshot(snapshot_id, state_manager=inventory)
+vm = Celesto.from_image(image, state_manager=inventory)
+restored = Celesto.from_snapshot(snapshot_id, state_manager=inventory)
 ```
 
 ## Allow domains at startup
@@ -165,7 +165,7 @@ restored = SmolVM.from_snapshot(snapshot_id, state_manager=inventory)
 You can also allow domains on Firecracker private networking or QEMU TAP. This Linux Firecracker example keeps the command connection available through `vsock`:
 
 ```python
-with SmolVM(
+with Celesto(
     backend="firecracker",
     comm_channel="vsock",
     internet_settings={"allowed_domains": ["api.example.com"]},
@@ -173,7 +173,7 @@ with SmolVM(
     vm.run("curl https://api.example.com")
 ```
 
-SmolVM resolves each name to IPv4 addresses during setup. It does not verify the hostname on every connection, and changing DNS answers can prevent an allowed service from working. Do not combine `allowed_domains` with `mode`. HTTP-method restrictions are not supported.
+Celesto resolves each name to IPv4 addresses during setup. It does not verify the hostname on every connection, and changing DNS answers can prevent an allowed service from working. Do not combine `allowed_domains` with `mode`. HTTP-method restrictions are not supported.
 
 ## Related
 

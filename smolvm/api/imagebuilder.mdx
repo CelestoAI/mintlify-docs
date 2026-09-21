@@ -6,11 +6,11 @@ description: "ImageBuilder reference: build minimal Alpine or Debian-based VM ro
 `ImageBuilder` automates the creation of VM images with SSH server pre-configured. It uses Docker to build minimal Alpine or Debian-based rootfs images, complete with networking and a custom init script.
 
 <Note>
-  Since v0.0.14, Debian is no longer a CLI `--os` value. The auto-config path (`smolvm sandbox create --os ...`) currently accepts `alpine`, `ubuntu`, and `windows`; Windows guests require `--image` because they boot from a prebuilt `qcow2`. The `build_debian_ssh_key` method below remains callable when you instantiate `ImageBuilder` directly, but it is no longer wired into the CLI's `--os` flag.
+  Since v0.0.14, Debian is no longer a CLI `--os` value. The auto-config path (`celesto sandbox create --os ...`) currently accepts `alpine`, `ubuntu`, and `windows`; Windows guests require `--image` because they boot from a prebuilt `qcow2`. The `build_debian_ssh_key` method below remains callable when you instantiate `ImageBuilder` directly, but it is no longer wired into the CLI's `--os` flag.
 </Note>
 
 <Note>
-  The optional `kernel_url` parameter on each build method is retained for backward compatibility. Since v0.0.14, SmolVM ships its own [universal kernel](/smolvm/concepts/published-images) and uses it by default — you only need to override `kernel_url` for advanced custom-kernel scenarios.
+  The optional `kernel_url` parameter on each build method is retained for backward compatibility. Since v0.0.14, Celesto ships its own [universal kernel](/smolvm/concepts/published-images) and uses it by default — you only need to override `kernel_url` for advanced custom-kernel scenarios.
 </Note>
 
 ## Constructor
@@ -24,7 +24,7 @@ Initialize the image builder.
 </ParamField>
 
 ```python  theme={null}
-from smolvm import ImageBuilder
+from celesto import ImageBuilder
 from pathlib import Path
 
 builder = ImageBuilder()
@@ -71,7 +71,7 @@ builder = ImageBuilder()
 if not builder.check_docker():
     error = builder.docker_requirement_error()
     print(error)
-    # Example: "Docker is installed, but SmolVM could not reach the Docker daemon.
+    # Example: "Docker is installed, but Celesto could not reach the Docker daemon.
     #           Start Docker Desktop or the Docker service and try again."
 ```
 
@@ -117,7 +117,7 @@ The resulting VM must be booted with `boot_args` containing `init=/init` so the 
 * `ImageError` - If Docker is not available or build fails
 
 ```python  theme={null}
-from smolvm import ImageBuilder, SmolVM, VMConfig, SSH_BOOT_ARGS
+from celesto import ImageBuilder, Celesto, VMConfig, SSH_BOOT_ARGS
 
 builder = ImageBuilder()
 kernel, rootfs = builder.build_alpine_ssh(
@@ -133,7 +133,7 @@ config = VMConfig(
     boot_args=SSH_BOOT_ARGS,
 )
 
-with SmolVM(config) as vm:
+with Celesto(config) as vm:
     vm.start()
     # SSH into vm.get_ip() with root / mysecret
     result = vm.run("hostname")
@@ -170,7 +170,7 @@ Build an Alpine Linux image with key-only SSH access (no password authentication
 
 ```python  theme={null}
 from pathlib import Path
-from smolvm import ImageBuilder
+from celesto import ImageBuilder
 
 builder = ImageBuilder()
 kernel, rootfs = builder.build_alpine_ssh_key(
@@ -213,8 +213,8 @@ This method creates a larger, more feature-complete image based on Debian. It's 
 * `ImageError` - If Docker is not available, build fails, or SSH key format is invalid
 
 ```python  theme={null}
-from smolvm import ImageBuilder, SmolVM, VMConfig, SSH_BOOT_ARGS
-from smolvm.utils import ensure_ssh_key
+from celesto import ImageBuilder, Celesto, VMConfig, SSH_BOOT_ARGS
+from celesto.utils import ensure_ssh_key
 
 # Generate or get existing SSH key pair
 private_key, public_key = ensure_ssh_key()
@@ -235,7 +235,7 @@ config = VMConfig(
     boot_args=SSH_BOOT_ARGS,
 )
 
-with SmolVM(config, ssh_key_path=str(private_key)) as vm:
+with Celesto(config, ssh_key_path=str(private_key)) as vm:
     vm.start()
     result = vm.run("apt-get update && apt-get install -y curl")
     print(f"Package install: {result.ok}")
@@ -272,7 +272,7 @@ The `init=/init` parameter is **required** for SSH-enabled images to work proper
 **Usage:**
 
 ```python  theme={null}
-from smolvm import ImageBuilder, VMConfig, SSH_BOOT_ARGS
+from celesto import ImageBuilder, VMConfig, SSH_BOOT_ARGS
 
 builder = ImageBuilder()
 kernel, rootfs = builder.build_alpine_ssh()
@@ -307,5 +307,5 @@ assert rootfs1 == rootfs2
 * [ImageSource](/smolvm/api/imagesource) - Define downloadable image metadata
 * [BootImage](/smolvm/api/bootimage) - Describe a bootable custom root filesystem
 * [DockerRootfsBuilder](/smolvm/api/dockerrootfsbuilder) - Build a custom root filesystem from a Dockerfile
-* [`smolvm image build`](/smolvm/cli/image#build) - Same build pipeline exposed as a CLI command
+* [`celesto image build`](/smolvm/cli/image#build) - Same build pipeline exposed as a CLI command
 * [VMConfig](/smolvm/api/vmconfig) - Configure VM instances

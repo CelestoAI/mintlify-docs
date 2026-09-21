@@ -1,14 +1,14 @@
 ---
-title: "smolvm sandbox stop"
-description: "Use smolvm sandbox stop to shut down a running sandbox while keeping its record available for later inspection or restart."
+title: "celesto sandbox stop"
+description: "Use celesto sandbox stop to shut down a running sandbox while keeping its record available for later inspection or restart."
 ---
 
-`smolvm sandbox stop` shuts down a running sandbox and releases its live resources. Use snapshots before stopping when you need to preserve memory state exactly.
+`celesto sandbox stop` shuts down a running sandbox and releases its live resources. Use snapshots before stopping when you need to preserve memory state exactly.
 
 ## Synopsis
 
 ```bash
-smolvm sandbox stop <sandbox> [OPTIONS]
+celesto sandbox stop <sandbox> [OPTIONS]
 ```
 
 ## Arguments
@@ -32,25 +32,25 @@ smolvm sandbox stop <sandbox> [OPTIONS]
 ### Stop one sandbox
 
 ```bash
-smolvm sandbox stop my-sandbox
+celesto sandbox stop my-sandbox
 ```
 
 ### Stop with a longer graceful window
 
 ```bash
-smolvm sandbox stop my-sandbox --timeout 10
+celesto sandbox stop my-sandbox --timeout 10
 ```
 
 ### Create, use, and stop a sandbox
 
 ```bash
-smolvm sandbox create --name dev-env
-smolvm sandbox shell dev-env
-smolvm sandbox stop dev-env
+celesto sandbox create --name dev-env
+celesto sandbox shell dev-env
+celesto sandbox stop dev-env
 ```
 
 ## Related commands
 
-* [`smolvm sandbox start`](/smolvm/cli/overview) - Start a stopped sandbox
-* [`smolvm sandbox snapshot create`](/smolvm/cli/snapshot) - Save sandbox state
-* [`smolvm sandbox delete`](/smolvm/cli/cleanup) - Delete sandbox resources
+* [`celesto sandbox start`](/smolvm/cli/overview) - Start a stopped sandbox
+* [`celesto sandbox snapshot create`](/smolvm/cli/snapshot) - Save sandbox state
+* [`celesto sandbox delete`](/smolvm/cli/cleanup) - Delete sandbox resources

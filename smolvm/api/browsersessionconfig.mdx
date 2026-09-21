@@ -1,18 +1,18 @@
 ---
 title: "Browser and desktop options"
-description: "Options for SmolVM.browser() and SmolVM.desktop(), including viewport size, profiles, recording, resources, and shared folders."
+description: "Options for Celesto.browser() and Celesto.desktop(), including viewport size, profiles, recording, resources, and shared folders."
 ---
 
 ## Overview
 
 You can tune browser and desktop sandboxes for the task your agent needs to complete. Start with the defaults, then adjust the screen size, memory, disk, profile, or recording options when your workflow needs them.
 
-Pass these options directly to `SmolVM.browser()` or `SmolVM.desktop()`.
+Pass these options directly to `Celesto.browser()` or `Celesto.desktop()`.
 
 ## Import
 
 ```python
-from smolvm import BrowserViewport, SmolVM
+from celesto import BrowserViewport, Celesto
 ```
 
 ## Common options
@@ -60,11 +60,11 @@ from smolvm import BrowserViewport, SmolVM
 ## Advanced local options
 
 <ParamField path="data_dir" type="Path | None" default="None">
-  Local directory for sandbox state. Omit it to use SmolVM's default state directory.
+  Local directory for sandbox state. Omit it to use Celesto's default state directory.
 </ParamField>
 
 <ParamField path="socket_dir" type="Path | None" default="None">
-  Local directory for runtime sockets. Omit it to use SmolVM's default socket directory.
+  Local directory for runtime sockets. Omit it to use Celesto's default socket directory.
 </ParamField>
 
 <ParamField path="ssh_key_path" type="str | None" default="None">
@@ -78,7 +78,7 @@ from smolvm import BrowserViewport, SmolVM
 ## Browser-only option
 
 <ParamField path="headless" type="bool" default="True">
-  `SmolVM.browser()` only. Use `True` for CDP-only browser automation. Use `False` to also start `viewer_url` and `display_url`.
+  `Celesto.browser()` only. Use `True` for CDP-only browser automation. Use `False` to also start `viewer_url` and `display_url`.
 </ParamField>
 
 <Tip>
@@ -112,7 +112,7 @@ from smolvm import BrowserViewport, SmolVM
 `BrowserViewport` is a small helper for screen dimensions.
 
 ```python
-from smolvm import BrowserViewport
+from celesto import BrowserViewport
 ```
 
 <ParamField path="width" type="int" default="1280">
@@ -128,9 +128,9 @@ from smolvm import BrowserViewport
 ### Larger visible browser
 
 ```python larger_browser.py
-from smolvm import BrowserViewport, SmolVM
+from celesto import BrowserViewport, Celesto
 
-with SmolVM.browser(
+with Celesto.browser(
     headless=False,
     viewport=BrowserViewport(width=1440, height=900),
     memory_mb=3072,
@@ -141,9 +141,9 @@ with SmolVM.browser(
 ### Persistent browser profile
 
 ```python browser_profile.py
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM.browser(profile_id="daily-reports", persistent=True) as browser:
+with Celesto.browser(profile_id="daily-reports", persistent=True) as browser:
     print(browser.cdp_url)
 ```
 
@@ -152,9 +152,9 @@ Use the same `profile_id` again when you want Chromium to reuse saved browser st
 ### Full desktop with a larger screen
 
 ```python desktop_viewport.py
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM.desktop(viewport={"width": 1440, "height": 900}) as desktop:
+with Celesto.desktop(viewport={"width": 1440, "height": 900}) as desktop:
     print(desktop.viewer_url)
     print(desktop.display_url)
 ```

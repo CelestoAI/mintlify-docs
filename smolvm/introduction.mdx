@@ -1,12 +1,12 @@
 ---
-title: "SmolVM: secure microVM sandboxes for AI agents"
+title: "Celesto: secure microVM sandboxes for AI agents"
 sidebarTitle: "Introduction"
-description: "Introduction to SmolVM — an open-source microVM sandbox with sub-second boot, hardware isolation, and persistent state for running AI agents safely."
+description: "Introduction to Celesto — an open-source microVM sandbox with sub-second boot, hardware isolation, and persistent state for running AI agents safely."
 ---
 
-# SmolVM
+# Celesto
 
-[SmolVM](https://github.com/CelestoAI/SmolVM) gives AI agents their own disposable computer. Each <Tooltip tip="A lightweight virtual machine that provides hardware-level isolation with near-instant startup, combining the speed of containers with the security of full VMs">microVM</Tooltip> boots in milliseconds, runs any code or software you throw at it, persists files and state across sessions, and disappears when you're done — built for scale in production.
+[Celesto](https://github.com/CelestoAI/celesto) gives AI agents their own disposable computer. Each <Tooltip tip="A lightweight virtual machine that provides hardware-level isolation with near-instant startup, combining the speed of containers with the security of full VMs">microVM</Tooltip> boots in milliseconds, runs any code or software you throw at it, persists files and state across sessions, and disappears when you're done — built for scale in production.
 
 <CardGroup cols={3}>
   <Card title="Sub-second boot" icon="bolt">
@@ -30,15 +30,15 @@ description: "Introduction to SmolVM — an open-source microVM sandbox with sub
 </CardGroup>
 
 <Note>
-  **Building with agent sandboxes?** Get SmolVM release notes, implementation patterns, and early-access updates.
+  **Building with agent sandboxes?** Get Celesto release notes, implementation patterns, and early-access updates.
 
-  [Join the SmolVM interest list][smolvm-interest-list]
+  [Join the Celesto interest list][smolvm-interest-list]
 </Note>
 
 ## Quickstart
 
 <Steps>
-  <Step title="Install SmolVM">
+  <Step title="Install Celesto">
     ```bash
     curl -sSL https://celesto.ai/install.sh | bash
     ```
@@ -51,9 +51,9 @@ description: "Introduction to SmolVM — an open-source microVM sandbox with sub
         Create `quickstart.py`:
 
         ```python quickstart.py
-        from smolvm import SmolVM
+        from celesto import Celesto
         
-        vm = SmolVM()
+        vm = Celesto()
         result = vm.run("echo 'Hello from the sandbox!'")
         print(result.stdout.strip())
         vm.stop()
@@ -67,11 +67,11 @@ description: "Introduction to SmolVM — an open-source microVM sandbox with sub
       </Tab>
       <Tab title="CLI">
         ```bash
-        smolvm sandbox create --name my-sandbox
-        smolvm sandbox ssh my-sandbox
+        celesto sandbox create --name my-sandbox
+        celesto sandbox ssh my-sandbox
         echo 'Hello from the sandbox!'
         exit
-        smolvm sandbox stop my-sandbox
+        celesto sandbox stop my-sandbox
         ```
       </Tab>
     </Tabs>
@@ -89,42 +89,42 @@ description: "Introduction to SmolVM — an open-source microVM sandbox with sub
 Create and manage sandboxes from the terminal:
 
 ```bash
-smolvm sandbox create --name my-sandbox
-smolvm sandbox ssh my-sandbox
-smolvm sandbox list
-smolvm sandbox stop my-sandbox
+celesto sandbox create --name my-sandbox
+celesto sandbox ssh my-sandbox
+celesto sandbox list
+celesto sandbox stop my-sandbox
 ```
 
 Run coding agents in an isolated sandbox:
 
 ```bash
-smolvm claude start
-smolvm codex start
-smolvm opencode start
-smolvm pi start
+celesto claude start
+celesto codex start
+celesto opencode start
+celesto pi start
 ```
 
 Mount host directories for read-only access:
 
 ```bash
-smolvm sandbox create --mount ~/Projects/my-app
-smolvm sandbox create --mount ~/Projects/my-app:/code --mount ~/data:/mnt/data
+celesto sandbox create --mount ~/Projects/my-app
+celesto sandbox create --mount ~/Projects/my-app:/code --mount ~/data:/mnt/data
 ```
 
 Save and restore VM state with snapshots:
 
 ```bash
-smolvm sandbox snapshot create my-sandbox
-smolvm sandbox snapshot list
-smolvm sandbox snapshot restore snap_abc123 --resume
+celesto sandbox snapshot create my-sandbox
+celesto sandbox snapshot list
+celesto sandbox snapshot restore snap_abc123 --resume
 ```
 
 Start a visible browser sandbox:
 
 ```bash
-smolvm browser start --live
-smolvm browser list
-smolvm browser stop sess_a1b2c3
+celesto browser start --live
+celesto browser list
+celesto browser stop sess_a1b2c3
 ```
 
 See the [CLI reference](/smolvm/cli/overview) for the full command list.
@@ -134,9 +134,9 @@ See the [CLI reference](/smolvm/cli/overview) for the full command list.
 Create and manage sandboxes from Python:
 
 ```python
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM() as vm:
+with Celesto() as vm:
     result = vm.run("echo 'Hello from the sandbox!'")
     print(result.stdout.strip())
 ```
@@ -144,13 +144,13 @@ with SmolVM() as vm:
 Customize memory and disk for heavier workloads:
 
 ```python
-vm = SmolVM(memory=2048, disk_size=4096)
+vm = Celesto(memory=2048, disk_size=4096)
 ```
 
 Mount host directories:
 
 ```python
-with SmolVM(mounts=["~/Projects/my-app"]) as vm:
+with Celesto(mounts=["~/Projects/my-app"]) as vm:
     result = vm.run("ls /workspace")
     print(result.stdout)
 ```
@@ -158,7 +158,7 @@ with SmolVM(mounts=["~/Projects/my-app"]) as vm:
 Expose a port from the sandbox to your host:
 
 ```python
-with SmolVM() as vm:
+with Celesto() as vm:
     vm.run("python3 -m http.server 8000 &")
     host_port = vm.expose_local(guest_port=8000)
     print(f"http://127.0.0.1:{host_port}/")
@@ -167,14 +167,14 @@ with SmolVM() as vm:
 See the [API reference](/smolvm/api/smolvm) for the full SDK documentation.
 
 <Tip>
-  Evaluating secure code execution, browser agents, or long-running agent environments? [Tell us what you're building][smolvm-interest-list] and we'll send the useful SmolVM updates — or follow up personally if you're evaluating now.
+  Evaluating secure code execution, browser agents, or long-running agent environments? [Tell us what you're building][smolvm-interest-list] and we'll send the useful Celesto updates — or follow up personally if you're evaluating now.
 </Tip>
 
 ## Next steps
 
 <CardGroup cols={2}>
   <Card title="AI agent integration" icon="robot" href="/smolvm/guides/ai-agent-integration">
-    Plug SmolVM into PydanticAI, OpenAI Agents, LangChain, and more
+    Plug Celesto into PydanticAI, OpenAI Agents, LangChain, and more
   </Card>
 
   <Card title="Port forwarding" icon="network-wired" href="/smolvm/features/port-forwarding">
@@ -186,7 +186,7 @@ See the [API reference](/smolvm/api/smolvm) for the full SDK documentation.
   </Card>
 
   <Card title="API reference" icon="book" href="/smolvm/api/smolvm">
-    Explore the complete SmolVM API
+    Explore the complete Celesto API
   </Card>
 </CardGroup>
 

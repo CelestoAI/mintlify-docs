@@ -1,15 +1,15 @@
 ---
 title: "Security model"
-description: "SmolVM security model: how hardware-virtualized microVMs isolate sandboxes from your host, where the trust boundaries are, and best practices for safe use."
+description: "Celesto security model: how hardware-virtualized microVMs isolate sandboxes from your host, where the trust boundaries are, and best practices for safe use."
 ---
 
-SmolVM runs your code inside its own virtual machine, completely separated from your host. This page explains what that isolation covers, where the boundaries are, and how to keep things safe.
+Celesto runs your code inside its own virtual machine, completely separated from your host. This page explains what that isolation covers, where the boundaries are, and how to keep things safe.
 
 ## How isolation works
 
 Each sandbox runs in a microVM — a lightweight virtual machine backed by hardware virtualization (KVM on Linux, HVF on macOS). Unlike containers, which share the host kernel, microVMs give every sandbox its own kernel. Breaking out of a microVM requires a hypervisor exploit, not just a kernel vulnerability.
 
-| Feature           | Containers            | SmolVM (microVMs)              |
+| Feature           | Containers            | Celesto (microVMs)              |
 | ----------------- | --------------------- | ------------------------------ |
 | Kernel            | Shared with host      | Isolated kernel per VM         |
 | Syscall interface | Direct to host kernel | Through KVM hypervisor         |
@@ -23,7 +23,7 @@ This matters most when AI agents generate and run code. You get:
 * **Controlled networking** — you can restrict or monitor what the sandbox can reach on the internet
 * **Ephemeral environments** — spin up a fresh sandbox for every task and destroy it immediately, so nothing persists
 
-## What SmolVM protects
+## What Celesto protects
 
 ### Host system
 
@@ -56,7 +56,7 @@ Each sandbox can:
 Each sandbox has dedicated, capped resources:
 
 ```python  theme={null}
-from smolvm import VMConfig
+from celesto import VMConfig
 
 config = VMConfig(
     vcpu_count=2,      # Max 2 CPUs
@@ -64,15 +64,15 @@ config = VMConfig(
 )
 ```
 
-## What SmolVM does not protect
+## What Celesto does not protect
 
 <Warning>
-  SmolVM provides isolation, not complete security. Understand these limitations:
+  Celesto provides isolation, not complete security. Understand these limitations:
 </Warning>
 
 ### Outbound network access
 
-SmolVM assumes the host network is trusted. Guests can:
+Celesto assumes the host network is trusted. Guests can:
 
 * Make outbound network requests (unless restricted)
 * Access any internet service
@@ -101,22 +101,22 @@ A malicious guest can:
 ## SSH trust model
 
 <Warning>
-  SmolVM currently prioritizes zero-touch VM access for local agent workflows. Read this section carefully.
+  Celesto currently prioritizes zero-touch VM access for local agent workflows. Read this section carefully.
 </Warning>
 
-SmolVM uses Paramiko's `AutoAddPolicy` for SSH connections, which means it accepts unknown host keys on first connection. This keeps setup simple for local use, but it can allow man-in-the-middle attacks on untrusted networks.
+Celesto uses Paramiko's `AutoAddPolicy` for SSH connections, which means it accepts unknown host keys on first connection. This keeps setup simple for local use, but it can allow man-in-the-middle attacks on untrusted networks.
 
-**Treat SmolVM as a local-only runtime by default.** Do not expose sandbox SSH ports to public or untrusted networks without additional controls.
+**Treat Celesto as a local-only runtime by default.** Do not expose sandbox SSH ports to public or untrusted networks without additional controls.
 
 ### Recommended practices
 
 <Note>
-  Follow these practices to use SmolVM securely:
+  Follow these practices to use Celesto securely:
 </Note>
 
 #### Local-only usage
 
-* Run SmolVM on developer machines or trusted CI runners
+* Run Celesto on developer machines or trusted CI runners
 * Do not expose guest SSH endpoints to public or untrusted networks
 
 #### Network controls
@@ -131,7 +131,7 @@ If your environment requires strict host identity validation:
 
 ```python  theme={null}
 # Good: Local development
-with SmolVM() as vm:
+with Celesto() as vm:
     result = vm.run("echo 'Safe on localhost'")
 
 # Bad: Exposing to untrusted networks
@@ -140,17 +140,17 @@ with SmolVM() as vm:
 
 ## SSH credentials in published images
 
-[Published images](/smolvm/concepts/published-images) are downloaded to your machine and shared across users, so they must not contain any per-user secrets. SmolVM handles credentials at first boot instead of bake time.
+[Published images](/smolvm/concepts/published-images) are downloaded to your machine and shared across users, so they must not contain any per-user secrets. Celesto handles credentials at first boot instead of bake time.
 
 ### Host keys are generated on first boot
 
 SSH host keys identify the sandbox to your SSH client. Earlier releases baked one set of host keys into every copy of the image — that meant every sandbox launched from the same image presented the same identity, which defeats SSH's man-in-the-middle protection.
 
-SmolVM now generates fresh SSH host keys the first time each sandbox boots, before `sshd` starts. Each sandbox has its own identity, even when many launch from the same image.
+Celesto now generates fresh SSH host keys the first time each sandbox boots, before `sshd` starts. Each sandbox has its own identity, even when many launch from the same image.
 
 ### Your public key is injected at boot
 
-When you run `smolvm claude start` or any other preset, SmolVM passes your SSH public key to the sandbox on the kernel command line. The first-boot script base64-decodes the key, writes it to `/root/.ssh/authorized_keys` with mode `0600`, and starts `sshd`. The image itself never contains your key, so the same image can be safely cached and reused across machines.
+When you run `celesto claude start` or any other preset, Celesto passes your SSH public key to the sandbox on the kernel command line. The first-boot script base64-decodes the key, writes it to `/root/.ssh/authorized_keys` with mode `0600`, and starts `sshd`. The image itself never contains your key, so the same image can be safely cached and reused across machines.
 
 ### Password authentication is disabled
 
@@ -164,10 +164,10 @@ Published images ship with `PasswordAuthentication no` in `sshd_config`. SSH acc
 
 ### Isolated mode (default)
 
-SmolVM defaults to `disk_mode="isolated"`, creating a per-VM rootfs clone:
+Celesto defaults to `disk_mode="isolated"`, creating a per-VM rootfs clone:
 
 ```python  theme={null}
-from smolvm import VMConfig
+from celesto import VMConfig
 
 # Each VM gets its own disk copy
 config = VMConfig(disk_mode="isolated")
@@ -207,20 +207,20 @@ config = VMConfig(
 )
 ```
 
-When `retain_disk_on_delete=True`, SmolVM writes a `<disk>.retained` marker file next to the disk when the sandbox is deleted. The marker tells [`smolvm sandbox prune`](/smolvm/cli/sandbox-prune) that this disk is deliberately kept, so the reclaim sweep leaves it alone. The marker is cleared automatically when a new sandbox reuses the disk, and restored if a create rolls back before a new row owns it.
+When `retain_disk_on_delete=True`, Celesto writes a `<disk>.retained` marker file next to the disk when the sandbox is deleted. The marker tells [`celesto sandbox prune`](/smolvm/cli/sandbox-prune) that this disk is deliberately kept, so the reclaim sweep leaves it alone. The marker is cleared automatically when a new sandbox reuses the disk, and restored if a create rolls back before a new row owns it.
 
 <Warning>
-  Disks that were retained on releases before this marker existed carry no marker on disk. `smolvm sandbox prune` will treat them as leftovers unless you preview the sweep with `--dry-run` first, or protect saved disks by omitting `--include-saved`. If you rely on pre-upgrade retained disks, verify the dry-run output before running `sandbox prune` for the first time after upgrading.
+  Disks that were retained on releases before this marker existed carry no marker on disk. `celesto sandbox prune` will treat them as leftovers unless you preview the sweep with `--dry-run` first, or protect saved disks by omitting `--include-saved`. If you rely on pre-upgrade retained disks, verify the dry-run output before running `sandbox prune` for the first time after upgrading.
 </Warning>
 
 ## Environment variables
 
-SmolVM can inject environment variables into VMs:
+Celesto can inject environment variables into VMs:
 
 ```python  theme={null}
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM() as vm:
+with Celesto() as vm:
     vm.set_env_vars({
         "API_KEY": "sk-...",
         "DEBUG": "1"
@@ -242,7 +242,7 @@ with SmolVM() as vm:
 
 ### Supported versions
 
-SmolVM is currently pre-1.0. Security fixes are prioritized for:
+Celesto is currently pre-1.0. Security fixes are prioritized for:
 
 | Version / Branch   | Supported       |
 | ------------------ | --------------- |
@@ -258,7 +258,7 @@ SmolVM is currently pre-1.0. Security fixes are prioritized for:
 
 Use GitHub's private vulnerability reporting:
 
-* **Private report**: [https://github.com/CelestoAI/SmolVM/security/advisories/new](https://github.com/CelestoAI/SmolVM/security/advisories/new)
+* **Private report**: [https://github.com/CelestoAI/celesto/security/advisories/new](https://github.com/CelestoAI/celesto/security/advisories/new)
 
 If that link is unavailable, open a minimal issue asking maintainers for a private contact channel (without sensitive details).
 
@@ -282,7 +282,7 @@ As a small team, reports are handled as capacity allows. Non-binding targets:
 
 ### Disclosure policy
 
-SmolVM follows coordinated disclosure:
+Celesto follows coordinated disclosure:
 
 * Please allow reasonable time for a fix before public disclosure
 * Security advisories may be published for confirmed issues
@@ -290,19 +290,19 @@ SmolVM follows coordinated disclosure:
 
 ## Scope notes
 
-This security policy covers vulnerabilities in SmolVM's code and release artifacts.
+This security policy covers vulnerabilities in Celesto's code and release artifacts.
 
 ### Out of scope
 
-(unless caused by SmolVM code):
+(unless caused by Celesto code):
 
 * Vulnerabilities in third-party dependencies/upstream projects
-* Host misconfiguration outside documented SmolVM setup
+* Host misconfiguration outside documented Celesto setup
 * Security findings without a realistic exploit path or impact
 
 ## Security checklist
 
-Before deploying SmolVM:
+Before deploying Celesto:
 
 * [ ] Using local/trusted networks only?
 * [ ] Firewall rules configured for outbound restrictions?

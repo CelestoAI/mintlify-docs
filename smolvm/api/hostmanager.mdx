@@ -1,6 +1,6 @@
 ---
 title: "HostManager"
-description: "HostManager reference: validate KVM access and host networking tools, install and pin the Firecracker binary, and prepare the SmolVM runtime environment."
+description: "HostManager reference: validate KVM access and host networking tools, install and pin the Firecracker binary, and prepare the Celesto runtime environment."
 ---
 
 ## Overview
@@ -16,11 +16,11 @@ The default installation directory is `~/.smolvm/bin/`.
 </ParamField>
 
 <ParamField path="firecracker_dir" type="str | Path | None" default="None">
-  Folder containing SmolVM's Firecracker binary. An explicit value overrides the `SMOLVM_FIRECRACKER_DIR` environment variable. When neither is set, the default is `~/.smolvm/bin`.
+  Folder containing Celesto's Firecracker binary. An explicit value overrides the `SMOLVM_FIRECRACKER_DIR` environment variable. When neither is set, the default is `~/.smolvm/bin`.
 </ParamField>
 
 ```python  theme={null}
-from smolvm import HostManager
+from celesto import HostManager
 
 # Use default Firecracker version
 host_mgr = HostManager()
@@ -35,7 +35,7 @@ host_mgr = HostManager(firecracker_dir="~/.local/bin")
 ## Class Attributes
 
 <ResponseField name="SMOLVM_HOME" type="Path">
-  SmolVM home directory: `~/.smolvm`
+  Celesto home directory: `~/.smolvm`
 </ResponseField>
 
 <ResponseField name="BIN_DIR" type="Path">
@@ -178,7 +178,7 @@ Run all host validation checks and return a summary.
 </ResponseField>
 
 ```python  theme={null}
-from smolvm import HostManager
+from celesto import HostManager
 
 host_mgr = HostManager()
 info = host_mgr.validate()
@@ -198,7 +198,7 @@ if info.firecracker_path:
 ## Complete Example
 
 ```python  theme={null}
-from smolvm import HostManager
+from celesto import HostManager
 
 # Initialize host manager
 host_mgr = HostManager()
@@ -219,14 +219,14 @@ if info.missing_deps:
     print(f"Warning: Missing dependencies: {', '.join(info.missing_deps)}")
     print("Run: sudo ./scripts/system-setup.sh --configure-runtime")
 
-print("Host environment is ready for SmolVM!")
+print("Host environment is ready for Celesto!")
 ```
 
 ## Related Types
 
 ### HostCapability
 
-Enum of host capabilities that SmolVM depends on:
+Enum of host capabilities that Celesto depends on:
 
 * `HostCapability.KVM` - KVM virtualization support
 * `HostCapability.NET_TOOLS` - Network configuration tools (ip, nft, ssh)

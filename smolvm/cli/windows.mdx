@@ -1,21 +1,21 @@
 ---
-title: "smolvm windows"
-description: "Build a reusable Windows 11 qcow2 image with smolvm windows build-image — an unattended install that produces a ready-to-boot SmolVM guest."
+title: "celesto windows"
+description: "Build a reusable Windows 11 qcow2 image with celesto windows build-image — an unattended install that produces a ready-to-boot Celesto guest."
 ---
 
 ## Synopsis
 
 ```bash  theme={null}
-smolvm windows build-image --iso PATH --virtio-win-iso PATH --output PATH [OPTIONS]
+celesto windows build-image --iso PATH --virtio-win-iso PATH --output PATH [OPTIONS]
 ```
 
 ## Description
 
 The `windows` command group bundles helpers for working with Windows guests. Today it has one subcommand:
 
-* `smolvm windows build-image` — produce a ready-to-use Windows 11 `qcow2` from a stock Windows ISO. The install runs unattended end to end (no clicks), and the resulting image has OpenSSH Server, the virtio-win drivers, and a known local admin account baked in — exactly what `SmolVM(os="windows", image=...)` needs to boot.
+* `celesto windows build-image` — produce a ready-to-use Windows 11 `qcow2` from a stock Windows ISO. The install runs unattended end to end (no clicks), and the resulting image has OpenSSH Server, the virtio-win drivers, and a known local admin account baked in — exactly what `Celesto(os="windows", image=...)` needs to boot.
 
-After you build the image once, you can spin up as many Windows sandboxes as you want from it; SmolVM creates per-VM overlay disks on top of the baseline so your original image is never modified.
+After you build the image once, you can spin up as many Windows sandboxes as you want from it; Celesto creates per-VM overlay disks on top of the baseline so your original image is never modified.
 
 <Note>
   The build takes 15–30 minutes. It runs an unattended Windows Setup inside a temporary QEMU VM, so plan accordingly — kick it off, walk away, come back to a finished image.
@@ -35,7 +35,7 @@ After you build the image once, you can spin up as many Windows sandboxes as you
 Drive an unattended Windows install and write the result to a qcow2 file.
 
 ```bash  theme={null}
-smolvm windows build-image \
+celesto windows build-image \
   --iso ./Win11.iso \
   --virtio-win-iso ./virtio-win.iso \
   --output ~/.smolvm/images/win11.qcow2
@@ -90,7 +90,7 @@ smolvm windows build-image \
 Build with all defaults:
 
 ```bash  theme={null}
-smolvm windows build-image \
+celesto windows build-image \
   --iso ./Win11.iso \
   --virtio-win-iso ./virtio-win.iso \
   --output ~/.smolvm/images/win11.qcow2
@@ -99,7 +99,7 @@ smolvm windows build-image \
 Build with a custom account and a smaller virtual disk:
 
 ```bash  theme={null}
-smolvm windows build-image \
+celesto windows build-image \
   --iso ./Win11.iso \
   --virtio-win-iso ./virtio-win.iso \
   --output ~/.smolvm/images/win11-dev.qcow2 \
@@ -112,7 +112,7 @@ smolvm windows build-image \
 Build Windows 11 Home and emit JSON:
 
 ```bash  theme={null}
-smolvm windows build-image \
+celesto windows build-image \
   --iso ./Win11.iso \
   --virtio-win-iso ./virtio-win.iso \
   --output ~/.smolvm/images/win11-home.qcow2 \
@@ -138,12 +138,12 @@ JSON output shape:
 
 ## Boot the image you just built
 
-Once the build finishes, point `SmolVM(os="windows", image=...)` at the qcow2 with the credentials you chose:
+Once the build finishes, point `Celesto(os="windows", image=...)` at the qcow2 with the credentials you chose:
 
 ```python
-from smolvm import SmolVM
+from celesto import Celesto
 
-with SmolVM(
+with Celesto(
     os="windows",
     image="~/.smolvm/images/win11.qcow2",
     ssh_user="smolvm",
@@ -153,7 +153,7 @@ with SmolVM(
     print(vm.run("hostname").stdout.strip())
 ```
 
-SmolVM creates a per-VM overlay disk on top of the baseline, so the qcow2 you built stays read-only and you can launch many sandboxes from it in parallel. See [Windows sandboxes](/smolvm/guides/windows-guests) for the full guest API.
+Celesto creates a per-VM overlay disk on top of the baseline, so the qcow2 you built stays read-only and you can launch many sandboxes from it in parallel. See [Windows sandboxes](/smolvm/guides/windows-guests) for the full guest API.
 
 ## Use it from Python
 
@@ -161,7 +161,7 @@ The same flow is available as a Python class, `WindowsImageBuilder`. Use it when
 
 ```python
 from pathlib import Path
-from smolvm.windows import WindowsImageBuilder
+from celesto.windows import WindowsImageBuilder
 
 builder = WindowsImageBuilder(
     windows_iso=Path("./Win11.iso"),
@@ -178,7 +178,7 @@ output = builder.build()
 print(f"Built {output}")
 ```
 
-`builder.build()` returns the `Path` of the finished qcow2 on success and raises `SmolVMError` (or another exception) on failure.
+`builder.build()` returns the `Path` of the finished qcow2 on success and raises `CelestoError` (or another exception) on failure.
 
 ## How the build works
 
@@ -193,7 +193,7 @@ The builder runs the same Windows Setup flow you'd run by hand, just driven by a
 
 Transient SSH failures across the install's multiple reboots (Setup → Specialize → OOBE → first login) are absorbed and retried automatically.
 
-For a deep dive into the answer file and the reasoning behind each Setup pass, see [Windows guest QEMU deep dive](https://github.com/celestoai/smolvm/blob/main/docs/deep-dive/windows-guest-qemu.md) in the SmolVM repo.
+For a deep dive into the answer file and the reasoning behind each Setup pass, see [Windows guest QEMU deep dive](https://github.com/celestoai/smolvm/blob/main/docs/deep-dive/windows-guest-qemu.md) in the Celesto repo.
 
 ## Exit codes
 
@@ -235,7 +235,7 @@ For a deep dive into the answer file and the reasoning behind each Setup pass, s
   </Card>
 
   <Card title="CLI overview" icon="terminal" href="/smolvm/cli/overview">
-    All available SmolVM CLI commands
+    All available Celesto CLI commands
   </Card>
 
   <Card title="VM lifecycle" icon="circle-play" href="/smolvm/guides/vm-lifecycle">

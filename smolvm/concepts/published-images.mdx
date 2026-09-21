@@ -1,20 +1,20 @@
 ---
 title: "Published images"
-description: "How SmolVM boots from pre-built sandbox images so smolvm claude start launches in seconds."
+description: "How Celesto boots from pre-built sandbox images so celesto claude start launches in seconds."
 ---
 
-SmolVM can start from ready-made sandbox images instead of building an operating system image on your machine. This makes the first launch faster and keeps common presets consistent across hosts.
+Celesto can start from ready-made sandbox images instead of building an operating system image on your machine. This makes the first launch faster and keeps common presets consistent across hosts.
 
-## What SmolVM downloads
+## What Celesto downloads
 
-Published images are release assets on the SmolVM GitHub repository. They include:
+Published images are release assets on the Celesto GitHub repository. They include:
 
-- A SmolVM-built Linux kernel in the format the selected backend needs
+- A Celesto-built Linux kernel in the format the selected backend needs
 - A compressed root filesystem for a preset or base operating system
-- SHA-256 checksums that SmolVM verifies before boot
+- SHA-256 checksums that Celesto verifies before boot
 - A pinned Rust guest-agent binary for custom image builds from installed wheels
 
-The image release tag uses a date-based format such as `images-2026.09.07.0`. This tag is separate from the Python package version, so SmolVM can publish rebuilt images without pretending the Python API changed.
+The image release tag uses a date-based format such as `images-2026.09.07.0`. This tag is separate from the Python package version, so Celesto can publish rebuilt images without pretending the Python API changed.
 
 <Tooltip tip="CalVer means calendar versioning. The version includes the release date, which makes image rebuilds easier to track.">
   CalVer
@@ -33,39 +33,39 @@ The image release tag uses a date-based format such as `images-2026.09.07.0`. Th
 | `ubuntu` | A clean Ubuntu base image |
 
 <Note>
-  SmolVM v0.0.31 uses image release `images-2026.09.07.0`. Publishing an image does not automatically enable it in the CLI: OpenClaw still installs Node.js and OpenClaw inside each new sandbox, and OpenCode images are not yet selected by this release. Allow several minutes for OpenClaw setup.
+  Celesto v0.0.31 uses image release `images-2026.09.07.0`. Publishing an image does not automatically enable it in the CLI: OpenClaw still installs Node.js and OpenClaw inside each new sandbox, and OpenCode images are not yet selected by this release. Allow several minutes for OpenClaw setup.
 </Note>
 
-The public CLI command for `claude-code` is `smolvm claude start`.
+The public CLI command for `claude-code` is `celesto claude start`.
 
 ```bash
-smolvm codex start
-smolvm claude start
-smolvm sandbox create --os ubuntu
+celesto codex start
+celesto claude start
+celesto sandbox create --os ubuntu
 ```
 
-Each manifest row is keyed by preset, CPU architecture, backend, and guest operating system. If SmolVM does not find a matching row, it uses the slower build or install path for that launch.
+Each manifest row is keyed by preset, CPU architecture, backend, and guest operating system. If Celesto does not find a matching row, it uses the slower build or install path for that launch.
 
 ## How a published launch works
 
 <Steps>
-  <Step title="SmolVM resolves the target image">
-    SmolVM combines the preset, host architecture, backend, and requested guest operating system. For example, a Linux Firecracker launch and a macOS QEMU launch can use different kernel artifacts.
+  <Step title="Celesto resolves the target image">
+    Celesto combines the preset, host architecture, backend, and requested guest operating system. For example, a Linux Firecracker launch and a macOS QEMU launch can use different kernel artifacts.
   </Step>
-  <Step title="SmolVM downloads verified assets">
-    Kernel and rootfs files come from the configured `images-YYYY.MM.DD.N` release tag. SmolVM verifies each file against the bundled SHA-256 checksum.
+  <Step title="Celesto downloads verified assets">
+    Kernel and rootfs files come from the configured `images-YYYY.MM.DD.N` release tag. Celesto verifies each file against the bundled SHA-256 checksum.
   </Step>
-  <Step title="SmolVM decompresses the rootfs once">
-    Compressed `.zst` files stay in the cache. SmolVM creates a sibling `rootfs.ext4` file and stores a sidecar checksum so it knows when to refresh the decompressed copy.
+  <Step title="Celesto decompresses the rootfs once">
+    Compressed `.zst` files stay in the cache. Celesto creates a sibling `rootfs.ext4` file and stores a sidecar checksum so it knows when to refresh the decompressed copy.
   </Step>
-  <Step title="SmolVM injects your access key at launch">
-    Published images do not bake in your SSH key. SmolVM passes your public key at launch so the same image can be shared safely across users.
+  <Step title="Celesto injects your access key at launch">
+    Published images do not bake in your SSH key. Celesto passes your public key at launch so the same image can be shared safely across users.
   </Step>
 </Steps>
 
 ## Kernel and rootfs formats
 
-SmolVM builds one kernel source tree into the formats each backend expects:
+Celesto builds one kernel source tree into the formats each backend expects:
 
 | Backend | Kernel format |
 | --- | --- |
@@ -79,7 +79,7 @@ The rootfs is a Linux filesystem image. Published rootfs files are compressed as
 
 Recent images include `/usr/local/bin/smolvm-guest-agent`. The agent starts before networking and powers the fast vsock control channel for commands, file transfer, shell streams, and guest sync.
 
-When you build images from an installed Python wheel instead of a source checkout, SmolVM downloads the pinned guest-agent binary from the same image release tag and verifies its SHA-256 checksum.
+When you build images from an installed Python wheel instead of a source checkout, Celesto downloads the pinned guest-agent binary from the same image release tag and verifies its SHA-256 checksum.
 
 ```text
 ~/.smolvm/images/
@@ -90,12 +90,12 @@ When you build images from an installed Python wheel instead of a source checkou
 ```
 
 <Note>
-  If you set `SMOLVM_GUEST_AGENT_BINARY`, SmolVM uses that local binary for image builds. The binary must be a static Linux binary for the guest architecture.
+  If you set `SMOLVM_GUEST_AGENT_BINARY`, Celesto uses that local binary for image builds. The binary must be a static Linux binary for the guest architecture.
 </Note>
 
 ## Cache layout
 
-Published images live under `~/.smolvm/images/`. The release URLs use the CalVer image tag, while the local cache directory includes the SmolVM package version.
+Published images live under `~/.smolvm/images/`. The release URLs use the CalVer image tag, while the local cache directory includes the Celesto package version.
 
 ```text
 ~/.smolvm/images/
@@ -110,22 +110,22 @@ Published images live under `~/.smolvm/images/`. The release URLs use the CalVer
     vmlinux.image
 ```
 
-The `.from-sha256` sidecar records which compressed rootfs produced the decompressed `rootfs.ext4`. If the manifest checksum changes, SmolVM refreshes the decompressed file.
+The `.from-sha256` sidecar records which compressed rootfs produced the decompressed `rootfs.ext4`. If the manifest checksum changes, Celesto refreshes the decompressed file.
 
-Run `smolvm prune` to remove old cached images:
+Run `celesto prune` to remove old cached images:
 
 ```bash
-smolvm prune
+celesto prune
 ```
 
 ## Dashboard UI assets
 
-The dashboard has its own release asset named like `smolvm-dashboard-ui-<tag>.tar.gz`. The `smolvm ui` command downloads the newest stable dashboard asset into the local SmolVM data directory when the installed package does not already include a built UI.
+The dashboard has its own release asset named like `smolvm-dashboard-ui-<tag>.tar.gz`. The `celesto ui` command downloads the newest stable dashboard asset into the local Celesto data directory when the installed package does not already include a built UI.
 
 Use beta dashboard assets only when you want prerelease UI changes:
 
 ```bash
-smolvm ui --allow-beta
+celesto ui --allow-beta
 ```
 
 ## Next steps
@@ -137,10 +137,10 @@ smolvm ui --allow-beta
   <Card title="Control channel" icon="plug" href="/smolvm/concepts/control-channel">
     Learn how the guest agent speeds up commands
   </Card>
-  <Card title="smolvm prune" icon="broom" href="/smolvm/cli/prune">
+  <Card title="celesto prune" icon="broom" href="/smolvm/cli/prune">
     Reclaim disk from old caches
   </Card>
-  <Card title="smolvm ui" icon="desktop" href="/smolvm/cli/ui">
+  <Card title="celesto ui" icon="desktop" href="/smolvm/cli/ui">
     Start the dashboard
   </Card>
 </CardGroup>

@@ -1,6 +1,6 @@
 ---
 title: "VMConfig Python reference"
-description: "VMConfig reference: the Pydantic model that defines CPU, memory, kernel, rootfs, disk, network, and boot parameters for a SmolVM microVM."
+description: "VMConfig reference: the Pydantic model that defines CPU, memory, kernel, rootfs, disk, network, and boot parameters for a Celesto microVM."
 ---
 
 ## Overview
@@ -20,7 +20,7 @@ All VMConfig instances are immutable (frozen) after creation.
 <ParamField path="vm_id" type="str" default="auto-generated">
   Unique identifier for the VM. Must be lowercase alphanumeric with hyphens or underscores, matching the pattern `^[a-z0-9][a-z0-9_-]{0,62}[a-z0-9]$` or a single character `^[a-z0-9]$`.
 
-  If omitted or explicitly set to `None`, SmolVM auto-generates an ID in the format `vm-<8-char-hex>` (for example, `vm-a1b2c3d4`).
+  If omitted or explicitly set to `None`, Celesto auto-generates an ID in the format `vm-<8-char-hex>` (for example, `vm-a1b2c3d4`).
 </ParamField>
 
 <ParamField path="vcpu_count" type="int" default="2">
@@ -32,7 +32,7 @@ All VMConfig instances are immutable (frozen) after creation.
 </ParamField>
 
 <ParamField path="guest_os" type="GuestOS" default="GuestOS.ALPINE">
-  The operating system running inside the VM. Used by SmolVM to pick the right
+  The operating system running inside the VM. Used by Celesto to pick the right
   QEMU machine type, firmware, and device topology.
 
   Valid values:
@@ -63,7 +63,7 @@ All VMConfig instances are immutable (frozen) after creation.
   * `"raw-ext4"` — a raw ext4 filesystem image (the default for `ImageBuilder` and `DockerRootfsBuilder`).
   * `"qcow2"` — a QEMU qcow2 disk image (used by Ubuntu and Windows cloud images).
 
-  When omitted, SmolVM falls back to the filename suffix (`.qcow2` ⇒ `qcow2`, anything else ⇒ `raw-ext4`). Setting this correctly matters because SmolVM uses it to pick the right QEMU drive format, backing-file format, and disk-resize strategy.
+  When omitted, Celesto falls back to the filename suffix (`.qcow2` ⇒ `qcow2`, anything else ⇒ `raw-ext4`). Setting this correctly matters because Celesto uses it to pick the right QEMU drive format, backing-file format, and disk-resize strategy.
 </ParamField>
 
 <ParamField path="boot_args" type="str" default="console=ttyS0 reboot=k panic=1 pci=off">
@@ -78,7 +78,7 @@ All VMConfig instances are immutable (frozen) after creation.
   * `"libkrun"`: Accepted by the source API, with limited public documentation
   * `None` or `"auto"`: Auto-detect based on host capabilities
 
-  SmolVM's public guides focus on Firecracker and QEMU because they have the broadest current support.
+  Celesto's public guides focus on Firecracker and QEMU because they have the broadest current support.
 </ParamField>
 
 <ParamField path="qemu_network" type="Literal['slirp', 'tap']" default="slirp">
@@ -100,7 +100,7 @@ All VMConfig instances are immutable (frozen) after creation.
 </ParamField>
 
 <ParamField path="disk_size_mib" type="int | None" default="None">
-  Target size in MiB for the per-VM disk. SmolVM only grows the disk — pick a value at least as large as the current rootfs size, otherwise creation fails with a clear error. Requires `disk_mode="isolated"`; shared base images are never resized. Works for both `raw-ext4` and `qcow2` rootfs formats.
+  Target size in MiB for the per-VM disk. Celesto only grows the disk — pick a value at least as large as the current rootfs size, otherwise creation fails with a clear error. Requires `disk_mode="isolated"`; shared base images are never resized. Works for both `raw-ext4` and `qcow2` rootfs formats.
 </ParamField>
 
 <ParamField path="grow_filesystem" type="bool" default="False">
@@ -122,14 +122,14 @@ All VMConfig instances are immutable (frozen) after creation.
 </ParamField>
 
 <ParamField path="network_rate_limit_mbps" type="int | None" default="None">
-  Optional network bandwidth limit in megabits per second. When set, SmolVM caps the guest's outbound traffic to this rate. Must be at least 1.
+  Optional network bandwidth limit in megabits per second. When set, Celesto caps the guest's outbound traffic to this rate. Must be at least 1.
 </ParamField>
 
 <ParamField path="port_forwards" type="list[PortForwardConfig]" default="[]">
   Host-to-guest TCP port forwards configured at VM launch. This setting is supported by QEMU `slirp`; TAP applications use their guest IP or `expose_local()`. Each entry maps a `host_port` to a `guest_port`. Host and guest ports must be unique within the list.
 
   ```python  theme={null}
-  from smolvm.types import PortForwardConfig
+  from celesto.types import PortForwardConfig
 
   port_forwards=[
       PortForwardConfig(host_port=8080, guest_port=80),
@@ -177,7 +177,7 @@ The `vm_id` must:
 ### Basic Configuration
 
 ```python  theme={null}
-from smolvm import VMConfig
+from celesto import VMConfig
 from pathlib import Path
 
 config = VMConfig(
@@ -193,7 +193,7 @@ print(config.memory)  # 512 (default)
 ### Custom VM ID and Resources
 
 ```python  theme={null}
-from smolvm import VMConfig
+from celesto import VMConfig
 from pathlib import Path
 
 config = VMConfig(
@@ -208,7 +208,7 @@ config = VMConfig(
 ### SSH-Capable VM with Environment Variables
 
 ```python  theme={null}
-from smolvm import VMConfig, SSH_BOOT_ARGS
+from celesto import VMConfig, SSH_BOOT_ARGS
 from pathlib import Path
 
 config = VMConfig(
@@ -229,7 +229,7 @@ config = VMConfig(
 ### Shared Disk Mode
 
 ```python  theme={null}
-from smolvm import VMConfig
+from celesto import VMConfig
 from pathlib import Path
 
 # Multiple VMs can boot from the same rootfs
@@ -244,7 +244,7 @@ config = VMConfig(
 ### Persistent Isolated Disk
 
 ```python  theme={null}
-from smolvm import VMConfig
+from celesto import VMConfig
 from pathlib import Path
 
 # Keep VM disk after deletion for state persistence
@@ -267,11 +267,11 @@ config2 = VMConfig(
 
 ### Windows guest
 
-Boot a pre-installed Windows 11 image. Requires `boot_mode="firmware"` and the QEMU backend; SmolVM enforces both invariants.
+Boot a pre-installed Windows 11 image. Requires `boot_mode="firmware"` and the QEMU backend; Celesto enforces both invariants.
 
 ```python  theme={null}
-from smolvm import VMConfig
-from smolvm.types import GuestOS
+from celesto import VMConfig
+from celesto.types import GuestOS
 from pathlib import Path
 
 config = VMConfig(
@@ -288,12 +288,12 @@ config = VMConfig(
 )
 ```
 
-For the high-level path, use [`SmolVM(os="windows", image=...)`](/smolvm/guides/windows-guests). SmolVM handles the QEMU firmware settings and per-VM qcow2 disk setup for you.
+For the high-level path, use [`Celesto(os="windows", image=...)`](/smolvm/guides/windows-guests). Celesto handles the QEMU firmware settings and per-VM qcow2 disk setup for you.
 
 ### QEMU Backend
 
 ```python  theme={null}
-from smolvm import VMConfig
+from celesto import VMConfig
 from pathlib import Path
 
 config = VMConfig(
@@ -324,12 +324,12 @@ from pydantic import BaseModel
 new_config = config.model_copy(update={"vcpu_count": 4})
 ```
 
-## Integration with SmolVM
+## Integration with Celesto
 
-Pass VMConfig to the SmolVM constructor:
+Pass VMConfig to the Celesto constructor:
 
 ```python  theme={null}
-from smolvm import SmolVM, VMConfig
+from celesto import Celesto, VMConfig
 from pathlib import Path
 
 config = VMConfig(
@@ -341,7 +341,7 @@ config = VMConfig(
     boot_args="console=ttyS0 reboot=k panic=1 init=/init",
 )
 
-with SmolVM(config) as vm:
+with Celesto(config) as vm:
     result = vm.run("echo 'Hello from configured VM'")
     print(result.stdout)
 ```
@@ -351,8 +351,8 @@ with SmolVM(config) as vm:
 Use `ImageBuilder` to create kernel and rootfs images:
 
 ```python  theme={null}
-from smolvm import VMConfig, SmolVM
-from smolvm.build import ImageBuilder
+from celesto import VMConfig, Celesto
+from celesto import ImageBuilder
 from pathlib import Path
 
 # Build an SSH-capable Alpine Linux image
@@ -373,7 +373,7 @@ config = VMConfig(
     boot_args="console=ttyS0 reboot=k panic=1 init=/init",
 )
 
-with SmolVM(config) as vm:
+with Celesto(config) as vm:
     result = vm.run("cat /etc/os-release")
     print(result.stdout)
 ```

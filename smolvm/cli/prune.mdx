@@ -1,21 +1,21 @@
 ---
-title: "smolvm prune"
-description: "Reclaim disk space by deleting cached SmolVM images from older releases. Preview targets with --dry-run or get machine-readable output with --json."
+title: "celesto prune"
+description: "Reclaim disk space by deleting cached Celesto images from older releases. Preview targets with --dry-run or get machine-readable output with --json."
 ---
 
-When you upgrade SmolVM, the new release pulls a fresh set of pre-built sandbox images. The images from older releases stay on disk under `~/.smolvm/images/` and slowly add up. The `smolvm prune` command finds those leftover image folders and deletes them so you get the space back.
+When you upgrade Celesto, the new release pulls a fresh set of pre-built sandbox images. The images from older releases stay on disk under `~/.smolvm/images/` and slowly add up. The `celesto prune` command finds those leftover image folders and deletes them so you get the space back.
 
 Run it any time after an upgrade. It only touches caches that belong to versions you're no longer using, so your current sandboxes keep working.
 
 <Note>
-  `smolvm prune` is an alias of [`smolvm image prune`](/smolvm/cli/image#prune) — same implementation, same flags. Either name works. The `image` group is the canonical home; the top-level `smolvm prune` is kept for backward compatibility.
+  `celesto prune` is an alias of [`celesto image prune`](/smolvm/cli/image#prune) — same implementation, same flags. Either name works. The `image` group is the canonical home; the top-level `celesto prune` is kept for backward compatibility.
 </Note>
 
 ## Synopsis
 
 ```bash  theme={null}
-smolvm prune [OPTIONS]
-smolvm image prune [OPTIONS]   # canonical spelling
+celesto prune [OPTIONS]
+celesto image prune [OPTIONS]   # canonical spelling
 ```
 
 ## Options
@@ -39,7 +39,7 @@ smolvm image prune [OPTIONS]   # canonical spelling
 Always safe to run first — it never deletes:
 
 ```bash  theme={null}
-smolvm prune --dry-run
+celesto prune --dry-run
 ```
 
 **Example output:**
@@ -58,7 +58,7 @@ Dry run complete. No changes made.
 Delete the stale caches:
 
 ```bash  theme={null}
-smolvm prune
+celesto prune
 ```
 
 **Example output:**
@@ -74,18 +74,18 @@ Reclaimed 899 MB.
 Get a machine-readable report:
 
 ```bash  theme={null}
-smolvm prune --json
+celesto prune --json
 ```
 
 The `--json` flag emits a structured object listing the cache directories that were considered, which were removed, and the total bytes reclaimed. Pipe into `jq` to extract specific fields, or combine with `--dry-run` to inspect targets without deleting:
 
 ```bash  theme={null}
-smolvm prune --dry-run --json | jq .
+celesto prune --dry-run --json | jq .
 ```
 
 ## What gets deleted
 
-`smolvm prune` only removes cached image folders for SmolVM versions other than the one currently installed. The current version's cache is preserved.
+`celesto prune` only removes cached image folders for Celesto versions other than the one currently installed. The current version's cache is preserved.
 
 It does not touch:
 
@@ -95,7 +95,7 @@ It does not touch:
 * SSH keys under `~/.smolvm/keys/`
 
 <Note>
-  If you upgrade SmolVM frequently, run `smolvm prune` periodically to keep your cache footprint small. Each release ships a fresh set of pre-built rootfs and kernel artifacts.
+  If you upgrade Celesto frequently, run `celesto prune` periodically to keep your cache footprint small. Each release ships a fresh set of pre-built rootfs and kernel artifacts.
 </Note>
 
 ## Exit codes
@@ -107,7 +107,7 @@ It does not touch:
 
 ## Related commands
 
-* [`smolvm image`](/smolvm/cli/image) — pull, list, inspect, build, save, and remove cached images
-* [`smolvm sandbox delete`](/smolvm/cli/cleanup) — remove stale sandboxes and free runtime resources
-* [`smolvm sandbox prune`](/smolvm/cli/sandbox-prune) — sweep disks and logs left behind by deleted sandboxes
-* [`smolvm doctor`](/smolvm/cli/doctor) — diagnose your install before pruning
+* [`celesto image`](/smolvm/cli/image) — pull, list, inspect, build, save, and remove cached images
+* [`celesto sandbox delete`](/smolvm/cli/cleanup) — remove stale sandboxes and free runtime resources
+* [`celesto sandbox prune`](/smolvm/cli/sandbox-prune) — sweep disks and logs left behind by deleted sandboxes
+* [`celesto doctor`](/smolvm/cli/doctor) — diagnose your install before pruning

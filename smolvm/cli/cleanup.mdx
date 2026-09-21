@@ -1,15 +1,15 @@
 ---
-title: "smolvm sandbox delete"
-description: "Use smolvm sandbox delete to remove one sandbox or clean up every sandbox on the host with a confirmation step."
+title: "celesto sandbox delete"
+description: "Use celesto sandbox delete to remove one sandbox or clean up every sandbox on the host with a confirmation step."
 ---
 
-`smolvm sandbox delete` removes sandboxes and releases their stored resources. Use it for normal cleanup after a workflow, or with `--all` when you want to clear every sandbox on the host.
+`celesto sandbox delete` removes sandboxes and releases their stored resources. Use it for normal cleanup after a workflow, or with `--all` when you want to clear every sandbox on the host.
 
 ## Synopsis
 
 ```bash
-smolvm sandbox delete <sandbox...> [OPTIONS]
-smolvm sandbox delete --all [OPTIONS]
+celesto sandbox delete <sandbox...> [OPTIONS]
+celesto sandbox delete --all [OPTIONS]
 ```
 
 ## Arguments
@@ -37,7 +37,7 @@ smolvm sandbox delete --all [OPTIONS]
 </ParamField>
 
 <Warning>
-  `smolvm sandbox delete --all --force` deletes every sandbox on the host. Use `--dry-run` first when you are unsure.
+  `celesto sandbox delete --all --force` deletes every sandbox on the host. Use `--dry-run` first when you are unsure.
 </Warning>
 
 ## Examples
@@ -45,46 +45,46 @@ smolvm sandbox delete --all [OPTIONS]
 ### Delete one sandbox
 
 ```bash
-smolvm sandbox delete my-sandbox
+celesto sandbox delete my-sandbox
 ```
 
 ### Delete several sandboxes
 
 ```bash
-smolvm sandbox delete test-a test-b old-agent
+celesto sandbox delete test-a test-b old-agent
 ```
 
 ### Preview full cleanup
 
 ```bash
-smolvm sandbox delete --all --dry-run
+celesto sandbox delete --all --dry-run
 ```
 
 ### Delete every sandbox
 
 ```bash
-smolvm sandbox delete --all --force
+celesto sandbox delete --all --force
 ```
 
 ### Use JSON in automation
 
 ```bash
-smolvm sandbox delete --all --force --json
+celesto sandbox delete --all --force --json
 ```
 
 ## What gets cleaned up
 
-For each target, SmolVM stops the sandbox if needed, removes its runtime state, releases network resources, deletes the per-sandbox disk state it owns, and removes the sandbox's `<vm_id>.log` runtime log.
+For each target, Celesto stops the sandbox if needed, removes its runtime state, releases network resources, deletes the per-sandbox disk state it owns, and removes the sandbox's `<vm_id>.log` runtime log.
 
 ### Reclaiming a leaked disk
 
-If a sandbox row has already been dropped from the inventory but its per-sandbox disk still exists on disk, `smolvm sandbox delete <id>` reclaims the disk by deriving its path from the sandbox ID instead of failing with "not found". This covers cases where a crash or an interrupted teardown left a disk behind without a matching row.
+If a sandbox row has already been dropped from the inventory but its per-sandbox disk still exists on disk, `celesto sandbox delete <id>` reclaims the disk by deriving its path from the sandbox ID instead of failing with "not found". This covers cases where a crash or an interrupted teardown left a disk behind without a matching row.
 
-To sweep leftovers from sandboxes whose IDs you no longer know, use [`smolvm sandbox prune`](/smolvm/cli/sandbox-prune).
+To sweep leftovers from sandboxes whose IDs you no longer know, use [`celesto sandbox prune`](/smolvm/cli/sandbox-prune).
 
 ## Related commands
 
-* [`smolvm sandbox list`](/smolvm/cli/list) - Review targets before deleting
-* [`smolvm sandbox stop`](/smolvm/cli/stop) - Stop without deleting
-* [`smolvm sandbox prune`](/smolvm/cli/sandbox-prune) - Sweep disks and logs left behind by deleted sandboxes
-* [`smolvm prune`](/smolvm/cli/prune) - Remove old image caches
+* [`celesto sandbox list`](/smolvm/cli/list) - Review targets before deleting
+* [`celesto sandbox stop`](/smolvm/cli/stop) - Stop without deleting
+* [`celesto sandbox prune`](/smolvm/cli/sandbox-prune) - Sweep disks and logs left behind by deleted sandboxes
+* [`celesto prune`](/smolvm/cli/prune) - Remove old image caches
