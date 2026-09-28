@@ -112,27 +112,27 @@
           {
             "group": "Start Here",
             "pages": [
-              "cloud/overview",
+              "celesto-sdk/overview",
               "cloud/quickstart",
-              "cloud/authentication"
+              "celesto-sdk/authentication"
             ]
           },
           {
             "group": "Features",
             "pages": [
-              "cloud/computers",
-              "cloud/features/publish-ports",
-              "cloud/features/lifecycle",
-              "cloud/features/resources",
-              "cloud/features/persistence",
+              "celesto-sdk/computers",
+              "celesto-sdk/features/publish-ports",
+              "celesto-sdk/features/lifecycle",
+              "celesto-sdk/features/resources",
+              "celesto-sdk/features/persistence",
               "cloud/features/network-control",
-              "cloud/features/petabyte-storage"
+              "celesto-sdk/features/petabyte-storage"
             ]
           },
           {
             "group": "Guides",
             "pages": [
-              "cloud/guides/publish-github-app"
+              "celesto-sdk/guides/publish-github-app"
             ]
           },
           {
@@ -146,11 +146,11 @@
                   "cloud/managed-agents/reference"
                 ]
               },
-              "cloud/guides/pi-coding-agent",
-              "cloud/deployments",
-              "cloud/openai-agents",
-              "cloud/gatekeeper",
-              "cloud/errors"
+              "celesto-sdk/guides/pi-coding-agent",
+              "celesto-sdk/deployments",
+              "celesto-sdk/openai-agents",
+              "celesto-sdk/gatekeeper",
+              "celesto-sdk/errors"
             ]
           }
         ]
@@ -245,9 +245,7 @@
         "groups": [
           {
             "group": "Celesto CLI",
-            "pages": [
-              "cloud/cli"
-            ]
+            "pages": []
           },
           {
             "group": "Celesto API",
@@ -278,6 +276,7 @@
             "group": "Celesto CLI",
             "pages": [
               "smolvm/cli/overview",
+              "celesto-sdk/cli",
               "smolvm/cli/create",
               "smolvm/cli/list",
               "smolvm/cli/shell",
@@ -387,7 +386,7 @@
   "appearance": {
     "default": "dark"
   },
-  "description": "Celesto provides secure, isolated computers that AI agents can use to browse, code, and get real work done.",
+  "description": "Celesto gives an AI agent its own computer for running code, browsing the web, and using desktop apps. You can run that computer on your machine during development or in Celesto Cloud for remote and production work.",
   "interaction": {
     "drilldown": true
   },

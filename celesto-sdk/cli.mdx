@@ -1,6 +1,6 @@
 ---
-title: "Celesto CLI reference"
-sidebarTitle: "CLI reference"
+title: Celesto CLI reference
+sidebarTitle: CLI reference
 description: "Use the celesto CLI to authenticate, create computers, run commands, publish ports, and manage sandbox lifecycle from the terminal."
 ---
 
@@ -26,8 +26,6 @@ Check or remove the saved key later:
 celesto auth status
 celesto auth logout
 ```
-
-`celesto auth status` reports the API URL, the credential source, and the organization the key is bound to. See [Authentication](/cloud/authentication#verify-which-credential-a-command-uses) for how the CLI resolves keys and how to check which organization a command targets.
 
 ## Create your first computer
 
@@ -73,18 +71,17 @@ celesto computer stop einstein
 celesto computer start einstein
 ```
 
-Delete the computer when you are done. The confirmation prompt names the organization the computer belongs to, so you can catch a wrong-tenant delete before it happens. Pass `--force` to skip the prompt in scripts.
+Delete the computer when you are done:
 
 ```bash
 celesto computer delete einstein
-# Delete computer einstein in Acme Research (org_123)? [y/N]:
 ```
 
 ## Computer commands
 
 | Command | Description |
 |---|---|
-| `celesto computer create [--template ID] [--cpus N] [--memory MB] [--disk-size-mb MB] [--no-internet]` | Create a computer. Pass `--no-internet` to turn off outbound internet access (requires `celesto` `0.0.13` or later). |
+| `celesto computer create [--template ID] [--cpus N] [--memory MB] [--disk-size-mb MB]` | Create a computer |
 | `celesto computer templates` | List templates with preinstalled tools |
 | `celesto computer list [--status STATUS] [--template ID] [--project ID] [--limit N]` | List matching computers |
 | `celesto computer get NAME` | Get one computer by name or ID |
