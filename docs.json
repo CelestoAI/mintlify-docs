@@ -118,6 +118,10 @@
             ]
           },
           {
+            "group": "GitHub Actions CI",
+            "pages": ["docs/ci"]
+          },
+          {
             "group": "Features",
             "pages": [
               "cloud/computers",
