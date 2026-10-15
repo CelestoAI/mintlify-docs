@@ -66,6 +66,7 @@
               "smolvm/features/callbacks",
               "smolvm/features/browser-sandboxes",
               "smolvm/features/coding-agents",
+              "smolvm/features/docker",
               "smolvm/features/host-mounts",
               "smolvm/features/network-controls",
               "smolvm/features/bridged-networking",
@@ -125,6 +126,7 @@
             "group": "Features",
             "pages": [
               "cloud/computers",
+              "smolvm/features/docker",
               "cloud/features/publish-ports",
               "cloud/features/lifecycle",
               "cloud/features/resources",
@@ -142,6 +144,7 @@
           {
             "group": "Agents and Integrations",
             "pages": [
+              "cloud/mcp-server",
               {
                 "group": "Managed agents",
                 "pages": [

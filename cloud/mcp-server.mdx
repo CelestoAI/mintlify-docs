@@ -1,0 +1,163 @@
+---
+title: "Give your AI assistant a cloud computer"
+sidebarTitle: "MCP server"
+description: "Connect an AI assistant to the Celesto MCP server to create cloud computers, run commands, keep files, and publish web apps."
+---
+
+You can give your AI assistant a Celesto cloud computer to run code, install software, and test projects. Ask it to work in that computer, keep the files for later, or share a running web app.
+
+The Celesto **MCP server** uses the Model Context Protocol, a standard that lets AI assistants call tools from other services. Connect your assistant to the hosted server, then use its tools through conversation.
+
+## Connect your assistant
+
+You need a Celesto account and an assistant that supports remote MCP connections with **Streamable HTTP**, the connection method used by this server. Your account must have access to cloud computers to create one.
+
+<Steps>
+  <Step title="Add the Celesto server">
+    Open your assistant's MCP or connector settings and add a remote server with these values:
+
+    | Setting | Value |
+    | --- | --- |
+    | Name | `Celesto` |
+    | Server URL | `https://mcp.celesto.ai/mcp` |
+    | Connection type | Streamable HTTP |
+    | Authentication | OAuth, a browser sign-in flow that grants the assistant access to your account |
+
+    You can also find Celesto on [Smithery](https://smithery.ai/servers/celesto-ai/mcp) and [Glama](https://glama.ai/mcp/connectors/ai.celesto/mcp) and follow their connection instructions.
+
+    <Accordion title="Connect from Claude Code">
+      With [Claude Code installed](https://code.claude.com/docs/en/mcp), run this command in your terminal:
+
+      ```bash
+      claude mcp add --transport http celesto https://mcp.celesto.ai/mcp
+      ```
+
+      Start Claude Code and enter `/mcp` to select Celesto and complete sign-in.
+    </Accordion>
+  </Step>
+
+  <Step title="Sign in to Celesto">
+    Follow your assistant's sign-in prompt. Review the requested permissions and approve access to the Celesto organization whose computers you want to use.
+
+    Tools operate on computers in that organization. Your organization role and granted permissions determine which actions the assistant can take.
+  </Step>
+
+  <Step title="Check the connection">
+    Ask your assistant:
+
+    ```text
+    Use Celesto to list my cloud computers.
+    ```
+
+    <Check>
+      The assistant calls `cloud_computer_list` and returns computer IDs and states, or an empty list if you have no computers yet. The server exposes ten tools.
+    </Check>
+  </Step>
+</Steps>
+
+<Accordion title="Use an API key with a client that supports custom headers">
+  Get a Celesto API key from **Settings > Security** in the [Celesto dashboard](https://celesto.ai). Add an `Authorization` header in your client's secure credential settings with the value `Bearer ` followed by your API key.
+
+  The server accepts API keys as an alternative to browser sign-in. The key's permissions and organization determine which computers and actions are available. See [Authentication](/cloud/authentication) for managing Celesto credentials.
+</Accordion>
+
+## Start your first task
+
+Ask the assistant to create a computer and check its tools:
+
+```text
+Create a Celesto cloud computer with the coding-agent template. Show me the
+sizes available on my account and ask me which size to use. Once I choose,
+run python3 --version and node --version in the computer and show the output.
+```
+
+The assistant asks you to choose a size before creating the computer. The `coding-agent` template includes Python, Node.js, Git, and common build tools. The default `scratch` template starts with a basic Ubuntu setup.
+
+The create tool returns the computer's ID in its `name` field. The assistant uses that ID in later calls. Commands run inside the cloud computer, where you can use administrator access to install tools such as [Docker](/smolvm/features/docker).
+
+To continue the same work later, ask the assistant to start the saved computer and reuse its files. Stop the computer when you want to keep its files for later. Delete it when you are finished with the computer and its files.
+
+## Available tools
+
+The server provides these ten tools. In tool arguments, `name` accepts a computer ID or display name.
+
+| Tool | Arguments | What it does |
+| --- | --- | --- |
+| `cloud_computer_create` | `idempotency_key`, `size_id`, optional `template_id` | Creates a computer and returns its ID, provider, and running state. The user chooses `size_id`; omitting it returns the account's available sizes. |
+| `cloud_computer_list` | Optional `limit` | Lists computer IDs and states in your organization. The default limit is 50; accepted values are 1–100. |
+| `cloud_computer_info` | `name` | Shows the computer's name, state, CPU, memory, disk, image, and creation time. |
+| `cloud_computer_exec` | `name`, `command`, optional `timeout` | Runs a shell command on a running computer and returns its output and exit code. The default timeout is 30 seconds; accepted values are 1–300 seconds. |
+| `cloud_computer_start` | `name` | Starts a stopped computer and returns its running state. |
+| `cloud_computer_stop` | `name` | Stops running work, keeps files, and suspends public ports. |
+| `cloud_computer_delete` | `name` | Permanently deletes the computer, its files, and its public routes. |
+| `cloud_computer_port_publish` | `name`, `port` | Gives an HTTP app a public URL and returns the route's publication state. |
+| `cloud_computer_port_list` | `name` | Lists the computer's public routes, URLs, ports, and publication states. |
+| `cloud_computer_port_unpublish` | `name`, `port` | Removes the public route while the app can keep running inside the computer. |
+
+`idempotency_key` is a creation key that makes retries reuse the same computer. Use a new key for each computer and the same key, size, and template when retrying a creation. Keys must contain 1–255 characters and include a non-space character.
+
+## Share a running web app
+
+Ask your assistant to start the app inside the computer, then publish its port. For example:
+
+```text
+In the Celesto computer we just created, make a small demo web page in its own
+folder and serve that folder on port 8000. Publish port 8000 and give me the
+public URL once the route is published and the page responds.
+```
+
+The app must listen on `0.0.0.0` so the public route can reach it. Application ports range from `1024` to `65535`; Celesto system ports are reserved. A returned URL becomes usable when the route is `published` and the app is ready.
+
+Anyone with the URL can send requests to the app. Add authentication in the app when it serves private data. For details, see [Publish ports](/cloud/features/publish-ports).
+
+## Understand permissions
+
+A **scope** is permission to perform a group of actions. OAuth connections and scoped API keys use these permissions:
+
+| Scope | Tools it permits |
+| --- | --- |
+| `computers:read` | List computers, inspect a computer, and list public ports. |
+| `computers:exec` | Create, start, and stop computers; run commands; publish and unpublish ports. |
+| `computers:admin` | Delete computers. |
+
+Each tool checks its own scope. Include each permission your workflow needs, along with the required access in your organization.
+
+## Troubleshoot a connection or tool call
+
+<AccordionGroup>
+  <Accordion title="The assistant cannot connect or asks you to sign in again">
+    Check that the URL includes `/mcp` and the connection type is Streamable HTTP. Complete browser sign-in again if your token has expired. For an API-key connection, check the `Authorization` header and the key's organization.
+
+    A `401` response means the server needs valid credentials. A browser address-bar visit does not perform an MCP connection; use your assistant's connection settings.
+  </Accordion>
+
+  <Accordion title="A tool reports missing permissions or cannot create a computer">
+    A `403` response can mean your connection needs another scope or your organization role does not permit the action. Reconnect with the required permissions.
+
+    Creation also requires a size available on your account and an account that can create computers. Follow the tool's message to choose a size or review billing in the Celesto dashboard.
+  </Accordion>
+
+  <Accordion title="A command times out or its output is cut short">
+    A command can continue running after an MCP request times out. Check its effects inside the computer before retrying: calling `cloud_computer_exec` again runs the command again.
+
+    Each output stream is limited to 16,384 characters. Check `stdout_truncated` and `stderr_truncated` in the result. Save long output to a file inside the computer and read the portions you need with later commands.
+  </Accordion>
+
+  <Accordion title="A computer list or public URL looks incomplete">
+    Computer lists always return `possibly_truncated: true` because the server does not count all computers. Increase `limit` up to 100 or inspect a known computer directly.
+
+    For public apps, check the route's state with `cloud_computer_port_list` and the app's output with `cloud_computer_exec`. Stopped computers have suspended routes; route removal can remain `unpublishing` while it completes.
+  </Accordion>
+
+  <Accordion title="The server asks you to retry later">
+    The MCP endpoint allows 60 requests per minute per organization. When you receive a `429` response, wait before retrying. For a `503` response, follow the `Retry-After` header when provided.
+
+    For a creation retry, reuse the same creation key. For lifecycle and port operations, check the computer or route state before repeating the call.
+  </Accordion>
+</AccordionGroup>
+
+## Related guides
+
+- [Create and manage cloud computers](/cloud/computers)
+- [Keep work between sessions](/cloud/features/persistence)
+- [Use the Celesto command line](/cloud/cli)
