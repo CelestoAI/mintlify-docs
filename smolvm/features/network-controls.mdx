@@ -1,9 +1,16 @@
 ---
-title: "Network Controls"
-description: "Cut off a sandbox's internet, or allow only specific IPv4 destinations, using the internet_settings policy on Firecracker and QEMU sandboxes."
+title: "Control sandbox internet access"
+sidebarTitle: "Network controls and egress allowlists"
+description: "Set an egress allowlist for local Linux sandboxes, allow specific destination addresses, or turn outbound internet access off."
 ---
 
-Use `internet_settings` when a sandbox should run with no outbound access, or should only reach a short list of IPv4 destinations. Celesto enforces the policy on both Firecracker and QEMU, validates it before allocating any resources, and preserves it across the sandbox's lifetime.
+You can choose which services your sandbox can contact. Give an agent access to the services its task needs, or turn internet access off so it works with files and tools already available inside the sandbox.
+
+An **egress allowlist** is a list of destinations the sandbox can connect to. All other outbound destinations are blocked. Set it with `internet_settings` when you create a local sandbox with the Python SDK (software development kit).
+
+<Note>
+  Destination allowlists are available for local Linux sandboxes using Firecracker or QEMU with TAP networking, a connection through your Linux host. Cloud computers offer `open` and `off` settings through a separate [Network Control policy](/cloud/features/network-control).
+</Note>
 
 ## Choose a mode
 
@@ -67,7 +74,43 @@ Firecracker `off` mode blocks all guest-initiated IP traffic, including DNS and 
 
 ## Allow specific IPv4 destinations
 
-Use `restricted` with the addresses or network ranges the task needs. This mode requires Firecracker on Linux with `comm_channel="vsock"`, or explicit QEMU TAP networking on Linux.
+Use `restricted` with the IPv4 addresses or network ranges the task needs. IPv4 addresses identify destinations using four numbers, such as `203.0.113.10`. This mode requires Firecracker on Linux with `comm_channel="vsock"`, a direct command connection separate from the sandbox's network, or explicit QEMU TAP networking on Linux.
+
+### Set an egress allowlist on Linux
+
+Complete [Celesto installation](/smolvm/installation) on your Linux machine first. Replace `203.0.113.10` below with your service's IPv4 address before running this example. Celesto applies the rules on your Linux host before the sandbox starts, so administrator access inside the sandbox keeps the same network restrictions.
+
+```python egress_allowlist.py
+from celesto import Celesto
+
+
+with Celesto(
+    backend="firecracker",
+    comm_channel="vsock",
+    internet_settings={
+        "mode": "restricted",
+        "allowed_cidrs": ["203.0.113.10/32"],
+    },
+) as vm:
+    result = vm.run("echo 'Sandbox ready with the destination allowlist'")
+    if result.exit_code != 0:
+        raise RuntimeError(result.stderr or result.stdout)
+    print(result.stdout.strip())
+```
+
+Run it on your Linux machine:
+
+```bash
+python3 egress_allowlist.py
+```
+
+<Check>
+  The script prints `Sandbox ready with the destination allowlist`. Commands remain available through the direct connection while outbound traffic follows your allowlist.
+</Check>
+
+To check access for your workload, run its connection command with `vm.run(...)` against the allowed service, then against a reachable service outside the list. The allowed connection should succeed; the other should fail. Set a connection timeout in your command so a blocked connection returns promptly.
+
+### Use QEMU with an existing network setup
 
 With a prepared `BootImage` named `image`:
 
