@@ -1,0 +1,120 @@
+---
+title: "Drive a browser and view the desktop of a cloud computer"
+sidebarTitle: "Browser and desktop"
+description: "Connect Playwright or Puppeteer to a Chromium browser inside a Celesto computer over CDP, and watch or control its desktop live from the console or your own VNC viewer."
+---
+
+Some agents need more than a shell. A computer created from the `browser-agent` template runs a Chromium browser and a graphical desktop, and Celesto gives you two short-lived connections to them:
+
+- A **browser connection**: a Chrome DevTools Protocol (CDP) WebSocket URL. Connect Playwright or Puppeteer to it and drive the browser from your own code.
+- A **display connection**: a VNC-over-WebSocket URL for the computer's screen. Watch an agent work, or take over the mouse and keyboard.
+
+Both URLs carry a credential. Keep them secret, and request a new connection when one expires.
+
+## Before you start
+
+- Create the computer from the `browser-agent` template. Computers created from other templates have no browser or display.
+- Authenticate with `celesto auth login`, or set `CELESTO_API_KEY` to an API key from **Settings → Security** in the console.
+- Install Playwright to drive the browser: `pip install playwright` or `npm i playwright`.
+
+## Drive the browser with Playwright
+
+Request a browser connection, then connect Playwright to its CDP URL. Reuse the browser's existing page when it has one.
+
+<CodeGroup>
+
+```python Python
+from celesto import Computer
+from playwright.sync_api import sync_playwright
+
+
+computer = Computer(provider="cloud", template_id="browser-agent")
+try:
+    connection = computer.browser()
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.connect_over_cdp(connection.url)
+        context = browser.contexts[0]
+        page = context.pages[0] if context.pages else context.new_page()
+        page.goto("https://example.com")
+        print(page.title())
+finally:
+    computer.delete()
+```
+
+```ts TypeScript
+import { Computer } from "@celestoai/sdk";
+import { chromium } from "playwright";
+
+const computer = await Computer.create({ templateId: "browser-agent" });
+try {
+  const connection = await computer.createBrowserConnection();
+  const browser = await chromium.connectOverCDP(connection.url);
+  const context = browser.contexts()[0];
+  if (!context) throw new Error("Celesto browser did not provide a context");
+  const page = context.pages()[0] ?? (await context.newPage());
+
+  await page.goto("https://example.com");
+  console.log(await page.title());
+} finally {
+  await computer.delete();
+}
+```
+
+</CodeGroup>
+
+<Note>
+  The connection expires at `expires_at`. If Playwright cannot connect, request a new connection and try again.
+</Note>
+
+## Watch or control the desktop
+
+### From the console
+
+Open **Computers** in the Celesto console and select **Display** on a running `browser-agent` computer. The live view opens read-only. Switch to read-write to use the mouse and keyboard.
+
+### From your own code
+
+Request a display connection to embed the screen in your own tool. The URL is a VNC-over-WebSocket address for a viewer such as [noVNC](https://novnc.com), not an HTML page you can open directly.
+
+<CodeGroup>
+
+```python Python
+from celesto import Computer
+
+
+computer = Computer(provider="cloud", template_id="browser-agent")
+
+watch = computer.display()                     # read-only
+control = computer.display(mode="read_write")  # mouse and keyboard
+
+print(watch.mode, watch.expires_at)
+```
+
+```ts TypeScript
+import { Computer } from "@celestoai/sdk";
+
+const computer = await Computer.create({ templateId: "browser-agent" });
+
+const watch = await computer.createDisplayConnection();
+const control = await computer.createDisplayConnection({ mode: "read_write" });
+
+console.log(watch.mode, watch.expiresAt);
+```
+
+</CodeGroup>
+
+`read_only` is enforced by the display service, so a viewer with a read-only URL cannot send input.
+
+## Troubleshooting
+
+| Problem | What to do |
+| --- | --- |
+| No browser or display is available | Create the computer from the `browser-agent` template. |
+| The connection is refused after a while | The URL expired. Request a new connection. |
+| A read-only viewer cannot click or type | Request a connection with `mode="read_write"`. |
+
+## Related
+
+- [Publish ports](/cloud/features/publish-ports) to share a web app running inside the computer.
+- [Computer lifecycle](/cloud/features/lifecycle) to stop and start a computer between sessions.
