@@ -120,7 +120,7 @@
           },
           {
             "group": "GitHub Actions CI",
-            "pages": ["docs/ci"]
+            "pages": ["ci"]
           },
           {
             "group": "Features",
