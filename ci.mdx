@@ -5,6 +5,8 @@ description: "Run your GitHub Actions on Celesto: quickstart, runner sizes and p
 
 Run your repository’s builds and tests on Celesto computers, and keep your workflow results and logs in GitHub Actions. Celesto starts a fresh computer for each job and deletes it when the job finishes.
 
+Use the [Docker guide](/ci/docker) for image builds and database services, or [benchmarking](/ci/benchmarking) to compare your workflow's speed and cost.
+
 ## Quickstart
 
 You need a GitHub account that administers the repositories you select, a Celesto workspace where you are an admin, and usable workspace credit. A workspace owner can start the eligible, card-free $5 Micro trial.
@@ -72,6 +74,7 @@ The CI image includes these tools:
 | Python | Python 3.12, pip, uv, uvx |
 | JavaScript | Node.js 24, npm, npx, pnpm |
 | Source control | Git, OpenSSH client |
+| Containers | Docker Engine, Buildx, and Compose v2 |
 | Build tools | C/C++ compiler toolchain, make, pkg-config, OpenSSL development libraries |
 | Utilities | Bash, curl, jq, ripgrep (`rg`), fd, SQLite, zip/unzip, tar, gzip, xz |
 | Coding agents | Pi coding agent |
@@ -81,7 +84,7 @@ This is Celesto’s CI image, rather than GitHub’s hosted runner image. Instal
 ## Limits and compatibility
 
 - **Operating system:** Ubuntu Linux x64. Windows, macOS, and ARM jobs need another runner.
-- **Actions:** Shell steps and compatible JavaScript actions work. Docker actions, `container:` jobs, and `services:` containers are not supported in the current image.
+- **Actions and containers:** Shell steps, compatible JavaScript actions, Docker image builds, Compose, and native PostgreSQL `services:` have been exercised on Celesto CI. See [Docker support and known limits](/ci/docker) for tested examples and configurations to validate before migration.
 - **Runtime:** Job computers have a two-hour safety limit. Set `timeout-minutes` below 120 to leave room for runner preparation and cleanup; the quickstart uses 90.
 - **Concurrency:** Available capacity, workspace sandbox limits, and usable credit govern admission. The Micro trial allows one retained sandbox at a time, so an existing sandbox can block a CI runner.
 - **Local files:** Each computer serves one job and is deleted afterward. Use GitHub Actions artifacts or compatible caching steps to keep results or dependencies between jobs.

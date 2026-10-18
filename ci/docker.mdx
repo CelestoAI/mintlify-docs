@@ -1,0 +1,81 @@
+---
+title: "Docker and services"
+description: "Build Docker images and run PostgreSQL and Azurite tests with Celesto CI, including Compose and GitHub service containers."
+---
+
+Build your application's images and test it with databases on Celesto CI. Docker Engine, Buildx, and Compose are included in the Linux runner image, and Docker starts before the runner accepts your job.
+
+You can use a personal GitHub account or a GitHub organization. First [install and connect Celesto CI](/ci#quickstart), select your repositories, and link a Celesto workspace with eligible credit.
+
+## Choose a tested workflow
+
+| Workflow | Verified behavior |
+| --- | --- |
+| Docker image builds | Build, load, and execute an image with Buildx |
+| Docker Compose | Run PostgreSQL and Azurite together; the repeated benchmark checks SQL and Azure Blob operations through a Python application |
+| GitHub `services:` | Start PostgreSQL before job steps and execute a SQL query |
+
+The [live functional check](https://github.com/CelestoAI/ci-benchmarks/actions/runs/39071944026) and [repeated benchmark](https://github.com/CelestoAI/ci-benchmarks/tree/e4461a43c193d56560c7df56ceff7fb3170cee78/results/docker-2026-10-17) record these results. Docker-based actions and whole-job `container:` configurations were not separately established by those checks; validate your chosen action or job image before migrating it.
+
+## Build and run an image
+
+This example uses the published Python fixture, which includes locked dependencies and a self-test. Save it as `.github/workflows/docker.yml` in a connected repository:
+
+```yaml .github/workflows/docker.yml
+name: Docker on Celesto
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: [self-hosted, celesto-large]
+    timeout-minutes: 15
+    steps:
+      - name: Fetch the tested fixture
+        uses: actions/checkout@v4
+        with:
+          repository: CelestoAI/ci-benchmarks
+          ref: e4461a43c193d56560c7df56ceff7fb3170cee78
+          path: ci-fixture
+      - name: Build the API image
+        run: |
+          BASE=$(python3 -c 'import json; print(json.load(open("ci-fixture/docker-bench/images.json"))["python"])')
+          docker build --build-arg "BASE=$BASE" -t app:ci ci-fixture/docker-bench/python
+      - name: Check the image
+        run: |
+          test "$(docker run --rm app:ci python app.py --self-test)" = 42
+```
+
+Open **Actions → Docker on Celesto → Run workflow**. A successful final step confirms the image built and its self-test returned `42`. This self-test checks the application image; it does not connect to a database.
+
+Large provides 4 vCPU and 16 GB RAM and requires eligible workspace credit. It is the size used for the repeated benchmark, not a minimum requirement for all Docker jobs. Select a [runner size](/ci#sizes-and-prices) for your application's needs.
+
+## Add databases and storage tests
+
+Use the [complete Docker and Compose walkthrough](https://celesto.ai/blog/posts/docker-compose-ci-personal-github/) for:
+
+- A Compose file with PostgreSQL, Azurite, and a Python API.
+- Health checks followed by real SQL inserts and an Azure Blob upload/download.
+- A native GitHub PostgreSQL `services:` example.
+- Cleanup steps that run even when tests fail.
+
+The [pinned integration fixture](https://github.com/CelestoAI/ci-benchmarks/tree/e4461a43c193d56560c7df56ceff7fb3170cee78/docker-bench/python) provides the application used in the repeated checks. Use health checks to wait for services, then assert the results your application needs. A listening port alone does not establish that a database query or storage operation works.
+
+## Authenticate image pulls before they happen
+
+At higher job volumes, unauthenticated Docker Hub pulls can reach registry limits. Store registry credentials in GitHub Actions secrets and authenticate before step-level pulls.
+
+GitHub pulls `services:` images before executing job steps. Put credentials in the service's `credentials` configuration when the registry requires authentication; a later `docker login` step is too late for that pull. The walkthrough includes both patterns.
+
+## Check cache and CPU-limit compatibility
+
+The October 17 benchmark found two failures on Celesto:
+
+- Direct BuildKit cache export with `type=gha,version=2` failed preflight.
+- Docker's explicit `--cpus` flag failed preflight.
+
+The tested builds used the runner VM's CPU allocation and either a registry cache or portable cache archives transferred through `actions/cache`. These alternatives passed their checks; they do not establish that the failing options are fixed.
+
+Each job gets a fresh computer. Local Docker images and build layers do not automatically survive into the next job. Compare complete build time, including cache transfer and import, before choosing a cache strategy. See [benchmarking](/ci/benchmarking) for the measured tradeoffs.
+
+For a failing migration, retain the Actions logs and runner size, and [contact support](mailto:aniket@celesto.ai) with a workflow that has secrets removed.

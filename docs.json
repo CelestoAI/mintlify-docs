@@ -119,10 +119,6 @@
             ]
           },
           {
-            "group": "GitHub Actions CI",
-            "pages": ["ci"]
-          },
-          {
             "group": "Features",
             "pages": [
               "cloud/computers",
@@ -160,6 +156,23 @@
               "cloud/gatekeeper",
               "cloud/errors"
             ]
+          }
+        ]
+      },
+      {
+        "tab": "CI",
+        "groups": [
+          {
+            "group": "Get started",
+            "pages": ["ci"]
+          },
+          {
+            "group": "Run your workflows",
+            "pages": ["ci/docker"]
+          },
+          {
+            "group": "Measure performance",
+            "pages": ["ci/benchmarking"]
           }
         ]
       },
