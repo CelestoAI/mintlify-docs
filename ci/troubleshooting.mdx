@@ -1,0 +1,57 @@
+---
+title: "Troubleshooting"
+description: "Resolve trial limits, credit issues, and queued GitHub Actions jobs."
+---
+
+Find out what is blocking your job, fix the cause, and start a new run. Begin with the **Celesto runner setup** check on your GitHub commit. Its message explains whether setup, workspace credit, or runner creation needs attention.
+
+## Choose the next action
+
+Use the workspace connected to your GitHub installation when checking computers or billing. Credit in another workspace does not fund this installation's jobs.
+
+| What you see | What to do |
+| --- | --- |
+| Setup is incomplete | Follow the setup check's link, sign in, and connect the installation to a workspace where you are an admin. |
+| Trial has not started | Ask the workspace owner to start the eligible trial in setup, or add prepaid credit. |
+| One retained sandbox limit reached | Follow [Free the trial slot](#free-the-trial-slot) below. |
+| Trial allows Micro only | Select Micro in setup and use `runs-on: [self-hosted, celesto-micro]` in your workflow, or add eligible paid credit for a larger size. |
+| Promotional credit does not allow this size | Choose an eligible size shown in setup or add paid credit. |
+| Trial expired or credit is too low | Open **Billing options** for the connected workspace and add credit. Deleting a computer does not replenish spent credit or renew the trial. |
+| Payment is pending or failed | Complete checkout or resolve the payment issue in the workspace's billing settings. |
+| Workspace running limit reached | Wait for active work to finish, or stop work you no longer need. Use the separate retained-slot instructions if the message names that limit. |
+| Capacity or runner creation is unavailable | Read the setup check's details. Retry later if capacity is temporarily unavailable; contact support if the failure continues. Adding credit does not resolve a capacity shortage. |
+| Credit could not be checked | Use **Retry credit check** when offered. If it keeps failing, contact support with the message. |
+
+## Free the trial slot
+
+The Micro trial allows one retained sandbox at a time, shared with your other computer usage. A retained sandbox is a computer that still exists in your workspace. Stopped and failed computers count toward this limit too.
+
+1. Open **Manage retained computers** from setup, or open **Computers** in the connected workspace.
+2. Identify a computer you no longer need. Save any files you want to keep before deleting it.
+3. Delete that computer through its existing confirmation flow and wait for deletion to finish. If it belongs to an active CI job, let that job finish or cancel it in GitHub and allow cleanup to complete.
+4. Return to setup and refresh the credit check. If the limit remains after deletion completes, contact support before deleting other computers.
+
+<Warning>
+  Stopping a computer keeps it available for later use and still occupies the retained trial slot. Delete it only after saving the files you need. If you need to keep it, review paid credit options instead.
+</Warning>
+
+## Check GitHub access
+
+Select the repository in the Celesto CI App installation. For an organization installation, approve the requested **Self-hosted runners** permission. Approve **Checks** permission so Celesto can publish setup progress on commits.
+
+Use the [permissions guide](/ci/security#github-app-permissions) to review why these permissions are needed. If the check reports a runner-group policy problem, send its details to support before changing the group's repository access.
+
+## Start a new run and verify
+
+After fixing a blocked setup or credit issue:
+
+1. Cancel the old queued run in GitHub Actions.
+2. Rerun the workflow from GitHub.
+3. Check that **Celesto runner setup** progresses through runner creation and assignment.
+4. Open the native GitHub Actions job to see the result of your build and test steps.
+
+Adding credit does not automatically restart a previously blocked job. A ready credit check confirms eligibility at that moment; available capacity and workspace limits are checked when a runner starts.
+
+## Get help
+
+Email [aniket@celesto.ai](mailto:aniket@celesto.ai) with the workspace name or ID, repository, GitHub run URL, requested runner size, and the exact setup-check message. For a deletion problem, include the computer ID and when you requested deletion. Share these details privately and leave out tokens, secrets, and file contents.

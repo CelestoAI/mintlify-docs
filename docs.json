@@ -168,11 +168,15 @@
           },
           {
             "group": "Run your workflows",
-            "pages": ["ci/docker"]
+            "pages": ["ci/docker", "ci/caching"]
           },
           {
             "group": "Measure performance",
             "pages": ["ci/benchmarking"]
+          },
+          {
+            "group": "Manage CI",
+            "pages": ["ci/troubleshooting", "ci/security"]
           }
         ]
       },

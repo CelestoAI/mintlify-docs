@@ -1,0 +1,55 @@
+---
+title: "Security and permissions"
+description: "Understand repository access, workflow secrets, and what remains after a CI job."
+---
+
+Choose which repositories can run on Celesto and review what your workflows can access. Each job gets a fresh computer, while your GitHub settings and workflow files determine which code runs and which credentials it receives.
+
+## GitHub App permissions
+
+Install the Celesto CI App on the repositories you want to use. Connecting it requires a Celesto workspace admin and a GitHub account that administers the selected repositories. One installation connects to one Celesto workspace.
+
+| Permission | Why Celesto needs it |
+| --- | --- |
+| Repository **Actions: read** | Read workflow-job status and runner assignment. |
+| Repository **Administration: read and write** | Manage repository runners for personal-account installations and clean up older repository runners. |
+| Repository **Checks: read and write** | Publish the **Celesto runner setup** check with progress and recovery instructions. |
+| Organization **Self-hosted runners: read and write** | Manage organization runners and the Celesto runner group. |
+
+Review the permissions GitHub presents during installation or an update. Existing installations may need to approve added permissions. Missing organization runner permission blocks new organization runners; missing Checks permission prevents setup-check updates in GitHub.
+
+Organization installations use a Celesto runner group restricted to the selected repositories. Keep its access aligned with the App installation. Adding a repository to a runner group alone does not complete Celesto setup for it.
+
+## Review code before giving it credentials
+
+A GitHub App's permissions and a workflow's credentials serve different purposes. Review the job's `GITHUB_TOKEN` permissions, referenced secrets, and any credentials created by its steps.
+
+- Give `GITHUB_TOKEN` only the permissions each job needs.
+- Use GitHub environment approvals for sensitive deployment credentials.
+- Review changes to workflow files and third-party actions before running them with secrets.
+- Keep credentials out of dependency caches, uploaded artifacts, and printed output.
+
+See [GitHub's secure workflow guidance](https://docs.github.com/en/actions/reference/security/secure-use) for permission and secret configuration.
+
+## Pull requests and forks
+
+Review your repository's GitHub Actions settings for fork approvals, token permissions, and secret access before routing contributor jobs to Celesto. A fork is a separate copy of a repository; its proposed code should be treated as untrusted until reviewed.
+
+GitHub controls approval and credential behavior for workflow events. Check its [pull request event documentation](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#pull_request) against your repository settings. Do not assume Celesto adds a separate approval step or blocks all fork jobs.
+
+Keep untrusted code out of privileged `pull_request_target` and `workflow_run` jobs. These events can run with access that an ordinary pull request job does not have. A fresh computer limits reuse between jobs; code running inside a job can still use the credentials and network access given to that job.
+
+## What remains after a job
+
+| Data | Where it goes and how to manage it |
+| --- | --- |
+| Files on the job computer | Celesto deletes the computer after the job finishes. Export results you need before the job ends. Contact support if cleanup remains blocked. |
+| Dependency caches | Celesto stores these separately so later authorized jobs can reuse them. See [cache expiry and deletion](/ci/caching). |
+| GitHub Actions logs and uploaded artifacts | Manage retention and deletion in GitHub. Deleting a Celesto computer does not delete these records. |
+| Celesto job and billing records | These are separate from the job computer. Contact support for retention requirements or a deletion request; computer cleanup is not a promise that all service records are erased. |
+
+Cache access uses the workspace, repository, and branch or pull-request permissions granted to the running job. Treat cached files as readable by jobs with the relevant access. Keep secrets in your workflow's credential controls instead.
+
+## Ask about your requirements
+
+Contact [aniket@celesto.ai](mailto:aniket@celesto.ai) before sending data that requires a specific retention period or deletion commitment. Include the workspace, repositories, and the types of records involved. For a suspected credential exposure, revoke or rotate the credential promptly and request removal from every location where it was saved.
