@@ -33,6 +33,8 @@ See [GitHub's secure workflow guidance](https://docs.github.com/en/actions/refer
 
 ## Pull requests and forks
 
+When a fork pull request runs on Celesto, the workspace connected to the base repository’s GitHub App installation pays for the job. The base repository is the repository receiving the pull request. Review workflow changes and the requested runner size before approving contributor jobs.
+
 Review your repository's GitHub Actions settings for fork approvals, token permissions, and secret access before routing contributor jobs to Celesto. A fork is a separate copy of a repository; its proposed code should be treated as untrusted until reviewed.
 
 GitHub controls approval and credential behavior for workflow events. Check its [pull request event documentation](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#pull_request) against your repository settings. Do not assume Celesto adds a separate approval step or blocks all fork jobs.
