@@ -7,6 +7,8 @@ Run your repository’s builds and tests on Celesto computers, and keep your wor
 
 Use the [Docker guide](/ci/docker) for image builds and database services, or [benchmarking](/ci/benchmarking) to compare your workflow's speed and cost.
 
+Review [security and permissions](/ci/security) before running contributor workflows. Use [dependency caching](/ci/caching) to reuse downloads between jobs.
+
 ## Quickstart
 
 You need a GitHub account that administers the repositories you select, a Celesto workspace where you are an admin, and usable workspace credit. A workspace owner can start the eligible, card-free $5 Micro trial.
@@ -15,7 +17,7 @@ You need a GitHub account that administers the repositories you select, a Celest
   <Step title="Install and connect">
     [Install the Celesto CI GitHub App](https://github.com/apps/celesto-ci/installations/new) and select the repositories you want to use. Follow the redirect to Celesto, sign in or create an account, and connect the installation to the workspace that will pay for its jobs.
 
-    Start the eligible trial or add workspace credit before running a job. Installing the App alone does not finish setup.
+    Start the eligible trial or add workspace credit before running a job. Installing the App alone does not finish setup. If the trial is blocked by an existing computer, follow [trial recovery](/ci/troubleshooting#free-the-trial-slot).
   </Step>
   <Step title="Add a workflow">
     Save this complete example as `.github/workflows/celesto-ci.yml` in a selected repository:
@@ -93,6 +95,8 @@ This is Celesto’s CI image, rather than GitHub’s hosted runner image. Instal
 - **Network:** Jobs need outbound access to GitHub and to the services used by your workflow.
 
 ## If a job stays queued
+
+Use [Troubleshooting](/ci/troubleshooting) for cause-specific steps covering retained computers, credit, permissions, and capacity.
 
 Open the **Celesto runner setup** check on the commit. Follow its link to finish connecting the installation, resolve GitHub permissions, or add credit to the linked workspace. Workspace owners manage trial activation and funding.
 

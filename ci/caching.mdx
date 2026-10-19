@@ -1,0 +1,88 @@
+---
+title: "Dependency caching"
+description: "Reuse dependencies between CI jobs, recover from cache misses, and request cache deletion."
+---
+
+Save downloaded dependencies so later jobs can spend less time installing them. Each job still starts on a fresh computer; a cache is a saved copy of reusable files kept separately from that computer.
+
+## Add caching to a workflow
+
+Use your setup action's cache option or a compatible `actions/cache` step. The [published cache guide](https://celesto.ai/blog/posts/celesto-ci-dependency-cache/) includes complete Node.js and Python workflows and measured results.
+
+For a Python project with a committed `requirements.txt` that includes pytest, save this workflow as `.github/workflows/python-tests.yml`. First complete the [CI quickstart](/ci#quickstart) for the repository.
+
+```yaml .github/workflows/python-tests.yml
+name: Python tests
+on: [push, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: [self-hosted, celesto-micro]
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Restore pip cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-v1-${{ runner.os }}-${{ runner.arch }}-py312-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            pip-v1-${{ runner.os }}-${{ runner.arch }}-py312-
+      - run: python -m pip install -r requirements.txt
+      - run: python -m pytest
+```
+
+The key identifies compatible files using the operating system, processor architecture, Python version, and dependency file. The fallback prefix lets pip reuse older downloads when dependencies change. Keep the install step: cached downloads help pip install the dependencies your project requests.
+
+## Verify reuse
+
+Run the workflow successfully, then rerun it with the same dependency file. Inspect the cache step for restore and save messages. A cache hit means a matching archive was found; compare the complete job duration to see whether it saves time.
+
+A miss means the job needs to fetch dependencies again. Check the key, saved paths, access scope, and expiry. Keep installation steps able to recover from a miss. Use `fail-on-cache-miss` only when you intentionally want a missing cache to fail the job.
+
+Caches created on GitHub-hosted runners remain in GitHub's separate store. Expect an initial miss when moving a workflow to Celesto.
+
+## Understand access and expiry
+
+Celesto scopes entries to the workspace, repository, Git ref (a branch or pull-request reference), and cache version. The version describes details such as saved paths and compression. Matching text keys alone do not grant access: Celesto checks the running job's GitHub runtime token. A read-only cache grant cannot save entries.
+
+| Default limit | Trial and promotional credit | Paid credit |
+| --- | ---: | ---: |
+| Per repository | 5 GiB | 25 GiB |
+| Per workspace | 10 GiB | 100 GiB |
+| Per entry | 10 GiB | 10 GiB |
+| Expiry after last access | 7 days | 7 days |
+
+These defaults can change. An hourly cleanup removes idle entries, then the least recently used entries as needed to meet storage limits. Expiry is therefore not an exact deletion timestamp. A restore updates the last-access time.
+
+The current cache release has no separate storage charge. Job runtime still consumes workspace credit. Use artifacts or durable storage for results you need to keep.
+
+## Start with a fresh cache
+
+In the example above, change `pip-v1` to `pip-v2` in both `key` and every `restore-keys` prefix. Commit the change and run the workflow. Updating all fallback prefixes prevents restoration through the old prefix.
+
+This bypasses old entries while they remain subject to normal cleanup. It does not delete them. Keep tokens, credentials, and private keys out of cached paths.
+
+## Request deletion
+
+GitHub's cache page and `gh cache` manage GitHub's store. Celesto currently handles early cache deletion through support and has no customer cache list or delete interface.
+
+Email [aniket@celesto.ai](mailto:aniket@celesto.ai) with:
+
+```text
+Subject: Celesto CI cache deletion request
+Workspace name or ID:
+Repository (owner/name):
+Cache key or prefix:
+Scope to delete (specific entries or all repository caches):
+Relevant GitHub run URL:
+Reason or required timing:
+```
+
+Request confirmation when deletion is complete. If you need to prevent the same data from being saved again, remove the cache step or affected paths before starting another run. If a cache contained a credential, revoke or rotate it immediately; changing the cache key does not remove the exposure.
+
+For Docker build caches and their separate compatibility limits, see [Docker and services](/ci/docker).
