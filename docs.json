@@ -122,6 +122,7 @@
             "group": "Features",
             "pages": [
               "cloud/computers",
+              "cloud/features/custom-templates",
               "smolvm/features/docker",
               "cloud/features/publish-ports",
               "cloud/features/browser-and-display",
