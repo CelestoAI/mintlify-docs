@@ -1,24 +1,24 @@
 ---
 title: "Build custom templates with your own packages preinstalled"
 sidebarTitle: "Custom templates"
-description: "Create a reusable computer image from a built-in template and a setup script, so every new Celesto computer starts with your tools already installed."
+description: "Write your setup commands once and turn them into a reusable starting point, so every new Celesto computer starts with your tools already installed."
 ---
 
 A custom template is your own starting point for new computers. You write the setup commands once, such as installing `ffmpeg` or a set of Python packages, and Celesto runs them for you. Every computer you create from the template then starts with those tools ready, so your agent can get to work right away instead of installing the same packages on every run.
 
 <Note>
-  Custom templates require the `celesto` Python package **0.1.6** or later (`pip install -U celesto`) and a Celesto Cloud API key in `CELESTO_API_KEY`.
+  Custom templates require the `celesto` Python package **0.1.6** or later (`pip install -U celesto`) and a Celesto Cloud API key in `CELESTO_API_KEY`. See [Authentication](/cloud/authentication) to get a key.
 </Note>
 
 ## How custom templates work
 
 A custom template has three parts:
 
-- **A base template.** One of the built-in templates, such as `coding-agent`. Your template starts from its tools.
+- **A base template.** One of the built-in templates, such as `coding-agent`. Your template starts with the tools the base already includes.
 - **A build script.** Shell commands that install what you need. Celesto runs the script once, when it builds the template.
 - **A template ID.** An ID that starts with `tpl_`. Pass it anywhere you would pass a built-in template ID.
 
-Building takes a few minutes. After the build finishes, creating a computer from the template is as fast as creating one from a built-in template.
+Building takes a few minutes. When the build finishes, Celesto saves the result as an image (a saved copy of the computer's disk that new computers start from). Creating a computer from your template is then as fast as creating one from a built-in template.
 
 ## Create a template and use it
 
@@ -65,6 +65,10 @@ Building takes a few minutes. After the build finishes, creating a computer from
         print(computer.run("ffmpeg -version").stdout)
     ```
 
+    <Check>
+      The output starts with `ffmpeg version`, which shows the computer started with your packages already installed.
+    </Check>
+
     You can also pass the template ID directly:
 
     ```python
@@ -78,19 +82,19 @@ Building takes a few minutes. After the build finishes, creating a computer from
 
 ## Choose a base template
 
-The base decides which tools your script can use and which features the computer supports.
+The base decides which tools your script can use and which features the computer supports. Pick one of these built-in templates:
 
 | Base | Includes | Good for |
 |------|----------|----------|
 | `scratch` | `bash`, `curl`, `sudo` | Minimal images where you install everything yourself |
 | `coding-agent` | `git`, `python`, `pip`, `uv`, `node`, `npm`, `pnpm`, `rg`, `fd`, `jq` | Most templates. This is the default. |
-| `browser-agent` | Everything in `coding-agent`, plus Playwright, Chromium, and a virtual display | Agents that browse the web. Experimental. |
+| `browser-agent` | Everything in `coding-agent`, plus Playwright (a browser automation library), Chromium, and a virtual display (an on-screen desktop the browser can draw to) | Agents that browse the web. Experimental. |
 
-A custom template can't be the base of another custom template.
+Bases are always built-in templates, so build each custom template from one of these three.
 
 ## Choose the computer size
 
-Computers from a template get the base template's size unless you choose one. Pass `vcpus`, `ram_mb`, and `disk_size_mb` together when your packages need more room; they must match one of the sandbox sizes:
+Computers from a template get the base template's size unless you choose one. When your packages need more room, pass all three size settings together: `vcpus` (virtual CPU cores), `ram_mb` (memory in MB), and `disk_size_mb` (disk space in MB). Use the values from one of the [named computer sizes](/cloud/features/resources#choose-a-named-size). This example uses Large: 4 vCPUs, 16 GB of memory, and a 60 GB disk.
 
 ```python
 template = Template.create(
@@ -106,15 +110,15 @@ The finished image must fit in `disk_size_mb`, so give large installs such as `t
 
 ## Write the build script
 
-The build script runs once, as root, inside a fresh copy of the base template. Keep these rules in mind:
+The build script runs once, as root (the administrator account, so you can install system packages directly), inside a fresh copy of the base template. Keep these rules in mind:
 
-- **The first failing command stops the build.** The script runs with `set -euxo pipefail`, so check each command works on its own.
-- **List packages directly.** Files can't be uploaded with the script, so `pip install -r requirements.txt` and `./setup.sh` fail. Write `pip install pandas polars` instead.
-- **Answer prompts in advance.** Use `apt-get install -y` so `apt` doesn't wait for a confirmation.
-- **Install services, start them later.** Services don't keep running after the build. Start them on the computer when you need them.
+- **The first failing command stops the build.** The script runs in strict mode (`set -euxo pipefail`), so make sure each command works on its own.
+- **List packages in the script.** The build receives only the script text, so name each package directly, such as `pip install pandas polars`. Commands that read local files, such as `pip install -r requirements.txt` or `./setup.sh`, fail.
+- **Answer prompts in advance.** Use `apt-get install -y` so `apt` installs packages straight away instead of stopping for a yes or no answer.
+- **Install services, start them later.** The image keeps installed files, not running programs. Install a service such as PostgreSQL in the script, then start it on the computer when you need it.
 - **Stay within the limits.** A script can be at most 64 KB, and a build can run for at most 30 minutes.
 
-Check a script before you create a template. `lint()` returns warnings without building anything:
+Check a script before you create a template. `lint()` reviews it in seconds and returns warnings, so you catch mistakes before you spend a build on them:
 
 ```python
 from celesto import Template
@@ -157,13 +161,13 @@ Common failures and fixes:
     The base template doesn't include that command. Pick a base that has it, or install it earlier in the script.
   </Accordion>
   <Accordion title="externally-managed-environment">
-    The system Python refuses `pip install`. Use the `coding-agent` base, whose `pip` installs into its own environment, or create a virtual environment in the script.
+    The system Python refuses `pip install`. Use the `coding-agent` base, whose `pip` installs into its own environment, or create a virtual environment (a private Python setup that `pip` can install into) in the script.
   </Accordion>
   <Accordion title="Unable to locate package">
     `apt` doesn't know the package name. Check the spelling and the package name for Ubuntu.
   </Accordion>
   <Accordion title="The build timed out">
-    The build ran past 30 minutes. Remove large downloads or split the work across fewer, bigger install commands.
+    The build ran past 30 minutes. Remove large downloads, or combine packages into fewer install commands.
   </Accordion>
 </AccordionGroup>
 
@@ -186,14 +190,14 @@ Organization members can create templates and use them; viewers can list and use
 
 ## Limits and errors
 
-- **2 builds at a time.** An organization can have 2 builds queued or running. A third raises `CloudAPIError` with status 429; wait for one to finish.
-- **One build per template.** Rebuilding while a build is queued or running raises `CloudAPIError` with status 409.
+- **2 builds at a time.** An organization can have 2 builds queued or running. A third raises `CloudAPIError` with status 429 (too many requests); wait for one to finish, then try again.
+- **One build per template.** Rebuilding while a build is queued or running raises `CloudAPIError` with status 409 (conflict).
 - **Unique names.** Template names are unique within an organization. Reusing a name raises `CloudAPIError` with status 409.
 - **A ready build first.** Creating a computer before the first build succeeds raises an error that says to call `wait()` first.
 
 Every `CloudAPIError` message says what to do next, and `error.status_code` holds the HTTP status.
 
-`wait()` keeps retrying through rate limits, server errors, and network errors until its timeout (40 minutes by default), because the build keeps running on Celesto either way. When the timeout passes, it raises `OperationTimeoutError`; call `wait()` again to keep waiting.
+`wait()` keeps retrying through rate limits (temporary caps on how many requests you can send), server errors, and network errors until its timeout (40 minutes by default), because the build keeps running on Celesto either way. When the timeout passes, it raises `OperationTimeoutError`; call `wait()` again to keep waiting.
 
 ## Template fields
 
@@ -218,5 +222,5 @@ Every `CloudAPIError` message says what to do next, and `error.status_code` hold
 </ResponseField>
 
 <ResponseField name="vcpus" type="integer">
-  vCPUs for computers created from this template, unless a computer asks for another size. `ram_mb` and `disk_size_mb` work the same way.
+  Virtual CPU cores for every computer created from this template. `ram_mb` (memory in MB) and `disk_size_mb` (disk space in MB) work the same way.
 </ResponseField>
