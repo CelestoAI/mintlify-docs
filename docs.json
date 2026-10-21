@@ -412,7 +412,7 @@
   "appearance": {
     "default": "dark"
   },
-  "description": "Celesto provides secure, isolated computers that AI agents can use to browse, code, and get real work done.",
+  "description": "A full cloud computer for every agent. Run agent harnesses, computer-use agents, and CI at AI scale. Celesto provides the cheapest CI runner -- A drop-in replacement for GitHub Actions runners, 96% cheaper per minute.",
   "interaction": {
     "drilldown": true
   },
@@ -448,5 +448,10 @@
     { "source": "/celesto-sdk/gatekeeper", "destination": "/cloud/gatekeeper" },
     { "source": "/celesto-sdk/errors", "destination": "/cloud/errors" },
     { "source": "/celesto-sdk/cli", "destination": "/cloud/cli" }
-  ]
+  ],
+  "fonts": {
+    "heading": {
+      "family": "Geist"
+    }
+  }
 }
