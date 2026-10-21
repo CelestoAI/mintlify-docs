@@ -33,10 +33,10 @@ Docker packages an app and its dependencies into an **image**. A **container** i
         The terminal runs inside your sandbox as `root`, the user with permission to install software.
       </Tab>
       <Tab title="Cloud computer">
-        Create a Standard computer with space for Docker images:
+        Create a Standard computer, which includes a 30 GB disk with space for Docker images:
 
         ```bash
-        celesto computer create --template coding-agent --cpus 2 --memory 4096 --disk-size-mb 20480
+        celesto computer create --template coding-agent --cpus 2 --memory 4096
         ```
 
         Copy the computer name from the output. Run the following command, replacing `einstein` with that name:

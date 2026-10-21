@@ -1,12 +1,12 @@
 ---
 title: "Choose computer size"
 sidebarTitle: "VM resources"
-description: "Configure CPU, memory, disk size, and templates when creating a Celesto computer so coding agents have enough resources for builds, packages, and apps."
+description: "Choose CPU, memory, disk, and templates when creating a Celesto computer so coding agents have enough resources for builds, packages, and apps."
 ---
 
-You can choose a named computer size before a Celesto computer starts. Start with Nano for small jobs, then move to Small, Standard, or Large when your agent builds code, installs packages, opens large files, or runs a web app.
+You can choose a named computer size before a Celesto computer starts. Start with Micro for small jobs, then move to a bigger size when your agent builds code, installs packages, opens large files, or runs a web app.
 
-Root disk and workspace storage are both durable, but they serve different jobs. Use `disk_size_mb` for operating system and runtime space. Use CelestoFS workspace storage for large project files, repositories, datasets, and artifacts. See [Petabyte-scale storage for AI agent sandboxes](/cloud/features/petabyte-storage).
+Root disk and workspace storage are both durable, but they serve different jobs. The root disk holds the operating system and tools, and its size comes with the computer size you choose. Use CelestoFS workspace storage for large project files, repositories, datasets, and artifacts. See [Petabyte-scale storage for AI agent sandboxes](/cloud/features/petabyte-storage).
 
 ## Start with a template
 
@@ -50,23 +50,18 @@ celesto computer templates
 
 ## Choose a named size
 
-CPU and memory must match one of these named sizes:
+CPU and memory must match one of these named sizes. Each size includes a fixed root disk for the operating system and tools. A vCPU is a virtual CPU core.
 
-| Size | CPU | Memory |
-| --- | ---: | ---: |
-| Nano | 1 vCPU | 512 MB |
-| Small | 1 vCPU | 1 GB |
-| Standard | 2 vCPU | 4 GB |
-| Large | 4 vCPU | 12 GB |
+| Size | CPU | Memory | Root disk | Price |
+| --- | ---: | ---: | ---: | ---: |
+| Micro (default) | 1 vCPU | 2 GB | 20 GB | $0.015/hour |
+| Small | 1 vCPU | 4 GB | 25 GB | $0.020/hour |
+| Standard | 2 vCPU | 4 GB | 30 GB | $0.030/hour |
+| Memory | 2 vCPU | 8 GB | 40 GB | $0.040/hour |
+| Large | 4 vCPU | 16 GB | 60 GB | $0.080/hour |
+| XL | 8 vCPU | 32 GB | 100 GB | $0.160/hour |
 
-Your Celesto plan controls which sizes you can create:
-
-| Plan | Available sizes |
-| --- | --- |
-| Free | Nano |
-| Nano | Nano |
-| Builder | Nano, Small, Standard, Large |
-| Growth | Nano, Small, Standard, Large |
+The free trial includes Micro only. Add credit to your account to unlock the other sizes. See [Celesto pricing](https://celesto.ai/pricing) for current rates and trial details.
 
 Omit both CPU and memory to use the template default. When you set them explicitly, choose both values from the same row. Mixed combinations such as 2 vCPU with 2 GB memory are rejected.
 
@@ -78,12 +73,8 @@ Omit both CPU and memory to use the template default. When you set them explicit
   Memory in MB from a named size. Use together with the matching `cpus` value.
 </ParamField>
 
-<ParamField body="disk" type="integer | string">
-  Root disk storage as MB or a string such as `"20gb"`. More root disk helps when tools, package managers, or system-level build steps need more local runtime space.
-</ParamField>
-
 <ParamField body="disk_size_mb" type="integer">
-  Root disk storage inside the computer in MB. Range: 512-20480 MB. For large workspace files, use CelestoFS instead of increasing root disk size.
+  Root disk storage inside the computer in MB. Each named size includes a fixed root disk, such as `30720` (30 GB) for Standard, so you can leave this out. If you set it, use the value from the same row as `cpus` and `memory`. For large workspace files, use CelestoFS.
 </ParamField>
 
 <ParamField body="template_id" type="string" default="scratch">
@@ -92,7 +83,7 @@ Omit both CPU and memory to use the template default. When you set them explicit
 
 ## Create a larger computer
 
-Create a larger computer when the default template does not have enough room for the job. This example creates a Standard `coding-agent` computer with 2 CPUs, 4096 MB of memory, and 20480 MB of disk space.
+Create a larger computer when the default template does not have enough room for the job. This example creates a Standard `coding-agent` computer with 2 CPUs and 4096 MB of memory. Standard includes a 30 GB root disk.
 
 <CodeGroup>
 
@@ -104,7 +95,6 @@ computer = Computer(
     template_id="coding-agent",
     cpus=2,
     memory=4096,
-    disk="20gb",
 )
 
 print(computer.name)
@@ -122,7 +112,6 @@ const computer = await Computer.create({
   templateId: "coding-agent",
   cpus: 2,
   memory: 4096,
-  disk: "20gb",
 });
 
 console.log(computer.name);
@@ -134,7 +123,7 @@ await computer.delete();
 ```
 
 ```bash CLI
-celesto computer create --template coding-agent --cpus 2 --memory 4096 --disk-size-mb 20480
+celesto computer create --template coding-agent --cpus 2 --memory 4096
 ```
 
 </CodeGroup>
@@ -149,12 +138,12 @@ Use the smallest computer that can finish the job. Increase the setting that mat
 
 | Workload | Start with |
 |---|---|
-| Quick shell commands | Nano or template defaults |
+| Quick shell commands | Micro or template defaults |
 | Coding agent with package installs | Standard `coding-agent` |
 | Large repository builds | Large, plus CelestoFS workspace storage |
-| Data processing or notebooks | Standard or Large, plus CelestoFS workspace storage |
+| Data processing or notebooks | Memory or Large, plus CelestoFS workspace storage |
 | Hosted preview app | Standard, plus port publishing |
 
 <Tip>
-  Move to the next named size when builds are slow or programs run out of memory. Increase root disk when system tools run out of runtime space, and use CelestoFS for large workspace files.
+  Move to the next named size when builds are slow, programs run out of memory, or system tools run out of disk space. Each larger size also includes a larger root disk. Use CelestoFS for large workspace files.
 </Tip>
