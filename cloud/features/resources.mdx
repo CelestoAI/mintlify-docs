@@ -1,18 +1,20 @@
 ---
-title: "Choose computer size"
-sidebarTitle: "VM resources"
-description: "Choose CPU, memory, disk, and templates when creating a Celesto computer so coding agents have enough resources for builds, packages, and apps."
+title: "Celesto cloud computer sizes and pricing"
+sidebarTitle: "Computer sizes"
+description: "Celesto cloud computer sizes set CPU, memory, root disk space, and hourly price. Compare named sizes and choose resources for your coding agents and apps."
 ---
 
-You can choose a named computer size before a Celesto computer starts. Start with Micro for small jobs, then move to a bigger size when your agent builds code, installs packages, opens large files, or runs a web app.
+A Celesto cloud computer size sets how much processing power, memory, and disk space your computer gets, and what it costs per hour. Choose a size before the computer starts. Start with Micro for small jobs, then move to a bigger size when your agent builds code, installs packages, opens large files, or runs a web app.
 
-Root disk and workspace storage are both durable, but they serve different jobs. The root disk holds the operating system and tools, and its size comes with the computer size you choose. Use CelestoFS workspace storage for large project files, repositories, datasets, and artifacts. See [Petabyte-scale storage for AI agent sandboxes](/cloud/features/petabyte-storage).
+A computer's root disk and its workspace storage both keep your data, but they serve different jobs. The root disk holds the operating system and tools, and its size comes with the computer size you choose. Use CelestoFS workspace storage for large project files, repositories, datasets, and artifacts. See [Petabyte-scale storage for AI agent sandboxes](/cloud/features/petabyte-storage).
 
 ## Start with a template
 
 A template is a ready-made starting setup for a computer. It includes an operating system, useful tools, and default resource sizes.
 
-Use `coding-agent` when your workflow needs common coding tools. Use the template defaults when you are running quick scripts or trying Celesto for the first time.
+Use `coding-agent` when your workflow needs common coding tools preinstalled. To start every computer with your own packages, [build a custom template](/cloud/features/custom-templates). Use the template defaults when you are running quick scripts or trying Celesto for the first time.
+
+List the available templates and their default CPU and memory:
 
 <CodeGroup>
 
@@ -63,7 +65,7 @@ CPU and memory must match one of these named sizes. Each size includes a fixed r
 
 The free trial includes Micro only. Add credit to your account to unlock the other sizes. See [Celesto pricing](https://celesto.ai/pricing) for current rates and trial details.
 
-Omit both CPU and memory to use the template default. When you set them explicitly, choose both values from the same row. Mixed combinations such as 2 vCPU with 2 GB memory are rejected.
+Omit both `cpus` and `memory` to use the template default. When you set them, choose both values from the same size in the table. Mixed combinations such as 2 vCPU with 2 GB memory are rejected.
 
 <ParamField body="cpus" type="integer">
   CPU value from a named size. Use together with the matching `memory` value.
@@ -81,7 +83,7 @@ Omit both CPU and memory to use the template default. When you set them explicit
   Ready-made starting setup for the computer. Use `coding-agent` when your agent needs coding tools already installed.
 </ParamField>
 
-## Create a larger computer
+## Create a larger Celesto cloud computer
 
 Create a larger computer when the default template does not have enough room for the job. This example creates a Standard `coding-agent` computer with 2 CPUs and 4096 MB of memory. Standard includes a 30 GB root disk.
 
@@ -132,7 +134,7 @@ celesto computer create --template coding-agent --cpus 2 --memory 4096
   The response shows the CPU, memory, and disk size assigned to the new computer.
 </Check>
 
-## Pick a starting size
+## Pick a computer size for your workload
 
 Use the smallest computer that can finish the job. Increase the setting that matches the problem you see.
 
@@ -142,7 +144,7 @@ Use the smallest computer that can finish the job. Increase the setting that mat
 | Coding agent with package installs | Standard `coding-agent` |
 | Large repository builds | Large, plus CelestoFS workspace storage |
 | Data processing or notebooks | Memory or Large, plus CelestoFS workspace storage |
-| Hosted preview app | Standard, plus port publishing |
+| Hosted preview app | Standard, plus [port publishing](/cloud/features/publish-ports) |
 
 <Tip>
   Move to the next named size when builds are slow, programs run out of memory, or system tools run out of disk space. Each larger size also includes a larger root disk. Use CelestoFS for large workspace files.

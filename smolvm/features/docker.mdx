@@ -1,12 +1,12 @@
 ---
-title: "Run Docker in a sandbox"
+title: "Run Docker in a Celesto sandbox"
 sidebarTitle: "Docker"
-description: "Install Docker inside a Celesto sandbox, run your first container, and automate the setup with Python."
+description: "Run Docker in a Celesto sandbox to test apps in a separate environment. Install Docker, run a container locally or in the cloud, and automate setup in Python."
 ---
 
 You can run apps and test your projects with Docker inside a Celesto sandbox. Your tools and files stay in the sandbox, giving you a separate place to try changes.
 
-Docker packages an app and its dependencies into an **image**. A **container** is a running copy of that image. You install Docker inside the sandbox, then use its commands there.
+Docker packages an app and the software it needs into a **Docker image**. A **container** is a running copy of a Docker image. You install Docker inside the sandbox, then use its commands there.
 
 ## Before you start
 
@@ -148,7 +148,7 @@ python docker_demo.py
 
 The output includes `Hello from Docker!`. The script checks each command's exit code and gives package installation and image downloads extra time to finish.
 
-## Troubleshoot Docker
+## Troubleshoot Docker in a Celesto sandbox
 
 Run these checks inside the sandbox with the same permissions you used during installation.
 
@@ -171,7 +171,7 @@ Run these checks inside the sandbox with the same permissions you used during in
     getent ahostsv4 registry-1.docker.io
     ```
 
-    Each command should print IP addresses. If a lookup fails, check your sandbox's internet access and outbound network rules. Then retry the failed installation or download command.
+    Each command should print IP addresses. If a lookup fails, check internet access and outbound network rules for your [local sandbox](/smolvm/features/network-controls) or [cloud computer](/cloud/features/network-control). Then retry the failed installation or download command.
   </Accordion>
 
   <Accordion title="Docker runs out of disk space or memory">
@@ -182,7 +182,7 @@ Run these checks inside the sandbox with the same permissions you used during in
     docker system df
     ```
 
-    Create a larger sandbox when your images or builds need more space. Increase memory when programs run out of memory. Docker images and containers use the sandbox's own resources.
+    Create a larger sandbox when your Docker images or builds need more space. For cloud computers, [compare computer sizes](/cloud/features/resources). Increase memory when programs run out of memory. Docker images and containers use the sandbox's own resources.
   </Accordion>
 </AccordionGroup>
 
@@ -191,3 +191,4 @@ Run these checks inside the sandbox with the same permissions you used during in
 - [Forward a local sandbox port](/smolvm/features/port-forwarding) to reach a container's web app from your machine. Publish the container port to the sandbox with Docker's `-p` flag first.
 - [Publish a cloud computer port](/cloud/features/publish-ports) to give a container's web app an HTTPS address.
 - [Build custom sandbox images](/smolvm/guides/custom-images) when you want to choose the tools available when a sandbox starts.
+- [Build a Celesto Cloud custom template](/cloud/features/custom-templates) to start every cloud computer with your packages preinstalled.
