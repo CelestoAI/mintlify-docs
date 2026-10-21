@@ -7,7 +7,7 @@ description: "Create a reusable computer image from a built-in template and a se
 A custom template is your own starting point for new computers. You write the setup commands once, such as installing `ffmpeg` or a set of Python packages, and Celesto runs them for you. Every computer you create from the template then starts with those tools ready, so your agent can get to work right away instead of installing the same packages on every run.
 
 <Note>
-  Custom templates require the `celesto` Python package **0.1.6** or later (`pip install -U celesto`) and a Celesto Cloud API key in `CELESTO_API_KEY`. They are turned on per account: if a call answers that custom templates are not enabled, [contact Celesto support](mailto:support@celesto.ai) to request access.
+  Custom templates require the `celesto` Python package **0.1.6** or later (`pip install -U celesto`) and a Celesto Cloud API key in `CELESTO_API_KEY`.
 </Note>
 
 ## How custom templates work
@@ -102,7 +102,7 @@ template = Template.create(
 )
 ```
 
-The finished image must fit in `disk_size_mb`, so give large installs such as `torch` or CUDA a bigger disk. A single computer can still ask for another size: `template.create_computer(vcpus=8, ram_mb=32768, disk_size_mb=102400)`. The build itself always runs on a large machine, whatever size you choose.
+The finished image must fit in `disk_size_mb`, so give large installs such as `torch` or CUDA a bigger disk. Every computer created from the template gets this size. The build itself always runs on a large machine, whatever size you choose.
 
 ## Write the build script
 
@@ -193,7 +193,7 @@ Organization members can create templates and use them; viewers can list and use
 
 Every `CloudAPIError` message says what to do next, and `error.status_code` holds the HTTP status.
 
-`wait()` keeps retrying through rate limits, server errors, and network errors until its timeout (40 minutes by default), because the build keeps running on Celesto either way.
+`wait()` keeps retrying through rate limits, server errors, and network errors until its timeout (40 minutes by default), because the build keeps running on Celesto either way. When the timeout passes, it raises `OperationTimeoutError`; call `wait()` again to keep waiting.
 
 ## Template fields
 
