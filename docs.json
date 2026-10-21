@@ -113,29 +113,29 @@
           {
             "group": "Start Here",
             "pages": [
-              "cloud/overview",
+              "celesto-sdk/overview",
               "cloud/quickstart",
-              "cloud/authentication"
+              "celesto-sdk/authentication"
             ]
           },
           {
             "group": "Features",
             "pages": [
-              "cloud/computers",
+              "celesto-sdk/computers",
               "smolvm/features/docker",
-              "cloud/features/publish-ports",
+              "celesto-sdk/features/publish-ports",
               "cloud/features/browser-and-display",
-              "cloud/features/lifecycle",
-              "cloud/features/resources",
-              "cloud/features/persistence",
+              "celesto-sdk/features/lifecycle",
+              "celesto-sdk/features/resources",
+              "celesto-sdk/features/persistence",
               "cloud/features/network-control",
-              "cloud/features/petabyte-storage"
+              "celesto-sdk/features/petabyte-storage"
             ]
           },
           {
             "group": "Guides",
             "pages": [
-              "cloud/guides/publish-github-app"
+              "celesto-sdk/guides/publish-github-app"
             ]
           },
           {
@@ -150,11 +150,11 @@
                   "cloud/managed-agents/reference"
                 ]
               },
-              "cloud/guides/pi-coding-agent",
-              "cloud/deployments",
-              "cloud/openai-agents",
-              "cloud/gatekeeper",
-              "cloud/errors"
+              "celesto-sdk/guides/pi-coding-agent",
+              "celesto-sdk/deployments",
+              "celesto-sdk/openai-agents",
+              "celesto-sdk/gatekeeper",
+              "celesto-sdk/errors"
             ]
           }
         ]
@@ -220,8 +220,7 @@
               "agentor/model-providers",
               "agentor/deploy",
               "agentor/tracing",
-              "agentor/agent-to-agent",
-              "agentor/concepts/skills"
+              "agentor/agent-to-agent"
             ]
           },
           {
@@ -231,6 +230,7 @@
               "agentor/concepts/tools",
               "agentor/concepts/mcp",
               "agentor/concepts/a2a-protocol",
+              "agentor/concepts/skills",
               "agentor/concepts/skills",
               "agentor/concepts/deployment"
             ]
@@ -270,9 +270,7 @@
         "groups": [
           {
             "group": "Celesto CLI",
-            "pages": [
-              "cloud/cli"
-            ]
+            "pages": []
           },
           {
             "group": "Celesto API",
@@ -303,6 +301,7 @@
             "group": "Celesto CLI",
             "pages": [
               "smolvm/cli/overview",
+              "celesto-sdk/cli",
               "smolvm/cli/create",
               "smolvm/cli/list",
               "smolvm/cli/shell",
@@ -412,7 +411,7 @@
   "appearance": {
     "default": "dark"
   },
-  "description": "Celesto provides secure, isolated computers that AI agents can use to browse, code, and get real work done.",
+  "description": "A full cloud computer for every agent. Run agent harnesses, computer-use agents, and CI at AI scale. Celesto provides the cheapest CI runner -- A drop-in replacement for GitHub Actions runners, 96% cheaper per minute.",
   "interaction": {
     "drilldown": true
   },
@@ -448,5 +447,10 @@
     { "source": "/celesto-sdk/gatekeeper", "destination": "/cloud/gatekeeper" },
     { "source": "/celesto-sdk/errors", "destination": "/cloud/errors" },
     { "source": "/celesto-sdk/cli", "destination": "/cloud/cli" }
-  ]
+  ],
+  "fonts": {
+    "heading": {
+      "family": "Geist"
+    }
+  }
 }

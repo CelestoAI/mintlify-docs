@@ -1,5 +1,5 @@
 ---
-title: "Sandbox an OpenAI agent with Celesto or SmolVM"
+title: Sandbox an OpenAI agent with Celesto or SmolVM
 description: "Give an OpenAI agent its own sandboxed computer. Use a hosted Celesto computer or a local SmolVM as the workspace for a SandboxAgent."
 ---
 
@@ -94,11 +94,11 @@ Use `CelestoSandboxClient` when you want OpenAI to spin up a fresh Celesto compu
 Pass a `CelestoSandboxClientOptions` to control how the computer is created. Every field is optional. Omit a field to inherit the template's default.
 
 <Note>
-  CPU and memory must match a named Celesto size. Free and Nano plans use Nano (1 vCPU, 512 MB). Builder and Growth can also use Small (1 vCPU, 1 GB), Standard (2 vCPU, 4 GB), and Large (4 vCPU, 12 GB). See [Choose computer size](/cloud/features/resources).
+  CPU and memory must match a named Celesto size. Free and Nano plans use Nano (1 vCPU, 512 MB). Builder and Growth can also use Small (1 vCPU, 1 GB), Standard (2 vCPU, 4 GB), and Large (4 vCPU, 12 GB). See [Choose computer size](/celesto-sdk/features/resources).
 </Note>
 
 <ParamField body="template_id" type="string" default="scratch">
-  Sandbox template to create the computer from. Defaults to `scratch` (a minimal Ubuntu computer). Pass `coding-agent` when your agent needs common coding tools preinstalled. See [Use a template](/cloud/computers#use-a-template).
+  Sandbox template to create the computer from. Defaults to `scratch` (a minimal Ubuntu computer). Pass `coding-agent` when your agent needs common coding tools preinstalled. See [Use a template](/celesto-sdk/computers#use-a-template).
 </ParamField>
 
 <ParamField body="template_version" type="string">
@@ -125,10 +125,6 @@ Pass a `CelestoSandboxClientOptions` to control how the computer is created. Eve
   Reuse an existing Celesto computer instead of creating a new one. When set, the session attaches to that computer and starts it if needed.
 </ParamField>
 
-<ParamField body="network_policy" type="object" default='{"mode": "open"}'>
-  Outbound internet setting for a newly created computer. Use `{"mode": "off"}` to create an offline computer. When you reuse `computer_id`, the requested setting must match that computer's saved policy; if it does not, `client.create()` raises `RuntimeError` and does not start the computer. Requires Celesto SDK `0.0.13` or later.
-</ParamField>
-
 <ParamField body="delete_on_close" type="boolean">
   Whether to delete the computer when the session closes. Defaults to `true` if the client created the computer, and `false` if you passed in an existing `computer_id`.
 </ParamField>
@@ -136,8 +132,6 @@ Pass a `CelestoSandboxClientOptions` to control how the computer is created. Eve
 <Tip>
   Need preinstalled coding tools? Create the session with `options=CelestoSandboxClientOptions(template_id="coding-agent")`.
 </Tip>
-
-For the setting choices and persistent-home requirement, see [Network Control](/cloud/features/network-control).
 
 ### Authenticate the client
 

@@ -1,6 +1,6 @@
 ---
-title: "Create and manage sandboxed computers"
-sidebarTitle: "Sandboxed computers"
+title: Create and manage sandboxed computers
+sidebarTitle: Sandboxed computers
 description: "Use the Celesto Computers API to create sandboxed computers, select templates, run shell commands, publish ports, and manage the VM lifecycle."
 ---
 
@@ -21,7 +21,7 @@ The Computers API gives your code or agent an isolated Linux computer. You creat
 </Steps>
 
 <Note>
-  Celesto accepts Nano (1 vCPU, 512 MB), Small (1 vCPU, 1 GB), Standard (2 vCPU, 4 GB), and Large (4 vCPU, 12 GB). Free and Nano plans can create Nano computers. Builder and Growth can create every named size. See [Choose computer size](/cloud/features/resources).
+  Celesto accepts Nano (1 vCPU, 512 MB), Small (1 vCPU, 1 GB), Standard (2 vCPU, 4 GB), and Large (4 vCPU, 12 GB). Free and Nano plans can create Nano computers. Builder and Growth can create every named size. See [Choose computer size](/celesto-sdk/features/resources).
 </Note>
 
 <View title="Python" icon="python">
@@ -78,30 +78,6 @@ computer.delete()
 <ParamField body="template_version" type="string">
   Optional immutable template version. Pin this when you want repeatable builds as a template changes over time.
 </ParamField>
-
-<ParamField body="persistent_home" type="boolean" default="false">
-  Keep `/home/ohm` across stop and restore. Set this at create time when you plan to reuse the computer across sessions. This setting cannot be changed after the computer is created.
-</ParamField>
-
-<ParamField body="network_policy" type="object" default='{"mode": "open"}'>
-  Outbound internet setting, fixed when you create the computer. Use `{"mode": "off"}` to create an offline computer. Offline computers use the default home storage and cannot be combined with `persistent_home=True`. Requires Celesto SDK `0.0.13` or later.
-</ParamField>
-
-See [Network Control](/cloud/features/network-control) for Python, TypeScript, CLI, and OpenAI Agents examples.
-
-## Create a computer with a persistent home
-
-Computers are ephemeral by default. Pass `persistent_home=True` to keep `/home/ohm` across stop and restore:
-
-```python create_persistent_computer.py
-from celesto import Computer
-
-
-computer = Computer(persistent_home=True)
-print(computer.name)
-```
-
-See [Keep work between sessions](/cloud/features/persistence) for how persistence works.
 
 ## Use a template
 
@@ -340,29 +316,6 @@ await computer.delete();
   Optional immutable template version. Pin this when you want repeatable builds as a template changes over time.
 </ParamField>
 
-<ParamField body="persistentHome" type="boolean" default="false">
-  Keep `/home/ohm` across stop and restore. Set this at create time when you plan to reuse the computer across sessions. This setting cannot be changed after the computer is created.
-</ParamField>
-
-<ParamField body="networkPolicy" type="object" default='{ mode: "open" }'>
-  Outbound internet setting, fixed when you create the computer. Use `{ mode: "off" }` to create an offline computer. Offline computers use the default home storage and cannot be combined with `persistentHome: true`. Requires `@celestoai/sdk` `0.1.5` or later.
-</ParamField>
-
-See [Network Control](/cloud/features/network-control) for Python, TypeScript, CLI, and OpenAI Agents examples.
-
-## Create a computer with a persistent home
-
-Computers are ephemeral by default. Pass `persistentHome: true` to keep `/home/ohm` across stop and restore:
-
-```ts create-persistent-computer.ts
-import { Computer } from "@celestoai/sdk";
-
-const computer = await Computer.create({ persistentHome: true });
-console.log(computer.name);
-```
-
-See [Keep work between sessions](/cloud/features/persistence) for how persistence works.
-
 ## Use a template
 
 A template is a ready-made computer image with extra tools and default CPU, memory, and disk settings. Use `coding-agent` for common coding workflows:
@@ -600,10 +553,6 @@ ws.on("open", () => ws.send("echo hello\n"));
 
 <ResponseField name="template_version" type="string">
   Pinned template version, if one was provided at create time. TypeScript exposes this as `templateVersion`.
-</ResponseField>
-
-<ResponseField name="persistentHome" type="boolean">
-  Whether `/home/ohm` is kept across stop and restore. Available in TypeScript as `persistentHome`. Set at create time and cannot be changed later.
 </ResponseField>
 
 <ResponseField name="connection" type="object">
