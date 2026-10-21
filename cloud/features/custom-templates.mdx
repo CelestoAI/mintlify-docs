@@ -7,7 +7,7 @@ description: "Create a reusable computer image from a built-in template and a se
 A custom template is your own starting point for new computers. You write the setup commands once, such as installing `ffmpeg` or a set of Python packages, and Celesto runs them for you. Every computer you create from the template then starts with those tools ready, so your agent can get to work right away instead of installing the same packages on every run.
 
 <Note>
-  Custom templates require Celesto SDK **0.0.15** or later for Python. They are turned on per account: if a call answers that custom templates are not enabled, [contact Celesto support](mailto:support@celesto.ai) to request access.
+  Custom templates require the `celesto` Python package **0.1.6** or later (`pip install -U celesto`) and a Celesto Cloud API key in `CELESTO_API_KEY`. They are turned on per account: if a call answers that custom templates are not enabled, [contact Celesto support](mailto:support@celesto.ai) to request access.
 </Note>
 
 ## How custom templates work
@@ -29,7 +29,7 @@ Building takes a few minutes. After the build finishes, creating a computer from
     ```python create_template.py
     from celesto import Template
 
-    template = Template(
+    template = Template.create(
         name="data-env",
         base_template_id="coding-agent",
         build_script="""
@@ -58,26 +58,21 @@ Building takes a few minutes. After the build finishes, creating a computer from
   </Step>
 
   <Step title="Create a computer from the template">
+    `create_computer()` returns a cloud computer that starts from the template. Like any Celesto computer, it is created when the `with` block starts and deleted when it ends.
+
     ```python
-    computer = template.create_computer()
-    print(computer.run("ffmpeg -version")["stdout"])
+    with template.create_computer() as computer:
+        print(computer.run("ffmpeg -version").stdout)
     ```
 
-    You can also use the template ID directly:
+    You can also pass the template ID directly:
 
-    <CodeGroup>
+    ```python
+    from celesto import CloudComputer
 
-    ```python Python
-    from celesto import Computer
-
-    computer = Computer(template_id="tpl_0123456789ab")
+    with CloudComputer(template_id="tpl_0123456789ab") as computer:
+        print(computer.run("ffmpeg -version").stdout)
     ```
-
-    ```bash CLI
-    celesto computer create --template tpl_0123456789ab
-    ```
-
-    </CodeGroup>
   </Step>
 </Steps>
 
@@ -91,7 +86,23 @@ The base decides which tools your script can use and which features the computer
 | `coding-agent` | `git`, `python`, `pip`, `uv`, `node`, `npm`, `pnpm`, `rg`, `fd`, `jq` | Most templates. This is the default. |
 | `browser-agent` | Everything in `coding-agent`, plus Playwright, Chromium, and a virtual display | Agents that browse the web. Experimental. |
 
-List the current built-in templates and their tools with `Computer.list_templates()`. A custom template can't be the base of another custom template.
+A custom template can't be the base of another custom template.
+
+## Choose the computer size
+
+Computers from a template get the base template's size unless you choose one. Pass `vcpus`, `ram_mb`, and `disk_size_mb` together when your packages need more room; they must match one of the sandbox sizes:
+
+```python
+template = Template.create(
+    name="ml-env",
+    build_script="pip install torch",
+    vcpus=4,
+    ram_mb=16384,
+    disk_size_mb=61440,
+)
+```
+
+The finished image must fit in `disk_size_mb`, so give large installs such as `torch` or CUDA a bigger disk. A single computer can still ask for another size: `template.create_computer(vcpus=8, ram_mb=32768, disk_size_mb=102400)`. The build itself always runs on a large machine, whatever size you choose.
 
 ## Write the build script
 
@@ -110,22 +121,22 @@ from celesto import Template
 
 warnings = Template.lint("apt-get install ffmpeg\npip install -r requirements.txt")
 for warning in warnings:
-    print(f"line {warning['line']}: {warning['message']}")
+    print(f"line {warning.line}: {warning.message}")
 ```
 
 ## Fix a failed build
 
-When a build fails, `wait()` raises `CelestoTemplateBuildError`. The error names the failing line, its exit code, and a hint for common mistakes:
+When a build fails, `wait()` raises `TemplateBuildError`. The error names the failing line, its exit code, and a hint for common mistakes:
 
 ```python
-from celesto.sdk import CelestoTemplateBuildError
+from celesto import TemplateBuildError
 
 try:
     template.wait()
-except CelestoTemplateBuildError as error:
-    print(error)          # the failing line and exit code
-    print(error.failure)  # {"line": ..., "line_number": ..., "exit_code": ..., "hint": ...}
-    print(template.logs()["log"])
+except TemplateBuildError as error:
+    print(error)                      # the failing line and exit code
+    print(error.failure.line_number)  # also: line, exit_code, hint
+    print(template.logs())            # the end of the build log
 ```
 
 Fix the script, then build again:
@@ -160,25 +171,27 @@ Common failures and fixes:
 
 | Method | What it does |
 |--------|--------------|
-| `Template(name=..., build_script=...)` | Create a template and start its build |
+| `Template.create(name=..., build_script=...)` | Create a template and start its build |
 | `Template.get("tpl_...")` | Load an existing template |
 | `Template.list()` | List your organization's templates, newest first |
 | `Template.lint(script)` | Check a script without building |
 | `template.wait(on_log=print)` | Wait until the build is ready, printing its log |
 | `template.logs()` | Get the latest build log |
-| `template.edit(name=..., build_script=...)` | Change the name, the script, or the default size |
+| `template.edit(name=..., build_script=...)` | Change the name, the script, or the computer size |
 | `template.rebuild()` | Build again with the current script and the latest base |
-| `template.create_computer()` | Create a computer from the template |
+| `template.create_computer()` | Get a cloud computer that starts from the template |
 | `template.delete()` | Delete the template |
 
 Organization members can create templates and use them; viewers can list and use them. Editing, rebuilding, and deleting a template need an organization admin.
 
 ## Limits and errors
 
-- **2 builds at a time.** An organization can have 2 builds queued or running. A third raises `CelestoRateLimitError`; wait for one to finish.
-- **One build per template.** Rebuilding while a build is queued or running raises `CelestoConflictError`.
-- **Unique names.** Template names are unique within an organization. Reusing a name raises `CelestoConflictError`.
+- **2 builds at a time.** An organization can have 2 builds queued or running. A third raises `CloudAPIError` with status 429; wait for one to finish.
+- **One build per template.** Rebuilding while a build is queued or running raises `CloudAPIError` with status 409.
+- **Unique names.** Template names are unique within an organization. Reusing a name raises `CloudAPIError` with status 409.
 - **A ready build first.** Creating a computer before the first build succeeds raises an error that says to call `wait()` first.
+
+Every `CloudAPIError` message says what to do next, and `error.status_code` holds the HTTP status.
 
 `wait()` keeps retrying through rate limits, server errors, and network errors until its timeout (40 minutes by default), because the build keeps running on Celesto either way.
 
@@ -200,10 +213,10 @@ Organization members can create templates and use them; viewers can list and use
   The setup commands Celesto runs during a build.
 </ResponseField>
 
-<ResponseField name="failure" type="object">
+<ResponseField name="failure" type="TemplateBuildFailure | None">
   Where the last build failed, when its script exited with an error: `line`, `line_number`, `exit_code`, and `hint`.
 </ResponseField>
 
-<ResponseField name="default_vcpus" type="integer">
-  CPUs for new computers from this template, unless the create asks for another size. `default_ram_mb` and `default_disk_size_mb` work the same way.
+<ResponseField name="vcpus" type="integer">
+  vCPUs for computers created from this template, unless a computer asks for another size. `ram_mb` and `disk_size_mb` work the same way.
 </ResponseField>
