@@ -129,6 +129,22 @@ line 1: `apt-get install` without `-y` waits for a confirmation that never comes
 line 2: This line references a file, but files can't be uploaded; list the packages directly.
 ```
 
+### Install code from your repositories
+
+The build script can download code from the internet, so it can clone a public repository and install it. The template then includes the code, ready on every new computer:
+
+```python
+template = Template.create(
+    name="flask-env",
+    build_script=(
+        "git clone --depth 1 https://github.com/pallets/flask /opt/app\n"
+        "pip install /opt/app"
+    ),
+)
+```
+
+Clone private repositories on the computer after it starts, using a token you pass at that point. Keep tokens and other secrets out of the build script: everyone in your organization can read the script, and the build log prints every command it runs.
+
 ## Fix a failed custom template build
 
 When a build fails, `wait()` raises `TemplateBuildError`. Its message gives the script line number, the exit code, and, for common mistakes, a hint:
@@ -172,6 +188,60 @@ Common failures and fixes:
     The script took longer than 30 minutes. Remove downloads you don't need, or move slow, optional steps out of the template and run them on the computer.
   </Accordion>
 </AccordionGroup>
+
+## Rebuild a custom template on a schedule
+
+`rebuild()` runs your build script again on the latest version of the base template. Rebuild every day to pick up new package versions and changes in your repositories. New computers keep using the previous build until the new one is ready.
+
+Any scheduler can run the rebuild. This script rebuilds one template and waits for the result:
+
+```python rebuild_template.py
+import os
+
+from celesto import Template
+
+template = Template.get(os.environ["TEMPLATE_ID"])
+template.rebuild().wait()
+print(f"{template.id} is {template.status}")
+```
+
+To run it every day with GitHub Actions, add this workflow to your repository. Save an organization admin's API key as the `CELESTO_API_KEY` repository secret, since rebuilding needs admin access:
+
+```yaml .github/workflows/rebuild-template.yml
+name: Rebuild Celesto template
+on:
+  schedule:
+    - cron: "0 6 * * *" # every day at 06:00 UTC
+  workflow_dispatch: # also run it by hand from the Actions tab
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -U celesto
+      - run: python rebuild_template.py
+        env:
+          CELESTO_API_KEY: ${{ secrets.CELESTO_API_KEY }}
+          TEMPLATE_ID: tpl_0123456789ab
+```
+
+<Check>
+  The run log ends with `tpl_0123456789ab is ready`. A failed build fails the run, so GitHub notifies you.
+</Check>
+
+<Note>
+  Each organization can run 2 builds at a time. To rebuild many templates, such as one per customer workspace, rebuild them one after another instead of all at once.
+</Note>
+
+## Custom templates vs snapshots
+
+A custom template saves installed files: packages, tools, and code on the disk. Every computer created from it starts fresh from those files, like a newly booted machine. Programs that were running during the build don't carry over, so start services such as databases on each computer.
+
+A snapshot, as some other sandbox providers use the word, freezes a whole running machine, including its memory and running programs. To keep one computer's work between sessions instead, [stop and start the computer](/cloud/features/lifecycle). Stopping keeps its disk, and starting brings back the same files.
 
 ## Manage custom templates
 
