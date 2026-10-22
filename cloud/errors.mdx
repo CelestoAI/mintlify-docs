@@ -110,17 +110,19 @@ Both `CloudAPIError` and `CloudOperationError` expose the common fields below.
 Optional references are `None` when no safe value is available. The final three
 fields apply to `CloudAPIError` only; `validation_errors` is an empty tuple when
 no safe field errors are available. Raw response bodies and connection
-credentials are excluded.
+credentials are excluded. For supported endpoints, `CloudAPIError.details["detail"]`
+preserves a bounded HTTP 400 explanation for compatibility. Other arbitrary
+server diagnostics are excluded.
 
 | Field | Meaning |
 |---|---|
 | `code` | A recognized public error code, or `http_<status>` for an unrecognized HTTP failure. Operation failures use the three `cloud_` codes above. |
-| `operation` | The action: `create`, `get`, `run`, `stop`, `resume`, `delete`, `browser`, `display`, `terminal`, `publish_port`, `published_ports`, or `unpublish_port`. |
+| `operation` | The action: `create`, `start`, `get`, `run`, `stop`, `resume`, `delete`, `browser`, `display`, `terminal`, `publish_port`, `published_ports`, or `unpublish_port`. |
 | `computer_id` | The affected computer, when known. Creation can fail before its ID is available. |
 | `request_id` | A validated request or trace reference from the response, when available. Give it to support. |
 | `idempotency_key` | The creation request's support reference, when available. |
 | `recovery_action` | `fix_and_retry`: correct a rejected request; `inspect`: establish what happened before another action; `ask_human`: request account, billing, or support help. This field does not authorize automatic retries. |
-| `side_effects` | `none`: the request was rejected before work; `unknown`: work may have happened. |
+| `side_effects` | `none`: no state change from this request; `unknown`: work may have happened. |
 | `required_scope` | The permission required for a rejected API key, when known. |
 | `running_limit` | The running-sandbox limit, when provided. |
 | `validation_errors` | A tuple of safe field errors with `field` and a recognized validation `code`. Use these to identify what to edit. |
