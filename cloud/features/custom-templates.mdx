@@ -1,41 +1,33 @@
 ---
 title: "Celesto custom templates with preinstalled packages"
 sidebarTitle: "Custom templates"
-description: "Celesto custom templates give each cloud computer your preinstalled packages. Build a reusable setup, choose a base template and size, and fix build errors."
+description: "Celesto custom templates start every cloud computer with your packages already installed. Build a reusable setup, choose a base template and size, and fix build errors."
 ---
 
-A Celesto custom template is a reusable setup for cloud computers, with your tools already installed. You write the setup commands once, such as installing `ffmpeg` or a set of Python packages, and Celesto runs them for you. Every computer you create from the template then starts with those tools ready, so your agent can get to work right away instead of installing the same packages on every run.
-
-<Note>
-  Custom templates require the `celesto` Python package **0.1.6** or later (`pip install -U celesto`) and a Celesto Cloud API key in `CELESTO_API_KEY`. See [Get a Celesto Cloud API key](/cloud/authentication).
-</Note>
+A Celesto custom template is a reusable setup for [cloud computers](/cloud/computers) (on-demand Linux machines your agent runs on), with your tools already installed. You write the setup commands once, such as installing Go, Django, or PyTorch, and Celesto runs them for you. Every computer you create from the template then starts with those tools ready, so your agent can get to work right away instead of installing the same packages on every run.
 
 ## How Celesto custom templates work
 
-A custom template has three parts:
+You give Celesto two things:
 
 - **A base template.** One of the built-in templates, such as `coding-agent`. Your template starts with the tools the base already includes.
-- **A build script.** Shell commands that install what you need. Celesto runs the script once, when it builds the template.
-- **A template ID.** An ID that starts with `tpl_`. Pass it anywhere you would pass a built-in template ID.
+- **A build script.** Shell commands that install what you need. Celesto runs the script each time it builds the template, not each time a computer starts.
 
-Building takes a few minutes. When the build finishes, Celesto saves the result as an image (a saved copy of the computer's disk that new computers start from). Creating a computer from your template is then as fast as creating one from a built-in template.
+Building takes a few minutes. When the build finishes, Celesto saves the result as an image (a saved copy of the computer's disk). New computers start from that image, so they skip the setup and are ready as quickly as computers from a built-in template.
 
 ## Create a custom template and use it
 
 <Steps>
   <Step title="Create the template">
-    Pass a name and your setup commands. Write the commands as a shell script, one command per line.
+    Pass a name, a base template to start from, and your setup commands. Write the commands as a shell script, one command per line.
 
     ```python create_template.py
     from celesto import Template
 
     template = Template.create(
-        name="data-env",
+        name="go-django-env",
         base_template_id="coding-agent",
-        build_script="""
-    apt-get install -y ffmpeg postgresql-client
-    pip install pandas polars duckdb
-    """,
+        build_script="apt-get install -y golang-go\npip install django",
     )
     print(template.id, template.status)
     ```
@@ -46,51 +38,51 @@ Building takes a few minutes. When the build finishes, Celesto saves the result 
   </Step>
 
   <Step title="Wait for the build">
-    `wait()` follows the build and returns when the template is ready. Pass `on_log=print` to see the build output as it runs.
+    Add this to the end of `create_template.py`. `wait()` follows the build and returns when the template is ready. The `on_log` callback prints the build log as it runs.
 
     ```python
-    template.wait(on_log=print)
+    template.wait(on_log=lambda text: print(text, end=""))
     ```
 
     <Check>
-      `wait()` returns when `template.status` is `ready`.
+      The log ends with `==> Done`, and `wait()` returns. `template.status` is now `ready`.
     </Check>
   </Step>
 
   <Step title="Create a computer from the template">
-    `create_computer()` returns a [Celesto cloud computer](/cloud/computers) that starts from the custom template. Like any Celesto computer, it is created when the `with` block starts and deleted when it ends.
+    Add this to the end of `create_template.py` too. `create_computer()` returns a cloud computer that starts from your template. Celesto creates the computer when the `with` block starts and deletes it when the block ends.
 
     ```python
     with template.create_computer() as computer:
-        print(computer.run("ffmpeg -version").stdout)
+        print(computer.run("go version").stdout)
     ```
 
     <Check>
-      The output starts with `ffmpeg version`, which shows the computer started with your packages already installed.
+      You see a line such as `go version go1.22.2 linux/amd64`. Go came with the template, so nothing was installed when the computer started.
     </Check>
 
-    You can also pass the template ID directly:
+    Every template gets an ID that starts with `tpl_`, saved in `template.id`. To create a computer from the template in another script, pass that ID as `template_id`:
 
     ```python
     from celesto import CloudComputer
 
     with CloudComputer(template_id="tpl_0123456789ab") as computer:
-        print(computer.run("ffmpeg -version").stdout)
+        print(computer.run("go version").stdout)
     ```
   </Step>
 </Steps>
 
 ## Choose a base template
 
-A custom template's base template decides which tools your build script can use and which features the cloud computer supports. Pick one of these built-in templates:
+The base template is your starting point. Your template starts with its tools, and your build script adds to them. Pick one of these built-in templates:
 
 | Base | Includes | Good for |
 |------|----------|----------|
 | `scratch` | `bash`, `curl`, `sudo` | Minimal images where you install everything yourself |
-| `coding-agent` | `git`, `python`, `pip`, `uv`, `node`, `npm`, `pnpm`, `rg`, `fd`, `jq` | Most templates. This is the default. |
+| `coding-agent` | `git`, `python`, `pip`, `uv`, `uvx`, `node`, `npm`, `npx`, `pnpm`, `rg`, `fd`, `jq` | Most templates. This is the default. |
 | `browser-agent` | Everything in `coding-agent`, plus Playwright (a browser automation library), Chromium, and a virtual display (an on-screen desktop the browser can draw to) | Agents that browse the web. Experimental. |
 
-Bases are always built-in templates, so build each custom template from one of these three.
+You can't use a custom template as a base.
 
 ## Choose the computer size for a custom template
 
@@ -106,31 +98,56 @@ template = Template.create(
 )
 ```
 
-The finished image must fit in `disk_size_mb`, so give large installs such as `torch` or CUDA a bigger disk. Every computer created from the custom template gets this size. Celesto always builds custom templates on a large machine, whatever size you choose.
+The size must be at least as big as the base template. For `browser-agent`, that means Standard or larger.
+
+The finished image must fit in `disk_size_mb`, so give large installs such as `torch` or CUDA a bigger disk. An image can be at most about 29 GB, whatever size you choose. New computers from the template start with this size. Celesto always builds custom templates on a Large machine.
 
 ## Write the custom template build script
 
-The build script runs once, as root (the administrator account, so you can install system packages directly), inside a fresh copy of the base template. Keep these rules in mind:
+The build script runs as root (the administrator account, so you can install system packages directly), inside a fresh copy of the base template. Keep these rules in mind:
 
-- **The first failing command stops the build.** The script runs in strict mode (`set -euxo pipefail`), so make sure each command works on its own.
-- **List packages in the script.** The build receives only the script text, so name each package directly, such as `pip install pandas polars`. Commands that read local files, such as `pip install -r requirements.txt` or `./setup.sh`, fail.
-- **Answer prompts in advance.** Use `apt-get install -y` so `apt` installs packages straight away instead of stopping for a yes or no answer.
+- **The first failing command stops the build.** The script runs in strict mode (`set -euxo pipefail`), so any command that fails ends the build and the error shows its line.
+- **List packages in the script.** The build receives only the script text, so name each package directly, such as `pip install django pytest`. Commands that read local files, such as `pip install -r requirements.txt` or `./setup.sh`, fail.
+- **Answer prompts in advance.** Use `apt-get install -y` so `apt` doesn't stop to ask yes or no. Celesto runs `apt-get update` for you before your script starts.
 - **Install services, start them later.** The image keeps installed files, not running programs. Install a service such as PostgreSQL in the script, then start it on the computer when you need it.
 - **Stay within the limits.** A script can be at most 64 KB, and a build can run for at most 30 minutes.
 
-Check a script before you create a template. `lint()` reviews it in seconds and returns warnings, so you catch mistakes before you spend a build on them:
+Check a script before you create a template. `lint()` reviews it in seconds against the `coding-agent` base (pass `base_template_id` to check another base) and returns warnings, so you catch mistakes before you spend a build on them:
 
 ```python
 from celesto import Template
 
-warnings = Template.lint("apt-get install ffmpeg\npip install -r requirements.txt")
+warnings = Template.lint("apt-get install golang-go\npip install -r requirements.txt")
 for warning in warnings:
     print(f"line {warning.line}: {warning.message}")
 ```
 
+The output names each problem and how to fix it:
+
+```text
+line 1: `apt-get install` without `-y` waits for a confirmation that never comes; add `-y`.
+line 2: This line references a file, but files can't be uploaded; list the packages directly.
+```
+
+### Install code from your repositories
+
+The build script can download code from the internet, so it can clone a public repository and install it. The template then includes the code, ready on every new computer:
+
+```python
+template = Template.create(
+    name="flask-env",
+    build_script=(
+        "git clone --depth 1 https://github.com/pallets/flask /opt/app\n"
+        "pip install /opt/app"
+    ),
+)
+```
+
+Clone private repositories on the computer after it starts, using a token you pass at that point. Keep tokens and other secrets out of the build script: everyone in your organization can read the script, and the build log prints every command it runs.
+
 ## Fix a failed custom template build
 
-When a build fails, `wait()` raises `TemplateBuildError`. The error names the failing line, its exit code, and a hint for common mistakes:
+When a build fails, `wait()` raises `TemplateBuildError`. Its message gives the script line number, the exit code, and, for common mistakes, a hint:
 
 ```python
 from celesto import TemplateBuildError
@@ -138,38 +155,93 @@ from celesto import TemplateBuildError
 try:
     template.wait()
 except TemplateBuildError as error:
-    print(error)                      # the failing line and exit code
-    print(error.failure.line_number)  # also: line, exit_code, hint
-    print(template.logs())            # the end of the build log
+    print(error)                          # line number, exit code, and hint
+    if error.failure:                     # None for timeouts and other non-script errors
+        print(error.failure.line)         # also: line_number, exit_code, hint
+    print(template.logs())                # the end of the build log
 ```
 
 Fix the script, then build again:
 
 ```python
-template.edit(build_script="apt-get install -y ffmpeg\npip install pandas")
-template.rebuild().wait(on_log=print)
+template.edit(build_script="apt-get install -y golang-go\npip install django")
+template.rebuild().wait(on_log=lambda text: print(text, end=""))
 ```
 
 <Tip>
-  While a template rebuilds, new computers keep starting from its previous successful build.
+  If the template built successfully before, new computers keep using that build while it rebuilds, and also if the rebuild fails.
 </Tip>
 
 Common failures and fixes:
 
 <AccordionGroup>
   <Accordion title="command not found">
-    The base template doesn't include that command. Pick a base that has it, or install it earlier in the script.
+    The base template doesn't include that command. Pick a base that has it, or install it earlier in the script, for example `apt-get install -y golang-go`.
   </Accordion>
   <Accordion title="externally-managed-environment">
-    The system Python refuses `pip install`. Use the `coding-agent` base, whose `pip` installs into its own environment, or create a virtual environment (a private Python setup that `pip` can install into) in the script.
+    The system Python blocks `pip install`. Build from `coding-agent`, whose `pip` installs into its own Python setup, or create a virtual environment (a private Python setup) first: `python3 -m venv /opt/venv`, then `/opt/venv/bin/pip install ...`.
   </Accordion>
   <Accordion title="Unable to locate package">
-    `apt` doesn't know the package name. Check the spelling and the package name for Ubuntu.
+    `apt` can't find a package with that name. Check the spelling, and look up the Ubuntu 24.04 name at [packages.ubuntu.com](https://packages.ubuntu.com).
   </Accordion>
-  <Accordion title="The build timed out">
-    The build ran past 30 minutes. Remove large downloads, or combine packages into fewer install commands.
+  <Accordion title="The build hit the 30 minute limit">
+    The script took longer than 30 minutes. Remove downloads you don't need, or move slow, optional steps out of the template and run them on the computer.
   </Accordion>
 </AccordionGroup>
+
+## Rebuild a custom template on a schedule
+
+`rebuild()` runs your build script again on the latest version of the base template. Rebuild every day to pick up new package versions and changes in your repositories. New computers keep using the previous build until the new one is ready.
+
+Any scheduler can run the rebuild. This script rebuilds one template and waits for the result:
+
+```python rebuild_template.py
+import os
+
+from celesto import Template
+
+template = Template.get(os.environ["TEMPLATE_ID"])
+template.rebuild().wait()
+print(f"{template.id} is {template.status}")
+```
+
+To run it every day with GitHub Actions, add this workflow to your repository. Save an organization admin's API key as the `CELESTO_API_KEY` repository secret, since rebuilding needs admin access:
+
+```yaml .github/workflows/rebuild-template.yml
+name: Rebuild Celesto template
+on:
+  schedule:
+    - cron: "0 6 * * *" # every day at 06:00 UTC
+  workflow_dispatch: # also run it by hand from the Actions tab
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -U celesto
+      - run: python rebuild_template.py
+        env:
+          CELESTO_API_KEY: ${{ secrets.CELESTO_API_KEY }}
+          TEMPLATE_ID: tpl_0123456789ab
+```
+
+<Check>
+  The run log ends with `tpl_0123456789ab is ready`. A failed build fails the run, so GitHub notifies you.
+</Check>
+
+<Note>
+  Each organization can run 2 builds at a time. To rebuild many templates, such as one per customer workspace, rebuild them one after another instead of all at once.
+</Note>
+
+## Custom templates vs snapshots
+
+A custom template saves installed files: packages, tools, and code on the disk. Every computer created from it starts fresh from those files, like a newly booted machine. Programs that were running during the build don't carry over, so start services such as databases on each computer.
+
+A snapshot, as some other sandbox providers use the word, freezes a whole running machine, including its memory and running programs. To keep one computer's work between sessions instead, [stop and start the computer](/cloud/features/lifecycle). Stopping keeps its disk, and starting brings back the same files.
 
 ## Manage custom templates
 
@@ -181,34 +253,40 @@ Use these Python methods to create, check, build, use, and delete custom templat
 | `Template.get("tpl_...")` | Load an existing template |
 | `Template.list()` | List your organization's templates, newest first |
 | `Template.lint(script)` | Check a script without building |
-| `template.wait(on_log=print)` | Wait until the build is ready, printing its log |
-| `template.logs()` | Get the latest build log |
-| `template.edit(name=..., build_script=...)` | Change the name, the script, or the computer size |
+| `template.wait(on_log=...)` | Wait until the build is ready, sending its log to `on_log` |
+| `template.logs()` | Get the end of the latest build's log (up to 256 KB) |
+| `template.edit(name=..., build_script=..., vcpus=..., ram_mb=..., disk_size_mb=...)` | Change the name, the script, or the computer size. A new script applies on the next rebuild |
 | `template.rebuild()` | Build again with the current script and the latest base |
 | `template.create_computer()` | Get a cloud computer that starts from the template |
 | `template.delete()` | Delete the template |
 
-Organization members can create templates and use them; viewers can list and use them. Editing, rebuilding, and deleting a template need an organization admin.
+Organization members can create templates and start computers from them. Viewers can list templates and read their build logs. Only admins and owners can edit, rebuild, or delete a template.
 
 ## Custom template limits and errors
 
-- **2 builds at a time.** An organization can have 2 builds queued or running. A third raises `CloudAPIError` with status 429 (too many requests); wait for one to finish, then try again.
-- **One build per template.** Rebuilding while a build is queued or running raises `CloudAPIError` with status 409 (conflict).
-- **Unique names.** Template names are unique within an organization. Reusing a name raises `CloudAPIError` with status 409.
-- **A ready build first.** Creating a computer before the first build succeeds raises an error that says to call `wait()` first.
+- **2 builds at a time.** Each organization can have 2 builds queued or running. Creating or rebuilding a third raises `CloudAPIError` with status 429 (too many requests). Wait for one to finish, then try again.
+- **One build per template.** Rebuilding while a build is queued or running raises `CloudAPIError` with status 409 (conflict). Call `wait()`, then `rebuild()`.
+- **Unique names.** Each name can be used once per organization, and a deleted template's name is free again. A name already in use raises `CloudAPIError` with status 409.
+- **A finished build first.** `create_computer()` needs at least one successful build. While the first build runs, it raises an error that tells you to call `wait()`. If the first build failed, the error tells you to fix the script and call `rebuild()`.
 
 Every `CloudAPIError` message says what to do next, and `error.status_code` holds the HTTP status.
 
-`wait()` keeps retrying through rate limits (temporary caps on how many requests you can send), server errors, and network errors until its timeout (40 minutes by default), because the build keeps running on Celesto either way. When the timeout passes, it raises `OperationTimeoutError`; call `wait()` again to keep waiting.
+`wait()` keeps checking for up to 40 minutes. Your build keeps running on Celesto even if a check fails, so `wait()` retries through rate limits (caps on how many requests you can send), server errors, and network errors. If time runs out, it raises `OperationTimeoutError`. Call `wait()` again to keep waiting.
 
 ## Custom template fields
+
+Each `Template` object has these attributes. Call `template.refresh()` to load the latest values.
 
 <ResponseField name="id" type="string">
   Template ID, starting with `tpl_`. Pass it as `template_id` to create computers.
 </ResponseField>
 
+<ResponseField name="name" type="string">
+  The template name, unique in your organization.
+</ResponseField>
+
 <ResponseField name="status" type="string">
-  Build state: `queued`, `building`, `ready`, `failed`, or `needs_rebuild`. `needs_rebuild` means the base template changed and the template must be rebuilt before it can create computers.
+  Build state: `queued`, `building`, `ready`, `failed`, or `needs_rebuild`. `needs_rebuild` means Celesto updated the base template and your old build can no longer start computers. Call `rebuild()`.
 </ResponseField>
 
 <ResponseField name="base_template_id" type="string">
@@ -223,6 +301,26 @@ Every `CloudAPIError` message says what to do next, and `error.status_code` hold
   Where the last build failed, when its script exited with an error: `line`, `line_number`, `exit_code`, and `hint`.
 </ResponseField>
 
+<ResponseField name="error" type="string | None">
+  Why the last build failed, when the cause was outside your script, such as the 30 minute limit.
+</ResponseField>
+
+<ResponseField name="warnings" type="list[TemplateLintWarning]">
+  Script warnings from the last create or edit. Empty otherwise.
+</ResponseField>
+
 <ResponseField name="vcpus" type="integer">
-  Virtual CPU cores for every computer created from this template. `ram_mb` (memory in MB) and `disk_size_mb` (disk space in MB) work the same way.
+  Virtual CPU cores for each computer made from this template.
+</ResponseField>
+
+<ResponseField name="ram_mb" type="integer">
+  Memory in MB for each computer made from this template.
+</ResponseField>
+
+<ResponseField name="disk_size_mb" type="integer">
+  Disk space in MB for each computer made from this template.
+</ResponseField>
+
+<ResponseField name="created_at" type="datetime">
+  When the template was created. `updated_at` holds the time of the last change.
 </ResponseField>
