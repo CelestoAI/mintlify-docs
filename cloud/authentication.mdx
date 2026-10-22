@@ -61,20 +61,47 @@ Destructive commands also name the organization they act on: `celesto computer d
 
 <View title="Python" icon="python">
 
+## Choose credentials for Python
+
+`CloudComputer` checks these sources in order:
+
+1. `api_key=` passed in code
+2. `CELESTO_API_KEY` in the process environment
+3. The key saved by `celesto auth login`
+
+Load a `.env` file into your environment yourself if you use one; the Python
+cloud client reads the process environment directly. An environment key takes
+precedence over a successful saved CLI login.
+
+## Set the required permissions
+
+Named API keys work with `CloudComputer`. Choose permissions for the actions
+your application needs:
+
+| Permission | Actions |
+|---|---|
+| **See your computers** (`computers:read`) | Inspect computers and their state. |
+| **Create, start, stop computers and run commands** (`computers:exec`) | Create, run, stop, resume, and connect to a computer. |
+| **Delete computers** (`computers:admin`) | Delete computers. Required for automatic cleanup with `with CloudComputer()`. |
+
+The key's owner also needs access to its organization. A valid key can still be
+rejected when its permission or the owner's membership is missing; the
+[error message](/cloud/errors) identifies the required change.
+
 ## Use an environment variable
 
 ```bash
 export CELESTO_API_KEY="your-api-key"
 ```
 
-List computers with the environment key:
+Create a computer, run a command, and delete it on exit:
 
 ```python auth.py
-from celesto import Computer
+from celesto import CloudComputer
 
 
-computers = Computer.list()
-print(len(computers))
+with CloudComputer() as computer:
+    print(computer.run("uname -a").stdout)
 ```
 
 ## Pass the key in code
@@ -84,12 +111,15 @@ Pass `api_key` when you need to select credentials explicitly:
 ```python auth_explicit.py
 import os
 
-from celesto import Computer
+from celesto import CloudComputer
 
 
-computers = Computer.list(api_key=os.environ["CELESTO_API_KEY"])
-print(len(computers))
+with CloudComputer(api_key=os.environ["CELESTO_API_KEY"]) as computer:
+    print(computer.run("uname -a").stdout)
 ```
+
+Both examples create a computer. Check the [quickstart](/cloud/quickstart) for
+trial limits before running them.
 
 </View>
 
