@@ -14,29 +14,34 @@ Get an API key from [celesto.ai](https://celesto.ai) under **Settings \> Securit
   ## Install the Python SDK
 
   ```bash
-  pip install -U celesto
+  python -m pip install --upgrade "celesto>=0.1.7"
   ```
 
   ## Run your first computer
 
+  A named API key needs all three permissions for this example: **See your
+  computers**, **Create, start, stop computers and run commands**, and **Delete
+  computers**. The final permission lets the example clean up after itself.
+
+  <Note>
+    The free trial allows one sandbox at a time, including stopped sandboxes.
+    Reuse your existing sandbox, delete it when you are done, or add prepaid
+    credit before creating another. HTTP 429 can mean this limit; waiting does
+    not free the slot.
+  </Note>
+
   Create `quickstart.py`:
 
   ```python quickstart.py
-  import os
-  
-  from celesto import Computer
-  
-  
-  if not os.environ.get("CELESTO_API_KEY"):
-      raise RuntimeError("Set CELESTO_API_KEY before running this script.")
-  
-  computer = Computer(template_id="scratch")
-  print(f"Computer ready: {computer.name}")
-  
-  result = computer.run("uname -a")
-  print(result["stdout"].strip())
-  
-  computer.delete()
+  from celesto import CloudComputer
+
+
+  with CloudComputer() as computer:
+      print(f"Computer ready: {computer.id}")
+      result = computer.run("uname -a")
+      print(result.stdout.strip())
+      if result.exit_code != 0:
+          raise RuntimeError(f"Command failed: {result.stderr}")
   ```
 
   Run it:
@@ -47,8 +52,14 @@ Get an API key from [celesto.ai](https://celesto.ai) under **Settings \> Securit
   ```
 
   <Check>
-    The script prints the computer name, prints Linux system information, and deletes the computer.
+    The script prints the computer ID and Linux system information. Exiting
+    the `with` block deletes the computer, including when your code fails.
   </Check>
+
+  If creation fails, follow the error's recovery message. If the response is
+  unreadable or the connection times out, inspect your computers in the
+  [dashboard](https://celesto.ai) before creating another. See
+  [error handling](/cloud/errors) for uncertain outcomes and cleanup failures.
 
   ## Next step
 

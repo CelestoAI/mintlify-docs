@@ -4,62 +4,126 @@ sidebarTitle: "Error handling"
 description: "Catch and handle Celesto SDK authentication, validation, not found, rate limit, server, and network exceptions across the Python and JavaScript clients."
 ---
 
-Celesto SDKs raise typed errors so your application can respond clearly to missing credentials, invalid parameters, missing resources, rate limits, server errors, and network failures.
+Find out what went wrong and choose the next safe step. These examples handle rejected requests, missing computers, and operations whose outcome is uncertain.
 
 <View title="Python" icon="python">
 
-## Import error classes
+Use Celesto 0.1.7 or later for the structured fields below:
 
-```python errors.py
-from celesto.sdk.exceptions import (
-    CelestoAuthenticationError,
-    CelestoValidationError,
-    CelestoNotFoundError,
-    CelestoRateLimitError,
-    CelestoServerError,
-    CelestoNetworkError,
-)
+```bash
+python -m pip install --upgrade "celesto>=0.1.7"
 ```
 
-## Catch common failures
+## Catch cloud errors
 
 ```python handle_errors.py
-from celesto import Computer
-from celesto.sdk.exceptions import (
-    CelestoAuthenticationError,
-    CelestoNetworkError,
-    CelestoNotFoundError,
-    CelestoRateLimitError,
-    CelestoServerError,
-    CelestoValidationError,
-)
+from celesto import CloudAPIError, CloudComputer, CloudOperationError, VMNotFoundError
+
+
+def describe(error):
+    if isinstance(error, BaseExceptionGroup):
+        # Your code and cleanup can both fail. Keep both failures visible.
+        for child in error.exceptions:
+            describe(child)
+    elif isinstance(error, CloudAPIError):
+        print(f"HTTP {error.status_code}: {error}")
+        print(f"Code: {error.code}; next action: {error.recovery_action}")
+        if error.request_id:
+            print(f"Support reference: {error.request_id}")
+    elif isinstance(error, CloudOperationError):
+        print(error)
+        print(f"Operation: {error.operation}; outcome: {error.side_effects}")
+        if error.computer_id:
+            print(f"Inspect computer: {error.computer_id}")
+        if error.idempotency_key:
+            print(f"Creation support reference: {error.idempotency_key}")
+    elif isinstance(error, VMNotFoundError):
+        print(error)
+    else:
+        raise error
 
 
 try:
-    computer = Computer.get("missing-computer")
-    print(computer.name)
-except CelestoAuthenticationError:
-    print("Check CELESTO_API_KEY.")
-except CelestoValidationError as error:
-    print(f"Fix the request: {error}")
-except CelestoNotFoundError:
-    print("The computer does not exist.")
-except CelestoRateLimitError:
-    print("Retry after the rate limit resets.")
-except CelestoServerError:
-    print("Celesto returned a server error.")
-except CelestoNetworkError as error:
-    print(f"Network failure: {error}")
+    with CloudComputer() as computer:
+        print(f"Computer ready: {computer.id}")
+        result = computer.run("uname -a")
+        print(result.stdout.strip())
+        if result.exit_code != 0:
+            print(f"Command exited with {result.exit_code}: {result.stderr}")
+except (CloudAPIError, CloudOperationError, VMNotFoundError, BaseExceptionGroup) as error:
+    describe(error)
 ```
+
+The `with` block deletes the computer when it exits. A nonzero command exit
+code is a `CommandResult`, so check `result.exit_code`. If your code and deletion
+both fail, Python raises an exception group containing both failures.
 
 | Exception | When it occurs |
 |---|---|
-| `CelestoAuthenticationError` | Invalid or missing API key |
-| `CelestoValidationError` | Invalid parameters |
-| `CelestoNotFoundError` | Resource not found |
-| `CelestoRateLimitError` | Too many requests |
-| `CelestoServerError` | Server-side error |
-| `CelestoNetworkError` | Connection failures or timeouts |
+| `CloudAPIError` | The Cloud API rejects a request. Inspect `status_code`, `code`, and the recovery fields below. |
+| `CloudOperationError` | A connection fails, a response cannot be read, or an operation times out. Its outcome may be unknown. |
+| `VMNotFoundError` | The computer cannot be found. Follow the error's command to list your computers. |
+| `CelestoError` | Base class for these Celesto errors. Import it from `celesto` to catch SDK failures broadly. |
+
+Missing credentials and invalid local arguments can raise `ValueError` before a
+request is sent. Set `CELESTO_API_KEY`, pass `api_key=`, or run
+`celesto auth login` to supply credentials.
+
+## Choose the next action
+
+Read the message first. Use `code` to distinguish failures that share an HTTP
+status, especially HTTP 429:
+
+| Code or status | What to do |
+|---|---|
+| `api_key_scope_required` | Create a key with the permission named in the error, then update `CELESTO_API_KEY` or `api_key=`. `required_scope` identifies the permission. |
+| `organization_access_denied` | Ask an organization owner to restore the key owner's membership. |
+| `trial_retained_sandbox_limit_reached` (HTTP 429) | The free trial allows one sandbox, including stopped sandboxes. Reuse it, delete it in the dashboard when you are done, or add prepaid credit before creating another. Waiting does not free this slot. |
+| `concurrency_limit_reached` (HTTP 429) | Reuse a running sandbox, or stop one to preserve its files. Delete one only when you intend to remove it. `running_limit` gives the limit when available. |
+| Other HTTP 429 | Inspect the message and dashboard to determine the limit. The status alone does not establish that waiting or retrying will help. |
+| HTTP 401 | Supply a valid API key and retry the rejected request. |
+| HTTP 402 | Follow the message to start the trial, complete payment, or add credit. |
+| `validation_error` (HTTP 422) | Edit the fields named in `validation_errors`, then retry. Submitted values and arbitrary server messages are excluded. |
+| HTTP 5xx | Keep the request reference for support. Inspect an uncertain state-changing operation before retrying it. |
+| `cloud_transport_error`, `cloud_invalid_response`, `cloud_operation_timeout` | Follow the operation-specific inspection guidance below. |
+
+## Handle an uncertain outcome
+
+A timeout or unreadable response can happen after the server accepts a request.
+The SDK does not automatically repeat state-changing requests.
+
+- **Create:** inspect your computers in the [dashboard](https://celesto.ai) before
+  creating another. `idempotency_key` is a support reference for reconciling that
+  request; the public constructor does not accept it to replay creation.
+- **Run a command:** check the command's intended result before running it again.
+  A computer's running state cannot establish whether the command executed.
+- **Stop or resume:** inspect that computer's state before retrying the same
+  operation. Stopping preserves files; deleting removes the computer.
+- **Delete:** inspect whether that computer still exists before deciding whether
+  to retry deletion on the same handle.
+- **Publish or remove a port:** inspect `computer.published_ports()` before
+  repeating the change.
+
+## Structured fields
+
+Both `CloudAPIError` and `CloudOperationError` expose the common fields below.
+Optional references are `None` when no safe value is available. The final three
+fields apply to `CloudAPIError` only; `validation_errors` is an empty tuple when
+no safe field errors are available. Raw response bodies and connection
+credentials are excluded.
+
+| Field | Meaning |
+|---|---|
+| `code` | A recognized public error code, or `http_<status>` for an unrecognized HTTP failure. Operation failures use the three `cloud_` codes above. |
+| `operation` | The action: `create`, `get`, `run`, `stop`, `resume`, `delete`, `browser`, `display`, `terminal`, `publish_port`, `published_ports`, or `unpublish_port`. |
+| `computer_id` | The affected computer, when known. Creation can fail before its ID is available. |
+| `request_id` | A validated request or trace reference from the response, when available. Give it to support. |
+| `idempotency_key` | The creation request's support reference, when available. |
+| `recovery_action` | `fix_and_retry`: correct a rejected request; `inspect`: establish what happened before another action; `ask_human`: request account, billing, or support help. This field does not authorize automatic retries. |
+| `side_effects` | `none`: the request was rejected before work; `unknown`: work may have happened. |
+| `required_scope` | The permission required for a rejected API key, when known. |
+| `running_limit` | The running-sandbox limit, when provided. |
+| `validation_errors` | A tuple of safe field errors with `field` and a recognized validation `code`. Use these to identify what to edit. |
 
 </View>
 
