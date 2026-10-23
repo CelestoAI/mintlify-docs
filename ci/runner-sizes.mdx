@@ -1,0 +1,142 @@
+---
+title: "Choose a runner size"
+description: "Pick the CPU and memory for each CI job, match your current GitHub or Blacksmith runner, and move to a smaller size safely."
+---
+
+Each job in your workflow can run on a different size of computer. You choose the size with one label in the job's `runs-on` line, so a quick lint job can use a small, cheap computer while a browser test job gets more memory.
+
+## Pick a size by CPU and memory
+
+Find the row with the vCPU and RAM your job needs, then put its label in `runs-on`. See [Sizes and prices](/ci#sizes-and-prices) for disk and per-minute rates.
+
+| If your job needs | Size | Label |
+| --- | --- | --- |
+| 1 vCPU, 2 GB RAM | Micro | `celesto-micro` |
+| 1 vCPU, 4 GB RAM | Small | `celesto-small` |
+| 2 vCPU, 4 GB RAM | Standard | `celesto-standard` |
+| 2 vCPU, 8 GB RAM | Memory | `celesto-memory` |
+| 4 vCPU, 16 GB RAM | Large | `celesto-large` |
+| 8 vCPU, 32 GB RAM | XL | `celesto-xl` |
+
+Memory is the standard 2 vCPU, 8 GB computer, the same CPU and RAM as GitHub's `ubuntu-latest` in a private repository.
+
+The $5 trial covers Micro only. Larger sizes need eligible workspace credit; otherwise the **Celesto runner setup** check reports a credit problem and the job stays queued. See [Troubleshooting](/ci/troubleshooting) if that happens.
+
+## Run a job on an 8 GB computer
+
+This workflow runs your Node.js tests on Memory, with 2 vCPU and 8 GB RAM. Save it as `.github/workflows/tests.yml` in a repository you connected during the [CI quickstart](/ci#quickstart):
+
+```yaml .github/workflows/tests.yml
+name: Tests
+on: [push, workflow_dispatch]
+jobs:
+  test:
+    runs-on: [self-hosted, celesto-memory]
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show runner resources
+        run: |
+          nproc
+          grep MemTotal /proc/meminfo
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm test
+```
+
+After you push, open the run in your repository's **Actions** tab. The **Show runner resources** step prints `2` for the vCPUs and a `MemTotal` of about 8 GB, shown in kilobytes. You can remove that step once you've confirmed the size.
+
+For a Python project, keep the same `runs-on` line and replace the Node.js steps with your Python setup and test commands.
+
+## Use different sizes in one workflow
+
+Set `runs-on` separately on each job. This workflow runs unit tests on Memory and browser end-to-end tests on Large, with 4 vCPU and 16 GB RAM:
+
+```yaml .github/workflows/ci.yml
+name: CI
+on: [push, workflow_dispatch]
+jobs:
+  test:
+    runs-on: [self-hosted, celesto-memory]
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  e2e:
+    runs-on: [self-hosted, celesto-large]
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
+```
+
+Use exactly one Celesto size label per job. A job with two Celesto labels, or an unknown one, fails setup before a computer starts.
+
+## Match your current runner
+
+When you move a workflow, start with a Celesto size that has the same vCPU and RAM as your current runner. Your jobs then get the same CPU and memory, so a failure or slowdown points to a real difference rather than a smaller machine.
+
+| Current runner | vCPU | RAM | Celesto label |
+| --- | ---: | ---: | --- |
+| GitHub `ubuntu-latest`, private repository | 2 | 8 GB | `celesto-memory` |
+| GitHub `ubuntu-latest`, public repository | 4 | 16 GB | `celesto-large` |
+| GitHub 4-core Linux larger runner | 4 | 16 GB | `celesto-large` |
+| GitHub 8-core Linux larger runner | 8 | 32 GB | `celesto-xl` |
+| Blacksmith `blacksmith-2vcpu-ubuntu-2404` | 2 | 8 GB | `celesto-memory` |
+| Blacksmith `blacksmith-4vcpu-ubuntu-2404` | 4 | 16 GB | `celesto-large` |
+| Blacksmith `blacksmith-8vcpu-ubuntu-2404` | 8 | 32 GB | `celesto-xl` |
+
+For example, a Blacksmith workflow with a regular test job and a browser end-to-end job changes only its `runs-on` lines:
+
+```diff
+ jobs:
+   test:
+-    runs-on: blacksmith-2vcpu-ubuntu-2404
++    runs-on: [self-hosted, celesto-memory]
+   e2e:
+-    runs-on: blacksmith-4vcpu-ubuntu-2404
++    runs-on: [self-hosted, celesto-large]
+```
+
+For another provider, find your runner's vCPU and RAM in its documentation and pick the matching row from [Pick a size by CPU and memory](#pick-a-size-by-cpu-and-memory).
+
+Matching CPU and memory gives a fair starting point, not identical machines. Processor models, disk size, and preinstalled tools can differ, so compare a real run before you move every job. Celesto's CI image has a different set of tools from GitHub's hosted image; check [what is preinstalled](/ci#what-is-preinstalled).
+
+Celesto Linux runners go up to 8 vCPU and 32 GB. Keep jobs that need more, or that need ARM, Windows, or macOS, on your current provider. The runner is chosen per job, so one workflow can use both.
+
+## Choose a smaller size
+
+After a job passes on the matching size, you can try a smaller one to lower its cost. Many lint and unit-test jobs fit Micro or Standard; builds and browser tests usually need more memory.
+
+<Steps>
+  <Step title="Record a baseline">
+    Run the job on the matching size three times. Note its duration and whether it passed.
+  </Step>
+  <Step title="Try one size down">
+    Change the label to the next smaller size in [the size table](#pick-a-size-by-cpu-and-memory) and run the job three more times.
+  </Step>
+  <Step title="Compare the results">
+    Keep the smaller size if every run passes and the cost per job is lower. Celesto charges per minute, so a smaller runner that runs much longer can cost more per job.
+  </Step>
+</Steps>
+
+These signs mean the runner is too small for the job:
+
+- A step ends with exit code `137`. The system stopped the process, usually because the job ran out of memory.
+- Test workers crash, or browser tests time out or fail intermittently.
+- The job takes much longer than on the matching size.
