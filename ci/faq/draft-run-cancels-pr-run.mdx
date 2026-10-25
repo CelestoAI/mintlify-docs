@@ -1,0 +1,86 @@
+---
+title: "Draft pull request run cancels your GitHub Actions run"
+sidebarTitle: "Draft run cancels PR run"
+description: "Fix GitHub Actions runs that get cancelled when you push and mark a draft pull request ready for review at the same time, leaving only skipped jobs."
+---
+
+When you push a commit and mark a draft pull request ready for review at almost the same moment, GitHub can cancel the run that tests your code and keep a run where every job is skipped. Your pull request then has no test results for its latest commit. A one-line change to your workflow keeps the real run going.
+
+This happens on GitHub-hosted runners too. It comes from how your workflow chooses which runs to cancel, so the fix goes in your workflow file.
+
+## What you see
+
+- In your repository's **Actions** tab, two runs for the same commit started at the same time. One shows **Cancelled**, and every job in the other shows **Skipped**.
+- On the commit, the **Celesto runner setup** check shows **Queued job ended** with the message "GitHub ended this job before runner setup completed."
+- The pull request shows no passing or failing tests for its latest commit.
+
+## Why it happens
+
+Your workflow runs on pushes to the pull request and when the pull request becomes ready for review. Each of those events starts its own run, and each run gets a copy of the pull request as it was when the event happened.
+
+- The run started by the push still sees a draft, so it skips every job.
+- The run started by **Ready for review** sees a ready pull request, so it runs your tests.
+- Both runs share one <Tooltip tip="A name GitHub uses to group workflow runs. With cancel-in-progress turned on, a new run in the group cancels the run already in progress.">concurrency group</Tooltip>. Whichever run arrives second cancels the first. When the draft copy arrives second, it cancels the run that tests your code.
+
+The same thing happens when you push and select **Convert to draft** at the same time.
+
+## Fix it
+
+Add the pull request's draft state to the end of the concurrency group name. Draft runs and ready runs then land in separate groups and never cancel each other.
+
+This complete workflow runs Node.js tests on Celesto, skips drafts, and keeps the real run. Save it as `.github/workflows/tests.yml`:
+
+```yaml .github/workflows/tests.yml
+name: Tests
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+concurrency:
+  # Draft and ready runs get separate groups, so a draft run never cancels a ready one.
+  group: tests-${{ github.ref }}-${{ github.event.pull_request.draft }}
+  cancel-in-progress: true
+jobs:
+  test:
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: [self-hosted, celesto-micro]
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm test
+```
+
+If your workflow already has a `concurrency` block, keep it and add `-${{ github.event.pull_request.draft }}` to the end of its `group` value:
+
+```diff .github/workflows/tests.yml
+ concurrency:
+-  group: tests-${{ github.ref }}
++  group: tests-${{ github.ref }}-${{ github.event.pull_request.draft }}
+   cancel-in-progress: true
+```
+
+Everything else keeps working as before:
+
+- A newer push to a ready pull request still cancels the older run for that pull request.
+- Pushes to a branch with no pull request, such as `main`, behave as they do today.
+- When you convert a pull request back to draft, a run already in progress finishes and reports its results.
+
+## Check the fix
+
+1. Push a commit to a draft pull request, then select **Ready for review** right away.
+2. Open the **Actions** tab. You see two runs for the commit: one finishes in a few seconds with every job **Skipped**, and the other runs your tests to completion.
+3. On the commit, the **Celesto runner setup** check reaches **Runner ready**, and the native GitHub Actions job shows your test results.
+
+## Get results for a commit that was already cancelled
+
+Open the cancelled run in the **Actions** tab and select **Re-run all jobs**. You can also push a new commit to start a fresh run.
+
+## What "Queued job ended" means
+
+GitHub cancelled the job before a runner picked it up. Your steps never ran, so the check reflects the cancellation itself, and Celesto stops setting up a runner for that job. Rerun the workflow to get results.
+
+For other blocked or queued jobs, see [Troubleshooting](/ci/troubleshooting).

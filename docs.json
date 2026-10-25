@@ -178,6 +178,10 @@
           {
             "group": "Manage CI",
             "pages": ["ci/troubleshooting", "ci/security"]
+          },
+          {
+            "group": "FAQs",
+            "pages": ["ci/faq/draft-run-cancels-pr-run"]
           }
         ]
       },
