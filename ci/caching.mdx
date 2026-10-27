@@ -3,7 +3,7 @@ title: "Caching"
 description: "Reuse dependencies and task results between CI jobs, share default-branch caches, and manage storage limits."
 ---
 
-Save downloaded dependencies so later jobs can spend less time installing them. Each job still starts on a fresh computer; a cache is a saved copy of reusable files kept separately from that computer.
+Save downloaded packages and completed builds so later jobs finish sooner. Each job starts on a fresh computer. A cache keeps a saved copy of reusable files for later jobs.
 
 You can also save build and type-check results. See [JavaScript and TypeScript](/ci/languages/javascript) for npm, pnpm, and Turborepo recipes, plus guidance for Nx.
 
@@ -77,13 +77,13 @@ The current cache release has no separate storage charge. Job runtime still cons
 
 Celesto currently has no customer-facing cache usage view or cache list API. GitHub's cache page and `gh cache` show GitHub's separate store. For current repository and workspace usage, [contact support](mailto:aniket@celesto.ai) with your workspace name or ID and repository (`owner/name`).
 
-To estimate an individual entry, inspect the compressed archive size in the cache action's save logs. Run `du -sh` on the saved directories to see their size on the job computer. Neither measurement gives total retained repository or workspace usage: older keys and other branches can occupy additional space.
+To estimate an individual entry, inspect the compressed archive size in the cache action's save logs. Run `du -sh` on the saved directories to see their size on the job computer. Total repository and workspace usage also includes older keys and entries from other branches.
 
 Prune old task results before saving a new archive, and save task caches on the default branch to reduce duplicate entries. Pruning the local directory reduces future archives; existing saved entries follow the cleanup rules above. Leave room for dependency caches and overlapping entries while older keys expire.
 
 ## Reduce cache restore time
 
-A restore includes downloading an archive, decompressing it, and writing its files to disk. Many small files can take longer to unpack than to download. A fast download therefore does not guarantee a fast restore.
+A restore includes downloading a compressed archive, unpacking it, and writing its files to disk. Many small files can take longer to unpack than to download. Compare both stages when measuring restore time.
 
 Compare the complete job on a cache miss and a hit, including restore, installation, tasks, and save. Use the action's timestamps and logs to separate transfer time from extraction time where available.
 
