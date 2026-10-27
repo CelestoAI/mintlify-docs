@@ -172,6 +172,10 @@
             "pages": ["ci/runner-sizes", "ci/docker", "ci/caching"]
           },
           {
+            "group": "Programming languages",
+            "pages": ["ci/languages/javascript"]
+          },
+          {
             "group": "Measure performance",
             "pages": ["ci/benchmarking"]
           },

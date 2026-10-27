@@ -1,9 +1,11 @@
 ---
-title: "Dependency caching"
-description: "Reuse dependencies between CI jobs, recover from cache misses, and request cache deletion."
+title: "Caching"
+description: "Reuse dependencies and task results between CI jobs, share default-branch caches, and manage storage limits."
 ---
 
 Save downloaded dependencies so later jobs can spend less time installing them. Each job still starts on a fresh computer; a cache is a saved copy of reusable files kept separately from that computer.
+
+You can also save build and type-check results. See [JavaScript and TypeScript](/ci/languages/javascript) for npm, pnpm, and Turborepo recipes, plus guidance for Nx.
 
 ## Add caching to a workflow
 
@@ -50,6 +52,16 @@ Caches created on GitHub-hosted runners remain in GitHub's separate store. Expec
 
 Celesto scopes entries to the workspace, repository, Git ref (a branch or pull-request reference), and cache version. The version describes details such as saved paths and compression. Matching text keys alone do not grant access: Celesto checks the running job's GitHub runtime token. A read-only cache grant cannot save entries.
 
+### Share default-branch caches with pull requests
+
+A pull request can restore an authorized base-branch or default-branch cache. The base branch is the branch the pull request targets; the default branch is the repository's primary branch, often `main`. The job's token determines which references it can read. An entry saved under a pull-request reference stays in that scope.
+
+Use `restore-keys` to find a compatible saved entry when the current run's exact key is new. The action tries the primary key and then the listed prefixes within the authorized scopes. You can save task caches only on the default branch and let pull requests restore them, as shown in the [Turborepo recipe](/ci/languages/javascript#reuse-turborepo-task-results).
+
+This follows the scope model described in the [published Celesto cache guide](https://celesto.ai/blog/posts/celesto-ci-dependency-cache/).
+
+### Storage limits and cleanup
+
 | Default limit | Trial and promotional credit | Paid credit |
 | --- | ---: | ---: |
 | Per repository | 5 GiB | 25 GiB |
@@ -60,6 +72,27 @@ Celesto scopes entries to the workspace, repository, Git ref (a branch or pull-r
 These defaults can change. An hourly cleanup removes idle entries, then the least recently used entries as needed to meet storage limits. Expiry is therefore not an exact deletion timestamp. A restore updates the last-access time.
 
 The current cache release has no separate storage charge. Job runtime still consumes workspace credit. Use artifacts or durable storage for results you need to keep.
+
+## Check cache size and usage
+
+Celesto currently has no customer-facing cache usage view or cache list API. GitHub's cache page and `gh cache` show GitHub's separate store. For current repository and workspace usage, [contact support](mailto:aniket@celesto.ai) with your workspace name or ID and repository (`owner/name`).
+
+To estimate an individual entry, inspect the compressed archive size in the cache action's save logs. Run `du -sh` on the saved directories to see their size on the job computer. Neither measurement gives total retained repository or workspace usage: older keys and other branches can occupy additional space.
+
+Prune old task results before saving a new archive, and save task caches on the default branch to reduce duplicate entries. Pruning the local directory reduces future archives; existing saved entries follow the cleanup rules above. Leave room for dependency caches and overlapping entries while older keys expire.
+
+## Reduce cache restore time
+
+A restore includes downloading an archive, decompressing it, and writing its files to disk. Many small files can take longer to unpack than to download. A fast download therefore does not guarantee a fast restore.
+
+Compare the complete job on a cache miss and a hit, including restore, installation, tasks, and save. Use the action's timestamps and logs to separate transfer time from extraction time where available.
+
+- Compare a package download cache with an installed `node_modules` cache. Restoring fewer files and then installing can be faster than extracting a large installed tree.
+- Save only the paths your tools reuse. Keep logs, temporary files, and old task results out of the archive.
+- For a monorepo (several packages in one repository), cache task results separately from dependencies. Skipping a build can save more time than accelerating package downloads.
+- Compare [runner sizes](/ci/runner-sizes) when decompression or file creation dominates. Measure complete job time and cost for your workload.
+
+The [cache benchmark](https://celesto.ai/blog/posts/celesto-ci-dependency-cache/) reports download and extraction separately for one workload. Use your own timings to choose between a package cache, installed dependencies, and task results.
 
 ## Start with a fresh cache
 
