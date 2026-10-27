@@ -1,6 +1,6 @@
 ---
 title: "Bridged networking"
-description: "Attach a Linux sandbox directly to an existing host bridge so it appears as a regular machine on that network, with its own MAC address and guest-managed IP, instead of sitting behind Celesto's private NAT."
+description: "Connect a Linux sandbox directly to a host bridge so it joins your network like a regular machine, with its own MAC address and an IP from your router."
 ---
 
 By default, a Celesto sandbox uses a private [NAT network](/celesto/concepts/networking) that provides convenient host access and can enforce [outbound network controls](/celesto/features/network-controls). Bridged networking is an opt-in alternative on **Linux hosts** that connects the sandbox directly to an existing host bridge (for example `br10`). The sandbox appears on that network as a separate computer, with its own MAC address and a guest-managed IP (DHCP or static configured inside the guest).
