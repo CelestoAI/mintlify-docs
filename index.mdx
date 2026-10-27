@@ -1,38 +1,103 @@
 ---
-title: "Secure, persistent computers for AI agents"
+title: "Infrastructure built for the speed and scale of AI agents"
 sidebarTitle: "Overview"
-description: "Celesto gives AI agents their own secure computer to run code, browse the web, and save work, and runs your GitHub Actions jobs on fast, low-cost runners."
+description: "Create secure sandboxed computers for AI agents with persistent files, CelestoFS storage, browser access, terminals, ports, SDKs, and open-source runtimes."
 ---
 
-Celesto gives each AI agent its own computer. Your agent can run code, browse the web, and save its work, safely separated from your app and your machine. You can stop a computer and pick up where it left off later.
+Celesto gives each agent a safe computer for real work: clone repositories, run commands, browse sites, expose previews, save files, and resume later in a managed sandbox.
 
-Celesto also runs your GitHub Actions jobs, so your builds and tests run faster and cost less.
-
-## Get started
+Use the hosted platform when you want managed sandboxes. Use the open-source stack when you want local control or deeper customization.
 
 <CardGroup cols={2}>
-  <Card icon="rocket" href="/cloud/quickstart" title="Create your first computer">
-    Launch a Celesto computer, run a command, and clean it up from the SDK or CLI.
+  <Card icon="rocket" href="/cloud/quickstart" title="Create your first sandbox">
+    Launch a hosted Celesto computer, run a command, and clean it up from the SDK or CLI.
   </Card>
-  <Card icon="bolt" href="/ci" title="Run GitHub Actions on Celesto">
-    Install the GitHub App and point your workflow at Celesto runners.
+  <Card icon="bolt" href="/ci" title="CI">
+    Run GitHub Actions faster and for less with Celesto runners.
   </Card>
 </CardGroup>
 
-## What you can build
+## Start by goal
+
+<CardGroup cols={2}>
+  <Card icon="code" href="/getting-started/coding-agents" title="Build a coding agent">
+    Clone repos, install dependencies, run tests, keep work between sessions, and publish previews.
+  </Card>
+  <Card icon="globe" href="/getting-started/browser-agents" title="Run browser workflows">
+    Give agents browser sessions, command execution, saved artifacts, and sandboxed web access.
+  </Card>
+  <Card icon="clock" href="/getting-started/long-running-agents" title="Resume long-running work">
+    Pause and restart multi-step jobs with saved computer state, files, and workspace artifacts.
+  </Card>
+  <Card icon="database" href="/getting-started/durable-workspaces" title="Store large project data">
+    Understand root disk durability, CelestoFS workspaces, and where agent files should live.
+  </Card>
+</CardGroup>
+
+## What the sandbox includes
 
 <CardGroup cols={3}>
-  <Card icon="code" href="/getting-started/coding-agents" title="Coding agents">
-    Clone repos, install dependencies, run tests, and share previews.
+  <Card icon="shield-halved" href="/smolvm/concepts/security" title="Isolated execution">
+    Run untrusted code and tools inside sandboxed computers instead of your app server.
   </Card>
-  <Card icon="globe" href="/getting-started/browser-agents" title="Browser agents">
-    Let agents browse and use websites in their own browser.
+  <Card icon="rotate" href="/cloud/features/persistence" title="Durable state">
+    Stop a computer and start it again with saved root disk and workspace state.
   </Card>
-  <Card icon="clock" href="/getting-started/long-running-agents" title="Long-running agents">
-    Pause multi-step jobs and resume them later with files intact.
+  <Card icon="database" href="/cloud/features/petabyte-storage" title="CelestoFS workspace">
+    Store large repositories, datasets, generated files, and build artifacts in a large durable workspace.
+  </Card>
+  <Card icon="terminal" href="/cloud/computers#run-commands" title="Shell and files">
+    Run commands, read outputs, write files, and inspect artifacts from your agent code.
+  </Card>
+  <Card icon="plug" href="/cloud/features/publish-ports" title="Published ports">
+    Expose web apps, APIs, dashboards, notebooks, and previews from inside the sandbox.
+  </Card>
+  <Card icon="github" href="/getting-started/hosted-and-open-source" title="Open-source foundations">
+    Build on SmolVM, SmolFS, and Agentor when you want to run or extend the stack yourself.
   </Card>
 </CardGroup>
 
-## Hosted or open source
+## Storage that grows with the job
 
-Use Celesto Cloud when you want managed computers. Use the open-source [Celesto](/celesto/introduction) runtime when you want to run everything on your own machine. See [hosted and open source](/getting-started/hosted-and-open-source) to compare them.
+In a storage test, a 10 GB coding-agent sandbox wrote a 20 GB file into the sandbox user's home workspace. The root disk stayed small while CelestoFS provided the large durable workspace.
+
+```bash CLI
+celesto computer create --template coding-agent --disk-size-mb 10240
+
+celesto computer run einstein "python3 - <<'PY'
+from pathlib import Path
+
+target = Path.home() / 'storage-proof/twenty-gib.bin'
+target.parent.mkdir(parents=True, exist_ok=True)
+
+with target.open('wb') as f:
+    chunk = b'0' * (1024 * 1024)
+    for gib in range(20):
+        for _ in range(1024):
+            f.write(chunk)
+        print(f'wrote {gib + 1} GiB', flush=True)
+
+print(target.stat().st_size)
+PY"
+
+celesto computer run einstein "du -h ~/storage-proof/twenty-gib.bin && df -h / ~"
+```
+
+See [Petabyte-scale storage for AI agent sandboxes](/cloud/features/petabyte-storage) for the full storage guide, expected output, and cleanup commands.
+
+## Choose your runtime
+
+<CardGroup cols={2}>
+  <Card icon="cloud" href="/cloud/overview" title="Hosted Celesto Platform">
+    Launch and orchestrate managed sandboxes at scale with the Celesto SDK and CLI.
+  </Card>
+  <Card icon="computer" href="/smolvm/introduction" title="SmolVM">
+    Run open-source microVM sandboxes locally with hardware-level isolation.
+  </Card>
+  <Card icon="folder-open" href="/smolfs/overview" title="SmolFS">
+    Use open-source durable workspace folders for agent state across runs.
+  </Card>
+  <Card icon="robot" href="/agentor/home" title="Agentor">
+    Build production-ready AI agents with tool use, MCP, and agent-to-agent communication.
+  </Card>
+</CardGroup>
