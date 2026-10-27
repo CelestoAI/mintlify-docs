@@ -1,0 +1,92 @@
+---
+title: "Celesto architecture overview"
+description: "Architecture overview of Celesto — how each sandbox boots a microVM, sets up isolated networking, runs your code over vsock or SSH, and tears itself down."
+---
+
+When you run code through Celesto, your commands execute inside a separate virtual machine — not on your host. This page explains the moving parts and why they are designed this way.
+
+## What happens when you run code
+
+When you call `Celesto()` and run a command, five things happen behind the scenes:
+
+1. **Celesto builds or reuses a lightweight Linux image** — a published preset such as Ubuntu, or a custom filesystem with your own tools.
+2. **A microVM boots** using Firecracker on Linux or QEMU on macOS and Linux.
+3. **A private network is created** so the sandbox can reach the internet but is isolated from other sandboxes.
+4. **Celesto connects to the sandbox** — over SSH, or a faster [vsock channel](/celesto/concepts/control-channel) when available — to execute your commands and return the output.
+5. **Everything is torn down** when you exit the `with` block.
+
+On the latest Linux benchmark timeline, the QEMU + vsock path reaches readiness in 413.1 ms and warm commands return in about 1 ms.
+
+```python
+from celesto import Celesto
+
+with Celesto(memory=2048) as vm:
+    result = vm.run("free -m")
+    print(result.stdout)
+# Sandbox automatically stopped and cleaned up
+```
+
+## Why microVMs instead of containers
+
+AI agents and applications often need to run code that comes from a language model — Python scripts, shell commands, or browser automation. Running that code directly on your host or inside a container can be risky because containers share the host kernel.
+
+Celesto uses **KVM-backed microVMs**, which provide hardware-level isolation:
+
+* **Stronger boundary** — each sandbox runs its own kernel, so a breakout would require a hypervisor exploit, not just a kernel vulnerability
+* **Fast startup** — QEMU + vsock published Ubuntu sandboxes reach readiness in under half a second on the latest Linux benchmark
+* **Low overhead** — minimal memory footprint compared to traditional VMs
+
+## Key components
+
+### SDK (`Celesto` class)
+
+The main interface you import in Python. It handles VM lifecycle (create, start, stop, delete), command execution via `vm.run()`, auto-configuration so you can get started with zero config, and reconnection to existing sandboxes via `Celesto.from_id()`.
+
+### CLI (`celesto` command)
+
+A terminal interface for creating sandboxes, starting browser sessions, running diagnostics, and managing snapshots. Useful for scripting, debugging, and quick exploration.
+
+### Network layer
+
+Each sandbox gets a dedicated TAP device, a private IP address in the `172.16.0.0/16` range, and automatic NAT for outbound connectivity. Sandboxes are isolated from each other by default.
+
+### State store
+
+Celesto tracks sandbox metadata, network assignments, and process state in a local SQLite database at `~/.local/state/celesto/celesto.db`. This lets you reconnect to running sandboxes across Python sessions.
+
+### Image builder
+
+Builds Alpine Linux root filesystems with SSH pre-configured. You can also [create custom images](/celesto/guides/custom-images) with your own tools and dependencies baked in.
+
+## Resource defaults
+
+| Setting | Default | Range |
+| --- | --- | --- |
+| vCPUs | 1 | 1–32 |
+| Memory | 512 MiB | 128–16384 MiB |
+| Disk | 512 MiB | 64 MiB minimum |
+| Disk mode | `isolated` (per-VM copy) | `isolated` or `shared` |
+
+```python
+# Customize resources
+with Celesto(memory=2048, disk_size=4096) as vm:
+    vm.run("echo 'more room to work'")
+```
+
+## Performance
+
+Latest QEMU published Ubuntu medians (p50) on a Linux KVM host:
+
+| Phase | Time |
+| --- | --- |
+| QEMU + vsock ready | **413.1 ms** |
+| QEMU + SSH ready | 1152.2 ms |
+| First command over vsock | 1.2 ms |
+| Warm command over vsock | **1.0 ms** |
+| Warm command over SSH | \~43 ms |
+
+## Next steps
+
+* Learn about the [security model](/celesto/concepts/security)
+* Understand [backend options](/celesto/concepts/backends) (Firecracker vs. QEMU)
+* Configure [networking](/celesto/concepts/networking)

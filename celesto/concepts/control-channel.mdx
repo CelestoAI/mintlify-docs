@@ -1,0 +1,168 @@
+---
+title: "Control channel"
+description: "How Celesto runs commands, copies files, and opens shells inside a sandbox over SSH or the faster vsock guest-agent channel."
+---
+
+Celesto needs a way to talk to each sandbox after it starts. That connection is the control channel, and Celesto chooses the fastest supported channel for you.
+
+## What you can do
+
+The control channel powers:
+
+- `vm.run(...)` in the Python SDK
+- `celesto sandbox shell` for a fast interactive shell
+- `celesto sandbox file upload` and `celesto sandbox file download`
+- `celesto sandbox env set`, `unset`, and `list`
+- Snapshot preflight work that asks the guest to save files before the VM pauses
+
+Celesto supports two channels:
+
+| Channel | What it is | Best for |
+| --- | --- | --- |
+| SSH | A normal secure shell connection over the sandbox network | Maximum compatibility, Windows guests, manual SSH access |
+| vsock | A direct host-to-guest socket that skips TCP networking | Fast commands, file transfer, shell access, and guest sync on supported Linux guests |
+
+<Tooltip tip="vsock is a socket connection built into the virtual machine. It lets the host and guest talk without opening a TCP port.">
+  vsock
+</Tooltip>
+
+## Default channel selection
+
+Celesto resolves the channel in this order:
+
+1. **Explicit request** - `Celesto(comm_channel="ssh")` or `Celesto(comm_channel="vsock")`
+2. **Saved VM config** - a channel stored with the sandbox
+3. **Automatic choice** - vsock where the host and guest support it, SSH elsewhere
+
+| Host and backend | Automatic channel |
+| --- | --- |
+| Linux + QEMU + recent Celesto image | vsock |
+| Linux + Firecracker + recent Celesto image | vsock |
+| macOS + QEMU | SSH |
+| Windows guest | SSH |
+
+<Note>
+  Recent Celesto images start the Rust guest agent before networking and `sshd`. That lets vsock commands run before the sandbox network is ready.
+</Note>
+
+## Use the Python SDK
+
+Leave `comm_channel` unset for the automatic path:
+
+```python
+from celesto import Celesto
+
+with Celesto() as vm:
+    result = vm.run("echo ready")
+    print(result.stdout)
+```
+
+Force SSH when you want the older network path:
+
+```python
+from celesto import Celesto
+
+with Celesto(comm_channel="ssh") as vm:
+    print(vm.run("whoami").stdout)
+```
+
+Force vsock when you want startup to fail if the guest agent is unavailable:
+
+```python
+from celesto import Celesto
+
+with Celesto(comm_channel="vsock") as vm:
+    print(vm.run("cat /proc/uptime").stdout)
+```
+
+<Warning>
+  An explicit `comm_channel="vsock"` request is strict. If the host, backend, or guest image cannot use vsock, Celesto raises an error instead of falling back to SSH.
+</Warning>
+
+## Use the CLI
+
+Open a fast shell:
+
+```bash
+celesto sandbox shell my-vm
+```
+
+`celesto sandbox shell` uses the vsock terminal stream when the sandbox supports it. If the fast shell feature is unavailable, it falls back to SSH for that session.
+
+Move files over the selected channel:
+
+```bash
+celesto sandbox file upload my-vm ./report.csv /workspace/report.csv
+celesto sandbox file download my-vm /workspace/output.json ./output.json
+```
+
+Pick a channel for file and environment operations:
+
+```bash
+celesto sandbox file upload my-vm ./report.csv /workspace/report.csv --comm-channel vsock
+celesto sandbox env list my-vm --comm-channel ssh
+```
+
+Open a real SSH session when you need SSH itself:
+
+```bash
+celesto sandbox ssh my-vm
+```
+
+`celesto sandbox ssh` always uses SSH. Port forwarding also uses SSH tunnels when the backend needs them.
+
+## Guest sync before snapshots
+
+Before Celesto pauses a sandbox for a snapshot, it asks the guest to flush filesystem state. On recent images, the guest agent exposes a dedicated `/sync` endpoint over vsock. This gives Celesto a direct "save files now" operation before it captures the disk.
+
+If the guest agent is older or unavailable, Celesto can use the raw command path as a fallback for some operations. The raw path runs the command directly in the guest instead of wrapping it in a login shell.
+
+<Tip>
+  If snapshot creation times out before a disk artifact appears, check the control channel and guest agent first. The failure may be in guest sync, before Celesto starts copying snapshot files.
+</Tip>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="vsock is unavailable on Linux">
+    For QEMU, make sure the host has the `vhost_vsock` driver loaded:
+
+    ```bash
+    sudo modprobe vhost_vsock
+    test -e /dev/vhost-vsock
+    ```
+
+    For Firecracker, vsock is available on Linux through Firecracker's host-side Unix socket bridge. If a Firecracker sandbox still uses SSH, recreate it with a recent Celesto image so the guest agent is present.
+  </Accordion>
+
+  <Accordion title="The guest agent does not answer">
+    Use a current published image or rebuild your custom image with the Celesto guest agent. Published images and images built through `ImageBuilder` include `/usr/local/bin/celesto-guest-agent`.
+
+    For a one-off compatibility check, force SSH:
+
+    ```bash
+    celesto sandbox env list my-vm --comm-channel ssh
+    ```
+  </Accordion>
+
+  <Accordion title="The fast shell falls back to SSH">
+    This is expected when the sandbox image does not advertise terminal-stream support. `celesto sandbox shell` tries the fast vsock terminal first, then opens SSH if that feature is missing.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Runtime backends" icon="microchip" href="/celesto/concepts/backends">
+    Compare Firecracker, QEMU, and libkrun
+  </Card>
+  <Card title="Snapshot and restore" icon="camera" href="/celesto/features/snapshots">
+    See how guest sync fits into snapshots
+  </Card>
+  <Card title="celesto sandbox shell" icon="terminal" href="/celesto/cli/shell">
+    Open the fast interactive shell
+  </Card>
+  <Card title="Troubleshooting" icon="wrench" href="/celesto/advanced/troubleshooting">
+    Fix startup and guest-agent failures
+  </Card>
+</CardGroup>

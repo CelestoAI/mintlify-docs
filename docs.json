@@ -56,53 +56,53 @@
           {
             "group": "Get Started",
             "pages": [
-              "smolvm/introduction",
-              "smolvm/installation"
+              "celesto/introduction",
+              "celesto/installation"
             ]
           },
           {
             "group": "Features",
             "pages": [
-              "smolvm/features/callbacks",
-              "smolvm/features/browser-sandboxes",
-              "smolvm/features/coding-agents",
-              "smolvm/features/docker",
-              "smolvm/features/host-mounts",
-              "smolvm/features/network-controls",
-              "smolvm/features/bridged-networking",
-              "smolvm/features/port-forwarding",
-              "smolvm/features/snapshots"
+              "celesto/features/callbacks",
+              "celesto/features/browser-sandboxes",
+              "celesto/features/coding-agents",
+              "celesto/features/docker",
+              "celesto/features/host-mounts",
+              "celesto/features/network-controls",
+              "celesto/features/bridged-networking",
+              "celesto/features/port-forwarding",
+              "celesto/features/snapshots"
             ]
           },
           {
             "group": "Guides",
             "pages": [
-              "smolvm/guides/basic-usage",
-              "smolvm/guides/custom-images",
-              "smolvm/guides/environment-variables",
-              "smolvm/guides/ai-agent-integration",
-              "smolvm/guides/http-api-typescript-sdk",
-              "smolvm/guides/vm-lifecycle",
-              "smolvm/guides/macos-sandboxes",
-              "smolvm/guides/windows-guests"
+              "celesto/guides/basic-usage",
+              "celesto/guides/custom-images",
+              "celesto/guides/environment-variables",
+              "celesto/guides/ai-agent-integration",
+              "celesto/guides/http-api-typescript-sdk",
+              "celesto/guides/vm-lifecycle",
+              "celesto/guides/macos-sandboxes",
+              "celesto/guides/windows-guests"
             ]
           },
           {
             "group": "Architecture",
             "pages": [
-              "smolvm/concepts/overview",
-              "smolvm/concepts/security",
-              "smolvm/concepts/backends",
-              "smolvm/concepts/published-images",
-              "smolvm/concepts/networking",
-              "smolvm/concepts/control-channel"
+              "celesto/concepts/overview",
+              "celesto/concepts/security",
+              "celesto/concepts/backends",
+              "celesto/concepts/published-images",
+              "celesto/concepts/networking",
+              "celesto/concepts/control-channel"
             ]
           },
           {
             "group": "Operations",
             "pages": [
-              "smolvm/advanced/performance",
-              "smolvm/advanced/troubleshooting"
+              "celesto/advanced/performance",
+              "celesto/advanced/troubleshooting"
             ]
           }
         ]
@@ -123,7 +123,7 @@
             "pages": [
               "cloud/computers",
               "cloud/features/custom-templates",
-              "smolvm/features/docker",
+              "celesto/features/docker",
               "cloud/features/publish-ports",
               "cloud/features/browser-and-display",
               "cloud/features/lifecycle",
@@ -282,53 +282,53 @@
           {
             "group": "Celesto API",
             "pages": [
-              "smolvm/api/smolvm",
-              "smolvm/api/browsersession",
-              "smolvm/api/browsersessionconfig",
-              "smolvm/api/browsersessioninfo",
-              "smolvm/api/callbacks",
-              "smolvm/api/commandresult",
-              "smolvm/api/exceptions",
-              "smolvm/api/hostmanager",
-              "smolvm/api/bootimage",
-              "smolvm/api/dockerrootfsbuilder",
-              "smolvm/api/imagebuilder",
-              "smolvm/api/imagemanager",
-              "smolvm/api/imagesource",
-              "smolvm/api/internetsettings",
-              "smolvm/api/kernelhelpers",
-              "smolvm/api/networkconfig",
-              "smolvm/api/snapshotinfo",
-              "smolvm/api/sshclient",
-              "smolvm/api/vmconfig",
-              "smolvm/api/vminfo"
+              "celesto/api/celesto",
+              "celesto/api/browsersession",
+              "celesto/api/browsersessionconfig",
+              "celesto/api/browsersessioninfo",
+              "celesto/api/callbacks",
+              "celesto/api/commandresult",
+              "celesto/api/exceptions",
+              "celesto/api/hostmanager",
+              "celesto/api/bootimage",
+              "celesto/api/dockerrootfsbuilder",
+              "celesto/api/imagebuilder",
+              "celesto/api/imagemanager",
+              "celesto/api/imagesource",
+              "celesto/api/internetsettings",
+              "celesto/api/kernelhelpers",
+              "celesto/api/networkconfig",
+              "celesto/api/snapshotinfo",
+              "celesto/api/sshclient",
+              "celesto/api/vmconfig",
+              "celesto/api/vminfo"
             ]
           },
           {
             "group": "Celesto CLI",
             "pages": [
-              "smolvm/cli/overview",
-              "smolvm/cli/create",
-              "smolvm/cli/list",
-              "smolvm/cli/shell",
-              "smolvm/cli/ssh",
-              "smolvm/cli/exec",
-              "smolvm/cli/logs",
-              "smolvm/cli/stop",
-              "smolvm/cli/cleanup",
-              "smolvm/cli/sandbox-prune",
-              "smolvm/cli/file",
-              "smolvm/cli/env",
-              "smolvm/cli/port",
-              "smolvm/cli/snapshot",
-              "smolvm/cli/server",
-              "smolvm/cli/ui",
-              "smolvm/cli/doctor",
-              "smolvm/cli/update",
-              "smolvm/cli/image",
-              "smolvm/cli/prune",
-              "smolvm/cli/completion",
-              "smolvm/cli/windows"
+              "celesto/cli/overview",
+              "celesto/cli/create",
+              "celesto/cli/list",
+              "celesto/cli/shell",
+              "celesto/cli/ssh",
+              "celesto/cli/exec",
+              "celesto/cli/logs",
+              "celesto/cli/stop",
+              "celesto/cli/cleanup",
+              "celesto/cli/sandbox-prune",
+              "celesto/cli/file",
+              "celesto/cli/env",
+              "celesto/cli/port",
+              "celesto/cli/snapshot",
+              "celesto/cli/server",
+              "celesto/cli/ui",
+              "celesto/cli/doctor",
+              "celesto/cli/update",
+              "celesto/cli/image",
+              "celesto/cli/prune",
+              "celesto/cli/completion",
+              "celesto/cli/windows"
             ]
           },
           {
@@ -452,7 +452,9 @@
     { "source": "/celesto-sdk/openai-agents", "destination": "/cloud/openai-agents" },
     { "source": "/celesto-sdk/gatekeeper", "destination": "/cloud/gatekeeper" },
     { "source": "/celesto-sdk/errors", "destination": "/cloud/errors" },
-    { "source": "/celesto-sdk/cli", "destination": "/cloud/cli" }
+    { "source": "/celesto-sdk/cli", "destination": "/cloud/cli" },
+    { "source": "/smolvm/api/smolvm", "destination": "/celesto/api/celesto" },
+    { "source": "/smolvm/:slug*", "destination": "/celesto/:slug*" }
   ],
   "fonts": {
     "heading": {

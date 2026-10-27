@@ -1,0 +1,57 @@
+---
+title: "celesto sandbox shell"
+description: "Open an interactive shell in a sandbox with celesto sandbox shell. It uses the fast guest agent on recent Linux images and starts the sandbox if needed."
+---
+
+`celesto sandbox shell` opens an interactive shell inside a sandbox. On recent Linux images it uses the Celesto guest agent for fast terminal access; when that is unavailable, use `celesto sandbox ssh` for a regular SSH session.
+
+## Synopsis
+
+```bash
+celesto sandbox shell <sandbox> [OPTIONS]
+```
+
+## Arguments
+
+<ParamField path="sandbox" type="string" required>
+  Name or ID of the sandbox to connect to.
+</ParamField>
+
+## Options
+
+<ParamField path="--boot-timeout" type="number" default="30">
+  Seconds to wait if Celesto needs to start or resume the sandbox before connecting.
+</ParamField>
+
+## Examples
+
+### Open a shell
+
+```bash
+celesto sandbox shell my-sandbox
+```
+
+### Create and connect
+
+```bash
+celesto sandbox create --name dev-env --os ubuntu
+celesto sandbox shell dev-env
+```
+
+### Allow more startup time
+
+```bash
+celesto sandbox shell dev-env --boot-timeout 60
+```
+
+## How it behaves
+
+If the sandbox is stopped or newly created, Celesto starts it first. If the sandbox is paused, Celesto resumes it. If the guest agent supports terminal access, the shell opens over the guest-agent terminal stream.
+
+Use [`celesto sandbox ssh`](/celesto/cli/ssh) when you need SSH-specific behavior such as a custom user, custom key, or SSH tooling.
+
+## Related commands
+
+* [`celesto sandbox ssh`](/celesto/cli/ssh) - Open a real SSH session
+* [`celesto sandbox create`](/celesto/cli/create) - Create a sandbox
+* [Control channel](/celesto/concepts/control-channel) - Learn how guest-agent communication works

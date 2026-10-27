@@ -1,0 +1,319 @@
+---
+title: "Security model"
+description: "Celesto security model: how hardware-virtualized microVMs isolate sandboxes from your host, where the trust boundaries are, and best practices for safe use."
+---
+
+Celesto runs your code inside its own virtual machine, completely separated from your host. This page explains what that isolation covers, where the boundaries are, and how to keep things safe.
+
+## How isolation works
+
+Each sandbox runs in a microVM — a lightweight virtual machine backed by hardware virtualization (KVM on Linux, HVF on macOS). Unlike containers, which share the host kernel, microVMs give every sandbox its own kernel. Breaking out of a microVM requires a hypervisor exploit, not just a kernel vulnerability.
+
+| Feature           | Containers            | Celesto (microVMs)              |
+| ----------------- | --------------------- | ------------------------------ |
+| Kernel            | Shared with host      | Isolated kernel per VM         |
+| Syscall interface | Direct to host kernel | Through KVM hypervisor         |
+| Attack surface    | Entire host kernel    | Virtualized hardware only      |
+| Escape difficulty | Kernel exploits       | Hardware virtualization bypass |
+| Boot time         | Milliseconds          | Sub-second                     |
+
+This matters most when AI agents generate and run code. You get:
+
+* **Strong isolation** — Firecracker microVMs use hardware virtualization (KVM), making it much harder for code to escape to your host
+* **Controlled networking** — you can restrict or monitor what the sandbox can reach on the internet
+* **Ephemeral environments** — spin up a fresh sandbox for every task and destroy it immediately, so nothing persists
+
+## What Celesto protects
+
+### Host system
+
+Malicious guest code cannot:
+
+* Access host filesystem (except via shared volumes)
+* Read host memory
+* Interfere with other VMs
+* Access host network interfaces directly
+* Execute privileged operations on the host
+
+### Network isolation
+
+By default, sandboxes are isolated from each other:
+
+```python  theme={null}
+# This network rule prevents VM-to-VM traffic
+# From network.py:469-472
+iifname "tap*" oifname "tap*" counter drop
+```
+
+Each sandbox can:
+
+* Access the internet via NAT (configurable)
+* Be accessed from the host via port forwarding
+* **Cannot** directly communicate with other sandboxes
+
+### Resource limits
+
+Each sandbox has dedicated, capped resources:
+
+```python  theme={null}
+from celesto import VMConfig
+
+config = VMConfig(
+    vcpu_count=2,      # Max 2 CPUs
+    memory=512   # Max 512 MiB RAM
+)
+```
+
+## What Celesto does not protect
+
+<Warning>
+  Celesto provides isolation, not complete security. Understand these limitations:
+</Warning>
+
+### Outbound network access
+
+Celesto assumes the host network is trusted. Guests can:
+
+* Make outbound network requests (unless restricted)
+* Access any internet service
+* Download and execute code from the internet
+
+### Data exfiltration
+
+If a sandbox has network access, malicious code can:
+
+* Send data to external servers
+* Establish reverse shells
+* Participate in botnets
+
+**Mitigation**: Use firewall rules or network policies to restrict outbound access.
+
+### Resource exhaustion
+
+A malicious guest can:
+
+* Consume all allocated CPU and memory
+* Fill the allocated disk
+* Generate high network traffic
+
+**Mitigation**: Set appropriate resource limits and monitor usage.
+
+## SSH trust model
+
+<Warning>
+  Celesto currently prioritizes zero-touch VM access for local agent workflows. Read this section carefully.
+</Warning>
+
+Celesto uses Paramiko's `AutoAddPolicy` for SSH connections, which means it accepts unknown host keys on first connection. This keeps setup simple for local use, but it can allow man-in-the-middle attacks on untrusted networks.
+
+**Treat Celesto as a local-only runtime by default.** Do not expose sandbox SSH ports to public or untrusted networks without additional controls.
+
+### Recommended practices
+
+<Note>
+  Follow these practices to use Celesto securely:
+</Note>
+
+#### Local-only usage
+
+* Run Celesto on developer machines or trusted CI runners
+* Do not expose guest SSH endpoints to public or untrusted networks
+
+#### Network controls
+
+If your environment requires strict host identity validation:
+
+* Use private networking with firewall restrictions
+* Deploy bastion or proxy hosts
+* Add SSH key pinning at your deployment layer
+
+#### Trusted networks only
+
+```python  theme={null}
+# Good: Local development
+with Celesto() as vm:
+    result = vm.run("echo 'Safe on localhost'")
+
+# Bad: Exposing to untrusted networks
+# DO NOT expose VM SSH ports publicly without additional controls
+```
+
+## SSH credentials in published images
+
+[Published images](/celesto/concepts/published-images) are downloaded to your machine and shared across users, so they must not contain any per-user secrets. Celesto handles credentials at first boot instead of bake time.
+
+### Host keys are generated on first boot
+
+SSH host keys identify the sandbox to your SSH client. Earlier releases baked one set of host keys into every copy of the image — that meant every sandbox launched from the same image presented the same identity, which defeats SSH's man-in-the-middle protection.
+
+Celesto now generates fresh SSH host keys the first time each sandbox boots, before `sshd` starts. Each sandbox has its own identity, even when many launch from the same image.
+
+### Your public key is injected at boot
+
+When you run `celesto claude start` or any other preset, Celesto passes your SSH public key to the sandbox on the kernel command line. The first-boot script base64-decodes the key, writes it to `/root/.ssh/authorized_keys` with mode `0600`, and starts `sshd`. The image itself never contains your key, so the same image can be safely cached and reused across machines.
+
+### Password authentication is disabled
+
+Published images ship with `PasswordAuthentication no` in `sshd_config`. SSH access is key-only. You cannot log in with a password even if you know the root password — `sshd` will refuse the attempt.
+
+<Note>
+  These behaviors apply to all images launched through the published-image fast path. If you build your own image with [`ImageBuilder`](/celesto/api/imagebuilder), you control its `sshd_config` and the host-key-generation logic in your `/init` script.
+</Note>
+
+## Disk isolation
+
+### Isolated mode (default)
+
+Celesto defaults to `disk_mode="isolated"`, creating a per-VM rootfs clone:
+
+```python  theme={null}
+from celesto import VMConfig
+
+# Each VM gets its own disk copy
+config = VMConfig(disk_mode="isolated")
+```
+
+**Benefits**:
+
+* Complete filesystem isolation
+* No state leakage between VMs
+* Safe for untrusted code
+
+**Trade-offs**:
+
+* Additional disk space per VM
+* Slight creation overhead for copying rootfs
+
+### Shared mode
+
+For trusted workloads that need persistent storage:
+
+```python  theme={null}
+config = VMConfig(disk_mode="shared")
+```
+
+<Warning>
+  Shared mode means all VMs boot from the same rootfs. Use only for trusted workloads where you need state persistence.
+</Warning>
+
+### Disk retention
+
+Control whether isolated disks are kept after VM deletion:
+
+```python  theme={null}
+config = VMConfig(
+    disk_mode="isolated",
+    retain_disk_on_delete=True  # Keep disk for later reuse
+)
+```
+
+When `retain_disk_on_delete=True`, Celesto writes a `<disk>.retained` marker file next to the disk when the sandbox is deleted. The marker tells [`celesto sandbox prune`](/celesto/cli/sandbox-prune) that this disk is deliberately kept, so the reclaim sweep leaves it alone. The marker is cleared automatically when a new sandbox reuses the disk, and restored if a create rolls back before a new row owns it.
+
+<Warning>
+  Disks that were retained on releases before this marker existed carry no marker on disk. `celesto sandbox prune` will treat them as leftovers unless you preview the sweep with `--dry-run` first, or protect saved disks by omitting `--include-saved`. If you rely on pre-upgrade retained disks, verify the dry-run output before running `sandbox prune` for the first time after upgrading.
+</Warning>
+
+## Environment variables
+
+Celesto can inject environment variables into VMs:
+
+```python  theme={null}
+from celesto import Celesto
+
+with Celesto() as vm:
+    vm.set_env_vars({
+        "API_KEY": "sk-...",
+        "DEBUG": "1"
+    })
+```
+
+<Warning>
+  Environment variables are persisted in `/etc/profile.d/celesto_env.sh` in the guest. Do not inject highly sensitive secrets if the VM is shared or persistent.
+</Warning>
+
+### Best practices
+
+* Use ephemeral VMs for sensitive operations
+* Rotate secrets after VM deletion
+* Prefer isolated disk mode for untrusted code
+* Consider using secret management services
+
+## Vulnerability reporting
+
+### Supported versions
+
+Celesto is currently pre-1.0. Security fixes are prioritized for:
+
+| Version / Branch   | Supported       |
+| ------------------ | --------------- |
+| Latest release tag | ✅               |
+| `main` branch      | ✅ (best effort) |
+| Older release tags | ❌               |
+
+### Reporting process
+
+<Warning>
+  Do not open public GitHub issues for suspected vulnerabilities.
+</Warning>
+
+Use GitHub's private vulnerability reporting:
+
+* **Private report**: [https://github.com/CelestoAI/celesto/security/advisories/new](https://github.com/CelestoAI/celesto/security/advisories/new)
+
+If that link is unavailable, open a minimal issue asking maintainers for a private contact channel (without sensitive details).
+
+### What to include
+
+Please include:
+
+* Clear description of the vulnerability and impact
+* Affected version/commit and host environment (OS, architecture)
+* Reproduction steps or proof-of-concept
+* Expected vs. actual behavior
+* Any suggested mitigation
+
+### Response expectations
+
+As a small team, reports are handled as capacity allows. Non-binding targets:
+
+1. Acknowledge report within **3 business days**
+2. Triage and severity assessment within **7 business days**
+3. Provide periodic updates when possible
+
+### Disclosure policy
+
+Celesto follows coordinated disclosure:
+
+* Please allow reasonable time for a fix before public disclosure
+* Security advisories may be published for confirmed issues
+* Reporters are credited (unless anonymous credit is requested)
+
+## Scope notes
+
+This security policy covers vulnerabilities in Celesto's code and release artifacts.
+
+### Out of scope
+
+(unless caused by Celesto code):
+
+* Vulnerabilities in third-party dependencies/upstream projects
+* Host misconfiguration outside documented Celesto setup
+* Security findings without a realistic exploit path or impact
+
+## Security checklist
+
+Before deploying Celesto:
+
+* [ ] Using local/trusted networks only?
+* [ ] Firewall rules configured for outbound restrictions?
+* [ ] Resource limits appropriate for workload?
+* [ ] Using `disk_mode="isolated"` for untrusted code?
+* [ ] Secrets rotated after ephemeral VM deletion?
+* [ ] Not exposing VM SSH ports publicly?
+* [ ] CI/CD runners using trusted network environments?
+
+## Next steps
+
+* Explore [backend options](/celesto/concepts/backends)
+* Configure [networking](/celesto/concepts/networking)
+* Review [architecture overview](/celesto/concepts/overview)

@@ -1,0 +1,176 @@
+---
+title: "Coding Agents in Sandbox"
+description: "Run Claude Code, Codex, OpenCode, OpenClaw, Hermes, and Pi inside a Celesto sandbox with full permissions — no accept-changes prompts and no host risk."
+---
+
+Celesto lets you run coding agents and agent tools like Claude, Codex, OpenCode, OpenClaw, Hermes, and Pi inside an isolated sandbox. The agent gets a full development environment — git credentials, dev tools, terminal access — but nothing it does can affect your host machine.
+
+No more pressing "accept changes" every few seconds. Let the agent work freely in its own computer.
+
+<Tip>
+  Want to keep Pi and its model credentials on your machine while its coding tools run in the cloud? Follow [Run Pi coding agent in the cloud](/cloud/guides/pi-coding-agent).
+</Tip>
+
+## Start a coding agent
+
+<Tabs>
+  <Tab title="Claude">
+    ```bash
+    celesto claude start
+    ```
+  </Tab>
+  <Tab title="Codex">
+    ```bash
+    celesto codex start
+    ```
+  </Tab>
+  <Tab title="OpenCode">
+    ```bash
+    celesto opencode start
+    ```
+  </Tab>
+  <Tab title="OpenClaw">
+    ```bash
+    celesto openclaw start
+    ```
+  </Tab>
+  <Tab title="Hermes">
+    ```bash
+    celesto hermes start
+    ```
+  </Tab>
+  <Tab title="Pi">
+    ```bash
+    celesto pi start
+    ```
+  </Tab>
+</Tabs>
+
+Each command creates a sandbox and prepares the selected agent. Most presets forward supported credentials and configuration from your machine when available. OpenClaw starts with fresh configuration and only receives supported credential variables from the shell that starts Celesto.
+
+Presets with a matching pre-built image skip installation after downloading that image. Download time depends on your connection. OpenClaw and OpenCode currently install inside each new sandbox. See [Published images](/celesto/concepts/published-images) for details.
+
+## Work with OpenClaw
+
+OpenClaw includes a browser dashboard. Follow these steps to create a sandbox, find it later, and open the dashboard.
+
+<Steps>
+  <Step title="Create an OpenClaw sandbox">
+    Create a named sandbox without opening its terminal session:
+
+    ```bash
+    celesto openclaw start --name openclaw-work --no-attach
+    ```
+
+    Celesto installs OpenClaw 2026.9.1 on Node.js 24.15.0 or newer after the sandbox starts, so creating each new sandbox can take several minutes. Celesto shows each installation step while you wait. The OpenClaw preset supports Ubuntu sandboxes only.
+
+    The sandbox does not inherit `~/.openclaw/openclaw.json`, `~/.openclaw/.env`, or other OpenClaw state from your machine. Set a supported credential variable before starting Celesto, or run `openclaw onboard` inside the sandbox.
+  </Step>
+
+  <Step title="Find a running OpenClaw sandbox">
+    List your running OpenClaw sandboxes when you need the name:
+
+    ```bash
+    celesto openclaw list
+    # NAME              STATUS   PID
+    # openclaw-work     running  12345
+    ```
+  </Step>
+
+  <Step title="Check every state">
+    Include stopped, paused, and errored OpenClaw sandboxes with `--all`, narrow to one state with `--status`, or emit machine-readable output with `--json`:
+
+    ```bash
+    celesto openclaw list --all
+    celesto openclaw list --status stopped
+    celesto openclaw list --json
+    ```
+  </Step>
+
+  <Step title="Check for older sandboxes">
+    The filtered list includes sandboxes that current Celesto releases created with the OpenClaw preset. To look for an older or manually prepared sandbox, view the complete inventory:
+
+    ```bash
+    celesto sandbox list --all
+    ```
+  </Step>
+
+  <Step title="Open the dashboard">
+    Use the sandbox name from the list:
+
+    ```bash
+    celesto openclaw open-ui openclaw-work
+    ```
+
+    Celesto starts the OpenClaw dashboard service when needed, creates a private connection available only on your machine, and opens a one-time link.
+  </Step>
+</Steps>
+
+<Note>
+  In Celesto v0.0.31, `celesto openclaw open-ui` replaces `celesto openclaw open`. Update existing scripts: the old command is no longer accepted.
+</Note>
+
+`open-ui` accepts three flags:
+
+- `--host-port PORT` — pin the localhost port that forwards to the dashboard. When omitted, Celesto chooses a free port.
+- `--no-browser` — print the one-time link instead of launching a browser. Useful on remote or headless machines.
+- `--json` — emit a machine-readable envelope with the sandbox name, dashboard URL, chosen host port, and cleanup command.
+
+```bash
+celesto openclaw open-ui openclaw-work --host-port 8899 --no-browser
+```
+
+Treat the link as a credential. Close the local connection with the exact `celesto sandbox port close` command printed by `open-ui`.
+
+Updating Celesto leaves OpenClaw inside existing sandboxes unchanged. Before replacing an older sandbox, save a snapshot with [sandbox snapshots](/celesto/cli/snapshot).
+
+See [Coding-agent preset environment variables](/celesto/guides/environment-variables#coding-agent-presets) for the credentials that you can explicitly pass to a fresh OpenClaw sandbox.
+
+### OpenCode credentials
+
+OpenCode works with multiple model providers, so the `opencode` preset forwards the common provider keys from your host environment: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_API_KEY`, `GEMINI_API_KEY`, `OPENROUTER_API_KEY`, and the AWS credential variables (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`, `AWS_REGION`).
+
+The preset also copies your OpenCode configuration into the sandbox:
+
+- `~/.config/opencode` — your OpenCode settings
+- `~/.local/share/opencode/auth.json` — stored provider logins, copied with owner-only permissions
+
+If none of these are present on your host, start the sandbox anyway and run `opencode auth login` inside it.
+
+```bash
+export ANTHROPIC_API_KEY=your-key
+celesto opencode start
+```
+
+## What you get
+
+Each coding agent sandbox comes with:
+
+- **Isolated environment** — the agent runs in its own VM, separate from your host
+- **Git credentials** — pre-configured so the agent can clone, commit, and push
+- **Dev tools** — common development tooling ready to use
+- **Terminal access** — full shell access for multi-step workflows
+
+## Share folders with the sandbox
+
+You can share folders from your machine so the coding agent can see your existing code. By default, shared folders are read-only — the agent can read your files but cannot modify the originals.
+
+```bash
+celesto claude start --mount ~/Projects/my-app
+```
+
+The agent sees your project files inside the sandbox at `/workspace`.
+
+To let the agent write changes back to your machine, add `--writable-mounts`:
+
+```bash
+celesto claude start --mount ~/Projects/my-app --writable-mounts
+```
+
+<Warning>
+With `--writable-mounts`, the agent can modify and delete files in the shared folder. Only enable this when you trust the code the agent will run.
+</Warning>
+
+<Tip>
+See the [host mounts guide](/celesto/features/host-mounts) for more options like sharing multiple folders and custom mount paths.
+</Tip>

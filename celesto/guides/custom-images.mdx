@@ -1,0 +1,274 @@
+---
+title: "Custom Sandbox Images with Docker"
+description: "Build Celesto sandboxes from Dockerfiles, SSH-ready Linux images, or existing disk images so your agents start with the tools they need."
+---
+
+Custom images let you start Celesto with your own tools already inside. You can add packages and files once, then reuse that setup every time you create an isolated machine.
+
+This guide starts with one working path. After that, it shows how to run commands inside the image, how the CLI fits in, and where to go when you need deeper control.
+
+## What You Can Build
+
+Use custom images when the default Celesto images need extra software or a different startup process.
+
+| Goal | Best starting point |
+| --- | --- |
+| Boot a Linux image built from your Dockerfile | `DockerRootfsBuilder` with `Celesto.from_image(...)` |
+| Run `vm.run(...)` and file commands right away | `ImageBuilder`, which adds SSH for you |
+| Boot an existing disk image | `BootImage` |
+| Build a reusable Windows image from an ISO | `celesto windows build-image` |
+
+<Info>
+  A root filesystem, often shortened to rootfs, is the disk image that contains the operating system files inside the sandbox.
+</Info>
+
+## Before You Start
+
+You need:
+
+* Docker installed and running, because the Linux image builders use Docker to assemble files.
+* A working VM runner. Celesto calls this a backend. Use QEMU for the broadest local path on macOS and Linux. Use Firecracker on Linux when you want the production Linux runner.
+* Python with `celesto` installed.
+
+Check the host before building:
+
+```bash
+celesto doctor --backend qemu
+```
+
+## Boot One Dockerfile Image
+
+In this chapter, you build a tiny Alpine image and boot it. The image starts and stays running. It is intentionally boot-only, so the first success signal is the VM ID.
+
+<Steps>
+  <Step title="Create a Python file">
+    Create `custom_image.py` in any directory where your Python environment can import `celesto`.
+
+    ```python custom_image.py
+    from celesto import DirectKernelBoot, DockerRootfsBuilder, Celesto
+
+    dockerfile = """FROM alpine:3.20
+    RUN echo '#!/bin/sh' > /init
+    RUN echo 'mount -t proc proc /proc' >> /init
+    RUN echo 'mount -t sysfs sysfs /sys' >> /init
+    RUN echo 'mount -t devtmpfs devtmpfs /dev 2>/dev/null || true' >> /init
+    RUN echo 'while true; do sleep 3600; done' >> /init
+    RUN chmod +x /init
+    """
+
+    image = DockerRootfsBuilder(
+        name="tiny-alpine",
+        dockerfile=dockerfile,
+    ).ensure(
+        backend="qemu",
+        boot=DirectKernelBoot(),
+    )
+
+    with Celesto.from_image(image, memory_mb=512) as vm:
+        print(f"Started {vm.vm_id}")
+    ```
+  </Step>
+
+  <Step title="Run it">
+    Run the file from the same directory:
+
+    ```bash
+    python custom_image.py
+    ```
+
+    <Check>
+      You should see output like `Started sbx-8f3a2c1b`. The exact ID is generated for each VM.
+    </Check>
+  </Step>
+</Steps>
+
+What happened:
+
+* `DockerRootfsBuilder` turned the Dockerfile into a raw ext4 disk.
+* `DirectKernelBoot()` used Celesto's default Linux boot settings, including `/init`.
+* `Celesto.from_image(...)` created a private per-VM disk and started the sandbox.
+
+## Run Commands Inside The Image
+
+The Dockerfile image above proves that a custom disk can boot. To run commands from the host with `vm.run(...)`, the guest, which is the operating system inside the sandbox, needs a control path. The easiest path is `ImageBuilder`, which creates an SSH-ready Linux image. SSH is the standard remote shell protocol Celesto can use to send commands into the sandbox.
+
+<Steps>
+  <Step title="Create a command-ready image">
+    Create `command_ready_image.py`:
+
+    ```python command_ready_image.py
+    from celesto import ImageBuilder, SSH_BOOT_ARGS, Celesto, VMConfig
+
+    builder = ImageBuilder()
+    kernel, rootfs = builder.build_alpine_ssh(name="ssh-ready-alpine")
+
+    config = VMConfig(
+        kernel_path=kernel,
+        rootfs_path=rootfs,
+        boot_args=SSH_BOOT_ARGS,
+    )
+
+    with Celesto(config) as vm:
+        result = vm.run("echo hello-from-custom-image")
+        print(result.stdout.strip())
+    ```
+  </Step>
+
+  <Step title="Run it">
+    ```bash
+    python command_ready_image.py
+    ```
+
+    <Check>
+      The command prints `hello-from-custom-image`.
+    </Check>
+  </Step>
+</Steps>
+
+Choose this path when your first goal is command execution, file upload, environment variables, or port forwarding from the SDK.
+
+## Use The CLI
+
+Use the SDK, which is the Python API, for Dockerfile-backed Linux images. Use the CLI, which is the command line, for built-in Linux images, preset images, and Windows image building.
+
+Create and inspect a built-in Ubuntu sandbox from the CLI:
+
+```bash
+celesto sandbox create --os ubuntu --name custom-ubuntu --disk-size 4096
+celesto sandbox info custom-ubuntu
+celesto sandbox delete custom-ubuntu
+```
+
+For Windows image building, start with the built-in help:
+
+```bash
+celesto windows build-image --help
+```
+
+See the [Windows image CLI reference](/celesto/cli/windows) for the full ISO-to-qcow2 flow.
+
+## Add More Control
+
+Most users can stop after Chapters 1-3. Use this section when you need to keep a custom Dockerfile as the source of truth, resize disks, or boot an existing image file.
+
+### Build From A Dockerfile
+
+`DockerRootfsBuilder` is the main SDK API for Dockerfile-backed Linux images. Use it when you want to own the packages, files, and init process inside the guest.
+
+Important options:
+
+| Option | What it controls |
+| --- | --- |
+| `name` | Cache name for the built image |
+| `dockerfile` | Dockerfile text used to build the rootfs |
+| `context` | Extra files copied beside the Dockerfile, such as an `/init` script |
+| `rootfs_size_mb` | Initial rootfs size in MB |
+| `build_args` | Docker `--build-arg` values |
+| `ssh_capable` | Whether the image starts SSH and accepts the credentials passed to Celesto |
+
+<Warning>
+  Set `ssh_capable=True` only when your image starts SSH during boot and accepts the `ssh_user`, `ssh_key_path`, or `ssh_password` you pass to Celesto.
+</Warning>
+
+### Launch A BootImage
+
+`BootImage` is a small Python object that describes a bootable disk. `DockerRootfsBuilder.ensure(...)` returns one for you.
+
+Pass that image to `Celesto.from_image(...)` when you want normal VM settings:
+
+* `memory_mb` for memory size
+* `vcpus` for CPU count
+* `backend` to choose QEMU or Firecracker
+* `port_forwards` for QEMU slirp networking
+* `disk_size_mb` to grow the per-VM disk
+* `grow_filesystem=True` to expand raw ext4 filesystems on the host
+
+For qcow2 images, Celesto can grow the virtual disk size. The guest operating system remains responsible for growing its partition or filesystem.
+
+### Boot An Existing Disk
+
+Use `BootImage` directly when you already have a disk image on the host.
+
+Common cases:
+
+* Raw ext4 Linux image with a kernel loaded by Celesto
+* QEMU qcow2 cloud image that boots through firmware
+* Windows qcow2 image built with `celesto windows build-image`
+
+See the [`BootImage` API reference](/celesto/api/bootimage) for complete constructor fields and validation rules.
+
+### Keep Builds Fast
+
+Celesto caches built images under `~/.celesto/images/`. Reusing the same Dockerfile, build args, context files, target architecture, and rootfs size reuses the cached rootfs.
+
+Run this when old release caches take up space:
+
+```bash
+celesto prune --dry-run
+```
+
+If the preview looks right, run:
+
+```bash
+celesto prune
+```
+
+## Boot Settings
+
+Boot settings are the values passed to Linux before it starts. Most users should use the defaults:
+
+* `DirectKernelBoot()` for Dockerfile-built Linux images.
+* `SSH_BOOT_ARGS` for `ImageBuilder` images.
+* `FirmwareBoot()` for QEMU images that already contain their own bootloader.
+
+Use custom boot settings only when you know the guest needs a different root device, init path, console, or extra kernel argument.
+
+Related references:
+
+* [`BootImage` and boot helpers](/celesto/api/bootimage)
+* [`DockerRootfsBuilder`](/celesto/api/dockerrootfsbuilder)
+* [`Celesto.from_image(...)`](/celesto/api/celesto#from-image)
+* [`VMConfig`](/celesto/api/vmconfig)
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Docker is not available">
+    Check Docker first:
+
+    ```bash
+    docker --version
+    docker info
+    ```
+
+    On macOS, start Docker Desktop. On Ubuntu, install Docker with `sudo apt install docker.io` and make sure the daemon is running.
+  </Accordion>
+
+  <Accordion title="The custom Dockerfile image boots, but vm.run does not work">
+    Use an SSH-ready image from `ImageBuilder`, or add SSH or a guest agent to your Dockerfile image. A boot-only image can start successfully while still leaving command execution unavailable.
+  </Accordion>
+
+  <Accordion title="The disk does not show the larger size inside the guest">
+    Use `grow_filesystem=True` for raw ext4 images. For qcow2 images, grow the partition or filesystem from inside the guest operating system.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="BootImage API" icon="image" href="/celesto/api/bootimage">
+    Describe bootable root filesystems, kernels, firmware images, and boot helpers.
+  </Card>
+
+  <Card title="DockerRootfsBuilder API" icon="box" href="/celesto/api/dockerrootfsbuilder">
+    Build and cache raw ext4 root filesystems from Dockerfiles.
+  </Card>
+
+  <Card title="Celesto API" icon="code" href="/celesto/api/celesto#from-image">
+    Launch custom images with CPU, memory, networking, and disk sizing options.
+  </Card>
+
+  <Card title="Windows images" icon="window" href="/celesto/cli/windows">
+    Build a reusable Windows qcow2 image from an ISO.
+  </Card>
+</CardGroup>

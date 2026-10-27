@@ -1,0 +1,253 @@
+---
+title: "celesto doctor"
+description: "Run celesto doctor to check that your machine is ready for Celesto: KVM access, required binaries, network tools, and the Firecracker or QEMU backend."
+---
+
+## Synopsis
+
+```bash  theme={null}
+celesto doctor [OPTIONS]
+```
+
+## Description
+
+The `doctor` command runs comprehensive diagnostics on your system to verify that all prerequisites for running Celesto are met. It checks for required binaries, permissions, KVM availability, and network configuration.
+
+## Options
+
+<ParamField path="--backend" type="string" default="auto">
+  Backend to validate. Choices: `auto`, `firecracker`, `qemu`.
+
+  * `auto`: Automatically detect the best backend for your platform
+  * `firecracker`: Validate Firecracker-specific requirements (Linux only)
+  * `qemu`: Validate QEMU-specific requirements
+</ParamField>
+
+<ParamField path="--json" type="flag" default="false">
+  Emit machine-readable JSON output instead of human-readable format.
+</ParamField>
+
+<ParamField path="--strict" type="flag" default="false">
+  Treat warnings as failures. When enabled, the command exits with code 1 if any warnings are present.
+</ParamField>
+
+## Examples
+
+### Basic diagnostics
+
+Run diagnostics with auto-detected backend:
+
+```bash  theme={null}
+celesto doctor
+```
+
+**Example output:**
+
+```
+Celesto Doctor
+Backend: firecracker (requested: auto)
+Platform: Linux x86_64
+
+[PASS] kvm: /dev/kvm is available
+[PASS] firecracker: /home/user/.celesto/bin/firecracker
+[PASS] command:ip: /usr/sbin/ip
+[PASS] command:nft: /usr/sbin/nft
+[PASS] command:ssh: /usr/bin/ssh
+[PASS] network-permissions: network commands and sudo policy are available
+[WARN] nft-table:ip:celesto_nat: not created yet (will be created on first VM network setup)
+[WARN] nft-table:inet:celesto_filter: not created yet (will be created on first VM network setup)
+
+Doctor result: OK
+```
+
+### Validate specific backend
+
+Check Firecracker-specific requirements:
+
+```bash  theme={null}
+celesto doctor --backend firecracker
+```
+
+Check QEMU-specific requirements:
+
+```bash  theme={null}
+celesto doctor --backend qemu
+```
+
+**Example output (macOS):**
+
+```
+Celesto Doctor
+Backend: qemu (requested: qemu)
+Platform: Darwin arm64
+
+[PASS] qemu: qemu-system-aarch64 (/opt/homebrew/bin/qemu-system-aarch64)
+[PASS] qemu-accel: Hypervisor.framework (hvf) is available
+[PASS] command:ssh: /usr/bin/ssh
+
+Doctor result: OK
+```
+
+### JSON output
+
+Get machine-readable output for automation:
+
+```bash  theme={null}
+celesto doctor --json
+```
+
+**Example output:**
+
+```json  theme={null}
+{
+  "backend_requested": "auto",
+  "backend_resolved": "firecracker",
+  "system": "Linux",
+  "arch": "x86_64",
+  "checks": [
+    {
+      "name": "kvm",
+      "status": "pass",
+      "detail": "/dev/kvm is available"
+    },
+    {
+      "name": "firecracker",
+      "status": "pass",
+      "detail": "/home/user/.celesto/bin/firecracker"
+    },
+    {
+      "name": "command:ip",
+      "status": "pass",
+      "detail": "/usr/sbin/ip"
+    },
+    {
+      "name": "command:nft",
+      "status": "pass",
+      "detail": "/usr/sbin/nft"
+    },
+    {
+      "name": "command:ssh",
+      "status": "pass",
+      "detail": "/usr/bin/ssh"
+    },
+    {
+      "name": "network-permissions",
+      "status": "pass",
+      "detail": "network commands and sudo policy are available"
+    }
+  ],
+  "summary": {
+    "failures": 0,
+    "warnings": 0,
+    "ok": true,
+    "strict": false
+  }
+}
+```
+
+### Strict mode
+
+Fail on warnings:
+
+```bash  theme={null}
+celesto doctor --strict
+```
+
+**Example output:**
+
+```
+Celesto Doctor
+Backend: firecracker (requested: auto)
+Platform: Linux x86_64
+
+[PASS] kvm: /dev/kvm is available
+[PASS] firecracker: /home/user/.celesto/bin/firecracker
+[PASS] command:ip: /usr/sbin/ip
+[FAIL] command:nft: 'nft' not found (install nftables)
+[PASS] command:ssh: /usr/bin/ssh
+
+Doctor result: FAIL
+```
+
+## Checks Performed
+
+### Firecracker Backend
+
+When validating the Firecracker backend, doctor checks:
+
+* **KVM**: `/dev/kvm` availability (hardware virtualization)
+* **Firecracker binary**: Located in the folder set by `CELESTO_FIRECRACKER_DIR` if that variable is set, otherwise in `PATH` or `~/.celesto/bin`
+* **ip command**: From iproute2 package (network management)
+* **nft command**: From nftables package (firewall rules)
+* **ssh command**: From openssh-client package (VM access)
+* **Network permissions**: Sudo access for network operations
+* **nftables tables**: Checks for existing `celesto_nat` and `celesto_filter` tables
+
+### QEMU Backend
+
+When validating the QEMU backend, doctor checks:
+
+* **QEMU binary**: `qemu-system-aarch64` or `qemu-system-x86_64`
+* **Hardware acceleration**:
+  * Linux: KVM support
+  * macOS: Hypervisor.framework (hvf) support
+* **ssh command**: From openssh-client package (VM access)
+
+## Check Statuses
+
+| Status | Description                                                             |
+| ------ | ----------------------------------------------------------------------- |
+| `PASS` | Check succeeded                                                         |
+| `WARN` | Non-critical issue detected (treated as pass unless `--strict` is used) |
+| `FAIL` | Critical requirement missing                                            |
+
+## Exit Codes
+
+| Code | Description                                                       |
+| ---- | ----------------------------------------------------------------- |
+| `0`  | Success - all checks passed (or only warnings without `--strict`) |
+| `1`  | Failure - one or more checks failed (or warnings with `--strict`) |
+
+## Common Issues
+
+### Missing KVM
+
+```
+[FAIL] kvm: /dev/kvm unavailable
+```
+
+**Solution**: Ensure KVM is enabled in your system's BIOS/UEFI and that the `kvm` kernel module is loaded.
+
+### Firecracker not found
+
+```
+[FAIL] firecracker: Not found in PATH or ~/.celesto/bin
+```
+
+**Solution**: Run the setup command to install Firecracker:
+
+```bash  theme={null}
+celesto setup
+```
+
+If `CELESTO_FIRECRACKER_DIR` is set, doctor only checks that folder and reports `Not found at <dir>/firecracker` instead. The suggested fix then includes the matching flag, for example `celesto setup --firecracker-dir <dir>`.
+
+### Missing network commands
+
+```
+[FAIL] command:nft: 'nft' not found (install nftables)
+```
+
+**Solution**: Install the required package:
+
+```bash  theme={null}
+# Debian/Ubuntu
+sudo apt-get install nftables
+
+# Fedora/RHEL
+sudo dnf install nftables
+```
+
+## Related Commands
+
+* [`celesto sandbox delete`](/celesto/cli/cleanup) - Delete sandboxes after diagnosing issues

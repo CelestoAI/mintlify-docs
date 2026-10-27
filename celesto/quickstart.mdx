@@ -1,0 +1,92 @@
+---
+title: "Run your first Celesto microVM sandbox"
+sidebarTitle: "Quickstart"
+description: "Install Celesto and run your first isolated microVM sandbox in under five minutes — execute commands, check outputs, and tear it down with a context manager."
+---
+
+By the end of this guide you'll have an isolated Linux sandbox running on your machine, ready to execute commands safely.
+
+<Steps>
+  <Step title="Install Celesto">
+    ```bash
+    curl -sSL https://celesto.ai/install.sh | bash
+    ```
+
+    This installs everything you need and configures your machine. See [Installation](/celesto/installation) for manual install and requirements.
+  </Step>
+  <Step title="Run your first sandbox">
+    Create `quickstart.py`:
+
+    ```python quickstart.py
+    from celesto import Celesto
+    
+    vm = Celesto()
+    result = vm.run("echo 'Hello from the sandbox!'")
+    print(result.stdout.strip())
+    vm.stop()
+    ```
+
+    Run it:
+
+    ```bash
+    python quickstart.py
+    ```
+
+    You should see:
+
+    ```text
+    Hello from the sandbox!
+    ```
+
+    <Note>
+      The first run takes 30-60 seconds to download the operating system images.
+    </Note>
+  </Step>
+</Steps>
+
+## Prefer the command line?
+
+You can do the same thing without writing any Python:
+
+```bash
+celesto sandbox create --name my-sandbox
+celesto sandbox ssh my-sandbox       # opens a shell inside the sandbox — type `exit` to leave
+celesto sandbox stop my-sandbox
+```
+
+## Customize resources
+
+Configure memory and disk for heavier workloads (defaults: 512 MiB memory, 512 MiB disk):
+
+```python
+from celesto import Celesto
+
+vm = Celesto(memory=2048, disk_size=4096)
+result = vm.run("free -m")
+print(result.stdout)
+vm.stop()
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="AI agent integration" icon="robot" href="/celesto/guides/ai-agent-integration">
+    Plug Celesto into PydanticAI, OpenAI Agents, LangChain, and more
+  </Card>
+
+  <Card title="Port forwarding" icon="network-wired" href="/celesto/features/port-forwarding">
+    Expose services running inside a sandbox to your host machine
+  </Card>
+
+  <Card title="Custom images" icon="box" href="/celesto/guides/custom-images">
+    Build specialized images with your own tools pre-installed
+  </Card>
+
+  <Card title="API reference" icon="book" href="/celesto/api/celesto">
+    Explore the complete Celesto API
+  </Card>
+</CardGroup>
+
+<Tip>
+  Join the [Discord community](https://discord.gg/KNb5UkrAmm) to get help and share your use cases.
+</Tip>

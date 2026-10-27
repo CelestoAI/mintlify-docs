@@ -1,0 +1,247 @@
+---
+title: "Browser and desktop sandboxes"
+description: "Start browser and desktop sandboxes with Celesto.browser() and Celesto.desktop(), then connect automation tools or open a live viewer."
+---
+
+## Overview
+
+Celesto can start a browser or a full desktop inside a disposable sandbox. You can give an agent a connection address for automation, open a web viewer to watch the screen, or connect a desktop-control tool.
+
+Use `Celesto.browser()` when your agent needs Chromium for web tasks. Use `Celesto.desktop()` when your agent needs the whole desktop environment, such as a window manager, visible apps, or a VNC-compatible computer-use driver. VNC means Virtual Network Computing, a standard way for tools to view and control a remote screen.
+
+## Import
+
+```python
+from celesto import Celesto
+```
+
+## Choose a mode
+
+| Factory | Best for | URLs returned |
+| --- | --- | --- |
+| `Celesto.browser(headless=True)` | Browser automation with Playwright or another automation client | `cdp_url` |
+| `Celesto.browser(headless=False)` | Browser automation plus a visible screen | `cdp_url`, `viewer_url`, `display_url` |
+| `Celesto.desktop()` | Full desktop computer-use agents | `viewer_url`, `display_url` |
+
+<Tip>
+  <Tooltip tip="Chrome DevTools Protocol, a local connection address used by Playwright and browser automation tools">CDP</Tooltip> is for browser automation. <Tooltip tip="Virtual Network Computing, a standard way for tools and viewers to control a remote screen">VNC</Tooltip> is for screen viewing and desktop control.
+</Tip>
+
+## Start a headless browser
+
+Headless browser mode gives automation tools a Chromium connection address. It is the smallest browser mode because it does not start the live screen viewer.
+
+```python browser_headless.py
+from celesto import Celesto
+
+with Celesto.browser(headless=True) as browser:
+    print(browser.cdp_url)
+```
+
+<ResponseField name="cdp_url" type="str">
+  Local browser automation URL for Playwright or another browser automation client.
+</ResponseField>
+
+## Start a visible browser
+
+Visible browser mode gives you both automation and a live screen. Use it when you want an agent to drive Chromium while a person can watch what happens.
+
+```python browser_visible.py
+from celesto import Celesto
+
+with Celesto.browser(headless=False) as browser:
+    print(browser.cdp_url)
+    print(browser.viewer_url)
+    print(browser.display_url)
+```
+
+<ResponseField name="viewer_url" type="str">
+  Web URL you can open in your own browser to watch or interact with the sandbox screen.
+</ResponseField>
+
+<ResponseField name="display_url" type="str">
+  VNC URL for desktop viewers and computer-use agents that need direct screen control.
+</ResponseField>
+
+## Start a full desktop
+
+Desktop mode starts the full display environment instead of only Chromium. Use it for agents that need desktop apps, window focus, or a VNC-compatible driver such as a computer-use agent driver.
+
+```python desktop.py
+from celesto import Celesto
+
+with Celesto.desktop() as desktop:
+    print(desktop.viewer_url)
+    print(desktop.display_url)
+```
+
+<Note>
+  Desktop sandboxes focus on screen access. They return `None` for `cdp_url`; use `Celesto.browser()` when you need a browser automation address.
+</Note>
+
+## Class methods
+
+### Celesto.browser
+
+```python  theme={null}
+@classmethod
+Celesto.browser(
+    *,
+    headless: bool = True,
+    session_id: str | None = None,
+    backend: Literal["firecracker", "qemu", "libkrun", "auto"] = "auto",
+    profile_id: str | None = None,
+    persistent: bool = False,
+    timeout_minutes: int = 30,
+    viewport: BrowserViewport | dict[str, Any] | None = None,
+    viewport_width: int = 1280,
+    viewport_height: int = 720,
+    record_video: bool = False,
+    allow_downloads: bool = True,
+    env_vars: dict[str, str] | None = None,
+    workspace_mounts: list[WorkspaceMount] | None = None,
+    memory_mb: int = 2048,
+    disk_size_mb: int = 4096,
+    data_dir: Path | None = None,
+    socket_dir: Path | None = None,
+    ssh_key_path: str | None = None,
+    boot_timeout: float = 90.0,
+    on_progress: Callable[[str], None] | None = None,
+) -> DisplaySandboxProtocol
+```
+
+Starts a Chromium browser sandbox and returns it when it is ready.
+
+<ParamField path="headless" type="bool" default="True">
+  Use `True` for browser automation only. Use `False` to also start the visible viewer and VNC display endpoint.
+</ParamField>
+
+<ParamField path="session_id" type="str | None" default="None">
+  Existing browser sandbox ID to reconnect to. Omit it to create a new sandbox.
+</ParamField>
+
+<ParamField path="backend" type="str" default="auto">
+  Runtime backend. Options are `"firecracker"`, `"qemu"`, `"libkrun"`, and `"auto"`.
+</ParamField>
+
+<ParamField path="profile_id" type="str | None" default="None">
+  Browser profile name. Reuse a profile ID to keep browser state such as cookies and local storage across persistent sessions.
+</ParamField>
+
+<ParamField path="persistent" type="bool" default="False">
+  Keep the sandbox record after the current Python process exits. Use this when another script needs to reconnect later with `session_id`.
+</ParamField>
+
+<ParamField path="timeout_minutes" type="int" default="30">
+  Maximum session lifetime in minutes.
+</ParamField>
+
+<ParamField path="viewport" type="BrowserViewport | dict | None" default="None">
+  Browser or desktop screen size. You can pass `BrowserViewport(width=1440, height=900)` or `{"width": 1440, "height": 900}`.
+</ParamField>
+
+<ParamField path="viewport_width" type="int" default="1280">
+  Screen width in pixels when `viewport` is omitted.
+</ParamField>
+
+<ParamField path="viewport_height" type="int" default="720">
+  Screen height in pixels when `viewport` is omitted.
+</ParamField>
+
+<ParamField path="record_video" type="bool" default="False">
+  Record the visible session. Retrieve recordings with `collect_artifacts()` before the sandbox stops.
+</ParamField>
+
+<ParamField path="allow_downloads" type="bool" default="True">
+  Allow Chromium downloads inside the sandbox.
+</ParamField>
+
+<ParamField path="env_vars" type="dict[str, str] | None" default="None">
+  Environment variables to set inside the sandbox.
+</ParamField>
+
+<ParamField path="workspace_mounts" type="list[WorkspaceMount] | None" default="None">
+  Folders to share with the sandbox.
+</ParamField>
+
+<ParamField path="memory_mb" type="int" default="2048">
+  Guest memory in MiB.
+</ParamField>
+
+<ParamField path="disk_size_mb" type="int" default="4096">
+  Root filesystem size in MiB.
+</ParamField>
+
+<ParamField path="boot_timeout" type="float" default="90.0">
+  Maximum seconds to wait for the sandbox, display services, and browser to become ready.
+</ParamField>
+
+<ParamField path="data_dir" type="Path | None" default="None">
+  Local directory for sandbox state. Omit it to use Celesto's default state directory.
+</ParamField>
+
+<ParamField path="socket_dir" type="Path | None" default="None">
+  Local directory for runtime sockets. Omit it to use Celesto's default socket directory.
+</ParamField>
+
+<ParamField path="ssh_key_path" type="str | None" default="None">
+  SSH private key path used for setup and file transfer inside the sandbox.
+</ParamField>
+
+<ParamField path="on_progress" type="Callable[[str], None] | None" default="None">
+  Callback that receives progress messages while the sandbox starts.
+</ParamField>
+
+### Celesto.desktop
+
+```python  theme={null}
+@classmethod
+Celesto.desktop(
+    *,
+    session_id: str | None = None,
+    backend: Literal["firecracker", "qemu", "libkrun", "auto"] = "auto",
+    profile_id: str | None = None,
+    persistent: bool = False,
+    timeout_minutes: int = 30,
+    viewport: BrowserViewport | dict[str, Any] | None = None,
+    viewport_width: int = 1280,
+    viewport_height: int = 720,
+    record_video: bool = False,
+    allow_downloads: bool = True,
+    env_vars: dict[str, str] | None = None,
+    workspace_mounts: list[WorkspaceMount] | None = None,
+    memory_mb: int = 2048,
+    disk_size_mb: int = 4096,
+    data_dir: Path | None = None,
+    socket_dir: Path | None = None,
+    ssh_key_path: str | None = None,
+    boot_timeout: float = 90.0,
+    on_progress: Callable[[str], None] | None = None,
+) -> DisplaySandboxProtocol
+```
+
+Starts a full desktop sandbox and returns it when the viewer and VNC display endpoint are ready. It accepts the same resource, viewport, persistence, and artifact options as `Celesto.browser()`.
+
+## Use Playwright with browser mode
+
+```python playwright_browser.py
+from celesto import Celesto
+
+with Celesto.browser(headless=True) as sandbox:
+    browser = sandbox.connect_playwright()
+    page = browser.new_page()
+    page.goto("https://example.com")
+    print(page.title())
+    browser.close()
+```
+
+<Note>
+  Install Playwright in your local Python environment before using `connect_playwright()`: `pip install playwright`.
+</Note>
+
+## Related
+
+* [Browser and desktop options](/celesto/api/browsersessionconfig) - Configure viewport, resources, profiles, and recording
+* [Display sandbox object](/celesto/api/browsersessioninfo) - Read returned URLs and lifecycle state
+* [Celesto](/celesto/api/celesto) - General sandbox management
+* [AI agent integration](/celesto/guides/ai-agent-integration) - Use Celesto with agent frameworks
