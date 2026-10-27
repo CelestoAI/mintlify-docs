@@ -1,6 +1,6 @@
 ---
-title: "Sandbox an OpenAI agent with Celesto or SmolVM"
-description: "Give an OpenAI agent its own sandboxed computer. Use a hosted Celesto computer or a local SmolVM as the workspace for a SandboxAgent."
+title: "Sandbox an OpenAI agent with Celesto"
+description: "Give an OpenAI agent its own sandboxed computer. Use a hosted Celesto computer or a local Celesto sandbox as the workspace for a SandboxAgent."
 ---
 
 The Celesto SDK ships with two ready-made sandbox providers for the [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/). With one of them plugged in, an OpenAI `SandboxAgent` can read files, run shell commands, and create artifacts in an isolated computer instead of on your laptop or server.
@@ -8,7 +8,7 @@ The Celesto SDK ships with two ready-made sandbox providers for the [OpenAI Agen
 You get to pick where that computer lives:
 
 - **Hosted Celesto computer** for cloud runs you can share, persist, and resume from any machine.
-- **Local SmolVM sandbox** for fast, private runs that stay on your own hardware.
+- **Local Celesto sandbox** for fast, private runs that stay on your own hardware.
 
 Both options expose the exact same OpenAI primitives (`SandboxAgent`, `SandboxRunConfig`, `Runner`), so you can swap providers without changing the rest of your agent code.
 
@@ -20,18 +20,18 @@ Reach for these integrations when you want an OpenAI agent to:
 - Inspect, edit, or build files in a clean, throwaway workspace.
 - Pause a session, save it, and resume it later from a different process.
 
-If you only need to call a single shell command from an OpenAI tool, the simpler [function tool example](/smolvm/guides/ai-agent-integration#openai-agents-sdk) on the SmolVM page may be enough.
+If you only need to call a single shell command from an OpenAI tool, the simpler [function tool example](/celesto/guides/ai-agent-integration#openai-agents-sdk) on the local Celesto page may be enough.
 
 ## Installation
 
-Install the Celesto SDK with the `openai-agents` extra. This pulls in the OpenAI Agents SDK and SmolVM alongside Celesto:
+Install the Celesto SDK with the `openai-agents` extra. This pulls in the OpenAI Agents SDK and the local sandbox runtime alongside Celesto:
 
 ```bash
 pip install "celesto[openai-agents]"
 ```
 
 <Note>
-  The hosted provider needs a Celesto API key. Set `CELESTO_API_KEY` or pass `api_key=` when you create the client. The SmolVM provider runs locally and does not need an API key.
+  The hosted provider needs a Celesto API key. Set `CELESTO_API_KEY` or pass `api_key=` when you create the client. The local provider runs on your machine and does not need an API key.
 </Note>
 
 ## Hosted Celesto sandboxes
@@ -166,9 +166,9 @@ resumed = await client.resume(
   Use `delete_on_close=False` when you plan to resume. Otherwise the computer is deleted when the original session ends.
 </Tip>
 
-## Local SmolVM sandboxes
+## Local Celesto sandboxes
 
-`SmolVMSandboxClient` runs the agent in a [SmolVM](/smolvm/introduction) on your own machine. It is a drop-in replacement for `CelestoSandboxClient` and uses the same `SandboxAgent`, `SandboxRunConfig`, and `Runner` flow.
+`SmolVMSandboxClient` runs the agent in a [local Celesto sandbox](/celesto/introduction) on your own machine. It is a drop-in replacement for `CelestoSandboxClient` and uses the same `SandboxAgent`, `SandboxRunConfig`, and `Runner` flow.
 
 ```python
 from agents import Runner
@@ -204,11 +204,11 @@ async def main():
 ### Client options
 
 <ParamField body="os" type="string">
-  OS image to boot inside SmolVM (for example, `ubuntu-24.04`). Defaults to SmolVM's default image.
+  OS image to boot inside the local sandbox (for example, `ubuntu-24.04`). Defaults to the default local image.
 </ParamField>
 
 <ParamField body="backend" type="string">
-  Which SmolVM backend to use (such as `firecracker` or `qemu`). Defaults to SmolVM's auto-selected backend for your platform.
+  Which local backend to use (such as `firecracker` or `qemu`). Defaults to the auto-selected backend for your platform.
 </ParamField>
 
 <ParamField body="memory" type="integer">
@@ -224,7 +224,7 @@ async def main():
 </ParamField>
 
 <ParamField body="vm_id" type="string">
-  Reuse an existing SmolVM instead of creating a new one. The session attaches to that VM and starts it if needed.
+  Reuse an existing local sandbox instead of creating a new one. The session attaches to that VM and starts it if needed.
 </ParamField>
 
 <ParamField body="delete_on_close" type="boolean">
@@ -237,7 +237,7 @@ async def main():
   <Card title="Hosted Celesto" icon="cloud">
     Use when you want managed infrastructure, shared computers, longer-lived sessions, or runs that originate from servers without local virtualization.
   </Card>
-  <Card title="Local SmolVM" icon="laptop">
+  <Card title="Local Celesto" icon="laptop">
     Use when you want fast iteration, private runs, no API key, or development on a single workstation.
   </Card>
 </CardGroup>
@@ -248,7 +248,7 @@ Both providers implement OpenAI's sandbox session interface, so the rest of your
 
 ### Read and write files in the sandbox
 
-`SandboxAgent` operations call `read()` and `write()` on the session. The Celesto and SmolVM providers map those calls to the underlying computer or VM:
+`SandboxAgent` operations call `read()` and `write()` on the session. The hosted and local providers map those calls to the underlying computer or VM:
 
 ```python
 from pathlib import Path

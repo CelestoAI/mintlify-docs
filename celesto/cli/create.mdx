@@ -1,0 +1,169 @@
+---
+title: "celesto sandbox create"
+description: "Use celesto sandbox create to start a new sandbox from the command line, name it, choose an operating system or image, share folders, and get JSON output for scripts."
+---
+
+`celesto sandbox create` starts a new sandbox and leaves it running. Give it a name when you want to use the same sandbox in later commands, or let Celesto generate one for you.
+
+## Synopsis
+
+```bash
+celesto sandbox create [OPTIONS]
+```
+
+## Options
+
+<ParamField path="--name, -n" type="string">
+  Name for the sandbox. If you omit it, Celesto creates a unique name.
+</ParamField>
+
+<ParamField path="--os" type="string">
+  Guest operating system image. Supported values are `alpine`, `ubuntu`, `windows`, and `macos`. Omit it for the default Linux image, pair `windows` with `--image`, or see [Disposable macOS environments](/celesto/guides/macos-sandboxes) before using `macos`.
+</ParamField>
+
+<ParamField path="--image" type="string">
+  Image reference to boot. Use an S3 image URI, a `file://` URI, or a local `qcow2` path for Windows guests.
+</ParamField>
+
+<ParamField path="--memory" type="integer">
+  Guest memory in MiB.
+</ParamField>
+
+<ParamField path="--disk-size" type="integer">
+  Guest disk size in MiB.
+</ParamField>
+
+<ParamField path="--backend" type="string">
+  Runtime backend. Choices are `auto`, `firecracker`, `qemu`, `libkrun`, and `vz`. Celesto selects `vz` automatically for macOS guests.
+</ParamField>
+
+<ParamField path="--qemu-machine" type="string" default="auto">
+  QEMU machine model. Choices are `auto`, `q35`, and `microvm`.
+</ParamField>
+
+<ParamField path="--comm-channel" type="string">
+  Host-to-guest control channel. Choices are `ssh` and `vsock`. Leave unset for auto-selection.
+</ParamField>
+
+<ParamField path="--mount" type="string">
+  Share a host folder with the sandbox. Use `HOST_PATH` or `HOST_PATH:GUEST_PATH`. You can pass this option more than once.
+</ParamField>
+
+<ParamField path="--writable-mounts" type="flag">
+  Allow writes to every shared folder from this command.
+</ParamField>
+
+<ParamField path="--clipboard / --no-clipboard" type="flag" default="--clipboard">
+  Share the clipboard between your Mac and a macOS sandbox desktop. On by default for macOS guests. Use `--no-clipboard` to keep the two clipboards separate. The choice is saved with the sandbox and applies across stop and start. See [Copy and paste between your Mac and the sandbox](/celesto/guides/macos-sandboxes#copy-and-paste-between-your-mac-and-the-sandbox).
+</ParamField>
+
+<ParamField path="--yes" type="flag">
+  Approve the one-time macOS image download and preparation without an interactive prompt.
+</ParamField>
+
+<ParamField path="--network" type="string" default="nat">
+  Network mode for the sandbox. Choices are `nat` (default, private Celesto network with NAT, port forwarding, and outbound network controls) and `bridge` (attach directly to an existing host bridge on Linux). See [Bridged networking](/celesto/features/bridged-networking).
+</ParamField>
+
+<ParamField path="--bridge" type="string">
+  Name of the Linux bridge to attach to. Required with `--network bridge` and rejected otherwise. Run [`celesto bridge check BRIDGE`](/celesto/features/bridged-networking#check-a-bridge-before-you-use-it) first to verify the bridge.
+</ParamField>
+
+<ParamField path="--boot-timeout" type="number" default="30">
+  Seconds to wait for the sandbox to become ready.
+</ParamField>
+
+<ParamField path="--json" type="flag">
+  Print a JSON envelope instead of formatted text.
+</ParamField>
+
+## Examples
+
+### Create a default sandbox
+
+```bash
+celesto sandbox create
+```
+
+### Create a named Ubuntu sandbox
+
+```bash
+celesto sandbox create --name dev-env --os ubuntu --disk-size 4096
+```
+
+### Share a project folder
+
+```bash
+celesto sandbox create \
+  --name code-review \
+  --mount ~/Projects/my-app:/workspace
+```
+
+By default, shared folders are read-only. Add `--writable-mounts` only when the sandbox should edit host files directly.
+
+### Use QEMU microvm explicitly
+
+```bash
+celesto sandbox create \
+  --name qemu-fast-path \
+  --backend qemu \
+  --qemu-machine microvm
+```
+
+### Attach a sandbox to a host bridge
+
+On Linux, connect the sandbox directly to an existing bridge so it appears as a regular machine on that network with its own MAC and guest-managed IP:
+
+```bash
+celesto bridge check br10
+celesto sandbox create --name demo --os alpine --network bridge --bridge br10
+```
+
+In bridge mode, SSH from the host, host port forwards, workspace mounts, and Celesto-managed outbound controls are unavailable — use `celesto sandbox shell` and connect to guest services over the bridged network instead. See [Bridged networking](/celesto/features/bridged-networking) for the full setup, tradeoffs, and SDK usage.
+
+### Create a Windows sandbox from a local image
+
+```bash
+celesto sandbox create \
+  --name win11-test \
+  --os windows \
+  --image ~/.celesto/images/win11.qcow2
+```
+
+See [Windows sandboxes](/celesto/guides/windows-guests) before running Windows guests.
+
+### Create a macOS desktop sandbox
+
+```bash
+celesto sandbox create --os macos --name nimble-mac
+```
+
+The sandbox starts immediately when a prepared macOS image is available. The output shows its `running` status and the next command:
+
+```text
+Next: celesto sandbox desktop nimble-mac
+Info: celesto sandbox info nimble-mac
+```
+
+Open the desktop:
+
+```bash
+celesto sandbox desktop nimble-mac
+```
+
+The first macOS sandbox asks before downloading and preparing a local image. See [Disposable macOS environments](/celesto/guides/macos-sandboxes) for host requirements, one-time setup, and preview limits.
+
+## What happens
+
+1. Celesto resolves the image, backend, and control channel.
+2. It creates a per-sandbox disk and network configuration.
+3. It starts the sandbox and waits for the guest to be ready.
+4. It prints the sandbox name and suggested next commands.
+
+## Related commands
+
+* [`celesto sandbox shell`](/celesto/cli/shell) - Open the fast shell
+* [`celesto sandbox ssh`](/celesto/cli/ssh) - Open an SSH session
+* [`celesto sandbox desktop`](/celesto/guides/macos-sandboxes) - Open a macOS sandbox in Screen Sharing
+* [`celesto sandbox list`](/celesto/cli/list) - View sandboxes
+* [`celesto sandbox delete`](/celesto/cli/cleanup) - Delete one or more sandboxes

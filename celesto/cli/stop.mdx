@@ -1,0 +1,56 @@
+---
+title: "celesto sandbox stop"
+description: "Use celesto sandbox stop to shut down a running sandbox while keeping its record available for later inspection or restart."
+---
+
+`celesto sandbox stop` shuts down a running sandbox and releases its live resources. Use snapshots before stopping when you need to preserve memory state exactly.
+
+## Synopsis
+
+```bash
+celesto sandbox stop <sandbox> [OPTIONS]
+```
+
+## Arguments
+
+<ParamField path="sandbox" type="string" required>
+  Name or ID of the sandbox to stop.
+</ParamField>
+
+## Options
+
+<ParamField path="--timeout" type="number" default="3.0">
+  Seconds to wait before forcing shutdown.
+</ParamField>
+
+<ParamField path="--json" type="flag">
+  Print a JSON envelope instead of formatted text.
+</ParamField>
+
+## Examples
+
+### Stop one sandbox
+
+```bash
+celesto sandbox stop my-sandbox
+```
+
+### Stop with a longer graceful window
+
+```bash
+celesto sandbox stop my-sandbox --timeout 10
+```
+
+### Create, use, and stop a sandbox
+
+```bash
+celesto sandbox create --name dev-env
+celesto sandbox shell dev-env
+celesto sandbox stop dev-env
+```
+
+## Related commands
+
+* [`celesto sandbox start`](/celesto/cli/overview) - Start a stopped sandbox
+* [`celesto sandbox snapshot create`](/celesto/cli/snapshot) - Save sandbox state
+* [`celesto sandbox delete`](/celesto/cli/cleanup) - Delete sandbox resources

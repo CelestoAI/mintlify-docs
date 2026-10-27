@@ -19,7 +19,7 @@ Set the choice when you create a computer. It stays with that computer across st
 | `open` | Connect to the internet. This is the default. |
 | `off` | Run commands and use terminal sessions with outbound internet access turned off. |
 
-Network Control currently supports these two settings. For destination-level control on your own Linux machine, use a [local sandbox egress allowlist](/smolvm/features/network-controls#set-an-egress-allowlist-on-linux). An egress allowlist limits outbound connections to the destinations you choose; cloud computers currently offer the `open` and `off` settings above.
+Network Control currently supports these two settings. For destination-level control on your own Linux machine, use a [local sandbox egress allowlist](/celesto/features/network-controls#set-an-egress-allowlist-on-linux). An egress allowlist limits outbound connections to the destinations you choose; cloud computers currently offer the `open` and `off` settings above.
 
 ## Create an offline computer
 
@@ -142,7 +142,7 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
-When you reuse a computer with `computer_id`, the requested policy must match that computer's saved setting. If it does not, the session fails closed: `client.create()` raises `RuntimeError` and does not start the computer, so an agent that expected an offline sandbox never runs against an online one. Omit `network_policy` when you want to accept whatever setting the existing computer was created with. For a complete agent workflow, see [Sandbox an OpenAI agent with Celesto or SmolVM](/cloud/openai-agents).
+When you reuse a computer with `computer_id`, the requested policy must match that computer's saved setting. If it does not, the session fails closed: `client.create()` raises `RuntimeError` and does not start the computer, so an agent that expected an offline sandbox never runs against an online one. Omit `network_policy` when you want to accept whatever setting the existing computer was created with. For a complete agent workflow, see [Sandbox an OpenAI agent with Celesto](/cloud/openai-agents).
 
 ## Related pages
 

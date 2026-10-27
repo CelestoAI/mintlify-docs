@@ -1,0 +1,159 @@
+---
+title: "Display sandbox object"
+description: "Reference for the object returned by Celesto.browser() and Celesto.desktop(), including URLs, IDs, lifecycle methods, and browser helpers."
+---
+
+## Overview
+
+`Celesto.browser()` and `Celesto.desktop()` return a sandbox object that is ready to use. Read its URLs to connect tools, use its lifecycle methods to stop it, and use browser helpers when the sandbox runs Chromium.
+
+The same object works as a context manager, so the sandbox stops when the `with` block exits.
+
+## URLs and identifiers
+
+<ResponseField name="session_id" type="str">
+  Stable browser or desktop sandbox ID.
+</ResponseField>
+
+<ResponseField name="vm_id" type="str">
+  ID of the underlying Celesto sandbox.
+</ResponseField>
+
+<ResponseField name="cdp_url" type="str | None">
+  Browser automation URL for Playwright or another Chrome DevTools Protocol client. Available in browser mode.
+</ResponseField>
+
+<ResponseField name="browser_cdp_url" type="str | None">
+  Alias for `cdp_url`.
+</ResponseField>
+
+<ResponseField name="viewer_url" type="str | None">
+  Web URL you can open in your own browser to watch or interact with the screen. Available for visible browser and desktop modes.
+</ResponseField>
+
+<ResponseField name="display_url" type="str | None">
+  VNC URL for desktop viewers and computer-use agents. VNC means Virtual Network Computing, a standard way to view and control a remote screen. Available for visible browser and desktop modes.
+</ResponseField>
+
+<ResponseField name="artifacts_dir" type="Path | None">
+  Local folder where collected logs, downloads, recordings, and other session artifacts are stored.
+</ResponseField>
+
+<ResponseField name="status" type="str">
+  Current lifecycle state for the sandbox, such as `created`, `starting`, `ready`, `stopping`, or `error`.
+</ResponseField>
+
+## Lifecycle methods
+
+### stop
+
+```python  theme={null}
+def stop() -> DisplaySandboxProtocol
+```
+
+Stops the sandbox and releases its VM resources.
+
+### delete
+
+```python  theme={null}
+def delete() -> None
+```
+
+Alias for `stop()`. Use it when you want the same naming style as regular `Celesto` sandboxes.
+
+### close
+
+```python  theme={null}
+def close() -> None
+```
+
+Releases local client resources, such as an open Playwright connection, while leaving a persistent sandbox record available for reconnect.
+
+### open_viewer
+
+```python  theme={null}
+def open_viewer() -> bool
+```
+
+Opens `viewer_url` in your default browser and returns whether the local browser accepted the request.
+
+## Browser helpers
+
+These helpers are available when the object came from `Celesto.browser()`.
+
+### connect_playwright
+
+```python  theme={null}
+def connect_playwright() -> Browser
+```
+
+Connects Playwright to the running Chromium browser over `cdp_url`.
+
+<Note>
+  Install Playwright locally before calling this method: `pip install playwright`.
+</Note>
+
+### screenshot
+
+```python  theme={null}
+def screenshot(destination: str | Path, *, full_page: bool = True) -> Path
+```
+
+Captures the current browser page and saves a PNG on your machine.
+
+<ParamField path="destination" type="str | Path" required>
+  Local file path for the screenshot.
+</ParamField>
+
+<ParamField path="full_page" type="bool" default="True">
+  Capture the full page when possible.
+</ParamField>
+
+### push_file
+
+```python  theme={null}
+def push_file(local_path: str | Path, guest_path: str) -> None
+```
+
+Copies a file from your machine into the sandbox.
+
+### pull_file
+
+```python  theme={null}
+def pull_file(guest_path: str, local_path: str | Path) -> Path
+```
+
+Copies a file from the sandbox to your machine.
+
+### collect_artifacts
+
+```python  theme={null}
+def collect_artifacts() -> Path | None
+```
+
+Collects guest logs, downloads, and recordings into `artifacts_dir`. Returns the archive path when artifacts are available.
+
+### logs
+
+```python  theme={null}
+def logs(tail: int = 100) -> str
+```
+
+Returns recent host and guest logs for the sandbox.
+
+## Example
+
+```python display_sandbox.py
+from celesto import Celesto
+
+with Celesto.browser(headless=False) as browser:
+    print(browser.session_id)
+    print(browser.cdp_url)
+    print(browser.viewer_url)
+    print(browser.display_url)
+```
+
+## Related
+
+* [Browser and desktop sandboxes](/celesto/api/browsersession) - Start browser and desktop modes
+* [Browser and desktop options](/celesto/api/browsersessionconfig) - Configure viewport, resources, profiles, and recording

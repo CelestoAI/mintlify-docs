@@ -1,0 +1,72 @@
+---
+title: "celesto completion"
+description: "Use celesto completion to install shell tab completion for bash, zsh, or fish in one step, including completion of your existing sandbox names."
+---
+
+`celesto completion` sets up tab completion for the `celesto` CLI. Once installed, your shell can complete subcommands, options, and the names of your existing sandboxes as you type — so `celesto sandbox ssh <Tab>` offers the sandboxes you actually have.
+
+Supported shells are `bash`, `zsh`, and `fish`.
+
+## Synopsis
+
+```bash
+celesto completion <bash|zsh|fish> [--install]
+```
+
+## Arguments
+
+<ParamField path="shell" type="string" required>
+  Which shell to generate the completion script for. One of `bash`, `zsh`, or `fish`.
+</ParamField>
+
+## Options
+
+<ParamField path="--install" type="flag">
+  Install the completion script and wire it into your shell's startup files. Without this flag, the script is printed to stdout so you can source it yourself.
+</ParamField>
+
+## One-shot install
+
+The quickest path is to let Celesto install completion for you:
+
+```bash
+celesto completion bash --install   # also works with: zsh, fish
+```
+
+Open a new shell afterward, then try:
+
+```bash
+celesto sandbox ssh <Tab>
+```
+
+What `--install` does per shell:
+
+- **bash** and **zsh**: write the completion script to `~/.celesto/completions/` and add a single marker-tagged `source` line to your startup file (`~/.bashrc`, or `~/.bash_profile` on macOS, or `$ZDOTDIR/.zshrc`). Re-running the command refreshes the script without duplicating the line.
+- **fish**: write the autoloaded completion file into `~/.config/fish/completions/celesto.fish` (honoring `XDG_CONFIG_HOME`). Fish picks it up automatically — no startup-file edit is needed.
+
+If the install can't write a file, `celesto` prints a plain-English error naming the manual `celesto completion <shell>` fallback below.
+
+<Tip>
+Running `sudo celesto completion <shell> --install` still installs into the invoking user's home directory (resolved via `SUDO_USER`), so completion lands where your interactive shell will actually see it.
+</Tip>
+
+## Manual setup
+
+Prefer to wire completion up yourself? Run the command without `--install` to print the script, then load it your own way:
+
+```bash
+# bash — add to ~/.bashrc
+eval "$(celesto completion bash)"
+
+# zsh — add to ~/.zshrc
+eval "$(celesto completion zsh)"
+
+# fish — create the folder once, then write the completion file
+mkdir -p ~/.config/fish/completions
+celesto completion fish > ~/.config/fish/completions/celesto.fish
+```
+
+## Related commands
+
+* [`celesto sandbox list`](/celesto/cli/list) - See the sandbox names that completion will suggest
+* [CLI overview](/celesto/cli/overview) - Full list of commands completion covers

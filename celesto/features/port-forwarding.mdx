@@ -1,0 +1,71 @@
+---
+title: "Port Forwarding"
+description: "Forward ports from a Celesto sandbox to your host so you can reach web servers, databases, and APIs running inside the sandbox as if they were local."
+---
+
+When you run a web server, database, or API inside a sandbox, port forwarding lets you access it from your host machine as if it were running locally.
+
+## Expose a port
+
+Start a service inside the sandbox and expose it to your host:
+
+```python
+from celesto import Celesto
+
+with Celesto() as vm:
+    vm.run("python3 -m http.server 8000 &")
+
+    host_port = vm.expose_local(guest_port=8000, host_port=8000)
+    print(f"Service available at http://127.0.0.1:{host_port}/")
+```
+
+Omit `host_port` to let Celesto pick an available port automatically:
+
+```python
+host_port = vm.expose_local(guest_port=8080)
+print(f"Guest port 8080 exposed on localhost:{host_port}")
+```
+
+QEMU keeps `expose_local()` available when outbound access is off or restricted. On the default `slirp` network it uses QEMU forwarding; on Linux TAP it uses localhost forwarding to the guest IP. Ordinary HTTP, WebSocket, and file-transfer traffic does not require SSH or a guest agent.
+
+Have the application listen on `0.0.0.0` inside the sandbox. If it listens only on the guest's `127.0.0.1`, pass `guest_loopback=True`; this option requires guest SSH because it uses an SSH tunnel.
+
+## Multiple ports
+
+Expose multiple services from the same sandbox:
+
+```python
+with Celesto() as vm:
+    vm.run("python3 -m http.server 8000 &")
+    vm.run("python3 -m http.server 9000 &")
+
+    port1 = vm.expose_local(guest_port=8000, host_port=8000)
+    port2 = vm.expose_local(guest_port=9000, host_port=9000)
+
+    print(f"Service 1: http://127.0.0.1:{port1}/")
+    print(f"Service 2: http://127.0.0.1:{port2}/")
+```
+
+## Remove a port forward
+
+Port forwards are automatically cleaned up when the sandbox stops. To remove one manually:
+
+```python
+vm.unexpose_local(host_port=8080, guest_port=8080)
+```
+
+<Warning>
+  `expose_local()` only binds to `127.0.0.1` (localhost). Services are not exposed to your network.
+</Warning>
+
+## From the CLI
+
+If you already have a running sandbox, you can forward ports from your terminal — no Python required:
+
+```bash
+celesto sandbox port expose my-vm 8080:3000
+celesto sandbox port list my-vm
+celesto sandbox port close my-vm 8080:3000
+```
+
+CLI forwards are non-blocking and persist after the command exits. See [`celesto sandbox port`](/celesto/cli/port) for the full reference.

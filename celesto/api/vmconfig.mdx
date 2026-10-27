@@ -1,0 +1,404 @@
+---
+title: "VMConfig Python reference"
+description: "VMConfig reference: the Pydantic model that defines CPU, memory, kernel, rootfs, disk, network, and boot parameters for a Celesto microVM."
+---
+
+## Overview
+
+`VMConfig` is a Pydantic model that defines the configuration for creating a microVM. It specifies CPU, memory, kernel, rootfs, and other runtime settings.
+
+## Model Definition
+
+```python  theme={null}
+class VMConfig(BaseModel)
+```
+
+All VMConfig instances are immutable (frozen) after creation.
+
+## Fields
+
+<ParamField path="vm_id" type="str" default="auto-generated">
+  Unique identifier for the VM. Must be lowercase alphanumeric with hyphens or underscores, matching the pattern `^[a-z0-9][a-z0-9_-]{0,62}[a-z0-9]$` or a single character `^[a-z0-9]$`.
+
+  If omitted or explicitly set to `None`, Celesto auto-generates an ID in the format `vm-<8-char-hex>` (for example, `vm-a1b2c3d4`).
+</ParamField>
+
+<ParamField path="vcpu_count" type="int" default="2">
+  Number of virtual CPUs. Valid range: 1-32.
+</ParamField>
+
+<ParamField path="memory" type="int" default="512">
+  Memory size in MiB (mebibytes). Valid range: 128-16384.
+</ParamField>
+
+<ParamField path="guest_os" type="GuestOS" default="GuestOS.ALPINE">
+  The operating system running inside the VM. Used by Celesto to pick the right
+  QEMU machine type, firmware, and device topology.
+
+  Valid values:
+
+  * `GuestOS.ALPINE` — Alpine Linux (default).
+  * `GuestOS.UBUNTU` — Ubuntu Linux.
+  * `GuestOS.WINDOWS` — Windows 11. Requires `boot_mode="firmware"` and `backend="qemu"`, and only runs on Linux hosts. See [Windows guests](/celesto/guides/windows-guests).
+</ParamField>
+
+<ParamField path="boot_mode" type="Literal['direct_kernel', 'firmware']" default="direct_kernel">
+  How the VM boots:
+
+  * `"direct_kernel"` — Boot a Linux kernel directly. Requires `kernel_path`. Used by every Linux sandbox.
+  * `"firmware"` — Boot through UEFI firmware reading the disk's own boot manager. Required for Windows guests. `kernel_path` must be `None`.
+</ParamField>
+
+<ParamField path="kernel_path" type="Path | None" required>
+  Path to the kernel image file. The path must exist and point to a valid file. Set to `None` (and omitted) when `boot_mode="firmware"`.
+</ParamField>
+
+<ParamField path="rootfs_path" type="Path" required>
+  Path to the root filesystem image. The path must exist and point to a valid file.
+</ParamField>
+
+<ParamField path="rootfs_format" type='Literal["raw-ext4", "qcow2"] | None' default="None">
+  Declared format of `rootfs_path`. New configs should set this explicitly:
+
+  * `"raw-ext4"` — a raw ext4 filesystem image (the default for `ImageBuilder` and `DockerRootfsBuilder`).
+  * `"qcow2"` — a QEMU qcow2 disk image (used by Ubuntu and Windows cloud images).
+
+  When omitted, Celesto falls back to the filename suffix (`.qcow2` ⇒ `qcow2`, anything else ⇒ `raw-ext4`). Setting this correctly matters because Celesto uses it to pick the right QEMU drive format, backing-file format, and disk-resize strategy.
+</ParamField>
+
+<ParamField path="boot_args" type="str" default="console=ttyS0 reboot=k panic=1 pci=off">
+  Kernel boot arguments. For SSH-capable VMs built with ImageBuilder, include `init=/init`.
+</ParamField>
+
+<ParamField path="backend" type="str | None" default="None">
+  Runtime backend override. Valid options:
+
+  * `"firecracker"`: Use Firecracker VMM
+  * `"qemu"`: Use QEMU
+  * `"libkrun"`: Accepted by the source API, with limited public documentation
+  * `None` or `"auto"`: Auto-detect based on host capabilities
+
+  Celesto's public guides focus on Firecracker and QEMU because they have the broadest current support.
+</ParamField>
+
+<ParamField path="qemu_network" type="Literal['slirp', 'tap']" default="slirp">
+  How the QEMU backend connects the guest to the network. Ignored when `backend="firecracker"` (Firecracker always uses a host TAP device).
+
+  * `"slirp"` — Userspace NAT with host port forwards. It needs no administrator setup, works on macOS and Linux, and supports `open` and `off` internet modes. This is the default.
+  * `"tap"` — Give the guest a private IP through a host TAP device. On Linux this supports `open`, `off`, and IPv4 `restricted` modes, plus host access by guest IP or `expose_local()`. It requires `ip`, `nft`, and sudo; see [network configuration](/celesto/concepts/networking).
+</ParamField>
+
+<ParamField path="internet_settings" type="InternetSettings | None" default="None">
+  Outbound access policy. Open access is the default. QEMU supports off mode with `qemu_network="slirp"` on macOS and Linux; restricted IPv4 destinations require `qemu_network="tap"` on Linux. See [Network controls](/celesto/features/network-controls).
+</ParamField>
+
+<ParamField path="disk_mode" type="Literal['isolated', 'shared']" default="isolated">
+  Disk lifecycle mode:
+
+  * `"isolated"`: Clone rootfs per VM for sandbox isolation. Each VM gets its own copy.
+  * `"shared"`: Boot directly from `rootfs_path`. Multiple VMs can share the same disk image.
+</ParamField>
+
+<ParamField path="disk_size_mib" type="int | None" default="None">
+  Target size in MiB for the per-VM disk. Celesto only grows the disk — pick a value at least as large as the current rootfs size, otherwise creation fails with a clear error. Requires `disk_mode="isolated"`; shared base images are never resized. Works for both `raw-ext4` and `qcow2` rootfs formats.
+</ParamField>
+
+<ParamField path="grow_filesystem" type="bool" default="False">
+  Grow the guest filesystem to fill the resized disk during VM creation. Only supported for `rootfs_format="raw-ext4"` images and requires `e2fsprogs` (`e2fsck`, `resize2fs`) on the host. For qcow2 images, leave this `False` and grow the partition or filesystem from inside the guest instead.
+</ParamField>
+
+<ParamField path="retain_disk_on_delete" type="bool" default="False">
+  Whether to keep the isolated VM disk after deletion. When `True`, a later create operation with the same VM ID can reuse prior disk state.
+
+  Only applies when `disk_mode="isolated"`.
+</ParamField>
+
+<ParamField path="env_vars" type="dict[str, str]" default="{}">
+  Environment variables to inject into the guest after boot via SSH. Keys must be valid shell identifiers (matching `^[a-zA-Z_][a-zA-Z0-9_]*$`).
+
+  Variables are persisted in `/etc/profile.d/celesto_env.sh` and affect new SSH sessions/login shells.
+
+  Requires an SSH-capable image (boot args must contain `init=/init`).
+</ParamField>
+
+<ParamField path="network_rate_limit_mbps" type="int | None" default="None">
+  Optional network bandwidth limit in megabits per second. When set, Celesto caps the guest's outbound traffic to this rate. Must be at least 1.
+</ParamField>
+
+<ParamField path="port_forwards" type="list[PortForwardConfig]" default="[]">
+  Host-to-guest TCP port forwards configured at VM launch. This setting is supported by QEMU `slirp`; TAP applications use their guest IP or `expose_local()`. Each entry maps a `host_port` to a `guest_port`. Host and guest ports must be unique within the list.
+
+  ```python  theme={null}
+  from celesto.types import PortForwardConfig
+
+  port_forwards=[
+      PortForwardConfig(host_port=8080, guest_port=80),
+      PortForwardConfig(host_port=3000, guest_port=3000),
+  ]
+  ```
+</ParamField>
+
+<ParamField path="extra_drives" type="list[Path]" default="[]">
+  Additional block-device image paths to attach at boot. Each path must exist and point to a valid file.
+</ParamField>
+
+## Validation Rules
+
+### Path Validation
+
+Both `kernel_path` and `rootfs_path` are validated to ensure:
+
+1. The path exists on the filesystem
+2. The path points to a file (not a directory)
+
+Validation occurs during model instantiation.
+
+### Environment Variable Validation
+
+All keys in `env_vars` must be valid shell identifiers:
+
+* Start with a letter or underscore
+* Contain only letters, numbers, and underscores
+* Pattern: `^[a-zA-Z_][a-zA-Z0-9_]*$`
+
+Invalid keys raise a `ValidationError` during model instantiation.
+
+### VM ID Validation
+
+The `vm_id` must:
+
+* Be lowercase
+* Start and end with alphanumeric characters
+* Contain only lowercase letters, numbers, hyphens, and underscores
+* Be 1-64 characters long
+
+## Usage Examples
+
+### Basic Configuration
+
+```python  theme={null}
+from celesto import VMConfig
+from pathlib import Path
+
+config = VMConfig(
+    kernel_path=Path("/path/to/vmlinux"),
+    rootfs_path=Path("/path/to/rootfs.ext4"),
+)
+
+print(config.vm_id)  # Auto-generated, e.g., "vm-a1b2c3d4"
+print(config.vcpu_count)  # 2 (default)
+print(config.memory)  # 512 (default)
+```
+
+### Custom VM ID and Resources
+
+```python  theme={null}
+from celesto import VMConfig
+from pathlib import Path
+
+config = VMConfig(
+    vm_id="my-custom-vm",
+    vcpu_count=4,
+    memory=2048,
+    kernel_path=Path("/path/to/vmlinux"),
+    rootfs_path=Path("/path/to/rootfs.ext4"),
+)
+```
+
+### SSH-Capable VM with Environment Variables
+
+```python  theme={null}
+from celesto import VMConfig, SSH_BOOT_ARGS
+from pathlib import Path
+
+config = VMConfig(
+    vm_id="api-server",
+    vcpu_count=2,
+    memory=1024,
+    kernel_path=Path("/path/to/vmlinux"),
+    rootfs_path=Path("/path/to/alpine-ssh.ext4"),
+    boot_args=SSH_BOOT_ARGS,  # Includes init=/init for SSH support
+    env_vars={
+        "API_KEY": "secret-key",
+        "DATABASE_URL": "postgresql://localhost/mydb",
+        "LOG_LEVEL": "debug",
+    },
+)
+```
+
+### Shared Disk Mode
+
+```python  theme={null}
+from celesto import VMConfig
+from pathlib import Path
+
+# Multiple VMs can boot from the same rootfs
+config = VMConfig(
+    vm_id="shared-vm-1",
+    kernel_path=Path("/path/to/vmlinux"),
+    rootfs_path=Path("/shared/rootfs.ext4"),
+    disk_mode="shared",
+)
+```
+
+### Persistent Isolated Disk
+
+```python  theme={null}
+from celesto import VMConfig
+from pathlib import Path
+
+# Keep VM disk after deletion for state persistence
+config = VMConfig(
+    vm_id="stateful-vm",
+    kernel_path=Path("/path/to/vmlinux"),
+    rootfs_path=Path("/path/to/rootfs.ext4"),
+    disk_mode="isolated",
+    retain_disk_on_delete=True,
+)
+
+# Later, create a new VM with the same ID to reuse the disk
+config2 = VMConfig(
+    vm_id="stateful-vm",  # Same ID
+    kernel_path=Path("/path/to/vmlinux"),
+    rootfs_path=Path("/path/to/rootfs.ext4"),
+    disk_mode="isolated",
+)
+```
+
+### Windows guest
+
+Boot a pre-installed Windows 11 image. Requires `boot_mode="firmware"` and the QEMU backend; Celesto enforces both invariants.
+
+```python  theme={null}
+from celesto import VMConfig
+from celesto.types import GuestOS
+from pathlib import Path
+
+config = VMConfig(
+    vm_id="win11-vm",
+    vcpu_count=4,
+    memory=4096,
+    guest_os=GuestOS.WINDOWS,
+    boot_mode="firmware",
+    kernel_path=None,
+    rootfs_path=Path("/var/lib/vms/win11.qcow2"),
+    rootfs_format="qcow2",
+    backend="qemu",
+    disk_mode="isolated",
+)
+```
+
+For the high-level path, use [`Celesto(os="windows", image=...)`](/celesto/guides/windows-guests). Celesto handles the QEMU firmware settings and per-VM qcow2 disk setup for you.
+
+### QEMU Backend
+
+```python  theme={null}
+from celesto import VMConfig
+from pathlib import Path
+
+config = VMConfig(
+    vm_id="qemu-vm",
+    kernel_path=Path("/path/to/vmlinux"),
+    rootfs_path=Path("/path/to/rootfs.ext4"),
+    backend="qemu",
+    boot_args="console=ttyAMA0 reboot=k panic=1 init=/init",
+)
+```
+
+## Immutability
+
+VMConfig instances are frozen and cannot be modified after creation:
+
+```python  theme={null}
+config = VMConfig(
+    kernel_path=Path("/path/to/vmlinux"),
+    rootfs_path=Path("/path/to/rootfs.ext4"),
+)
+
+# This raises an error
+config.vcpu_count = 4  # ValidationError: "VMConfig" is frozen
+
+# Instead, create a new instance
+from pydantic import BaseModel
+
+new_config = config.model_copy(update={"vcpu_count": 4})
+```
+
+## Integration with Celesto
+
+Pass VMConfig to the Celesto constructor:
+
+```python  theme={null}
+from celesto import Celesto, VMConfig
+from pathlib import Path
+
+config = VMConfig(
+    vm_id="my-vm",
+    vcpu_count=2,
+    memory=512,
+    kernel_path=Path("/path/to/vmlinux"),
+    rootfs_path=Path("/path/to/rootfs.ext4"),
+    boot_args="console=ttyS0 reboot=k panic=1 init=/init",
+)
+
+with Celesto(config) as vm:
+    result = vm.run("echo 'Hello from configured VM'")
+    print(result.stdout)
+```
+
+## Building Images for VMConfig
+
+Use `ImageBuilder` to create kernel and rootfs images:
+
+```python  theme={null}
+from celesto import VMConfig, Celesto
+from celesto import ImageBuilder
+from pathlib import Path
+
+# Build an SSH-capable Alpine Linux image
+builder = ImageBuilder()
+public_key = Path("~/.ssh/id_rsa.pub").expanduser().read_text()
+
+kernel, rootfs = builder.build_alpine_ssh_key(
+    ssh_public_key=public_key,
+    name="my-alpine",
+    rootfs_size_mb=512,
+)
+
+# Use the built images in VMConfig
+config = VMConfig(
+    vm_id="alpine-vm",
+    kernel_path=kernel,
+    rootfs_path=rootfs,
+    boot_args="console=ttyS0 reboot=k panic=1 init=/init",
+)
+
+with Celesto(config) as vm:
+    result = vm.run("cat /etc/os-release")
+    print(result.stdout)
+```
+
+## Field Summary
+
+| Field                      | Type                    | Default                                    | Range/Validation                     |
+| -------------------------- | ----------------------- | ------------------------------------------ | ------------------------------------ |
+| `vm_id`                    | `str`                   | Auto-generated                             | `^[a-z0-9][a-z0-9_-]{0,62}[a-z0-9]$` |
+| `vcpu_count`               | `int`                   | `2`                                        | 1-32                                 |
+| `memory`                   | `int`                   | `512`                                      | 128-16384                            |
+| `guest_os`                 | `GuestOS`               | `GuestOS.ALPINE`                           | `alpine`, `ubuntu`, `windows`        |
+| `boot_mode`                | `Literal`               | `"direct_kernel"`                          | `"direct_kernel"`, `"firmware"`      |
+| `kernel_path`              | `Path \| None`          | Required for direct_kernel                 | Must exist as file                   |
+| `rootfs_path`              | `Path`                  | Required                                   | Must exist as file                   |
+| `rootfs_format`            | `Literal \| None`       | `None`                                     | `"raw-ext4"`, `"qcow2"`              |
+| `extra_drives`             | `list[Path]`            | `[]`                                       | Each must exist as file              |
+| `boot_args`                | `str`                   | `"console=ttyS0 reboot=k panic=1 pci=off"` | Any string                           |
+| `backend`                  | `str \| None`           | `None`                                     | `"firecracker"`, `"qemu"`, `"libkrun"`, `None` |
+| `qemu_network`             | `Literal`               | `"slirp"`                                  | `"slirp"`, `"tap"`                   |
+| `internet_settings`        | `InternetSettings \| None` | `None`                                  | See network controls                 |
+| `disk_mode`                | `Literal`               | `"isolated"`                               | `"isolated"`, `"shared"`             |
+| `disk_size_mib`            | `int \| None`           | `None`                                     | `>= 1` when set                      |
+| `grow_filesystem`          | `bool`                  | `False`                                    | Requires `rootfs_format="raw-ext4"`  |
+| `retain_disk_on_delete`    | `bool`                  | `False`                                    | `True`, `False`                      |
+| `env_vars`                 | `dict[str, str]`        | `{}`                                       | Keys must be valid shell identifiers |
+| `network_rate_limit_mbps`  | `int \| None`           | `None`                                     | >= 1 when set                        |
+| `port_forwards`            | `list[PortForwardConfig]` | `[]`                                     | No duplicate host or guest ports     |
