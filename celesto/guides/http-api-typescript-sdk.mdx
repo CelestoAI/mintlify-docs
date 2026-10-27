@@ -15,7 +15,7 @@ Use the HTTP API when:
 - You want to generate clients from the OpenAPI spec.
 - You want to keep one Celesto server process alive while several tools make requests.
 
-For Python-only workflows, the [`Celesto` class](/smolvm/api/smolvm) is still the shortest path.
+For Python-only workflows, the [`Celesto` class](/celesto/api/celesto) is still the shortest path.
 
 ## Start the server
 
@@ -124,22 +124,22 @@ Example response:
 
 ## Use the TypeScript client
 
-The Celesto repository includes a generated TypeScript client and a small wrapper class named `SmolVM`. In a project where that TypeScript package is available, point it at the local server:
+The Celesto repository includes a generated TypeScript client and a small wrapper class named `Celesto`. In a project where that TypeScript package is available, point it at the local server:
 
-```typescript smolvm-client.ts
-import { SmolVM } from "@celestoai/smolvm";
+```typescript celesto-client.ts
+import { Celesto } from "@celestoai/celesto";
 
-const smolvm = new SmolVM({
+const celesto = new Celesto({
   baseUrl: "http://127.0.0.1:8000",
 });
 
-const sandbox = await smolvm.sandbox.create({
+const sandbox = await celesto.sandbox.create({
   os: "ubuntu",
   memory: 512,
   disk_size: 1024,
 });
 
-const result = await smolvm.sandbox.exec(sandbox.id, {
+const result = await celesto.sandbox.exec(sandbox.id, {
   command: "uname -a",
   timeout: 30,
   shell: "login",
@@ -147,32 +147,32 @@ const result = await smolvm.sandbox.exec(sandbox.id, {
 
 console.log(result.stdout);
 
-await smolvm.sandbox.delete(sandbox.id);
+await celesto.sandbox.delete(sandbox.id);
 ```
 
-The wrapper groups operations under `smolvm.sandbox`:
+The wrapper groups operations under `celesto.sandbox`:
 
 | Method | HTTP call |
 | --- | --- |
-| `smolvm.sandbox.create(...)` | `POST /sandboxes` |
-| `smolvm.sandbox.list()` | `GET /sandboxes` |
-| `smolvm.sandbox.get(id)` | `GET /sandboxes/{id}` |
-| `smolvm.sandbox.exec(id, body)` | `POST /sandboxes/{id}/exec` |
-| `smolvm.sandbox.desktop(id)` | `GET /sandboxes/{id}/desktop` |
-| `smolvm.sandbox.delete(id)` | `DELETE /sandboxes/{id}` |
+| `celesto.sandbox.create(...)` | `POST /sandboxes` |
+| `celesto.sandbox.list()` | `GET /sandboxes` |
+| `celesto.sandbox.get(id)` | `GET /sandboxes/{id}` |
+| `celesto.sandbox.exec(id, body)` | `POST /sandboxes/{id}/exec` |
+| `celesto.sandbox.desktop(id)` | `GET /sandboxes/{id}/desktop` |
+| `celesto.sandbox.delete(id)` | `DELETE /sandboxes/{id}` |
 
 ## Get sandbox desktop connection details
 
-Use `sandbox.desktop(id)` to get the details you need to open a sandbox's desktop viewer from a Node or TypeScript app. This is the SDK equivalent of the [`celesto sandbox desktop`](/smolvm/guides/macos-sandboxes) CLI command, so you can wire the same workflow into a service or agent instead of shelling out.
+Use `sandbox.desktop(id)` to get the details you need to open a sandbox's desktop viewer from a Node or TypeScript app. This is the SDK equivalent of the [`celesto sandbox desktop`](/celesto/guides/macos-sandboxes) CLI command, so you can wire the same workflow into a service or agent instead of shelling out.
 
 ```typescript sandbox-desktop.ts
-import { SmolVM } from "@celestoai/smolvm";
+import { Celesto } from "@celestoai/celesto";
 
-const smolvm = new SmolVM({
+const celesto = new Celesto({
   baseUrl: "http://127.0.0.1:8000",
 });
 
-const desktop = await smolvm.sandbox.desktop("vm-a1b2c3d4");
+const desktop = await celesto.sandbox.desktop("vm-a1b2c3d4");
 
 console.log(desktop.protocol);   // "vnc"
 console.log(desktop.host);       // "127.0.0.1"
@@ -231,10 +231,10 @@ Use that URL with your client generator of choice when you need another language
 ## Related
 
 <CardGroup cols={2}>
-  <Card title="celesto server" icon="server" href="/smolvm/cli/server">
+  <Card title="celesto server" icon="server" href="/celesto/cli/server">
     CLI reference for the local API server
   </Card>
-  <Card title="Celesto Python API" icon="code" href="/smolvm/api/smolvm">
+  <Card title="Celesto Python API" icon="code" href="/celesto/api/celesto">
     Use Celesto directly from Python
   </Card>
 </CardGroup>
