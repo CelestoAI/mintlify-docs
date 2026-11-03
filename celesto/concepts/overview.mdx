@@ -9,7 +9,7 @@ When you run code through Celesto, your commands execute inside a separate virtu
 
 When you call `Celesto()` and run a command, five things happen behind the scenes:
 
-1. **Celesto builds or reuses a lightweight Linux image** — a published preset such as Ubuntu, or a custom filesystem with your own tools.
+1. **Celesto builds or reuses a lightweight Linux image** — a published image such as Ubuntu, or a custom filesystem with your own tools.
 2. **A microVM boots** using Firecracker on Linux or QEMU on macOS and Linux.
 3. **A private network is created** so the sandbox can reach the internet but is isolated from other sandboxes.
 4. **Celesto connects to the sandbox** — over SSH, or a faster [vsock channel](/celesto/concepts/control-channel) when available — to execute your commands and return the output.

@@ -15,7 +15,7 @@ By default Celesto downloads images lazily the first time a sandbox needs them a
 ## Synopsis
 
 ```bash  theme={null}
-celesto image pull [PRESET] [--all] [OPTIONS]
+celesto image pull [IMAGE] [--all] [OPTIONS]
 celesto image list [OPTIONS]
 celesto image ls [OPTIONS]              # alias of `image list`
 celesto images [OPTIONS]                # top-level alias of `image list`
@@ -45,8 +45,8 @@ Resolution order for the cache directory (first match wins):
 
   ```bash  theme={null}
   export CELESTO_IMAGE_DIR=/data/celesto-images
-  celesto image pull codex
-  celesto sandbox create --preset codex
+  celesto image pull ubuntu
+  celesto sandbox create
   ```
 </Note>
 
@@ -57,12 +57,12 @@ Resolution order for the cache directory (first match wins):
 Download a published image (kernel + rootfs, verified and decompressed) ahead of time.
 
 ```bash  theme={null}
-celesto image pull codex
+celesto image pull ubuntu
 celesto image pull --all
 ```
 
-<ParamField path="preset" type="string">
-  Preset to fetch (for example `codex`, `claude-code`, `pi`). Required unless `--all` is set. `claude` is accepted as an alias for `claude-code`.
+<ParamField path="image" type="string">
+  Published image to fetch: `ubuntu` or `linux-desktop`. Required unless `--all` is set.
 </ParamField>
 
 <ParamField path="--all" type="flag">
@@ -93,7 +93,7 @@ Preview and warm-up patterns:
 
 ```bash  theme={null}
 # CI: pre-download the image the build will use
-celesto image pull codex
+celesto image pull ubuntu
 
 # Air-gapped prep: fetch every image for this host in one go
 celesto image pull --all --os ubuntu
@@ -101,7 +101,7 @@ celesto image pull --all --os ubuntu
 
 ### list / ls / images
 
-Show every entry in the cache with preset, platform, version-staleness, size, and age. `celesto images` and `celesto image ls` are aliases of `celesto image list` — same output, same JSON envelope.
+Show every entry in the cache with its kind, platform, version (stale versions are flagged), age, and size. `celesto images` and `celesto image ls` are aliases of `celesto image list` — same output, same JSON envelope.
 
 ```bash  theme={null}
 celesto images
@@ -110,10 +110,9 @@ celesto images
 Example output:
 
 ```
-NAME                                         TYPE     PRESET       CREATED         SIZE
-codex-v0.0.24-amd64-firecracker              image    codex        2 hours ago     1.9 GiB
-base-kernel-v0.0.24-amd64                    kernel   -            2 hours ago     34 MiB
-custom/my-agent/9c1e4a2f                     custom   my-agent     10 minutes ago  620 MiB
+NAME                                  KIND     PLATFORM                   VERSION   CREATED         SIZE
+ubuntu-v0.1.11-amd64-firecracker      image    amd64/firecracker/ubuntu   0.1.11    2 hours ago     1.1 GiB
+base-kernel-v0.1.11-amd64             kernel   amd64                      0.1.11    2 hours ago     34 MiB
 ```
 
 Sizes are computed from allocated blocks, so sparse rootfs files report what deleting them will actually free.
@@ -123,12 +122,12 @@ Sizes are computed from allocated blocks, so sparse rootfs files report what del
 Print a Docker-style JSON array describing one image: parsed fields, per-file sizes (both apparent and on-disk), the rootfs sidecar, and — for current-version published entries — the manifest URLs, SHAs, and release tag.
 
 ```bash  theme={null}
-celesto image inspect codex
+celesto image inspect ubuntu
 celesto image inspect custom/my-agent
 ```
 
 <ParamField path="name" type="string" required>
-  Preset name (matches every entry for that preset), full cache directory name (as shown by `image list`), or a custom image's `custom/<name>` handle. Absolute paths that `image list` prints are also accepted.
+  Published image name such as `ubuntu` (matches every cached entry for that image), full cache directory name (as shown by `image list`), or a custom image's `custom/<name>` handle. Absolute paths that `image list` prints are also accepted.
 </ParamField>
 
 ### rm
@@ -136,14 +135,14 @@ celesto image inspect custom/my-agent
 Remove a downloaded image to free space. Deletion is confined to direct children of the resolved image directory — symlinks are unlinked in place and never followed.
 
 ```bash  theme={null}
-celesto image rm codex                        # every codex entry
-celesto image rm codex-v0.0.24-amd64-firecracker
+celesto image rm ubuntu                       # every ubuntu entry
+celesto image rm ubuntu-v0.1.11-amd64-firecracker
 celesto image rm custom/my-agent
 celesto image rm custom/my-agent/9c1e4a2f     # one build
 ```
 
 <ParamField path="name" type="string" required>
-  Preset name, full cache directory name, or `custom/<name>[/<fingerprint>]` handle. Fingerprints accept Docker-style unique prefixes.
+  Published image name, full cache directory name, or `custom/<name>[/<fingerprint>]` handle. Fingerprints accept Docker-style unique prefixes.
 </ParamField>
 
 <ParamField path="--dry-run" type="flag">
@@ -205,10 +204,10 @@ Move an image between hosts without going through the network. `save` packs a ca
 
 ```bash  theme={null}
 # on the source host
-celesto image save codex -o codex.tar
+celesto image save ubuntu -o ubuntu.tar
 
-# copy codex.tar to the destination host (scp, rsync, USB stick), then:
-celesto image load -i codex.tar
+# copy ubuntu.tar to the destination host (scp, rsync, USB stick), then:
+celesto image load -i ubuntu.tar
 ```
 
 The archive carries a `manifest.json` describing every member. Load stages into a hidden `.partial` directory and renames atomically; malicious archives (traversal, absolute paths, undeclared members, unsupported schema versions) are rejected before anything reaches the cache. Use `--force` on `load` to replace an existing entry.
@@ -235,7 +234,7 @@ If you `pull` into a directory that isn't reachable via `CELESTO_IMAGE_DIR`, the
 | ---- | --------------------------------------------------------------------------- |
 | `0`  | Success                                                                     |
 | `1`  | Runtime error (download failed, disk full, corrupt archive, partial batch)  |
-| `2`  | Invalid usage (missing subcommand, conflicting flags, unknown preset)       |
+| `2`  | Invalid usage (missing subcommand, conflicting flags, unknown image)        |
 
 ## Related
 

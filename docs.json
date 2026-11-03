@@ -65,7 +65,6 @@
             "pages": [
               "celesto/features/callbacks",
               "celesto/features/browser-sandboxes",
-              "celesto/features/coding-agents",
               "celesto/features/docker",
               "celesto/features/host-mounts",
               "celesto/features/network-controls",
@@ -443,6 +442,7 @@
     { "source": "/celesto-sdk/cli", "destination": "/cloud/cli" },
     { "source": "/cloud/managed-agents/:slug*", "destination": "/cloud/overview" },
     { "source": "/cloud/deployments", "destination": "/cloud/overview" },
+    { "source": "/celesto/features/coding-agents", "destination": "/getting-started/coding-agents" },
     { "source": "/agentor/tracing", "destination": "/agentor/guides/observability" },
     { "source": "/enterprise/:slug*", "destination": "/" },
     { "source": "/smolvm/api/smolvm", "destination": "/celesto/api/celesto" },
