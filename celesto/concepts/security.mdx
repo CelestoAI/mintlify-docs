@@ -150,7 +150,7 @@ Celesto now generates fresh SSH host keys the first time each sandbox boots, bef
 
 ### Your public key is injected at boot
 
-When you run `celesto claude start` or any other preset, Celesto passes your SSH public key to the sandbox on the kernel command line. The first-boot script base64-decodes the key, writes it to `/root/.ssh/authorized_keys` with mode `0600`, and starts `sshd`. The image itself never contains your key, so the same image can be safely cached and reused across machines.
+When Celesto creates a sandbox, it passes your SSH public key to the sandbox on the kernel command line. The first-boot script base64-decodes the key, writes it to `/root/.ssh/authorized_keys` with mode `0600`, and starts `sshd`. The image itself never contains your key, so the same image can be safely cached and reused across machines.
 
 ### Password authentication is disabled
 

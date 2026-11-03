@@ -280,7 +280,7 @@ A few environment variables on your host machine change how Celesto itself behav
 </ResponseField>
 
 <ResponseField name="CELESTO_USE_PUBLISHED" type="string" default="1">
-  Controls the [published-image fast path](/celesto/concepts/published-images). On by default. Set to `0`, `false`, or `no` to force Celesto to build images locally instead of downloading pre-built ones. Useful when you're testing changes to a preset's install script.
+  Controls the [published-image fast path](/celesto/concepts/published-images). On by default. Set to `0`, `false`, or `no` to force Celesto to build images locally instead of downloading pre-built ones.
 </ResponseField>
 
 <ResponseField name="CELESTO_VERBOSE_BOOT" type="string">
@@ -291,30 +291,6 @@ A few environment variables on your host machine change how Celesto itself behav
   ```
 
   This only affects sandboxes that use the default low-latency boot profile (`MICROVM_DIRECT`). It does not change behaviour after the guest is up.
-</ResponseField>
-
-### Coding-agent presets
-
-When you launch a coding-agent preset, Celesto forwards a small list of host environment variables into the sandbox so the agent can authenticate without an extra login step.
-
-<ResponseField name="OPENAI_API_KEY" type="string">
-  Forwarded to presets that talk to OpenAI APIs, including `codex` and `opencode`.
-</ResponseField>
-
-<ResponseField name="OPENROUTER_API_KEY" type="string">
-  Forwarded to the `opencode` preset and any preset that supports OpenRouter.
-</ResponseField>
-
-<ResponseField name="ANTHROPIC_API_KEY" type="string">
-  Forwarded to the `opencode` preset for Anthropic models.
-</ResponseField>
-
-<ResponseField name="GOOGLE_API_KEY" type="string">
-  Forwarded to the `opencode` preset for Google models. `GEMINI_API_KEY` is forwarded as well.
-</ResponseField>
-
-<ResponseField name="AWS_ACCESS_KEY_ID" type="string">
-  Forwarded to the `opencode` preset for Amazon Bedrock. `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`, and `AWS_REGION` are forwarded together with it.
 </ResponseField>
 
 ## Variable validation

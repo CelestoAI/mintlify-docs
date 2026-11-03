@@ -1,6 +1,6 @@
 ---
 title: "celesto sandbox list"
-description: "Use celesto sandbox list to view sandboxes, filter by state or preset, and produce JSON for scripts."
+description: "Use celesto sandbox list to view sandboxes, filter by state, and produce JSON for scripts."
 ---
 
 `celesto sandbox list` shows the sandboxes on your machine. Use it to find a sandbox name, check whether one is still running, or feed sandbox data into a script.
@@ -31,26 +31,6 @@ celesto sandbox list --all
 celesto sandbox list --status stopped
 ```
 
-### Filter by preset
-
-A preset is a ready-made sandbox setup for an agent. Use `--preset` to show only sandboxes created by one preset. The table adds a Preset column so you can tell which agent produced each sandbox:
-
-```bash
-celesto sandbox list --preset codex
-# NAME              PRESET     STATUS   PID
-# codex-work        codex      running  12345
-```
-
-Add `--all` to include that preset's sandboxes in every state:
-
-```bash
-celesto sandbox list --preset codex --all
-```
-
-<Note>
-  Preset filtering uses information saved when Celesto creates a sandbox. Sandboxes created by older Celesto releases and manually prepared sandboxes remain available through `celesto sandbox list --all`, but do not appear in preset-filtered results. Their Preset column shows `-`.
-</Note>
-
 ### Use JSON output
 
 ```bash
@@ -65,13 +45,12 @@ celesto sandbox list --json
   "data": {
     "filters": {
       "all": false,
-      "status": "running",
-      "preset": null
+      "status": "running"
     },
     "vms": [
       {
-        "name": "codex-work",
-        "preset": "codex",
+        "name": "my-sandbox",
+        "preset": null,
         "status": "running",
         "pid": 12345,
         "ip_address": "172.16.0.2",
@@ -94,12 +73,8 @@ celesto sandbox list --json
   Show only sandboxes in one state. Use one of the states printed by `celesto sandbox list --all`.
 </ParamField>
 
-<ParamField path="--preset" type="string">
-  Show only sandboxes created by this preset, such as `codex` or `claude-code`. You can combine this with `--all` or `--status`.
-</ParamField>
-
 <ParamField path="--json" type="flag">
-  Print a JSON envelope instead of a table. Each sandbox includes its stored `preset`, and `filters` includes the active `preset` filter.
+  Print a JSON envelope instead of a table.
 </ParamField>
 
 <Note>
