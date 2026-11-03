@@ -16,7 +16,7 @@ You can use a personal GitHub account or a GitHub organization. First [install a
 | GitHub `services:` | Start PostgreSQL before job steps and execute a SQL query |
 | Docker layer cache | Save layers with `cache-to: type=gha` and restore them in a later job |
 
-The [live functional check](https://github.com/CelestoAI/ci-benchmarks/actions/runs/39071944026) and [repeated benchmark](https://github.com/CelestoAI/ci-benchmarks/tree/e4461a43c193d56560c7df56ceff7fb3170cee78/results/docker-2026-10-17) record these results. Docker-based actions and whole-job `container:` configurations were not separately established by those checks; validate your chosen action or job image before migrating it.
+The [live functional check](https://github.com/CelestoAI/ci-benchmarks/actions/runs/39071944026) and [repeated benchmark](https://github.com/CelestoAI/ci-benchmarks/tree/e4461a43c193d56560c7df56ceff7fb3170cee78/results/docker-2026-10-17) record the image build, Compose, and `services:` results. The [cache acceptance suite](https://github.com/CelestoAI/ci-benchmarks/blob/b01cdd64451ee60d10795ac33c2be9d465d2498e/cache-tests/README.md) covers the layer cache. Docker-based actions and whole-job `container:` configurations were not separately established by those checks; validate your chosen action or job image before migrating it.
 
 ## Build and run an image
 
@@ -99,7 +99,7 @@ jobs:
 - `mode=max` saves the layers from every build stage, not only the final image.
 - `scope` names the cache. Give each image its own scope so builds don't overwrite each other's layers.
 
-Workflows that already use `type=gha` caching on GitHub-hosted runners work without changes. The first Celesto run misses because GitHub keeps its caches in a separate store.
+If your workflow already uses `cache-from` and `cache-to` with `type=gha`, you only need to switch `runs-on` to a Celesto runner. This works when the workflow uses the cache address the runner provides. Workflows that set their own cache address are an exception. The first Celesto run misses because GitHub keeps its caches in a separate store.
 
 Saved layers count toward the same [storage limits](/ci/caching#storage-limits-and-cleanup) as your other caches and follow the same access rules and 7-day expiry. Large layer caches can cause older dependency caches to be removed sooner. A restore can still miss, so compare complete build time with and without the cache.
 
