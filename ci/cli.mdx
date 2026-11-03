@@ -1,0 +1,76 @@
+---
+title: "Check CI jobs from the terminal"
+sidebarTitle: "Check jobs from the terminal"
+description: "Use the celesto CLI to list your Celesto CI jobs, see what passed or failed, read job logs, and check available runner sizes from your terminal."
+---
+
+Check your CI jobs without leaving your terminal. You can see which jobs passed or failed, read their logs, and see which machine sizes are available. Your coding agent can use the same commands to help you investigate a failed job.
+
+These commands only read information. They don't change, cancel, or rerun jobs.
+
+## Before you start
+
+Install or upgrade the CLI and sign in with your API key:
+
+```bash
+pip install -U celesto
+celesto auth login
+```
+
+See the [CLI reference](/cloud/cli#install-and-sign-in) for more on signing in.
+
+## List your jobs
+
+See your recent CI jobs:
+
+```bash
+celesto ci jobs list
+```
+
+Narrow the list by status, repository, or workflow. For example, show only failed jobs in one repository:
+
+```bash
+celesto ci jobs list --status failed --repo acme/api
+```
+
+## See job details
+
+Use a job ID from the list to see its status, machine size, branch, and a link to the job on GitHub:
+
+```bash
+celesto ci jobs show <job-id>
+```
+
+## Read job logs
+
+Print the logs for a job:
+
+```bash
+celesto ci logs <job-id>
+```
+
+Add `--step` to see the logs for one step only. For example, show step 4:
+
+```bash
+celesto ci logs <job-id> --step 4
+```
+
+## Check runner sizes
+
+See the machine sizes you can use, with their CPU, memory, and disk:
+
+```bash
+celesto ci runners list
+```
+
+Use a size's label in your workflow's `runs-on` line. See [runner sizes](/ci/runner-sizes) to pick the right one.
+
+## Use the output in scripts and coding agents
+
+Add `--json` to any of these commands to get output that a script or coding agent can read:
+
+```bash
+celesto ci jobs list --status failed --json
+```
+
+If a job never started, use [troubleshooting](/ci/troubleshooting) to find out what blocked it.
