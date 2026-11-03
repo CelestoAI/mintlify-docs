@@ -1,6 +1,6 @@
 ---
 title: "Docker and services"
-description: "Build Docker images and run PostgreSQL and Azurite tests with Celesto CI, including Compose and GitHub service containers."
+description: "Build and cache Docker images and run PostgreSQL and Azurite tests with Celesto CI, including Compose and GitHub service containers."
 ---
 
 Build your application's images and test it with databases on Celesto CI. Docker Engine, Buildx, and Compose are included in the Linux runner image, and Docker starts before the runner accepts your job.
@@ -14,6 +14,7 @@ You can use a personal GitHub account or a GitHub organization. First [install a
 | Docker image builds | Build, load, and execute an image with Buildx |
 | Docker Compose | Run PostgreSQL and Azurite together; the repeated benchmark checks SQL and Azure Blob operations through a Python application |
 | GitHub `services:` | Start PostgreSQL before job steps and execute a SQL query |
+| Docker layer cache | Save layers with `cache-to: type=gha` and restore them in a later job |
 
 The [live functional check](https://github.com/CelestoAI/ci-benchmarks/actions/runs/39071944026) and [repeated benchmark](https://github.com/CelestoAI/ci-benchmarks/tree/e4461a43c193d56560c7df56ceff7fb3170cee78/results/docker-2026-10-17) record these results. Docker-based actions and whole-job `container:` configurations were not separately established by those checks; validate your chosen action or job image before migrating it.
 
@@ -67,15 +68,47 @@ At higher job volumes, unauthenticated Docker Hub pulls can reach registry limit
 
 GitHub pulls `services:` images before executing job steps. Put credentials in the service's `credentials` configuration when the registry requires authentication; a later `docker login` step is too late for that pull. The walkthrough includes both patterns.
 
-## Check cache and CPU-limit compatibility
+## Cache image layers between jobs
 
-The October 17 benchmark found two failures on Celesto:
+Docker builds images in steps called layers. Reusing saved layers lets later builds skip steps that haven't changed.
 
-- Direct BuildKit cache export with `type=gha,version=2` failed preflight.
-- Docker's explicit `--cpus` flag failed preflight.
+Each job gets a fresh computer, so local Docker images and layers disappear when the job ends. To reuse layers in a later job, save them to the Celesto cache with `cache-to: type=gha` and restore them with `cache-from: type=gha`. No special runner label or setting is needed.
 
-The tested builds used the runner VM's CPU allocation and either a registry cache or portable cache archives transferred through `actions/cache`. These alternatives passed their checks; they do not establish that the failing options are fixed.
+For a repository with a `Dockerfile` at its root, save this workflow as `.github/workflows/docker-cache.yml`:
 
-Each job gets a fresh computer. Local Docker images and build layers do not automatically survive into the next job. Compare complete build time, including cache transfer and import, before choosing a cache strategy. See [benchmarking](/ci/benchmarking) for the measured tradeoffs.
+```yaml .github/workflows/docker-cache.yml
+name: Docker build with cache
+on: [push, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: [self-hosted, celesto-large]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          cache-from: type=gha,scope=app
+          cache-to: type=gha,mode=max,scope=app
+```
+
+- `mode=max` saves the layers from every build stage, not only the final image.
+- `scope` names the cache. Give each image its own scope so builds don't overwrite each other's layers.
+
+Workflows that already use `type=gha` caching on GitHub-hosted runners work without changes. The first Celesto run misses because GitHub keeps its caches in a separate store.
+
+Saved layers count toward the same [storage limits](/ci/caching#storage-limits-and-cleanup) as your other caches and follow the same access rules and 7-day expiry. Large layer caches can cause older dependency caches to be removed sooner. A restore can still miss, so compare complete build time with and without the cache.
+
+The [public cache acceptance suite](https://github.com/CelestoAI/ci-benchmarks/blob/b01cdd64451ee60d10795ac33c2be9d465d2498e/cache-tests/README.md) includes Docker workflows you can run to check caching in your own repository. It checks that caching works, not how much time it saves.
+
+## Limit CPU for containers
+
+Docker's `--cpus` flag and Compose's `cpus` setting work on Celesto. A [public check on October 28](https://github.com/CelestoAI/ci-benchmarks/actions/runs/40665413640) passed with `docker run --cpus 1` and Compose `cpus: "0.5"`.
+
+The October 17 benchmark recorded failures for `--cpus` and for BuildKit cache export with `type=gha,version=2`. Those results came before these fixes.
 
 For a failing migration, retain the Actions logs and runner size, and [contact support](mailto:aniket@celesto.ai) with a workflow that has secrets removed.

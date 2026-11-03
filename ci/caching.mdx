@@ -118,4 +118,4 @@ Reason or required timing:
 
 Request confirmation when deletion is complete. If you need to prevent the same data from being saved again, remove the cache step or affected paths before starting another run. If a cache contained a credential, revoke or rotate it immediately; changing the cache key does not remove the exposure.
 
-For Docker build caches and their separate compatibility limits, see [Docker and services](/ci/docker).
+To save Docker image layers between jobs, see [Cache image layers between jobs](/ci/docker#cache-image-layers-between-jobs). Saved layers count toward the same storage limits.

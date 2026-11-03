@@ -224,4 +224,4 @@ Keep Nx's checks for trusted cache files enabled. Follow the chosen provider's N
 
 ## Cache Docker builds separately
 
-Docker saves reusable parts of an image, called layers, in a separate cache. Store those layers in an image registry, such as GitHub Container Registry (GHCR), following [Docker cache compatibility guidance](/ci/docker#check-cache-and-cpu-limit-compatibility). The tested Celesto workflow found that direct BuildKit cache export with `type=gha,version=2` failed.
+Docker saves reusable parts of an image, called layers, separately from your dependency and task caches. Save and restore them with `cache-to` and `cache-from` set to `type=gha`, as shown in [Cache image layers between jobs](/ci/docker#cache-image-layers-between-jobs).
