@@ -49,7 +49,7 @@ Use the [pinned benchmark methodology and workflow instructions](https://github.
 
 Before launching it, connect the Celesto GitHub App to your repository, fund the selected runner size, and configure the registry credentials described in the harness. Repeated jobs consume runner credit, registry pulls, and cache space. Start with one paired run and confirm correctness before launching the repeated suite.
 
-Direct BuildKit `type=gha,version=2` export and explicit Docker `--cpus` limits failed Celesto preflight in this benchmark. Registry and portable caching were tested separately. Review [Docker compatibility](/ci/docker) before selecting a scenario.
+Direct BuildKit `type=gha,version=2` export and explicit Docker `--cpus` limits failed Celesto preflight in this benchmark. Registry and portable caching were tested separately. Both failures have since been fixed. See [Docker layer caching](/ci/docker#cache-image-layers-between-jobs) and [CPU limits](/ci/docker#limit-cpu-for-containers).
 
 ## Decide whether caching helps
 
