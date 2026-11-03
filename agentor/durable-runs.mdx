@@ -146,7 +146,7 @@ agent.fork(result.run_id, "Make it punchier", fork_id="launch-plan-punchy")
 
 `fork()` raises `ValueError` if that id is already taken.
 
-`max_turns` and `tracing` behave the same as on `run()` — they apply only to the fork's continuation, never to the run being copied.
+`max_turns` behaves the same as on `run()` — it applies only to the fork's continuation, never to the run being copied.
 
 ## What gets written
 
@@ -267,10 +267,6 @@ async for event in agent.stream_chat("What is the weather in Tokyo?"):
 ## Next steps
 
 <CardGroup cols={2}>
-  <Card title="Tracing" icon="chart-line" href="/agentor/tracing">
-    The same events power Celesto traces. Watch a run instead of reading its log.
-  </Card>
-
   <Card title="Structured output" icon="brackets-curly" href="/agentor/structured-output">
     Get a typed object back from a run instead of a block of text.
   </Card>

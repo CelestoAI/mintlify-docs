@@ -341,7 +341,7 @@ asyncio.run(main())
   Prepended to every tool name from this server. Use it when two servers expose the same tool name — otherwise the second one is skipped with a warning.
 </ParamField>
 
-Remote tools behave like local ones: they appear in traces, and a tool that keeps failing is withdrawn after the same [failure budget](/agentor/guides/observability#failing-tools-do-not-kill-the-run).
+Remote tools behave like local ones: they appear in the run's events, and a tool that keeps failing is withdrawn after the same [failure budget](/agentor/guides/observability#failing-tools-do-not-kill-the-run).
 
 ### Inspect a server directly
 

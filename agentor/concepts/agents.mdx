@@ -7,7 +7,7 @@ description: "Agent architecture in Agentor: how the Agent class handles configu
 
 An Agentor agent is a model, a set of tools, and the loop that drives them. The loop calls the model; if the model asks for tools, the loop runs them and feeds the results back; it repeats until the model stops asking or the turn budget runs out.
 
-Everything the loop does is emitted as an event. Streaming, the final result, [traces](/agentor/tracing), and [durable runs](/agentor/durable-runs) are all views of that one stream.
+Everything the loop does is emitted as an event. Streaming, the final result, and [durable runs](/agentor/durable-runs) are all views of that one stream.
 
 ## Agent Class
 
@@ -27,7 +27,7 @@ agent = Agentor(
 ### Constructor Parameters
 
 <ParamField path="name" type="str" required>
-  Agent name used in logs, traces, and A2A protocol agent cards
+  Agent name used in logs and A2A protocol agent cards
 </ParamField>
 
 <ParamField path="instructions" type="str">
@@ -73,10 +73,6 @@ agent = Agentor(
 
 <ParamField path="skills" type="List[str]">
   Paths to skill directories (see [Skills](/agentor/concepts/skills))
-</ParamField>
-
-<ParamField path="enable_tracing" type="bool" default={false}>
-  Enable Celesto AI tracing and observability
 </ParamField>
 
 <ParamField path="api_key" type="str">
@@ -212,23 +208,6 @@ def get_weather(wrapper: RunContext, city: str) -> str:
 <Note>
   The older `RunContextWrapper` annotation from openai-agents is still recognised, so tools written before 0.1.0 keep working without an edit.
 </Note>
-
-## Tracing and Observability
-
-Opt in to tracing with Celesto AI:
-
-```python  theme={null}
-agent = Agentor(
-    name="My Agent",
-    model="gpt-4o",
-    enable_tracing=True  # Requires CELESTO_API_KEY
-)
-```
-
-Traces appear at `https://celesto.ai/observe`.
-
-Tracing is off unless you ask for it, so there is nothing to disable. To exclude
-a single run from an agent that has it on, pass `tracing=False` on that call.
 
 ## Next Steps
 

@@ -16,23 +16,6 @@ you can run a Python web service will do:
 The app carries no authentication of its own. Put it behind whatever your
 infrastructure already uses.
 
-## Observability
-
-Tracing is off unless you ask for it. A trace carries prompts, tool arguments and
-tool results, so nothing leaves your process by default:
-
-```python  theme={null}
-agent = Agentor(
-    name="Production Agent",
-    model="gpt-4o",
-    enable_tracing=True,   # needs CELESTO_API_KEY
-)
-```
-
-You can also decide per run - `agent.run("...", tracing=False)` sends nothing for
-that call, and `tracing=True` traces one run without turning it on for the agent.
-See [Tracing](/agentor/tracing) for the full picture.
-
 ## Self-Hosted Deployment
 
 ### Local Development
@@ -142,7 +125,6 @@ services:
       - "8000:8000"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - CELESTO_API_KEY=${CELESTO_API_KEY}
     restart: unless-stopped
 ```
 
@@ -289,20 +271,6 @@ gcloud run deploy my-agent \
 
 ## Environment Configuration
 
-### Production Settings
-
-Configure for production (src/agentor/config.py):
-
-```python  theme={null}
-import os
-from dataclasses import dataclass
-
-@dataclass
-class Config:
-    base_url: str = os.getenv("CELESTO_BASE_URL", "https://api.celesto.ai")
-    api_key: str | None = os.getenv("CELESTO_API_KEY")
-```
-
 ### Required Environment Variables
 
 ```bash  theme={null}
@@ -310,9 +278,6 @@ class Config:
 export OPENAI_API_KEY="sk-..."
 export ANTHROPIC_API_KEY="sk-ant-..."
 export GEMINI_API_KEY="..."
-
-# Celesto tracing (only needed if you pass enable_tracing=True)
-export CELESTO_API_KEY="..."
 
 # Tool-specific keys
 export WEATHER_API_KEY="..."
@@ -350,19 +315,6 @@ logging.basicConfig(
 )
 
 agent.serve(log_level="info")
-```
-
-### Tracing
-
-Enable Celesto tracing (src/agentor/tracer.py):
-
-```python  theme={null}
-from agentor.tracer import setup_celesto_tracing
-
-setup_celesto_tracing(
-    endpoint="https://api.celesto.ai/traces/ingest",
-    token="your-celesto-key"
-)
 ```
 
 ### Metrics
@@ -505,9 +457,5 @@ agent.serve(
 
   <Card title="MCP Servers" icon="plug" href="/agentor/concepts/mcp">
     Deploy MCP servers
-  </Card>
-
-  <Card title="Celesto AI" icon="cloud" href="https://celesto.ai">
-    Deploy to Celesto platform
   </Card>
 </CardGroup>

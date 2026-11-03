@@ -223,7 +223,7 @@ private_key, public_key = ensure_ssh_key()
 builder = ImageBuilder()
 kernel, rootfs = builder.build_debian_ssh_key(
     ssh_public_key=public_key,
-    name="debian-openclaw-4g",
+    name="debian-4g",
     rootfs_size_mb=4096,
 )
 

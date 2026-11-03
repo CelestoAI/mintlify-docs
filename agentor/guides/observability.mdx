@@ -1,41 +1,11 @@
 ---
 title: "Monitoring agents in production"
-description: "Watch Agentor agents in production: send traces to Celesto, read token usage and tool history from a run result, and spot runs that hit the turn limit."
+description: "Watch Agentor agents in production: read token usage and tool history from a run result, spot runs that hit the turn limit, and keep a copy of every run."
 ---
 
 Once an agent is live you stop asking "does it work?" and start asking "what did it just do, and what did it cost?". Agentor answers both from one place: the stream of events every run emits.
 
-Those events go two ways. They are uploaded to Celesto as a [trace](/agentor/tracing) you can click through, and they come back on the result object so your own code can read them.
-
-## Send runs to Celesto
-
-Set your Celesto API key and turn tracing on for the agent — a run is only recorded when both are true:
-
-```bash
-export CELESTO_API_KEY="cel_..."
-```
-
-```python
-from agentor import Agentor
-
-agent = Agentor(
-    name="Support Agent",
-    model="gpt-5-mini",
-    tools=["get_weather"],
-    enable_tracing=True,
-)
-
-result = agent.run("What's the weather in Paris?")
-# View the trace at https://celesto.ai/observe
-```
-
-Each run becomes one trace: an agent span, a span per model call, and a span per tool call, with timings and token counts throughout. See [Tracing](/agentor/tracing) for setup options, private endpoints, and what each span holds.
-
-<Tip>
-  Tests need no special handling - tracing is off unless you ask for it. To keep
-  one run out of an agent that has it on, pass `tracing=False` on that call. Runs
-  behave identically either way; only the upload is skipped.
-</Tip>
+Those events come back on the result object, so your own code can read them.
 
 ## Read a run in code
 
@@ -137,7 +107,7 @@ A run that did not produce an answer is not automatically an exception. Check `s
   </Tab>
 
   <Tab title="failed">
-    Something raised — a provider error, a bad API key, a network failure. The exception propagates to your caller, and the `run_end` event is still recorded with `status="failed"` so the trace and the saved run show what happened.
+    Something raised — a provider error, a bad API key, a network failure. The exception propagates to your caller, and the `run_end` event is still recorded with `status="failed"` so the saved run shows what happened.
   </Tab>
 </Tabs>
 
@@ -184,7 +154,7 @@ print(failures[0].error)      # RuntimeError: database unavailable
 
 ## Keep a copy of every run
 
-Tracing is for looking at runs. A [store](/agentor/durable-runs) is for keeping them — and for finishing them if the process dies:
+A [store](/agentor/durable-runs) keeps every run — and lets you finish one if the process dies:
 
 ```python
 from agentor.engine.store import FileStore
@@ -195,7 +165,7 @@ result = agent.run("Summarize today's tickets.")
 result.run_id  # 'cabc9046ac5040298aa362c0d6d2c5c5'
 ```
 
-Every event lands in `runs/<run_id>.jsonl` as it happens, so you can replay a run long after the dashboard has moved on, and `agent.resume(run_id)` can pick up an interrupted one.
+Every event lands in `runs/<run_id>.jsonl` as it happens, so you can replay a run later, and `agent.resume(run_id)` can pick up an interrupted one.
 
 ## Watch a run as it happens
 
@@ -214,10 +184,6 @@ See the [streaming guide](/agentor/guides/streaming) for the full event shape.
 ## Next steps
 
 <CardGroup cols={2}>
-  <Card title="Tracing" icon="chart-line" href="/agentor/tracing">
-    Set up Celesto tracing and learn what each span records.
-  </Card>
-
   <Card title="Durable runs" icon="floppy-disk" href="/agentor/durable-runs">
     Save runs to disk and resume them after a crash.
   </Card>
@@ -227,6 +193,6 @@ See the [streaming guide](/agentor/guides/streaming) for the full event shape.
   </Card>
 
   <Card title="Deployment" icon="cloud" href="/agentor/deploy">
-    Ship the agent, with observability already on.
+    Serve the agent as an API.
   </Card>
 </CardGroup>
