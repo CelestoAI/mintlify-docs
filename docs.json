@@ -167,7 +167,7 @@
           },
           {
             "group": "Manage CI",
-            "pages": ["ci/troubleshooting", "ci/security"]
+            "pages": ["ci/cli", "ci/troubleshooting", "ci/security"]
           },
           {
             "group": "FAQs",
