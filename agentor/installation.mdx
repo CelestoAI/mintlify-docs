@@ -127,33 +127,6 @@ You should see `0.1.0` (or later), or a `0.0.x` version if you pinned the old li
   `import agentor` should return almost instantly. Heavy dependencies are loaded only when something actually needs them.
 </Check>
 
-## Enable observability (optional)
-
-To turn on tracing and monitoring, set your Celesto API key:
-
-```bash
-export CELESTO_API_KEY=your_api_key
-```
-
-Get your key from the [Celesto dashboard](https://celesto.ai/dashboard).
-
-Tracing is off unless you ask for it. Opt in on the agent, or on a single call:
-
-```python
-from agentor import Agentor
-
-agent = Agentor(
-    name="My Agent",
-    model="gpt-5-mini",
-    enable_tracing=True,   # trace every run this agent makes
-)
-
-# Or trace one call from an otherwise-untraced agent.
-agent.run("Debug this", tracing=True)
-```
-
-View traces at [celesto.ai/observe](https://celesto.ai/observe). See [Tracing](/agentor/tracing) for the full guide.
-
 ## Next steps
 
 <CardGroup cols={2}>

@@ -143,16 +143,7 @@
             "group": "Agents and Integrations",
             "pages": [
               "cloud/mcp-server",
-              {
-                "group": "Managed agents",
-                "pages": [
-                  "cloud/managed-agents/overview",
-                  "cloud/managed-agents/quickstart",
-                  "cloud/managed-agents/reference"
-                ]
-              },
               "cloud/guides/pi-coding-agent",
-              "cloud/deployments",
               "cloud/openai-agents",
               "cloud/gatekeeper",
               "cloud/errors"
@@ -224,7 +215,6 @@
               "agentor/durable-runs",
               "agentor/model-providers",
               "agentor/deploy",
-              "agentor/tracing",
               "agentor/agent-to-agent",
               "agentor/concepts/skills"
             ]
@@ -444,15 +434,17 @@
     { "source": "/celesto-sdk/features/persistence", "destination": "/cloud/features/persistence" },
     { "source": "/celesto-sdk/features/petabyte-storage", "destination": "/cloud/features/petabyte-storage" },
     { "source": "/celesto-sdk/guides/publish-github-app", "destination": "/cloud/guides/publish-github-app" },
-    { "source": "/celesto-sdk/managed-agents/overview", "destination": "/cloud/managed-agents/overview" },
-    { "source": "/celesto-sdk/managed-agents/quickstart", "destination": "/cloud/managed-agents/quickstart" },
-    { "source": "/celesto-sdk/managed-agents/reference", "destination": "/cloud/managed-agents/reference" },
+    { "source": "/celesto-sdk/managed-agents/:slug*", "destination": "/cloud/overview" },
     { "source": "/celesto-sdk/guides/pi-coding-agent", "destination": "/cloud/guides/pi-coding-agent" },
-    { "source": "/celesto-sdk/deployments", "destination": "/cloud/deployments" },
+    { "source": "/celesto-sdk/deployments", "destination": "/cloud/overview" },
     { "source": "/celesto-sdk/openai-agents", "destination": "/cloud/openai-agents" },
     { "source": "/celesto-sdk/gatekeeper", "destination": "/cloud/gatekeeper" },
     { "source": "/celesto-sdk/errors", "destination": "/cloud/errors" },
     { "source": "/celesto-sdk/cli", "destination": "/cloud/cli" },
+    { "source": "/cloud/managed-agents/:slug*", "destination": "/cloud/overview" },
+    { "source": "/cloud/deployments", "destination": "/cloud/overview" },
+    { "source": "/agentor/tracing", "destination": "/agentor/guides/observability" },
+    { "source": "/enterprise/:slug*", "destination": "/" },
     { "source": "/smolvm/api/smolvm", "destination": "/celesto/api/celesto" },
     { "source": "/smolvm/:slug*", "destination": "/celesto/:slug*" }
   ],

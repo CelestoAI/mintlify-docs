@@ -283,7 +283,7 @@ The weather in Tokyo is sunny with a temperature of 22°C.
 [completed] 188 tokens
 ```
 
-`astream` emits the engine's raw events: `run_start`, `generation`, `text_delta`, `tool_call`, `tool_result`, `message`, and `run_end`. The same events power [tracing](/agentor/tracing) and [durable runs](/agentor/durable-runs).
+`astream` emits the engine's raw events: `run_start`, `generation`, `text_delta`, `tool_call`, `tool_result`, `message`, and `run_end`. The same events power [durable runs](/agentor/durable-runs).
 
 <Warning>
   Drain the generator. If you break out of an `astream` loop early, the run never finishes — its trace is not exported, and its saved log has no terminal event.

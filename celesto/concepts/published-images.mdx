@@ -26,14 +26,12 @@ The image release tag uses a date-based format such as `images-2026.09.07.0`. Th
 | --- | --- |
 | `codex` | OpenAI Codex CLI in a sandbox |
 | `claude-code` | Claude Code CLI in a sandbox |
-| `openclaw` | OpenClaw gateway and runtime |
 | `opencode` | OpenCode coding agent |
-| `hermes` | Hermes coding agent |
 | `pi` | Pi coding agent |
 | `ubuntu` | A clean Ubuntu base image |
 
 <Note>
-  Celesto v0.0.31 uses image release `images-2026.09.07.0`. Publishing an image does not automatically enable it in the CLI: OpenClaw still installs Node.js and OpenClaw inside each new sandbox, and OpenCode images are not yet selected by this release. Allow several minutes for OpenClaw setup.
+  Celesto v0.0.31 uses image release `images-2026.09.07.0`. Publishing an image does not automatically enable it in the CLI: OpenCode images are not yet selected by this release.
 </Note>
 
 The public CLI command for `claude-code` is `celesto claude start`.
