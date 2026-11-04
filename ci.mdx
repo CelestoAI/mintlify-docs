@@ -27,7 +27,7 @@ You need a GitHub account that administers the repositories you select, a Celest
     on: [push, workflow_dispatch]
     jobs:
       verify:
-        runs-on: [self-hosted, celesto-micro]
+        runs-on: celesto-micro
         timeout-minutes: 90
         steps:
           - uses: actions/checkout@v4
@@ -55,7 +55,7 @@ You need a GitHub account that administers the repositories you select, a Celest
 
 ## Sizes and prices
 
-Use `runs-on: [self-hosted, celesto-SIZE]` with exactly one label from this table. All sizes use Ubuntu 24.04 Linux x64. Prices are in USD; minute rates are rounded for display.
+Set `runs-on` to one label from this table, such as `runs-on: celesto-micro`. The `celesto` label also selects Micro. All sizes use Ubuntu 24.04 Linux x64. Prices are in USD; minute rates are rounded for display.
 
 | Size | Workflow label | vCPU | RAM | Disk | Per minute | Per hour |
 | --- | --- | ---: | ---: | ---: | ---: | ---: |
@@ -66,7 +66,7 @@ Use `runs-on: [self-hosted, celesto-SIZE]` with exactly one label from this tabl
 | Large | `celesto-large` | 4 | 16 GB | 60 GB | $0.00133333 | $0.080 |
 | XL | `celesto-xl` | 8 | 32 GB | 100 GB | $0.00266667 | $0.160 |
 
-For example, `runs-on: [self-hosted, celesto-memory]` selects 2 vCPU and 8 GB RAM. The current workspace billing catalog is authoritative; setup reads the current specs and rates.
+For example, `runs-on: celesto-memory` selects 2 vCPU and 8 GB RAM. The current workspace billing catalog is authoritative; setup reads the current specs and rates.
 
 Celesto charges workspace credit for the computer’s runtime, including preparation, job execution, and cleanup. The one-time $5 trial covers up to 20,000 Micro runtime minutes at the listed rate, expires after 30 days, and is shared with other sandbox usage. Other sizes require eligible workspace credit; some promotional credit is restricted to Micro or Small.
 

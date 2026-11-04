@@ -24,7 +24,7 @@ permissions:
   contents: read
 jobs:
   build:
-    runs-on: [self-hosted, celesto-micro]
+    runs-on: celesto-micro
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
