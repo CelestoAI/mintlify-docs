@@ -159,7 +159,7 @@
           },
           {
             "group": "Run your workflows",
-            "pages": ["ci/runner-sizes", "ci/docker", "ci/caching", "ci/languages/javascript"]
+            "pages": ["ci/runner-sizes", "ci/docker", "ci/caching", "ci/turbo-cache", "ci/languages/javascript"]
           },
           {
             "group": "Measure performance",

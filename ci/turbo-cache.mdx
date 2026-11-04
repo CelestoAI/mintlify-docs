@@ -1,0 +1,48 @@
+---
+title: "Turbo cache"
+description: "Celesto saves Turborepo task results automatically, so unchanged builds and checks are skipped on later CI runs. No setup or tokens needed."
+---
+
+Turborepo can skip a build or check that already ran with the same inputs, such as files and environment variables. Celesto saves those results for you, so later runs finish sooner.
+
+It works automatically on Celesto runners. You don't need `actions/cache` for `.turbo/cache`, and you don't need to set `TURBO_API`, `TURBO_TOKEN`, or `TURBO_TEAM`.
+
+## Before you start
+
+- Install Turborepo in your repository.
+- List each task's outputs in `turbo.json`. For example, a build that writes `dist` needs `"outputs": ["dist/**"]`. Turborepo restores only the files you list, so a missing output can leave your build incomplete.
+- List the environment variables each task depends on in `turbo.json`. Otherwise Turborepo can reuse a result built with different settings. See [Turborepo caching](https://turborepo.dev/docs/crafting-your-repository/caching).
+
+## Add Turbo to a workflow
+
+Run `turbo` in your workflow as usual. For a project with a `build` task, save this workflow as `.github/workflows/turbo-build.yml`:
+
+```yaml .github/workflows/turbo-build.yml
+name: Turborepo build
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: [self-hosted, celesto-micro]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci
+      - run: npx turbo run build
+```
+
+Run the workflow twice without changing your code. On the second run, Turborepo's output marks unchanged tasks as cache hits.
+
+## Switch from the old `actions/cache` recipe
+
+If your workflow copies `.turbo/cache` with `actions/cache`, remove those restore, prune, and save steps. Also remove `--cache=local:rw` from your `turbo` command and any `TURBO_CACHE=local:rw` setting. That setting keeps Turborepo on the local cache, so it never uses Celesto's saved results.
+
+## How the cache works
+
+- **Sharing:** Branches and pull requests in the same repository share results. Pull requests from forks can use saved results but can't add new ones.
+- **Your own remote cache:** Celesto respects the `TURBO_API`, `TURBO_TOKEN`, and `TURBO_TEAM` settings you already have. If you pass `--token` on the command line, move it to `TURBO_TOKEN`. Otherwise Celesto can redirect the command and it can fail.
+- **Storage:** Turborepo results share the same [storage limits and seven-day cleanup](/ci/caching#storage-limits-and-cleanup) as your other caches.
+- **Containers:** The cache covers `turbo` commands that run directly on the runner. Don't rely on it for `turbo` commands inside `docker build` or job containers.
