@@ -123,40 +123,7 @@ The example sets `--cache-dir` explicitly so the saved path matches the install 
 
 ## Reuse Turborepo task results
 
-Turborepo can skip a build or check that already ran with the same files. Celesto saves those results for you, so later runs finish sooner. It works automatically on Celesto runners. You don't need `actions/cache` for `.turbo/cache`, and you don't need to set `TURBO_API`, `TURBO_TOKEN`, or `TURBO_TEAM`.
-
-Before you start:
-
-- Install Turborepo in your repository.
-- List each task's outputs in `turbo.json`. For example, a build that writes `dist` needs `"outputs": ["dist/**"]`. Turborepo restores only the files you list, so a missing output can leave your build incomplete.
-
-Run `turbo` in your workflow as usual. For a project with a `build` task, save this workflow as `.github/workflows/turbo-build.yml`:
-
-```yaml .github/workflows/turbo-build.yml
-name: Turborepo build
-on: [push, pull_request]
-permissions:
-  contents: read
-jobs:
-  build:
-    runs-on: [self-hosted, celesto-micro]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-      - run: npm ci
-      - run: npx turbo run build
-```
-
-Run the workflow twice without changing your code. On the second run, Turborepo's output marks unchanged tasks as cache hits.
-
-How the cache works:
-
-- **Sharing:** Branches and pull requests in the same repository share results. Pull requests from forks can use saved results but can't add new ones.
-- **Your own remote cache:** If you already set up a Turborepo remote cache, Turborepo keeps using it.
-- **Storage:** Turborepo results share the same [storage limits and seven-day cleanup](/ci/caching#storage-limits-and-cleanup) as your other caches.
-- **Containers:** The cache covers `turbo` commands that run directly on the runner. Don't rely on it for `turbo` commands inside `docker build` or job containers.
+Celesto saves Turborepo task results automatically, with no extra setup. See [Turbo cache](/ci/turbo-cache).
 
 ## Reuse Nx task results
 
