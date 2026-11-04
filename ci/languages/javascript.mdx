@@ -46,7 +46,6 @@ pnpm keeps downloaded package files in a **store**, then creates the installed d
 | pnpm store | Downloaded packages | Restore plus installation time |
 | Root and package-level `node_modules` | Installed dependencies and links between packages | Unpacking plus installation checks |
 | `lockfile-verified.jsonl`, when your pnpm version creates it | Successful checks that locked packages meet your dependency rules | Time spent checking package information with the registry |
-| `.turbo/cache` | Completed task results, such as builds | Task cache hits and total task time |
 
 Start with the store. Compare installed dependencies if installation remains a large part of your job. See [restore performance](/ci/caching#reduce-cache-restore-time) when a large number of small files makes extraction slow.
 
@@ -124,95 +123,40 @@ The example sets `--cache-dir` explicitly so the saved path matches the install 
 
 ## Reuse Turborepo task results
 
-A monorepo can spend more time building and checking packages than installing them. Turborepo can reuse each completed command, called a task, when its inputs match a previous run.
+Turborepo can skip a build or check that already ran with the same files. Celesto saves those results for you, so later runs finish sooner. It works automatically on Celesto runners. You don't need `actions/cache` for `.turbo/cache`, and you don't need to set `TURBO_API`, `TURBO_TOKEN`, or `TURBO_TEAM`.
 
-Save shared results on the default branch, your repository's primary branch, so pull requests can reuse them. Turborepo stores results under `.turbo/cache`. Celesto transfers that directory between jobs through `actions/cache`. Turborepo uses a hash, a fingerprint of each task's inputs, to decide which results it can reuse.
+Before you start:
 
-Before adding the recipe:
+- Install Turborepo in your repository.
+- List each task's outputs in `turbo.json`. For example, a build that writes `dist` needs `"outputs": ["dist/**"]`. Turborepo restores only the files you list, so a missing output can leave your build incomplete.
 
-- Install Turborepo 2.x as a project dependency and commit the lockfile.
-- Define `build` and `typecheck` tasks in `turbo.json` and matching package scripts. Replace those names below if your project uses different names.
-- Declare build outputs and all relevant inputs, including environment variables, in your [Turborepo configuration](https://turborepo.dev/docs/crafting-your-repository/caching). For example, a build that writes `dist` needs an output pattern such as `dist/**`.
-- Add `.turbo/` to `.gitignore`.
+Run `turbo` in your workflow as usual. For a project with a `build` task, save this workflow as `.github/workflows/turbo-build.yml`:
 
-<Steps>
-  <Step title="Restore saved task results">
-    In either pnpm workflow above, replace the final test step with the following steps. Keep dependency installation before them.
-
-    ```yaml
-      - name: Restore Turborepo results
-        id: turbo-cache
-        uses: actions/cache/restore@v4
+```yaml .github/workflows/turbo-build.yml
+name: Turborepo build
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: [self-hosted, celesto-micro]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          path: .turbo/cache
-          key: >-
-            turbo-v1-${{ runner.os }}-${{ runner.arch }}-node${{ steps.node.outputs.node-version }}-${{ hashFiles('pnpm-lock.yaml', 'package.json') }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: |
-            turbo-v1-${{ runner.os }}-${{ runner.arch }}-node${{ steps.node.outputs.node-version }}-${{ hashFiles('pnpm-lock.yaml', 'package.json') }}-
-      - name: Build and check packages
-        run: pnpm exec turbo run build typecheck --cache-dir=.turbo/cache --cache=local:rw --summarize
-    ```
+          node-version: "22"
+      - run: npm ci
+      - run: npx turbo run build
+```
 
-    The primary key is unique to each run attempt, so a successful default-branch run can save updated results. The `restore-keys` prefix is the shared start of those keys. It finds a recent compatible entry, including one from the default branch that the pull request can read.
+Run the workflow twice without changing your code. On the second run, Turborepo's output marks unchanged tasks as cache hits.
 
-    Turborepo checks each task's own hash before reusing its result. See [branch access rules](/ci/caching#share-default-branch-caches-with-pull-requests) for how pull requests share saved entries.
+How the cache works:
 
-    `--cache=local:rw` reads and writes the local task cache. Celesto stores its archive between jobs; this recipe uses Turborepo's local cache rather than a Turborepo remote cache service.
-  </Step>
-  <Step title="Keep only the current run's task results">
-    Append this step after the task command. Turborepo's `--summarize` flag writes task hashes to `.turbo/runs`. The script keeps saved results for those hashes, including cache hits, and removes older task results from the local cache directory.
-
-    ```yaml
-      - name: Prune old Turborepo results
-        if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-
-          summaries = list(Path('.turbo/runs').glob('*.json'))
-          if not summaries:
-              raise SystemExit('No Turborepo run summary found; skipping cache save.')
-          summary = max(summaries, key=lambda path: path.stat().st_mtime_ns)
-          tasks = json.loads(summary.read_text())['tasks']
-          hashes = {task['hash'] for task in tasks}
-          keep = {f'{value}{suffix}' for value in hashes
-                  for suffix in ('.tar.zst', '-meta.json')}
-          cache = Path('.turbo/cache')
-          for path in cache.iterdir():
-              if path.is_file() and path.name not in keep:
-                  path.unlink()
-          print(f'Kept results for {len(hashes)} task hashes')
-          PY
-          du -sh .turbo/cache
-    ```
-
-    After this step, the local cache contains results for the current run's task hashes. The script expects Turborepo 2.x's cache filenames; check them again when you upgrade. A missing summary stops the job before saving the cache.
-  </Step>
-  <Step title="Save only after a successful default-branch push">
-    Append the save step after pruning:
-
-    ```yaml
-      - name: Save Turborepo results
-        if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
-        uses: actions/cache/save@v4
-        with:
-          path: .turbo/cache
-          key: ${{ steps.turbo-cache.outputs.cache-primary-key }}
-    ```
-
-    Pull requests restore results and run their tasks. Successful pushes to the default branch save the pruned archive. Push a commit to that branch to create the first entry; a manual run only restores results.
-
-    Pruning bounds the contents of each new archive to the current run's tasks. Older saved keys still count toward [repository and workspace limits](/ci/caching#storage-limits-and-cleanup) until cleanup removes them. If the current task outputs alone are too large, narrow the saved tasks or use a dedicated remote cache.
-  </Step>
-</Steps>
-
-### Verify task reuse
-
-After a successful default-branch run, open a pull request that leaves a package's task inputs unchanged. Inspect both the restore logs and Turborepo's task summary: an archive restore and an individual task cache hit are separate results. Unchanged tasks should report hits; changed tasks should run and produce fresh outputs.
-
-If all tasks miss, check the restored path, task inputs, environment variables, and `outputs` definitions. Compare the complete job duration, including dependency extraction and task cache transfer, before deciding how much to cache. The [Turborepo run reference](https://turborepo.dev/docs/reference/run#--summarize) explains how to inspect run summaries.
+- **Sharing:** Branches and pull requests in the same repository share results. Pull requests from forks can use saved results but can't add new ones.
+- **Your own remote cache:** If you already set up a Turborepo remote cache, Turborepo keeps using it.
+- **Storage:** Turborepo results share the same [storage limits and seven-day cleanup](/ci/caching#storage-limits-and-cleanup) as your other caches.
+- **Containers:** The cache covers `turbo` commands that run directly on the runner. Don't rely on it for `turbo` commands inside `docker build` or job containers.
 
 ## Reuse Nx task results
 

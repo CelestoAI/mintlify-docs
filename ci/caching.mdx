@@ -5,7 +5,7 @@ description: "Reuse dependencies and task results between CI jobs, share default
 
 Save downloaded packages and completed builds so later jobs finish sooner. Each job starts on a fresh computer. A cache keeps a saved copy of reusable files for later jobs.
 
-You can also save build and type-check results. See [JavaScript and TypeScript](/ci/languages/javascript) for npm, pnpm, and Turborepo recipes, plus guidance for Nx.
+You can also save build and type-check results. Celesto saves [Turborepo task results](/ci/languages/javascript#reuse-turborepo-task-results) automatically. See [JavaScript and TypeScript](/ci/languages/javascript) for npm and pnpm recipes, plus guidance for Nx.
 
 ## Add caching to a workflow
 
@@ -56,7 +56,7 @@ Celesto scopes entries to the workspace, repository, Git ref (a branch or pull-r
 
 A pull request can restore an authorized base-branch or default-branch cache. The base branch is the branch the pull request targets; the default branch is the repository's primary branch, often `main`. The job's token determines which references it can read. An entry saved under a pull-request reference stays in that scope.
 
-Use `restore-keys` to find a compatible saved entry when the current run's exact key is new. The action tries the primary key and then the listed prefixes within the authorized scopes. You can save task caches only on the default branch and let pull requests restore them, as shown in the [Turborepo recipe](/ci/languages/javascript#reuse-turborepo-task-results).
+Use `restore-keys` to find a compatible saved entry when the current run's exact key is new. The action tries the primary key and then the listed prefixes within the authorized scopes.
 
 This follows the scope model described in the [published Celesto cache guide](https://celesto.ai/blog/posts/celesto-ci-dependency-cache/).
 
