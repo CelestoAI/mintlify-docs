@@ -42,7 +42,7 @@ concurrency:
 jobs:
   test:
     if: ${{ !github.event.pull_request.draft }}
-    runs-on: [self-hosted, celesto-micro]
+    runs-on: celesto-micro
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
