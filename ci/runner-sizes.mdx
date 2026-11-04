@@ -31,7 +31,7 @@ name: Tests
 on: [push, workflow_dispatch]
 jobs:
   test:
-    runs-on: [self-hosted, celesto-memory]
+    runs-on: celesto-memory
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
@@ -60,7 +60,7 @@ name: CI
 on: [push, workflow_dispatch]
 jobs:
   test:
-    runs-on: [self-hosted, celesto-memory]
+    runs-on: celesto-memory
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
@@ -72,7 +72,7 @@ jobs:
       - run: npm test
 
   e2e:
-    runs-on: [self-hosted, celesto-large]
+    runs-on: celesto-large
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
@@ -107,10 +107,10 @@ For example, a Blacksmith workflow with a regular test job and a browser end-to-
  jobs:
    test:
 -    runs-on: blacksmith-2vcpu-ubuntu-2404
-+    runs-on: [self-hosted, celesto-memory]
++    runs-on: celesto-memory
    e2e:
 -    runs-on: blacksmith-4vcpu-ubuntu-2404
-+    runs-on: [self-hosted, celesto-large]
++    runs-on: celesto-large
 ```
 
 For another provider, find your runner's vCPU and RAM in its documentation and pick the matching row from [Pick a size by CPU and memory](#pick-a-size-by-cpu-and-memory).

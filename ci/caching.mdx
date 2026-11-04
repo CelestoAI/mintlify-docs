@@ -20,7 +20,7 @@ permissions:
   contents: read
 jobs:
   test:
-    runs-on: [self-hosted, celesto-micro]
+    runs-on: celesto-micro
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
