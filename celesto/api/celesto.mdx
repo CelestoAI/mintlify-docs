@@ -197,7 +197,7 @@ Celesto.from_image(
 ) -> Celesto
 ```
 
-Launch a VM from a custom [`BootImage`](/celesto/guides/custom-images#describe-a-bootable-image) without writing a `VMConfig` by hand. The image supplies the rootfs, kernel, and boot arguments; `from_image` resolves the backend, architecture, and any missing base kernel, then applies the per-VM runtime knobs you pass in.
+Launch a VM from a custom [`BootImage`](/celesto/api/bootimage) without writing a `VMConfig` by hand. The image supplies the rootfs, kernel, and boot arguments; `from_image` resolves the backend, architecture, and any missing base kernel, then applies the per-VM runtime knobs you pass in.
 
 Use this when you have built a custom image (for example with `DockerRootfsBuilder`) and want a one-line launcher that still lets you tune memory, networking, port forwards, vsock, and the host-to-guest control channel.
 
