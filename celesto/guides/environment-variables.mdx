@@ -7,7 +7,7 @@ keywords: ["environment variables", "sandbox secrets", "API keys VM", "Celesto e
 
 You can pass configuration values, API keys, and other settings into a sandbox using environment variables. Celesto supports two approaches: setting variables when you create the sandbox, or adding them at runtime while the sandbox is running.
 
-The same Python API (`env_vars=`, `vm.set_env_vars(...)`, `vm.unset_env_vars(...)`, `vm.list_env_vars(...)`) works for both Linux and Windows guests. On Linux the variables are written to `/etc/profile.d/celesto_env.sh` and picked up by new login shells; on Windows they're written to `HKCU\Environment` and picked up by new processes. See [Windows guests](#windows-guests) below for the details specific to Windows.
+The same Python API (`env_vars=`, `vm.set_env_vars(...)`, `vm.unset_env_vars(...)`, `vm.list_env_vars(...)`) works for both Linux and Windows guests. On Linux the variables are written to `/etc/profile.d/celesto_env.sh` and picked up by new login shells; on Windows they're written to `HKCU\Environment` and picked up by new processes. See [Windows sandboxes](#windows-sandboxes) below for the details specific to Windows.
 
 ## Setting variables at boot
 
