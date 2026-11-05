@@ -15,24 +15,18 @@ You need admin access to your GitHub repository and Celesto workspace, plus work
     [Install the Celesto CI GitHub App](https://github.com/apps/celesto-ci/installations/new), select your repositories, and follow the redirect to connect a Celesto workspace. Start the trial or add credit to finish setup.
   </Step>
   <Step title="Add a workflow">
-    Save as `.github/workflows/celesto-ci.yml`:
+    This workflow prints "Hello, world!" on a Celesto runner. Save it as `.github/workflows/celesto-ci.yml`:
 
     ```yaml .github/workflows/celesto-ci.yml
-    name: Celesto CI
+    name: Hello world
     on: [push, workflow_dispatch]
     jobs:
-      verify:
+      hello:
         runs-on: celesto-micro
-        timeout-minutes: 90
+        timeout-minutes: 5
         steps:
-          - uses: actions/checkout@v4
-          - name: Check the runner
-            run: |
-              uname -m
-              python --version
-              node --version
-              git --version
-              echo "Running on Celesto"
+          - name: Say hello
+            run: echo "Hello, world!"
     ```
 
     For an existing workflow, change `runs-on` and keep your steps.
@@ -42,7 +36,7 @@ You need admin access to your GitHub repository and Celesto workspace, plus work
     </Note>
   </Step>
   <Step title="Push and check the result">
-    Push the workflow and open **Actions → Celesto CI** in GitHub. Expect `x86_64`, tool versions, `Running on Celesto`, and a green check.
+    Push the workflow and open **Actions → Hello world** in GitHub. Open the **Say hello** step to see `Hello, world!` and a green check.
   </Step>
 </Steps>
 
