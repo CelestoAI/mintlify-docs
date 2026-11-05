@@ -1,38 +1,23 @@
 ---
-title: "Secure, persistent computers for AI agents"
+title: "CI Runner - low cost, high performance"
 sidebarTitle: "Overview"
-description: "Celesto gives AI agents their own secure computer to run code, browse the web, and save work, and runs your GitHub Actions jobs on fast, low-cost runners."
+mode: "center"
+description: "Drop-in GitHub Actions replacement, 90% cheaper with on-par or better performance."
 ---
 
-Celesto gives each AI agent its own computer. Your agent can run code, browse the web, and save its work, safely separated from your app and your machine. You can stop a computer and pick up where it left off later.
+```diff
+- runs-on: ubuntu-latest
++ runs-on: celesto
+```
 
-Celesto also runs your GitHub Actions jobs, so your builds and tests run faster and cost less.
+## GitHub Actions
 
-## Get started
+- [Runner sizes](/ci/runner-sizes): 1–8 vCPUs, 2–32 GB RAM, Ubuntu 24.04 (Linux x64).
+- [Cache](/ci/caching): Reuse [dependencies](/ci/caching), [Turbo results](/ci/turbo-cache), and [Docker layers](/ci/docker).
+- [CLI](/ci/cli): Check jobs with `celesto ci jobs list`.
+- [Security](/ci/security): Fresh, isolated computers with runners registered per job.
 
-<CardGroup cols={2}>
-  <Card icon="rocket" href="/cloud/quickstart" title="Create your first computer">
-    Launch a Celesto computer, run a command, and clean it up from the SDK or CLI.
-  </Card>
-  <Card icon="bolt" href="/ci" title="Run GitHub Actions on Celesto">
-    Install the GitHub App and point your workflow at Celesto runners.
-  </Card>
-</CardGroup>
+## Sandboxes
 
-## What you can build
-
-<CardGroup cols={3}>
-  <Card icon="code" href="/getting-started/coding-agents" title="Coding agents">
-    Clone repos, install dependencies, run tests, and share previews.
-  </Card>
-  <Card icon="globe" href="/getting-started/browser-agents" title="Browser agents">
-    Let agents browse and use websites in their own browser.
-  </Card>
-  <Card icon="clock" href="/getting-started/long-running-agents" title="Long-running agents">
-    Pause multi-step jobs and resume them later with files intact.
-  </Card>
-</CardGroup>
-
-## Hosted or open source
-
-Use Celesto Cloud when you want managed computers. Use the open-source [Celesto](/celesto/introduction) runtime when you want to run everything on your own machine. See [hosted and open source](/getting-started/hosted-and-open-source) to compare them.
+- [MicroVMs](/cloud/overview): Run code in lightweight, isolated virtual machines.
+- [Open source](/celesto/introduction): Run Celesto sandboxes on your own machine.
