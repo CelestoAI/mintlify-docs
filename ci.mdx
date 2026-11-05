@@ -1,27 +1,21 @@
 ---
 title: "GitHub Actions runners"
 sidebarTitle: "Quickstart"
-description: "Run your GitHub Actions on Celesto: quickstart, runner sizes and prices, installed tools, and limits."
+description: "Connect your repository, run your first job, and choose a Celesto runner."
 ---
 
-Run your repository’s builds and tests on Celesto computers, and keep your workflow results and logs in GitHub Actions. Celesto starts a fresh computer for each job and deletes it when the job finishes.
-
-Use the [Docker guide](/ci/docker) for image builds and database services, or [benchmarking](/ci/benchmarking) to compare your workflow's speed and cost.
-
-Review [security and permissions](/ci/security) before running contributor workflows. Use [dependency caching](/ci/caching) to reuse downloads between jobs.
+Run builds and tests on Celesto. Each job gets a fresh computer; results and logs stay in GitHub Actions.
 
 ## Quickstart
 
-You need a GitHub account that administers the repositories you select, a Celesto workspace where you are an admin, and usable workspace credit. A workspace owner can start the eligible, card-free $5 Micro trial.
+You need admin access to your GitHub repository and Celesto workspace, plus workspace credit. Workspace owners can start an eligible $5 Micro trial.
 
 <Steps>
-  <Step title="Install and connect">
-    [Install the Celesto CI GitHub App](https://github.com/apps/celesto-ci/installations/new) and select the repositories you want to use. Follow the redirect to Celesto, sign in or create an account, and connect the installation to the workspace that will pay for its jobs.
-
-    Start the eligible trial or add workspace credit before running a job. Installing the App alone does not finish setup. If the trial is blocked by an existing computer, follow [trial recovery](/ci/troubleshooting#free-the-trial-slot).
+  <Step title="Connect your repository">
+    [Install the Celesto CI GitHub App](https://github.com/apps/celesto-ci/installations/new), select your repositories, and follow the redirect to connect a Celesto workspace. Start the trial or add credit to finish setup.
   </Step>
   <Step title="Add a workflow">
-    Save this complete example as `.github/workflows/celesto-ci.yml` in a selected repository:
+    Save as `.github/workflows/celesto-ci.yml`:
 
     ```yaml .github/workflows/celesto-ci.yml
     name: Celesto CI
@@ -41,22 +35,20 @@ You need a GitHub account that administers the repositories you select, a Celest
               echo "Running on Celesto"
     ```
 
-    For an existing compatible workflow, change its `runs-on` line and keep your steps. Check the tools and limits below before moving a workflow from `ubuntu-latest`.
+    For an existing workflow, change `runs-on` and keep your steps.
 
     <Note>
-      This example uses Micro, the trial size, with 1 vCPU and 2 GB RAM. That is smaller than GitHub's `ubuntu-latest` and every Blacksmith runner. To move an existing workflow with the same CPU and memory it has today, [choose a matching size](/ci/runner-sizes#match-your-current-runner).
+      Micro has 1 vCPU and 2 GB RAM. When migrating, [match your current runner's CPU and memory](/ci/runner-sizes#match-your-current-runner).
     </Note>
   </Step>
-  <Step title="Push and verify">
-    Commit and push the workflow. Open the repository’s **Actions** tab and select **Celesto CI**. The **Check the runner** step should print `x86_64`, tool versions, and `Running on Celesto`, and the job should finish with a green check.
-
-    The separate **Celesto runner setup** check reports computer creation and runner assignment. GitHub’s native Actions result tells you whether your steps passed. Celesto deletes the job computer afterward.
+  <Step title="Push and check the result">
+    Push the workflow and open **Actions → Celesto CI** in GitHub. Expect `x86_64`, tool versions, `Running on Celesto`, and a green check.
   </Step>
 </Steps>
 
 ## Sizes and prices
 
-Set `runs-on` to one label from this table, such as `runs-on: celesto-micro`. The `celesto` label also selects Micro. All sizes use Ubuntu 24.04 Linux x64. Prices are in USD; minute rates are rounded for display.
+Use one label in `runs-on`. The bare `celesto` label selects Micro. All sizes run Ubuntu 24.04 Linux x64. USD rates below are rounded; your workspace billing catalog has current rates.
 
 | Size | Workflow label | vCPU | RAM | Disk | Per minute | Per hour |
 | --- | --- | ---: | ---: | ---: | ---: | ---: |
@@ -67,23 +59,13 @@ Set `runs-on` to one label from this table, such as `runs-on: celesto-micro`. Th
 | Large | `celesto-large` | 4 | 16 GB | 60 GB | $0.00133333 | $0.080 |
 | XL | `celesto-xl` | 8 | 32 GB | 100 GB | $0.00266667 | $0.160 |
 
-For example, `runs-on: celesto-memory` selects 2 vCPU and 8 GB RAM. The current workspace billing catalog is authoritative; setup reads the current specs and rates.
-
-Celesto charges workspace credit for the computer’s runtime, including preparation, job execution, and cleanup. The one-time $5 trial covers up to 20,000 Micro runtime minutes at the listed rate, expires after 30 days, and is shared with other sandbox usage. Other sizes require eligible workspace credit; some promotional credit is restricted to Micro or Small.
+Billing covers preparation, execution, and cleanup. The one-time $5 trial covers up to 20,000 Micro runtime minutes, expires after 30 days, and is shared with sandbox usage. Other sizes need eligible credit; some promotions cover only Micro or Small.
 
 ## Choose the right size
 
-Moving from GitHub's `ubuntu-latest` or a Blacksmith runner? Start with the Celesto size that has the same CPU and memory:
-
-- 2 vCPU, 8 GB, such as `ubuntu-latest` in a private repository or `blacksmith-2vcpu-ubuntu-2404`: use `celesto-memory`.
-- 4 vCPU, 16 GB, such as `blacksmith-4vcpu-ubuntu-2404`: use `celesto-large`.
-- 8 vCPU, 32 GB, such as `blacksmith-8vcpu-ubuntu-2404`: use `celesto-xl`.
-
-[Choose a runner size](/ci/runner-sizes) has complete workflow examples, the full matching table, and how to try a smaller size safely.
+For 2 vCPU and 8 GB RAM, use `celesto-memory`. See [runner sizes](/ci/runner-sizes) to match GitHub or Blacksmith runners.
 
 ## What is preinstalled?
-
-The CI image includes these tools:
 
 | Area | Included tools |
 | --- | --- |
@@ -96,23 +78,18 @@ The CI image includes these tools:
 | Utilities | Bash, curl, jq, ripgrep (`rg`), fd, SQLite, zip/unzip, tar, gzip, xz |
 | Coding agents | Pi coding agent |
 
-This is Celesto’s CI image, rather than GitHub’s hosted runner image. Install your project dependencies and any additional tools in workflow steps. Pin the versions your project needs with compatible setup actions such as `actions/setup-node` or `actions/setup-python`.
+Install project dependencies and additional tools in your workflow. Pin versions with setup actions such as `actions/setup-node` or `actions/setup-python`.
 
 ## Limits and compatibility
 
-- **Operating system:** Ubuntu Linux x64. Windows, macOS, and ARM jobs need another runner.
-- **Actions and containers:** Shell steps, compatible JavaScript actions, Docker image builds, Compose, and native PostgreSQL `services:` have been exercised on Celesto CI. See [Docker support and known limits](/ci/docker) for tested examples and configurations to validate before migration.
-- **Runtime:** Job computers have a two-hour safety limit. Set `timeout-minutes` below 120 to leave room for runner preparation and cleanup; the quickstart uses 90.
-- **Concurrency:** Available capacity, workspace sandbox limits, and usable credit govern admission. The Micro trial allows one retained sandbox at a time, so an existing sandbox can block a CI runner.
-- **Local files:** Each computer serves one job and is deleted afterward. Use GitHub Actions artifacts or compatible caching steps to keep results or dependencies between jobs.
-- **Repository access:** Select every repository that uses Celesto labels in the App installation. One installation connects to one Celesto workspace. Organization runners use a Celesto runner group restricted to the selected repositories.
-- **Labels:** Use exactly one Celesto size label. Unknown or multiple Celesto labels fail setup before a computer starts. Existing `celesto-cloud` and `celesto-cloud-micro` labels select Micro; the existing Standard, Large, and XL labels remain supported.
-- **Network:** Jobs need outbound access to GitHub and to the services used by your workflow.
+- **Platform:** Linux x64. See [Docker builds and services](/ci/docker) for container support.
+- **Runtime:** Two-hour safety limit. Keep `timeout-minutes` below 120 to allow preparation and cleanup.
+- **Concurrency:** Depends on capacity, workspace limits, and credit. The trial allows one retained computer.
+- **Files:** Computers are deleted after each job. Save results as artifacts and reuse dependencies with [caching](/ci/caching).
+- **Access:** Select every repository using Celesto in the GitHub App. See [security and permissions](/ci/security).
+- **Labels:** Use exactly one Celesto size label.
+- **Network:** Jobs need outbound access to GitHub and your workflow's services.
 
 ## If a job stays queued
 
-Use [Troubleshooting](/ci/troubleshooting) for cause-specific steps covering retained computers, credit, permissions, and capacity.
-
-Open the **Celesto runner setup** check on the commit. Follow its link to finish connecting the installation, resolve GitHub permissions, or add credit to the linked workspace. Workspace owners start the trial. Owners and admins can add credit.
-
-After fixing setup or credit, cancel the old run and rerun it in GitHub. Adding credit does not automatically restart a previously blocked job. If setup reports another failure, use its details when [contacting support](mailto:aniket@celesto.ai).
+Open the **Celesto runner setup** check for setup, permission, or credit errors. After fixing the issue, cancel the blocked run and rerun it. See [troubleshooting](/ci/troubleshooting) for recovery steps.
