@@ -23,35 +23,98 @@
     "global": {},
     "tabs": [
       {
-        "tab": "Getting Started",
+        "tab": "GitHub Actions",
         "groups": [
           {
-            "group": "Start Here",
+            "group": "Get started",
             "pages": [
-              "index",
-              "getting-started/why-celesto"
+              "ci"
             ]
           },
           {
-            "group": "Core Ideas",
+            "group": "Run your workflows",
             "pages": [
-              "getting-started/agent-computers",
-              "getting-started/durable-workspaces",
-              "getting-started/hosted-and-open-source"
+              "ci/runner-sizes",
+              "ci/docker",
+              "ci/caching",
+              "ci/turbo-cache",
+              "ci/languages/javascript"
             ]
           },
           {
-            "group": "Popular Paths",
+            "group": "Measure performance",
             "pages": [
-              "getting-started/coding-agents",
-              "getting-started/browser-agents",
-              "getting-started/long-running-agents"
+              "ci/benchmarking"
+            ]
+          },
+          {
+            "group": "Manage CI",
+            "pages": [
+              "ci/cli",
+              "ci/troubleshooting",
+              "ci/security"
+            ]
+          },
+          {
+            "group": "FAQs",
+            "pages": [
+              "ci/faq/draft-run-cancels-pr-run"
             ]
           }
         ]
       },
       {
-        "tab": "Celesto",
+        "tab": "Sandboxes",
+        "groups": [
+          {
+            "group": "Start Here",
+            "pages": [
+              "cloud/overview",
+              "cloud/quickstart",
+              "cloud/authentication"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "cloud/computers",
+              "cloud/features/custom-templates",
+              "celesto/features/docker",
+              "cloud/features/publish-ports",
+              "cloud/features/browser-and-display",
+              "cloud/features/lifecycle",
+              "cloud/features/resources",
+              "cloud/features/persistence",
+              "cloud/features/network-control",
+              "cloud/features/petabyte-storage"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "cloud/guides/publish-github-app"
+            ]
+          },
+          {
+            "group": "Agents and Integrations",
+            "pages": [
+              "cloud/mcp-server",
+              "cloud/guides/pi-coding-agent",
+              "cloud/openai-agents",
+              "cloud/gatekeeper",
+              "cloud/errors"
+            ]
+          },
+          {
+            "group": "CLI reference",
+            "pages": [
+              "cloud/cli"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Open source",
         "groups": [
           {
             "group": "Get Started",
@@ -102,170 +165,6 @@
             "pages": [
               "celesto/advanced/performance",
               "celesto/advanced/troubleshooting"
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "Cloud",
-        "groups": [
-          {
-            "group": "Start Here",
-            "pages": [
-              "cloud/overview",
-              "cloud/quickstart",
-              "cloud/authentication"
-            ]
-          },
-          {
-            "group": "Features",
-            "pages": [
-              "cloud/computers",
-              "cloud/features/custom-templates",
-              "celesto/features/docker",
-              "cloud/features/publish-ports",
-              "cloud/features/browser-and-display",
-              "cloud/features/lifecycle",
-              "cloud/features/resources",
-              "cloud/features/persistence",
-              "cloud/features/network-control",
-              "cloud/features/petabyte-storage"
-            ]
-          },
-          {
-            "group": "Guides",
-            "pages": [
-              "cloud/guides/publish-github-app"
-            ]
-          },
-          {
-            "group": "Agents and Integrations",
-            "pages": [
-              "cloud/mcp-server",
-              "cloud/guides/pi-coding-agent",
-              "cloud/openai-agents",
-              "cloud/gatekeeper",
-              "cloud/errors"
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "CI",
-        "groups": [
-          {
-            "group": "Get started",
-            "pages": ["ci"]
-          },
-          {
-            "group": "Run your workflows",
-            "pages": ["ci/runner-sizes", "ci/docker", "ci/caching", "ci/turbo-cache", "ci/languages/javascript"]
-          },
-          {
-            "group": "Measure performance",
-            "pages": ["ci/benchmarking"]
-          },
-          {
-            "group": "Manage CI",
-            "pages": ["ci/cli", "ci/troubleshooting", "ci/security"]
-          },
-          {
-            "group": "FAQs",
-            "pages": ["ci/faq/draft-run-cancels-pr-run"]
-          }
-        ]
-      },
-      {
-        "tab": "SmolFS",
-        "groups": [
-          {
-            "group": "Start Here",
-            "pages": [
-              "smolfs/overview",
-              "smolfs/installation",
-              "smolfs/quickstart"
-            ]
-          },
-          {
-            "group": "Reference",
-            "pages": [
-              "smolfs/cli",
-              "smolfs/sdk"
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "Agents",
-        "groups": [
-          {
-            "group": "Start Here",
-            "pages": [
-              "agentor/home",
-              "agentor/installation",
-              "agentor/quickstart"
-            ]
-          },
-          {
-            "group": "Build Agents",
-            "pages": [
-              "agentor/agents-api",
-              "agentor/structured-output",
-              "agentor/durable-runs",
-              "agentor/model-providers",
-              "agentor/deploy",
-              "agentor/agent-to-agent",
-              "agentor/concepts/skills"
-            ]
-          },
-          {
-            "group": "Concepts",
-            "pages": [
-              "agentor/concepts/agents",
-              "agentor/concepts/tools",
-              "agentor/concepts/mcp",
-              "agentor/concepts/a2a-protocol",
-              "agentor/concepts/skills",
-              "agentor/concepts/deployment"
-            ]
-          },
-          {
-            "group": "Tool Use & MCP",
-            "pages": [
-              "agentor/tools/overview",
-              "agentor/tools/tool-use",
-              "agentor/tools/tool-search",
-              "agentor/tools/LiteMCP",
-              "agentor/tools/LiteMCP-fastapi",
-              "agentor/tools/auth",
-              "agentor/guides/mcp-servers"
-            ]
-          },
-          {
-            "group": "Guides",
-            "pages": [
-              "agentor/guides/building-agents",
-              "agentor/guides/custom-tools",
-              "agentor/guides/streaming",
-              "agentor/guides/observability",
-              "agentor/guides/agent-communication"
-            ]
-          },
-          {
-            "group": "SuperAuth",
-            "pages": [
-              "superauth/google-oauth-setup"
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "API Reference",
-        "groups": [
-          {
-            "group": "Celesto CLI",
-            "pages": [
-              "cloud/cli"
             ]
           },
           {
@@ -318,29 +217,6 @@
               "celesto/cli/prune",
               "celesto/cli/completion",
               "celesto/cli/windows"
-            ]
-          },
-          {
-            "group": "Agentor API",
-            "pages": [
-              "agentor/api/agentor",
-              "agentor/api/llm",
-              "agentor/api/model-settings",
-              "agentor/api/tools",
-              "agentor/api/tools/calculator",
-              "agentor/api/tools/google-calendar",
-              "agentor/api/tools/fetch",
-              "agentor/api/tools/github",
-              "agentor/api/tools/git",
-              "agentor/api/tools/gmail",
-              "agentor/api/tools/scrapegraphai",
-              "agentor/api/tools/shell",
-              "agentor/api/tools/weather",
-              "agentor/api/mcp/hub",
-              "agentor/api/mcp/litemcp",
-              "agentor/api/mcp/router",
-              "agentor/api/a2a/controller",
-              "agentor/api/a2a/types"
             ]
           }
         ]
@@ -406,7 +282,7 @@
   "appearance": {
     "default": "dark"
   },
-  "description": "A full cloud computer for every agent. Run agent harnesses, computer-use agents, and CI at AI scale. Celesto provides the cheapest CI runner -- A drop-in replacement for GitHub Actions runners, 96% cheaper per minute.",
+  "description": "Celesto runs your GitHub Actions builds and tests on managed runners. Choose a runner size, keep your existing workflows, and measure runtime and cost.",
   "interaction": {
     "drilldown": true
   },
