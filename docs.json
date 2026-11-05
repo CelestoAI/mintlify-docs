@@ -7,9 +7,9 @@
     "dark": "/assets/celesto-logo.png"
   },
   "colors": {
-    "primary": "#FF5722",
-    "light": "#FF5722",
-    "dark": "#FF5722"
+    "primary": "#52525B",
+    "light": "#A1A1AA",
+    "dark": "#3F3F46"
   },
   "favicon": {
     "light": "favicon.png",
@@ -32,32 +32,43 @@
             ]
           },
           {
-            "group": "Run your workflows",
+            "group": "Runners",
             "pages": [
               "ci/runner-sizes",
               "ci/docker",
-              "ci/caching",
-              "ci/turbo-cache",
               "ci/languages/javascript"
             ]
           },
           {
-            "group": "Measure performance",
+            "group": "Caching",
+            "pages": [
+              "ci/caching",
+              "ci/turbo-cache",
+              "ci/docker-cache"
+            ]
+          },
+          {
+            "group": "CLI",
+            "pages": [
+              "ci/cli"
+            ]
+          },
+          {
+            "group": "Performance",
             "pages": [
               "ci/benchmarking"
             ]
           },
           {
-            "group": "Manage CI",
+            "group": "Security",
             "pages": [
-              "ci/cli",
-              "ci/troubleshooting",
               "ci/security"
             ]
           },
           {
-            "group": "FAQs",
+            "group": "Troubleshooting",
             "pages": [
+              "ci/troubleshooting",
               "ci/faq/draft-run-cancels-pr-run"
             ]
           }
@@ -67,7 +78,7 @@
         "tab": "Sandboxes",
         "groups": [
           {
-            "group": "Start Here",
+            "group": "Get started",
             "pages": [
               "cloud/overview",
               "cloud/quickstart",
@@ -75,40 +86,45 @@
             ]
           },
           {
-            "group": "Features",
+            "group": "Run code",
             "pages": [
               "cloud/computers",
+              "cloud/features/resources",
               "cloud/features/custom-templates",
               "celesto/features/docker",
-              "cloud/features/publish-ports",
-              "cloud/features/browser-and-display",
+              "cloud/features/browser-and-display"
+            ]
+          },
+          {
+            "group": "Save and resume work",
+            "pages": [
               "cloud/features/lifecycle",
-              "cloud/features/resources",
               "cloud/features/persistence",
-              "cloud/features/network-control",
               "cloud/features/petabyte-storage"
             ]
           },
           {
-            "group": "Guides",
+            "group": "Connect your apps",
             "pages": [
+              "cloud/features/publish-ports",
+              "cloud/features/network-control",
               "cloud/guides/publish-github-app"
             ]
           },
           {
-            "group": "Agents and Integrations",
+            "group": "Connect AI agents",
             "pages": [
               "cloud/mcp-server",
               "cloud/guides/pi-coding-agent",
-              "cloud/openai-agents",
-              "cloud/gatekeeper",
-              "cloud/errors"
+              "cloud/openai-agents"
             ]
           },
           {
-            "group": "CLI reference",
+            "group": "Reference and troubleshooting",
             "pages": [
-              "cloud/cli"
+              "cloud/cli",
+              "cloud/errors",
+              "cloud/gatekeeper"
             ]
           }
         ]
@@ -117,106 +133,123 @@
         "tab": "Open source",
         "groups": [
           {
-            "group": "Get Started",
+            "group": "Get started",
             "pages": [
               "celesto/introduction",
-              "celesto/installation"
+              "celesto/installation",
+              "celesto/guides/basic-usage"
             ]
           },
           {
-            "group": "Features",
+            "group": "Run sandboxes",
             "pages": [
-              "celesto/features/callbacks",
-              "celesto/features/browser-sandboxes",
-              "celesto/features/docker",
-              "celesto/features/host-mounts",
-              "celesto/features/network-controls",
-              "celesto/features/bridged-networking",
-              "celesto/features/port-forwarding",
-              "celesto/features/snapshots"
-            ]
-          },
-          {
-            "group": "Guides",
-            "pages": [
-              "celesto/guides/basic-usage",
-              "celesto/guides/custom-images",
-              "celesto/guides/environment-variables",
-              "celesto/guides/ai-agent-integration",
-              "celesto/guides/http-api-typescript-sdk",
               "celesto/guides/vm-lifecycle",
+              "celesto/guides/environment-variables",
+              "celesto/features/docker",
+              "celesto/features/browser-sandboxes",
               "celesto/guides/macos-sandboxes",
               "celesto/guides/windows-guests"
             ]
           },
           {
-            "group": "Architecture",
+            "group": "Images and snapshots",
+            "pages": [
+              "celesto/concepts/published-images",
+              "celesto/guides/custom-images",
+              "celesto/features/snapshots"
+            ]
+          },
+          {
+            "group": "Files and networking",
+            "pages": [
+              "celesto/features/host-mounts",
+              "celesto/features/port-forwarding",
+              "celesto/features/network-controls",
+              "celesto/features/bridged-networking"
+            ]
+          },
+          {
+            "group": "Connect AI agents",
+            "pages": [
+              "celesto/guides/ai-agent-integration",
+              "celesto/features/callbacks"
+            ]
+          },
+          {
+            "group": "How it works",
             "pages": [
               "celesto/concepts/overview",
               "celesto/concepts/security",
               "celesto/concepts/backends",
-              "celesto/concepts/published-images",
               "celesto/concepts/networking",
               "celesto/concepts/control-channel"
             ]
           },
           {
-            "group": "Operations",
+            "group": "Performance and troubleshooting",
             "pages": [
               "celesto/advanced/performance",
               "celesto/advanced/troubleshooting"
             ]
           },
           {
-            "group": "Celesto API",
+            "group": "Reference",
             "pages": [
-              "celesto/api/celesto",
-              "celesto/api/browsersession",
-              "celesto/api/browsersessionconfig",
-              "celesto/api/browsersessioninfo",
-              "celesto/api/callbacks",
-              "celesto/api/commandresult",
-              "celesto/api/exceptions",
-              "celesto/api/hostmanager",
-              "celesto/api/bootimage",
-              "celesto/api/dockerrootfsbuilder",
-              "celesto/api/imagebuilder",
-              "celesto/api/imagemanager",
-              "celesto/api/imagesource",
-              "celesto/api/internetsettings",
-              "celesto/api/kernelhelpers",
-              "celesto/api/networkconfig",
-              "celesto/api/snapshotinfo",
-              "celesto/api/sshclient",
-              "celesto/api/vmconfig",
-              "celesto/api/vminfo"
-            ]
-          },
-          {
-            "group": "Celesto CLI",
-            "pages": [
-              "celesto/cli/overview",
-              "celesto/cli/create",
-              "celesto/cli/list",
-              "celesto/cli/shell",
-              "celesto/cli/ssh",
-              "celesto/cli/exec",
-              "celesto/cli/logs",
-              "celesto/cli/stop",
-              "celesto/cli/cleanup",
-              "celesto/cli/sandbox-prune",
-              "celesto/cli/file",
-              "celesto/cli/env",
-              "celesto/cli/port",
-              "celesto/cli/snapshot",
-              "celesto/cli/server",
-              "celesto/cli/ui",
-              "celesto/cli/doctor",
-              "celesto/cli/update",
-              "celesto/cli/image",
-              "celesto/cli/prune",
-              "celesto/cli/completion",
-              "celesto/cli/windows"
+              "celesto/guides/http-api-typescript-sdk",
+              {
+                "group": "Python API",
+                "pages": [
+                  "celesto/api/celesto",
+                  "celesto/api/browsersession",
+                  "celesto/api/browsersessionconfig",
+                  "celesto/api/browsersessioninfo",
+                  "celesto/api/callbacks",
+                  "celesto/api/commandresult",
+                  "celesto/api/exceptions",
+                  "celesto/api/hostmanager",
+                  "celesto/api/bootimage",
+                  "celesto/api/dockerrootfsbuilder",
+                  "celesto/api/imagebuilder",
+                  "celesto/api/imagemanager",
+                  "celesto/api/imagesource",
+                  "celesto/api/internetsettings",
+                  "celesto/api/kernelhelpers",
+                  "celesto/api/networkconfig",
+                  "celesto/api/snapshotinfo",
+                  "celesto/api/sshclient",
+                  "celesto/api/vmconfig",
+                  "celesto/api/vminfo"
+                ],
+                "expanded": false
+              },
+              {
+                "group": "CLI commands",
+                "pages": [
+                  "celesto/cli/overview",
+                  "celesto/cli/create",
+                  "celesto/cli/list",
+                  "celesto/cli/shell",
+                  "celesto/cli/ssh",
+                  "celesto/cli/exec",
+                  "celesto/cli/logs",
+                  "celesto/cli/stop",
+                  "celesto/cli/cleanup",
+                  "celesto/cli/sandbox-prune",
+                  "celesto/cli/file",
+                  "celesto/cli/env",
+                  "celesto/cli/port",
+                  "celesto/cli/snapshot",
+                  "celesto/cli/server",
+                  "celesto/cli/ui",
+                  "celesto/cli/doctor",
+                  "celesto/cli/update",
+                  "celesto/cli/image",
+                  "celesto/cli/prune",
+                  "celesto/cli/completion",
+                  "celesto/cli/windows"
+                ],
+                "expanded": false
+              }
             ]
           }
         ]
