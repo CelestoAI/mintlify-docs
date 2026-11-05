@@ -1,0 +1,50 @@
+---
+title: "Cache Docker image layers"
+sidebarTitle: "Docker layer caching"
+description: "Reuse Docker build steps across CI jobs with Celesto's cache. Configure Buildx, check cache reuse, and understand storage limits."
+---
+
+Reuse completed build steps so your Docker images are ready sooner. Celesto saves those results for your next job.
+
+Docker builds images in steps called layers. Reusing saved layers lets later builds skip steps that haven't changed.
+
+Each job gets a fresh computer, so local Docker images and layers disappear when the job ends. To reuse layers in a later job, save them to the Celesto cache with `cache-to: type=gha` and restore them with `cache-from: type=gha`. No special runner label or setting is needed.
+
+## Configure your workflow
+
+First [connect your repository to Celesto](/ci#quickstart). For a repository with a `Dockerfile` at its root, save this workflow as `.github/workflows/docker-cache.yml`:
+
+```yaml .github/workflows/docker-cache.yml
+name: Docker build with cache
+on: [push, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: celesto-large
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          cache-from: type=gha,scope=app
+          cache-to: type=gha,mode=max,scope=app
+```
+
+- `mode=max` saves the layers from every build stage, not only the final image.
+- `scope` names the cache. Give each image its own scope so builds don't overwrite each other's layers.
+
+If your workflow already uses `cache-from` and `cache-to` with `type=gha`, you only need to switch `runs-on` to a Celesto runner. This works when the workflow uses the cache address the runner provides. Workflows that set their own cache address are an exception. The first Celesto run misses because GitHub keeps its caches in a separate store.
+
+Saved layers count toward the same [storage limits](/ci/caching#storage-limits-and-cleanup) as your other caches and follow the same access rules and 7-day expiry. Large layer caches can cause older dependency caches to be removed sooner. A restore can still miss, so compare complete build time with and without the cache.
+
+The [public cache acceptance suite](https://github.com/CelestoAI/ci-benchmarks/blob/b01cdd64451ee60d10795ac33c2be9d465d2498e/cache-tests/README.md) includes Docker workflows you can run to check caching in your own repository. It checks that caching works, not how much time it saves.
+
+## Verify reuse
+
+Run the workflow successfully, then rerun it with the same Dockerfile and build inputs. Check the build logs for steps marked `CACHED`, and compare the complete job duration. The first run saves layers for later builds.
+
+For image builds and database services, see [Docker builds and services](/ci/docker).
