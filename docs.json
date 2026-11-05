@@ -355,7 +355,8 @@
     { "source": "/agentor/tracing", "destination": "/agentor/guides/observability" },
     { "source": "/enterprise/:slug*", "destination": "/" },
     { "source": "/smolvm/api/smolvm", "destination": "/celesto/api/celesto" },
-    { "source": "/smolvm/:slug*", "destination": "/celesto/:slug*" }
+    { "source": "/smolvm/:slug*", "destination": "/celesto/:slug*" },
+    { "source": "/docs/ci", "destination": "/ci" }
   ],
   "fonts": {
     "heading": {
