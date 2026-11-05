@@ -1,16 +1,57 @@
 ---
-title: "Benchmarking"
+title: "CI benchmarks"
 sidebarTitle: "Compare speed and cost"
-description: "Compare Celesto CI with your current runners using matched resources, complete job costs, and reproducible Docker benchmarks."
+description: "Compare Celesto and GitHub Actions using matched CPU, cache, and Docker benchmarks, with raw results and reproduction steps."
 ---
 
-Measure your own build before moving all your CI jobs. Compare whether it passes, how long it takes, and what the complete run costs on each provider.
+Compare how quickly Celesto and GitHub Actions run the same work. Use these results as a starting point, then measure your own builds and costs.
 
-## Read the published results
+## CPU and cache results — November 2, 2026
 
-The [October 17 Docker benchmark](https://github.com/CelestoAI/ci-benchmarks/blob/e4461a43c193d56560c7df56ceff7fb3170cee78/results/docker-2026-10-17/README.md) contains 120 successful authenticated jobs, with five repetitions per provider and scenario. Both sides used 4 vCPU, 16 GiB nominal RAM, Ubuntu 24.04, and x86-64. Physical processors, kernels, and supporting runtime builds differed.
+Three runs produced 36 successful jobs on runners with **4 vCPUs and 16 GiB RAM**: GitHub `ubuntu-24.04` and Celesto `celesto-large`. Both used Ubuntu 24.04.5 and Node.js 22.23.3.
 
-These are median workload times in seconds, excluding queue time and runner setup. They are not complete billed runtimes.
+The CPU test repeats the same calculation and counts iterations per second. Higher is better. For cache operations, lower time is better.
+
+| Measurement (median) | GitHub Actions | Celesto Large | Difference |
+| --- | ---: | ---: | --- |
+| Single-core CPU, million iterations/s | 221.5 | 234.3 | Celesto +5.8% |
+| Four-core CPU, million iterations/s | 827.7 | 924.1 | Celesto +11.6% |
+| Restore a 512 MiB cache | 4.04 s | 3.60 s | Celesto 1.12× faster |
+| Save a 512 MiB cache | 3.01 s | 6.09 s | GitHub 2.02× faster |
+
+Medians use 18 CPU measurements, 9 successful cache restores, and 9 cache saves per provider. Every initial run missed the cache; every repeat hit it. Cache times include action overhead, transfer, compression, and extraction.
+
+Celesto had higher median CPU throughput and faster cache restores in this test. GitHub saved the cache faster. These measurements cover individual operations, not complete job duration or billed runtime.
+
+[Full report and job logs](https://github.com/CelestoAI/ci-benchmarks/blob/32e8803259c5bb8a438218b15a65555cb58a189b/results/2026-11-02-matched/README.md) · [Raw samples](https://github.com/CelestoAI/ci-benchmarks/blob/32e8803259c5bb8a438218b15a65555cb58a189b/results/2026-11-02-matched/samples.json)
+
+### Hardware and variation
+
+GitHub assigned three processor models. Its EPYC 9V45 jobs were faster than Celesto's EPYC-Milan jobs; its EPYC 7763 and 9V74 jobs were slower. Matching CPU count and RAM does not match the underlying hardware.
+
+Celesto cache restores ranged from 3.35–4.06 seconds; GitHub's ranged from 2.71–9.56 seconds. Celesto saves ranged from 4.46–28.47 seconds, including the slowest sample. One workflow ran alone; two ran concurrently. These three runs do not establish what caused the slower saves.
+
+## Run the CPU and cache comparison
+
+You need a repository connected to Celesto and credit eligible for Large. The Micro-only trial does not cover this runner.
+
+<Steps>
+  <Step title="Open the benchmark workflow">
+    Open [Matched 4-core benchmark](https://github.com/CelestoAI/ci-benchmarks/actions/workflows/matched.yml). If you need write access, fork the repository and enable Actions in your fork.
+  </Step>
+  <Step title="Use a new cache name">
+    Select **Run workflow** on `main`. Set `cache_namespace` to a unique name, such as `my-team-20261105-01`, for each experiment.
+  </Step>
+  <Step title="Check all 12 jobs">
+    Expect six initial cache misses followed by six cache hits. Read each job's summary and download its raw timing artifact. The published results above pool three workflow runs.
+  </Step>
+</Steps>
+
+See the [benchmark instructions](https://github.com/CelestoAI/ci-benchmarks/blob/32e8803259c5bb8a438218b15a65555cb58a189b/README.md#run-it-yourself) for setup and result collection.
+
+## Earlier Docker results — October 17, 2026
+
+This separate suite used matched 4-vCPU / 16-GiB runners, with five repetitions per provider and scenario. The table shows median workload seconds, excluding queue time and runner setup. These Docker measurements have not been rerun for the November report.
 
 | Workload | GitHub | Celesto |
 | --- | ---: | ---: |
@@ -20,40 +61,14 @@ These are median workload times in seconds, excluding queue time and runner setu
 | Offline Rust release compilation | 18.14 | 11.60 |
 | Python integration: pulls, build, and Compose tests | 40.44 | 42.39 |
 
-Celesto used about 36% less time for the measured Rust compilation. GitHub was faster in the other four workloads above. Five samples describe these fixtures and environments; they do not establish a universal speed advantage.
+[Docker report, raw events, and job logs](https://github.com/CelestoAI/ci-benchmarks/blob/e4461a43c193d56560c7df56ceff7fb3170cee78/results/docker-2026-10-17/README.md) · [Reproduction instructions](https://github.com/CelestoAI/ci-benchmarks/blob/e4461a43c193d56560c7df56ceff7fb3170cee78/docker-bench/README.md)
 
-The [full report](https://github.com/CelestoAI/ci-benchmarks/blob/e4461a43c193d56560c7df56ceff7fb3170cee78/results/docker-2026-10-17/README.md) includes observed ranges, raw events, job links, cache correctness checks, and failed pilot runs. Selected runs used authenticated Docker Hub pulls. Task-owned benchmark caches were removed between completed experiments to stay within quota, so this measures operation with available cache space rather than retention under storage pressure.
+The report preserves preflight failures for direct GitHub Actions cache export and Docker CPU limits. Both were fixed afterward; see [Docker layer caching](/ci/docker-cache) and [container CPU limits](/ci/docker#limit-cpu-for-containers) for current usage.
 
-## Compare your workflow fairly
+## Compare your own workflow
 
-<Steps>
-  <Step title="Match the resources and inputs">
-    Use the same repository commit, dependencies, test data, architecture, and CPU/RAM allocation. Celesto Memory matches 2 vCPU / 8 GB; Large provides 4 vCPU / 16 GB. Record actual resources and tool versions on both sides.
-  </Step>
-  <Step title="Separate fresh builds from cache reuse">
-    Measure an initial build, an unchanged rebuild, a source-only change, and a dependency change. Use a fresh runner for each job. Keep image digests and cache settings consistent, and record whether restores and saves actually succeeded.
-  </Step>
-  <Step title="Repeat and keep failures">
-    Alternate providers across several repetitions. Report the median, range, and sample count. Keep failed runs and missing measurements separately; a missing measurement is not zero seconds.
-  </Step>
-  <Step title="Verify the result before comparing speed">
-    Require the same tests to pass on both runners. For integrations, check real database and storage operations. A successful container start or cache-hit message is not enough.
-  </Step>
-  <Step title="Measure the whole cost">
-    Record queue time, runner preparation, workflow execution, and cleanup separately where available. Celesto bills computer runtime, including preparation and cleanup. Compare actual usage and provider allowances, rather than multiplying one timed build step by a list rate.
-  </Step>
-</Steps>
-
-## Reproduce the Docker suite
-
-Use the [pinned benchmark methodology and workflow instructions](https://github.com/CelestoAI/ci-benchmarks/blob/e4461a43c193d56560c7df56ceff7fb3170cee78/docker-bench/README.md). They specify fixtures, versions, credentials, workflow inputs, and result collection.
-
-Before launching it, connect the Celesto GitHub App to your repository, fund the selected runner size, and configure the registry credentials described in the harness. Repeated jobs consume runner credit, registry pulls, and cache space. Start with one paired run and confirm correctness before launching the repeated suite.
-
-Direct BuildKit `type=gha,version=2` export and explicit Docker `--cpus` limits failed Celesto preflight in this benchmark. Registry and portable caching were tested separately. Both failures have since been fixed. See [Docker layer caching](/ci/docker#cache-image-layers-between-jobs) and [CPU limits](/ci/docker#limit-cpu-for-containers).
-
-## Decide whether caching helps
-
-Include restore, extraction, import, export, compression, and upload in the comparison. A cache can avoid compilation yet take longer overall because of transfer costs.
-
-In the published fixture, restoring and loading PostgreSQL and Azurite image archives took longer than pulling the images directly on both providers. Measure your own image sizes and registries before applying that result to your workflow.
+- Match the commit, dependencies, CPU, RAM, and architecture.
+- Measure fresh builds and cache reuse separately. Confirm the same tests pass.
+- Repeat runs and compare medians, ranges, and failures.
+- Include cache restore and save time. Saved computation can be outweighed by transfer time.
+- Compare complete costs. Celesto bills computer runtime, including preparation and cleanup; queue time and provider allowances also affect your comparison.
