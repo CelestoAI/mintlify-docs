@@ -1,9 +1,22 @@
 ---
 title: "Security and permissions"
-description: "Understand repository access, workflow secrets, and what remains after a CI job."
+description: "Understand single-job JIT runners, isolated computers, GitHub permissions, workflow secrets, and data cleanup."
 ---
 
 Choose which repositories can run on Celesto and review what your workflows can access. Each job gets a fresh computer, while your GitHub settings and workflow files determine which code runs and which credentials it receives.
+
+## Just-in-time runners
+
+Celesto uses GitHub's **just-in-time (JIT) runners**: runners registered when needed that accept at most one job. This limits each registration to a single job, even before the job's computer is deleted.
+
+- **Created when needed:** Celesto requests startup credentials from GitHub during runner setup.
+- **Protected during setup:** Saved startup configuration is encrypted and cleared after the runner starts.
+- **Single-job registration:** GitHub removes the JIT runner registration after its job.
+- **Fresh computer:** Each job runs in its own microVM, a lightweight virtual machine with its own operating-system kernel. Celesto deletes the computer after the job.
+
+JIT registration controls runner reuse. Your workflow's permissions and secrets still determine what code can access during the job. Configure those separately, as described below.
+
+See [Celesto's security overview](https://celesto.ai/security) and [GitHub's JIT runner documentation](https://docs.github.com/en/actions/reference/security/secure-use#using-just-in-time-runners).
 
 ## GitHub App permissions
 
