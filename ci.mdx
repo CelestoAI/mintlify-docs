@@ -77,9 +77,21 @@ Install project dependencies and additional tools in your workflow. Pin versions
 ## Limits and compatibility
 
 - **Platform:** Linux x64. See [Docker builds and services](/ci/docker) for container support.
-- **Runtime:** Two-hour safety limit. Keep `timeout-minutes` below 120 to allow preparation and cleanup.
+- **Runtime:** A running job can use the full time GitHub allows. GitHub stops a job after its `timeout-minutes`, which defaults to 360 (six hours). A job must start within two hours; if no Celesto computer accepts it by then, its **Celesto runner** check fails, and you can cancel and rerun the job.
+- **Swap:** Each computer starts with 2 GB of swap (disk space Linux uses as extra memory when RAM runs out) at `/swapfile`. To add more, create a second swap file with a different name, as shown below.
 - **Concurrency:** Depends on capacity, workspace limits, and credit. The trial allows one retained computer.
 - **Files:** Computers are deleted after each job. Save results as artifacts and reuse dependencies with [caching](/ci/caching).
 - **Access:** Select every repository using Celesto in the GitHub App. See [security and permissions](/ci/security).
 - **Labels:** Use exactly one Celesto size label.
 - **Network:** Jobs need outbound access to GitHub and your workflow's services.
+
+To give a memory-heavy job more swap, add this step before the steps that need it. Swap uses the computer's disk, so pick a size that leaves room for your build (see **Disk** in [Sizes and prices](#sizes-and-prices)).
+
+```yaml
+- name: Add 8 GB of swap
+  run: |
+    sudo fallocate -l 8G /swapfile-extra
+    sudo chmod 600 /swapfile-extra
+    sudo mkswap /swapfile-extra
+    sudo swapon /swapfile-extra
+```
