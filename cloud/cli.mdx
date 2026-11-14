@@ -1,184 +1,119 @@
 ---
 title: "Celesto CLI reference"
 sidebarTitle: "CLI reference"
-description: "Use the celesto CLI to authenticate, create computers, run commands, publish ports, and manage sandbox lifecycle from the terminal."
+description: "Install the Celesto CLI, authenticate, and create, use, and clean up cloud computers from your terminal."
 ---
 
-The `celesto` CLI lets you manage Celesto from your terminal. Use it for one-off sandbox work, scripts, and debugging SDK workflows.
+Use the Celesto CLI to give an agent a cloud computer, run commands, and delete the computer when its work is finished.
 
 ## Install and sign in
 
-Install or upgrade the CLI:
+Use Python 3.11 or newer. The package includes the CLI and Python SDK:
 
 ```bash
-pip install -U celesto
+python -m pip install --upgrade celesto
 ```
 
-Save your API key once:
+Open the [API key page](https://celesto.ai/api-key) and copy the default key shown there. It already has the organization access needed to create, inspect, use, and delete computers; no named-key setup or scope selection is needed for this CLI guide.
+
+Save your key at the private prompt:
 
 ```bash
 celesto auth login
+celesto auth status
 ```
 
-Check or remove the saved key later:
+Agents can instead receive `CELESTO_API_KEY` in their process environment. Cloud commands use that key before the saved login. See [authentication](/cloud/authentication) for credential selection and storage.
+
+## Make a first read-only call
 
 ```bash
-celesto auth status
+celesto computer list --cloud --json
+```
+
+This lists cloud computers and creates nothing. An empty list is a successful result for a new workspace.
+
+<Note>
+  Select `--cloud` for cloud commands. Commands such as `create`, `list`, `info`, `exec`, `start`, `stop`, and `delete` otherwise operate on local computers. The older `get` and `run` commands are cloud-only aliases.
+</Note>
+
+## Create, use, and delete a computer
+
+The free trial covers Micro. It allows two retained sandboxes per organization, including stopped and failed computers. Reuse a computer, delete one when finished, or add prepaid credit before creating more. The `trial_retained_sandbox_limit_reached` response includes the allowed `limit`; waiting does not free a retained slot. Other HTTP 429 errors can require different recovery steps.
+
+Create one cloud computer:
+
+```bash
+celesto computer create --cloud --size micro
+```
+
+Copy the computer ID from the output. Replace `COMPUTER_ID` in the following commands with that ID:
+
+```bash
+celesto computer info COMPUTER_ID --cloud
+celesto computer exec COMPUTER_ID --cloud -- uname -a
+celesto computer delete COMPUTER_ID --cloud
+```
+
+The execution command prints Linux system information. Deleting the computer removes its files and frees its retained sandbox slot. To preserve files instead, stop it and start the same computer later:
+
+```bash
+celesto computer stop COMPUTER_ID --cloud
+celesto computer start COMPUTER_ID --cloud
+```
+
+A stopped computer still counts toward the retained trial limit. If a create request times out, [inspect your computers](https://celesto.ai/computers) before repeating it: the request may already have created one. See [error handling](/cloud/errors) for uncertain outcomes.
+
+## Cloud computer commands
+
+| Command | Purpose |
+|---|---|
+| `celesto computer create --cloud [--size SIZE] [--template ID] [--no-internet]` | Create a cloud computer. |
+| `celesto computer list --cloud [--limit N]` | List cloud computers. |
+| `celesto computer info ID --cloud` | Inspect a computer. |
+| `celesto computer exec ID --cloud [--start] [--timeout SECONDS] -- COMMAND ...` | Run a command on a running computer. `--start` requests startup but does not wait for readiness. |
+| `celesto computer ssh ID --cloud` | Open an interactive terminal. |
+| `celesto computer stop ID --cloud` | Stop a computer and preserve its files. |
+| `celesto computer start ID --cloud` | Start a stopped computer. |
+| `celesto computer delete ID --cloud` | Delete a computer. |
+
+For an existing stopped computer, run `celesto computer start ID --cloud`, then inspect `celesto computer info ID --cloud` until its status is `running` before running commands or opening SSH.
+
+Use `--size` for cloud CPU, memory, and disk allocations. See [resources](/cloud/features/resources) for sizes. Choose a template from the console's [Templates page](https://celesto.ai/templates), then pass its ID:
+
+```bash
+celesto computer create --cloud --template YOUR_TEMPLATE_ID
+```
+
+## Publish a port
+
+Once an application is listening inside your computer, publish its port to receive a public HTTPS URL:
+
+```bash
+celesto computer port publish COMPUTER_ID --port 8000
+celesto computer port list COMPUTER_ID --cloud
+celesto computer port unpublish COMPUTER_ID --port 8000
+```
+
+`port publish` and `port unpublish` are cloud-only commands. `port list` requires `--cloud`. See [publish ports](/cloud/features/publish-ports) for supported ports and limits.
+
+## Agent output
+
+Use `--json` for a structured result. The response includes `ok`, `command`, `exit_code`, `data`, and `error`:
+
+```bash
+celesto computer create --cloud --size micro --json
+celesto computer exec COMPUTER_ID --cloud --json -- uname -a
+celesto computer delete COMPUTER_ID --cloud --json
+```
+
+For cloud creates, read the computer ID from `data.computer_id`. Keep this ID for cleanup. Check the command's exit code and error recovery message before continuing. Interactive SSH has no JSON mode.
+
+## Update or remove your login
+
+```bash
+python -m pip install --upgrade celesto
 celesto auth logout
 ```
 
-`celesto auth status` reports the API URL, the credential source, and the organization the key is bound to. See [Authentication](/cloud/authentication#verify-which-credential-a-command-uses) for how the CLI resolves keys and how to check which organization a command targets.
-
-## Create your first computer
-
-Create a computer with the default `scratch` template. The command prints a generated name. Use that name in later commands.
-
-```bash
-celesto computer create
-# Name:   einstein
-# ID:     cmp_123
-# Status: creating
-```
-
-Inspect the computer by name or ID:
-
-```bash
-celesto computer get einstein
-# Name:   einstein
-# Status: running
-```
-
-List your computers:
-
-```bash
-celesto computer list
-```
-
-Run a command inside the computer:
-
-```bash
-celesto computer run einstein "uname -a"
-```
-
-Open an interactive terminal. SSH means an interactive shell connection to the computer.
-
-```bash
-celesto computer ssh einstein
-```
-
-Stop and start the same computer when you want to keep its files for later:
-
-```bash
-celesto computer stop einstein
-celesto computer start einstein
-```
-
-Delete the computer when you are done. The confirmation prompt names the organization the computer belongs to, so you can catch a wrong-tenant delete before it happens. Pass `--force` to skip the prompt in scripts.
-
-```bash
-celesto computer delete einstein
-# Delete computer einstein in Acme Research (org_123)? [y/N]:
-```
-
-## Computer commands
-
-| Command | Description |
-|---|---|
-| `celesto computer create [--template ID] [--cpus N] [--memory MB] [--disk-size-mb MB] [--no-internet]` | Create a computer. Pass `--no-internet` to turn off outbound internet access (requires `celesto` `0.0.13` or later). |
-| `celesto computer templates` | List templates with preinstalled tools |
-| `celesto computer list [--status STATUS] [--template ID] [--project ID] [--limit N]` | List matching computers |
-| `celesto computer get NAME` | Get one computer by name or ID |
-| `celesto computer run NAME "command" [--timeout N]` | Run a command on a computer |
-| `celesto computer run NAME "command" --stream` | Stream command output while it runs |
-| `celesto computer ssh NAME` | Open an interactive terminal |
-| `celesto computer stop NAME` | Stop a computer |
-| `celesto computer start NAME` | Start a stopped computer |
-| `celesto computer delete [--force] NAME` | Delete a computer |
-
-## Templates and resources
-
-List templates when you want a computer with tools already installed:
-
-```bash
-celesto computer templates
-```
-
-Create a computer from a template:
-
-```bash
-celesto computer create --template coding-agent
-# Name:   curie
-# Status: creating
-```
-
-Override the template's default CPU, memory, or disk size when the job needs more room:
-
-```bash
-celesto computer create --template coding-agent --cpus 2 --memory 2048 --disk-size-mb 15360
-```
-
-## Port commands
-
-Publish a port when a process inside the computer needs a public HTTPS URL:
-
-```bash
-celesto computer port publish einstein --port 8000
-# https://p-test.celesto.ai
-```
-
-List published ports:
-
-```bash
-celesto computer port list einstein
-```
-
-Unpublish the port when you are done:
-
-```bash
-celesto computer port unpublish einstein --port 8000
-```
-
-| Command | Description |
-|---|---|
-| `celesto computer port publish NAME [--port N]` | Expose an application port (`1024`–`65535`) on the public internet. Defaults to `8000` |
-| `celesto computer port list NAME` | List published ports for a computer |
-| `celesto computer port unpublish NAME [--port N]` | Stop exposing a port. Defaults to `8000` |
-
-A computer can have up to four ports published at a time, and Celesto system ports are reserved for the platform.
-
-## Auto-resume stopped computers
-
-The `run` and `ssh` commands automatically resume a stopped computer before executing. You can run a command or open a terminal session without calling `start` first.
-
-```bash
-celesto computer run einstein "uname -a"
-celesto computer ssh einstein
-```
-
-## JSON output
-
-Most computer commands support `--json` or `-j` for structured output. Use JSON in scripts and automation.
-
-```bash
-celesto computer list --json
-celesto computer create --template coding-agent --json
-celesto computer run einstein "uname -a" --json
-```
-
-`celesto computer ssh` is interactive and does not support JSON output.
-
-## Update command
-
-Run `celesto update` to upgrade the `celesto` package in your current Python environment.
-
-```bash
-celesto update
-```
-
-The command upgrades `celesto` using `pip` when it is available, and falls back to `uv` when you installed Celesto with `uv` or are running inside a `uv run` environment.
-
-If neither `pip` nor `uv` is available, the command prints the exact command to run yourself, for example:
-
-```bash
-uv pip install --python /path/to/python --upgrade celesto
-```
+Logging out removes the saved login. A `CELESTO_API_KEY` already set in an agent's environment remains a separate credential source.
