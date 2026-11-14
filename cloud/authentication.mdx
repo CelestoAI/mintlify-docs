@@ -4,17 +4,17 @@ sidebarTitle: "Authentication"
 description: "Authenticate Celesto SDK and CLI calls with the CELESTO_API_KEY environment variable, direct credentials, or the saved CLI login session."
 ---
 
-Celesto uses an API key to identify your project and authorize SDK or CLI requests. You can save the key once for CLI commands, set it in your environment for SDK code, or pass it directly when you create a computer client.
+Celesto uses an API key to authorize requests for its organization. Get your key from the [API key page](https://celesto.ai/api-key). You can save the key once for CLI commands, set it in your environment for SDK code, or pass it directly when you create a computer client.
 
 ## Save your key for the CLI
 
-If you use the `celesto` CLI, save your key one time and reuse it for every command:
+For the `celesto` CLI, copy the default key shown on the [API key page](https://celesto.ai/api-key), then save it once:
 
 ```bash
 celesto auth login
 ```
 
-The command prompts for your API key and stores it in your operating system's secure credential store: Keychain on macOS, Credential Manager on Windows, or Secret Service on Linux.
+The command prompts for your API key and saves it in `~/.celesto/credentials` with owner-only file permissions. The key stays private; keep this file out of source control.
 
 Manage the saved key with:
 
@@ -24,40 +24,47 @@ celesto auth logout
 ```
 
 <Tip>
-  The saved key is scoped to the Celesto API URL. If you point the CLI at a different environment with `--base-url` or `CELESTO_BASE_URL`, sign in again for that URL.
+  The saved login includes its API URL. Signing in again replaces that saved login. Use `CELESTO_API_KEY` explicitly when an agent needs a different key from the saved login.
 </Tip>
 
-## API key lookup order
+## Choose credentials for cloud commands
 
-The CLI resolves the API key in this order:
-
-1. `--api-key` flag
-2. `CELESTO_API_KEY` environment variable
-3. `.env` file in the current directory
-4. Key saved by `celesto auth login`
-
-## Verify which credential a command uses
-
-Each API key is bound to a single organization. Because the lookup order reads `.env` from the current working directory, the same command can target a different organization depending on where you run it. Run `celesto auth status` to see exactly which key and organization CLI commands use from your current directory:
+Cloud computer commands use `CELESTO_API_KEY` from the current process first,
+then the key saved by `celesto auth login`. Load a `.env` file into your shell
+if you want it to supply this variable. Use `--cloud` to select cloud computers;
+commands such as `celesto computer list` otherwise inspect local computers.
 
 ```bash
-celesto auth status
-# API URL:      https://api.celesto.ai/v1
-# Credential:   your saved login (system keyring)
-# Organization: Acme Research (org_123)
+export CELESTO_API_KEY="your-api-key"
+celesto computer list --cloud --json
 ```
 
-The output reports:
+The default key has the organization access needed for this read-only call and
+for creating, using, and deleting computers. Named-key scope selection is not
+part of CLI onboarding.
 
-- **API URL**: the endpoint commands target. Pass `--base-url` to check the credential saved for a different environment.
-- **Credential**: the exact source the key came from, such as the `CELESTO_API_KEY` environment variable, a `.env` file, or your saved login.
-- **Organization**: the organization the resolved key is bound to.
+## Check your saved login
 
-When a `.env` file in the current directory holds a different key than your saved login, `celesto auth status` names both organizations and tells you how to switch. Every other CLI command prints a one-time warning on stderr in that situation, naming the `.env` file that overrides the saved login. The warning goes to stderr, so `--json` output on stdout stays parseable.
+`celesto auth status` validates the saved default key and reports its owner's
+email and API URL. This command checks the saved login, while an SDK or cloud
+command may use `CELESTO_API_KEY` instead.
 
-To use your saved login instead of the `.env` key, run the command from another directory or pass `--api-key` explicitly.
+Each key is bound to one organization. Use the matching organization in the
+console when looking for computers created with that key.
 
-Destructive commands also name the organization they act on: `celesto computer delete` includes it in the confirmation prompt, and `celesto computer stop` includes it in the result message. `--force` and `--json` skip the organization lookup, so scripted calls make no extra request.
+## Scope SDK and REST integrations
+
+For narrower SDK or REST access, create a named key on the [API key page](https://celesto.ai/api-key). Choose permissions for the actions the integration needs. Supply this key directly to the SDK or through `CELESTO_API_KEY`; the CLI instructions above use the default key.
+
+| Permission | Actions |
+|---|---|
+| **See your computers** (`computers:read`) | Inspect computers and their state. |
+| **Create, start, stop computers and run commands** (`computers:exec`) | Create, run, stop, resume, and connect to a computer. |
+| **Delete computers** (`computers:admin`) | Delete computers. Required for automatic cleanup with `with CloudComputer()`. |
+
+The key's owner also needs access to its organization. A valid key can still be
+rejected when its permission or the owner's membership is missing; the
+[error message](/cloud/errors) identifies the required change.
 
 <View title="Python" icon="python">
 
@@ -72,21 +79,6 @@ Destructive commands also name the organization they act on: `celesto computer d
 Load a `.env` file into your environment yourself if you use one; the Python
 cloud client reads the process environment directly. An environment key takes
 precedence over a successful saved CLI login.
-
-## Set the required permissions
-
-Named API keys work with `CloudComputer`. Choose permissions for the actions
-your application needs:
-
-| Permission | Actions |
-|---|---|
-| **See your computers** (`computers:read`) | Inspect computers and their state. |
-| **Create, start, stop computers and run commands** (`computers:exec`) | Create, run, stop, resume, and connect to a computer. |
-| **Delete computers** (`computers:admin`) | Delete computers. Required for automatic cleanup with `with CloudComputer()`. |
-
-The key's owner also needs access to its organization. A valid key can still be
-rejected when its permission or the owner's membership is missing; the
-[error message](/cloud/errors) identifies the required change.
 
 ## Use an environment variable
 
@@ -130,9 +122,8 @@ trial limits before running them.
 1. `token` or `apiKey` passed in the client config
 2. `CELESTO_API_KEY` environment variable
 3. `CELESTO_API_KEY` in a `.env` file in the current working directory
-4. Key saved by `celesto auth login`
 
-If none of them produce a key, the SDK throws a `CelestoError` telling you to run `celesto auth login` or set `CELESTO_API_KEY`.
+Set `CELESTO_API_KEY` before running the example so the selected key is explicit.
 
 ## Use an environment variable
 
@@ -159,14 +150,12 @@ CELESTO_API_KEY="your-api-key"
 
 The SDK reads `.env` from `process.cwd()` when `CELESTO_API_KEY` is not already set in the shell, so the same `Computer.list()` call works without any extra setup.
 
-## Use CLI-saved credentials
+## Share a key with CLI commands
 
-Install the CLI and sign in once. The SDK falls back to the key saved in your operating system's secure credential store when no other source is set:
-
-```bash
-pip install celesto
-celesto auth login
-```
+Use `CELESTO_API_KEY` when the same agent needs both TypeScript and CLI access.
+A login saved by the current Python CLI is separate from the older TypeScript
+SDK credential-store integration. Setting the environment variable selects the
+same key explicitly in both tools.
 
 ## Pass the key in code
 
@@ -188,7 +177,7 @@ console.log(computers.length);
 
 The SDK exports the same resolution helpers it uses internally, so you can reuse them in your own tooling:
 
-- `resolveCelestoApiKey(options?)` walks the environment, `.env`, and CLI-saved key and returns the first match, or `undefined` if none are set.
+- `resolveCelestoApiKey(options?)` checks the environment and `.env`, then attempts the older CLI credential-store integration. Use an explicit environment key with the current Python CLI. It returns `undefined` if no compatible source is available.
 - `resolveClientConfig(config?, options?)` returns a `ClientConfig` with `token` populated, preserving any explicit `token` or `apiKey` you already passed. It throws `CelestoError` with `MISSING_CREDENTIALS_MESSAGE` when no credentials are available.
 
 ```ts resolve.ts

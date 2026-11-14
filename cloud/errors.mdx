@@ -8,10 +8,10 @@ Find out what went wrong and choose the next safe step. These examples handle re
 
 <View title="Python" icon="python">
 
-Use Celesto 0.1.7 or later for the structured fields below:
+Upgrade the Python SDK to use the structured fields below:
 
 ```bash
-python -m pip install --upgrade "celesto>=0.1.7"
+python -m pip install --upgrade celesto
 ```
 
 ## Catch cloud errors
@@ -78,7 +78,7 @@ status, especially HTTP 429:
 |---|---|
 | `api_key_scope_required` | Create a key with the permission named in the error, then update `CELESTO_API_KEY` or `api_key=`. `required_scope` identifies the permission. |
 | `organization_access_denied` | Ask an organization owner to restore the key owner's membership. |
-| `trial_retained_sandbox_limit_reached` (HTTP 429) | The free trial allows one sandbox, including stopped sandboxes. Reuse it, delete it in the dashboard when you are done, or add prepaid credit before creating another. Waiting does not free this slot. |
+| `trial_retained_sandbox_limit_reached` (HTTP 429) | The trial allows two retained Micro sandboxes per organization, including stopped and failed computers. The response carries the allowed `limit`. Reuse a computer, delete one when you are done, or add prepaid credit before creating more. Waiting does not free a retained slot. |
 | `concurrency_limit_reached` (HTTP 429) | Reuse a running sandbox, or stop one to preserve its files. Delete one only when you intend to remove it. `running_limit` gives the limit when available. |
 | Other HTTP 429 | Inspect the message and dashboard to determine the limit. The status alone does not establish that waiting or retrying will help. |
 | HTTP 401 | Supply a valid API key and retry the rejected request. |

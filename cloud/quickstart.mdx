@@ -8,40 +8,45 @@ This quickstart creates one sandboxed computer, runs `uname -a`, prints the outp
 
 ## Before you start
 
-Get an API key from [celesto.ai](https://celesto.ai) under **Settings \> Security**. Set it as `CELESTO_API_KEY` before you run the examples.
+Open [API key](https://celesto.ai/api-key) in the Celesto console. Sign in or create an account when prompted, then set the default key shown there as `CELESTO_API_KEY` before running either example. It already has full access to its organization.
+
+If you choose a named key for an SDK or REST integration, this example needs all three permissions:
+
+| Permission | Why this example needs it |
+|---|---|
+| **See your computers** (`computers:read`) | Check the computer's startup and state. |
+| **Create, start, stop computers and run commands** (`computers:exec`) | Create the computer and run the command. |
+| **Delete computers** (`computers:admin`) | Clean up the computer when the example finishes. |
+
+The named-key form starts with read access only.
+
+<Note>
+  The free trial covers Micro and allows two retained sandboxes per organization.
+  Stopped and failed sandboxes still count. Reuse a computer, delete one when
+  you are finished, or add prepaid credit before creating more. A
+  `trial_retained_sandbox_limit_reached` error includes the allowed `limit`;
+  waiting alone does not free a retained slot. Other HTTP 429 errors can have
+  different recovery steps.
+</Note>
 
 <View title="Python" icon="python">
   ## Install the Python SDK
 
+  Use Python 3.11 or newer.
+
   ```bash
-  python -m pip install --upgrade "celesto>=0.1.7"
+  python -m pip install --upgrade celesto
   ```
 
   ## Run your first computer
-
-  A named API key needs all three permissions for this example: **See your
-  computers**, **Create, start, stop computers and run commands**, and **Delete
-  computers**. The final permission lets the example clean up after itself.
-
-  <Note>
-    The free trial allows one sandbox at a time, including stopped sandboxes.
-    Reuse your existing sandbox, delete it when you are done, or add prepaid
-    credit before creating another. HTTP 429 can mean this limit; waiting does
-    not free the slot.
-  </Note>
 
   Create `quickstart.py`:
 
   ```python quickstart.py
   from celesto import CloudComputer
 
-
   with CloudComputer() as computer:
-      print(f"Computer ready: {computer.id}")
-      result = computer.run("uname -a")
-      print(result.stdout.strip())
-      if result.exit_code != 0:
-          raise RuntimeError(f"Command failed: {result.stderr}")
+      print(computer.run("uname -a").stdout)
   ```
 
   Run it:
@@ -52,25 +57,20 @@ Get an API key from [celesto.ai](https://celesto.ai) under **Settings \> Securit
   ```
 
   <Check>
-    The script prints the computer ID and Linux system information. Exiting
-    the `with` block deletes the computer, including when your code fails.
+    The script prints Linux system information. Exiting the `with` block deletes
+    the computer.
   </Check>
-
-  If creation fails, follow the error's recovery message. If the response is
-  unreadable or the connection times out, inspect your computers in the
-  [dashboard](https://celesto.ai) before creating another. See
-  [error handling](/cloud/errors) for uncertain outcomes and cleanup failures.
 
   ## Next step
 
-  Learn how to [create computers with templates](/cloud/computers#use-a-template) when your agent needs coding tools already installed.
+  Learn how to [create computers with templates](/cloud/computers#use-a-template) when your agent needs coding tools already installed. See [error handling](/cloud/errors) when adding this to an application.
 </View>
 
 <View title="TypeScript" icon="js">
   ## Install the TypeScript SDK
 
   ```bash
-  npm install @celestoai/sdk@latest
+  npm install @celestoai/sdk
   npm install --save-dev tsx typescript
   ```
 
@@ -80,18 +80,13 @@ Get an API key from [celesto.ai](https://celesto.ai) under **Settings \> Securit
 
   ```ts quickstart.ts
   import { Computer } from "@celestoai/sdk";
-  
-  const token = process.env.CELESTO_API_KEY;
-  if (!token) {
-    throw new Error("Set CELESTO_API_KEY before running this script.");
+
+  const computer = await Computer.create();
+  while (computer.status !== "running") {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    await computer.refresh();
   }
-  
-  const computer = await Computer.create({ templateId: "scratch" }, { token });
-  console.log("Computer ready:", computer.name);
-  
-  const result = await computer.run("uname -a");
-  console.log(result.stdout.trim());
-  
+  console.log((await computer.run("uname -a")).stdout);
   await computer.delete();
   ```
 
@@ -103,10 +98,13 @@ Get an API key from [celesto.ai](https://celesto.ai) under **Settings \> Securit
   ```
 
   <Check>
-    The script prints the computer name, prints Linux system information, and deletes the computer.
+    The script prints Linux system information and deletes the computer.
   </Check>
+
+  The SDK reads `CELESTO_API_KEY` from your environment. The loop waits for
+  startup before running the command.
 
   ## Next step
 
-  Learn how to [create computers with templates](/cloud/computers#use-a-template) when your agent needs coding tools already installed.
+  Learn how to [create computers with templates](/cloud/computers#use-a-template) when your agent needs coding tools already installed. See [error handling](/cloud/errors) when adding this to an application.
 </View>
