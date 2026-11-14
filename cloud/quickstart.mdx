@@ -10,16 +10,6 @@ This quickstart creates one sandboxed computer, runs `uname -a`, prints the outp
 
 Open [API key](https://celesto.ai/api-key) in the Celesto console. Sign in or create an account when prompted, then set the default key shown there as `CELESTO_API_KEY` before running either example. It already has full access to its organization.
 
-If you choose a named key for an SDK or REST integration, this example needs all three permissions:
-
-| Permission | Why this example needs it |
-|---|---|
-| **See your computers** (`computers:read`) | Check the computer's startup and state. |
-| **Create, start, stop computers and run commands** (`computers:exec`) | Create the computer and run the command. |
-| **Delete computers** (`computers:admin`) | Clean up the computer when the example finishes. |
-
-The named-key form starts with read access only.
-
 <Note>
   The free trial covers Micro and allows two retained sandboxes per organization.
   Stopped and failed sandboxes still count. Reuse a computer, delete one when
@@ -35,7 +25,7 @@ The named-key form starts with read access only.
   Use Python 3.11 or newer.
 
   ```bash
-  python -m pip install --upgrade celesto
+  pip install celesto
   ```
 
   ## Run your first computer
