@@ -61,14 +61,9 @@ The named-key form starts with read access only.
     the computer.
   </Check>
 
-  If creation fails, follow the error's recovery message. If the response is
-  unreadable or the connection times out, inspect your computers in the
-  [dashboard](https://celesto.ai) before creating another. See
-  [error handling](/cloud/errors) for uncertain outcomes and cleanup failures.
-
   ## Next step
 
-  Learn how to [create computers with templates](/cloud/computers#use-a-template) when your agent needs coding tools already installed.
+  Learn how to [create computers with templates](/cloud/computers#use-a-template) when your agent needs coding tools already installed. See [error handling](/cloud/errors) when adding this to an application.
 </View>
 
 <View title="TypeScript" icon="js">
@@ -86,20 +81,13 @@ The named-key form starts with read access only.
   ```ts quickstart.ts
   import { Computer } from "@celestoai/sdk";
 
-  const computer = await Computer.create({ templateId: "scratch" }, { timeoutMs: 10_000 });
-  try {
-    const deadline = Date.now() + 120_000;
-    while (computer.status !== "running") {
-      if (computer.status === "error" || Date.now() >= deadline) {
-        throw new Error("Computer startup failed or timed out.");
-      }
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      await computer.refresh();
-    }
-    console.log((await computer.run("uname -a")).stdout);
-  } finally {
-    await computer.delete();
+  const computer = await Computer.create();
+  while (computer.status !== "running") {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    await computer.refresh();
   }
+  console.log((await computer.run("uname -a")).stdout);
+  await computer.delete();
   ```
 
   Run it:
@@ -113,16 +101,10 @@ The named-key form starts with read access only.
     The script prints Linux system information and deletes the computer.
   </Check>
 
-  The SDK reads `CELESTO_API_KEY` from your environment. Creation returns before
-  startup finishes, so the loop waits for the computer to be running. The
-  `finally` block deletes it when the script finishes.
-
-  If creation times out or its response cannot be read, inspect your
-  [computers](https://celesto.ai/computers) before retrying. The request may
-  already have created a sandbox. See [error handling](/cloud/errors) for
-  uncertain outcomes and cleanup failures.
+  The SDK reads `CELESTO_API_KEY` from your environment. The loop waits for
+  startup before running the command.
 
   ## Next step
 
-  Learn how to [create computers with templates](/cloud/computers#use-a-template) when your agent needs coding tools already installed.
+  Learn how to [create computers with templates](/cloud/computers#use-a-template) when your agent needs coding tools already installed. See [error handling](/cloud/errors) when adding this to an application.
 </View>
