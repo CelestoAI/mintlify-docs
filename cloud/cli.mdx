@@ -11,10 +11,10 @@ Use the Celesto CLI to give an agent a cloud computer, run commands, and delete 
 Use Python 3.11 or newer. The package includes the CLI and Python SDK:
 
 ```bash
-python -m pip install --upgrade celesto
+pip install celesto
 ```
 
-Open the [API key page](https://celesto.ai/api-key) and copy the default key shown there. It already has the organization access needed to create, inspect, use, and delete computers; no named-key setup or scope selection is needed for this CLI guide.
+Open the [API key page](https://celesto.ai/api-key) and copy the default key shown there. It already has the organization access needed to create, inspect, use, and delete computers.
 
 Save your key at the private prompt:
 
@@ -111,8 +111,9 @@ For cloud creates, read the computer ID from `data.computer_id`. Keep this ID fo
 
 ## Update or remove your login
 
+Run `celesto auth login` again to replace your saved key, or remove it:
+
 ```bash
-python -m pip install --upgrade celesto
 celesto auth logout
 ```
 

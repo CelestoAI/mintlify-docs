@@ -40,8 +40,7 @@ celesto computer list --cloud --json
 ```
 
 The default key has the organization access needed for this read-only call and
-for creating, using, and deleting computers. Named-key scope selection is not
-part of CLI onboarding.
+for creating, using, and deleting computers.
 
 ## Check your saved login
 
@@ -54,7 +53,9 @@ console when looking for computers created with that key.
 
 ## Scope SDK and REST integrations
 
-For narrower SDK or REST access, create a named key on the [API key page](https://celesto.ai/api-key). Choose permissions for the actions the integration needs. Supply this key directly to the SDK or through `CELESTO_API_KEY`; the CLI instructions above use the default key.
+The default key provides full access to its organization, including creating,
+inspecting, using, and deleting computers. Integrations that already use a
+scoped key need the corresponding permissions below.
 
 | Permission | Actions |
 |---|---|
