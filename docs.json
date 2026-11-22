@@ -123,8 +123,7 @@
             "group": "Reference and troubleshooting",
             "pages": [
               "cloud/cli",
-              "cloud/errors",
-              "cloud/gatekeeper"
+              "cloud/errors"
             ]
           }
         ]
@@ -346,7 +345,8 @@
     { "source": "/celesto-sdk/guides/pi-coding-agent", "destination": "/cloud/guides/pi-coding-agent" },
     { "source": "/celesto-sdk/deployments", "destination": "/cloud/overview" },
     { "source": "/celesto-sdk/openai-agents", "destination": "/cloud/openai-agents" },
-    { "source": "/celesto-sdk/gatekeeper", "destination": "/cloud/gatekeeper" },
+    { "source": "/celesto-sdk/gatekeeper", "destination": "/cloud/overview" },
+    { "source": "/cloud/gatekeeper", "destination": "/cloud/overview" },
     { "source": "/celesto-sdk/errors", "destination": "/cloud/errors" },
     { "source": "/celesto-sdk/cli", "destination": "/cloud/cli" },
     { "source": "/cloud/managed-agents/:slug*", "destination": "/cloud/overview" },
