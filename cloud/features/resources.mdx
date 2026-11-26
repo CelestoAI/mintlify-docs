@@ -10,27 +10,13 @@ A computer's root disk and its workspace storage both keep your data, but they s
 
 ## Start with a template
 
-A template is a ready-made starting setup for a computer. It includes an operating system, useful tools, and default resource sizes.
+A template is a ready-made starting setup for a computer. It determines which tools are installed. A named size determines how much CPU, memory, and disk space the computer gets.
 
-Use `coding-agent` when your workflow needs common coding tools preinstalled. To start every computer with your own packages, [build a custom template](/cloud/features/custom-templates). Use the template defaults when you are running quick scripts or trying Celesto for the first time.
+Use `coding-agent` when your workflow needs common coding tools preinstalled. To start every computer with your own packages, [build a custom template](/cloud/features/custom-templates).
 
-List the available templates and their default CPU and memory:
+List the available templates:
 
 <CodeGroup>
-
-```python Python
-from celesto import Computer
-
-
-templates = Computer.list_templates()
-
-for template in templates:
-    print(
-        f"{template['id']}: "
-        f"{template['default_vcpus']} CPU, "
-        f"{template['default_ram_mb']} MB memory"
-    )
-```
 
 ```ts TypeScript
 import { Computer } from "@celestoai/sdk";
@@ -38,45 +24,35 @@ import { Computer } from "@celestoai/sdk";
 const templates = await Computer.listTemplates();
 
 for (const template of templates) {
-  console.log(
-    `${template.id}: ${template.defaultVcpus} CPU, ${template.defaultRamMb} MB memory`,
-  );
+  console.log(`${template.id}: ${template.displayName}`);
 }
 ```
 
 ```bash CLI
-celesto computer templates
+celesto computer templates --cloud
 ```
 
 </CodeGroup>
 
 ## Choose a named size
 
-CPU and memory must match one of these named sizes. Each size includes a fixed root disk for the operating system and tools. A vCPU is a virtual CPU core.
+Choose a size by ID, such as `micro` or `large`. Each size includes a fixed root disk for the operating system and tools. A vCPU is a virtual CPU core.
 
 | Size | CPU | Memory | Root disk | Price |
 | --- | ---: | ---: | ---: | ---: |
-| Micro (default) | 1 vCPU | 2 GB | 20 GB | $0.015/hour |
+| Micro | 1 vCPU | 2 GB | 20 GB | $0.015/hour |
 | Small | 1 vCPU | 4 GB | 25 GB | $0.020/hour |
 | Standard | 2 vCPU | 4 GB | 30 GB | $0.030/hour |
 | Memory | 2 vCPU | 8 GB | 40 GB | $0.040/hour |
 | Large | 4 vCPU | 16 GB | 60 GB | $0.080/hour |
 | XL | 8 vCPU | 32 GB | 100 GB | $0.160/hour |
 
-The free trial includes Micro only. Add credit to your account to unlock the other sizes. See [Celesto pricing](https://celesto.ai/pricing) for current rates and trial details.
+The free trial includes Micro only. Some promotions cover Micro and Small. Add eligible credit to unlock the full catalog. See [Celesto pricing](https://celesto.ai/pricing) for current rates and trial details, or request `GET /v1/billing/sizes` for the current catalog.
 
-Omit both `cpus` and `memory` to use the template default. When you set them, choose both values from the same size in the table. Mixed combinations such as 2 vCPU with 2 GB memory are rejected.
+For built-in templates, the default is Micro on the trial and Standard outside it. Choose an explicit size to get the same resources across accounts. Cloud computers reject custom CPU, memory, and disk values.
 
-<ParamField body="cpus" type="integer">
-  CPU value from a named size. Use together with the matching `memory` value.
-</ParamField>
-
-<ParamField body="memory" type="integer">
-  Memory in MB from a named size. Use together with the matching `cpus` value.
-</ParamField>
-
-<ParamField body="disk_size_mb" type="integer">
-  Root disk storage inside the computer in MB. Each named size includes a fixed root disk, such as `30720` (30 GB) for Standard, so you can leave this out. If you set it, use the value from the same row as `cpus` and `memory`. For large workspace files, use CelestoFS.
+<ParamField body="size_id" type="string">
+  Named size ID. Use `size_id` in Python and the API, `sizeId` in TypeScript, or `--size` in the CLI.
 </ParamField>
 
 <ParamField body="template_id" type="string" default="scratch">
@@ -85,26 +61,15 @@ Omit both `cpus` and `memory` to use the template default. When you set them, ch
 
 ## Create a larger Celesto cloud computer
 
-Create a larger computer when the default template does not have enough room for the job. This example creates a Standard `coding-agent` computer with 2 CPUs and 4096 MB of memory. Standard includes a 30 GB root disk.
+Create a larger computer when your current size does not have enough room for the job. This example requires an account that can create Standard computers. It gives the `coding-agent` template 2 vCPUs, 4 GB of memory, and a 30 GB root disk.
 
 <CodeGroup>
 
 ```python Python
-from celesto import Computer
+from celesto import CloudComputer
 
-
-computer = Computer(
-    template_id="coding-agent",
-    cpus=2,
-    memory=4096,
-)
-
-print(computer.name)
-print(f"{computer.vcpus} CPU")
-print(f"{computer.ram_mb} MB memory")
-print(f"{computer.disk_size_mb} MB disk")
-
-computer.delete()
+with CloudComputer(template_id="coding-agent", size_id="standard") as computer:
+    print(computer.id)
 ```
 
 ```ts TypeScript
@@ -112,26 +77,23 @@ import { Computer } from "@celestoai/sdk";
 
 const computer = await Computer.create({
   templateId: "coding-agent",
-  cpus: 2,
-  memory: 4096,
+  sizeId: "standard",
 });
 
 console.log(computer.name);
 console.log(`${computer.vcpus} CPU`);
 console.log(`${computer.ramMb} MB memory`);
 console.log(`${computer.diskSizeMb} MB disk`);
-
-await computer.delete();
 ```
 
 ```bash CLI
-celesto computer create --template coding-agent --cpus 2 --memory 4096
+celesto computer create --cloud --template coding-agent --size standard
 ```
 
 </CodeGroup>
 
 <Check>
-  The response shows the CPU, memory, and disk size assigned to the new computer.
+  The computer uses the Standard resources listed above. If you created it with TypeScript or the CLI, [delete the computer](/cloud/computers) when you no longer need it.
 </Check>
 
 ## Pick a computer size for your workload
@@ -140,7 +102,7 @@ Use the smallest computer that can finish the job. Increase the setting that mat
 
 | Workload | Start with |
 |---|---|
-| Quick shell commands | Micro or template defaults |
+| Quick shell commands | Micro |
 | Coding agent with package installs | Standard `coding-agent` |
 | Large repository builds | Large, plus CelestoFS workspace storage |
 | Data processing or notebooks | Memory or Large, plus CelestoFS workspace storage |
