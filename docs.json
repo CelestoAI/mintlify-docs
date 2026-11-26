@@ -356,7 +356,11 @@
     { "source": "/enterprise/:slug*", "destination": "/" },
     { "source": "/smolvm/api/smolvm", "destination": "/celesto/api/celesto" },
     { "source": "/smolvm/:slug*", "destination": "/celesto/:slug*" },
-    { "source": "/docs/ci", "destination": "/ci" }
+    { "source": "/docs/ci", "destination": "/ci" },
+    { "source": "/agentor", "destination": "/agentor/home" },
+    { "source": "/agentor/guides/deployment", "destination": "/agentor/deploy" },
+    { "source": "/celesto-sdk", "destination": "/cloud/overview" },
+    { "source": "/celesto/guides/port-forwarding", "destination": "/celesto/features/port-forwarding" }
   ],
   "fonts": {
     "heading": {
