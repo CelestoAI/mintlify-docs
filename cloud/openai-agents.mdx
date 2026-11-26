@@ -1,291 +1,51 @@
 ---
-title: "Sandbox an OpenAI agent with Celesto"
+title: "Give an OpenAI agent a Celesto computer"
 sidebarTitle: "OpenAI Agents SDK"
-description: "Give an OpenAI agent its own sandboxed computer. Use a hosted Celesto computer or a local Celesto sandbox as the workspace for a SandboxAgent."
+description: "Give an OpenAI agent a tool that runs work on a cloud computer and returns the result."
 ---
 
-The Celesto SDK ships with two ready-made sandbox providers for the [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/). With one of them plugged in, an OpenAI `SandboxAgent` can read files, run shell commands, and create artifacts in an isolated computer instead of on your laptop or server.
+Give your agent a tool that runs work on a separate Linux computer instead of your machine. The tool below opens a Celesto computer, checks its operating system, and removes the computer when it finishes.
 
-You get to pick where that computer lives:
-
-- **Hosted Celesto computer** for cloud runs you can share, persist, and resume from any machine.
-- **Local Celesto sandbox** for fast, private runs that stay on your own hardware.
-
-Both options expose the exact same OpenAI primitives (`SandboxAgent`, `SandboxRunConfig`, `Runner`), so you can swap providers without changing the rest of your agent code.
-
-## When to use this
-
-Reach for these integrations when you want an OpenAI agent to:
-
-- Run untrusted or model-generated commands without touching your machine.
-- Inspect, edit, or build files in a clean, throwaway workspace.
-- Pause a session, save it, and resume it later from a different process.
-
-If you only need to call a single shell command from an OpenAI tool, the simpler [function tool example](/celesto/guides/ai-agent-integration#openai-agents-sdk) on the local Celesto page may be enough.
-
-## Installation
-
-Install the Celesto SDK with the `openai-agents` extra. This pulls in the OpenAI Agents SDK and the local sandbox runtime alongside Celesto:
+## Install the SDKs
 
 ```bash
-pip install "celesto[openai-agents]"
+pip install 'celesto>=0.1.15' openai-agents
 ```
 
-<Note>
-  The hosted provider needs a Celesto API key. Set `CELESTO_API_KEY` or pass `api_key=` when you create the client. The local provider runs on your machine and does not need an API key.
-</Note>
+Set `OPENAI_API_KEY` for the agent and `CELESTO_API_KEY` for the cloud computer. Keep the keys in your application's environment, not in commands sent to the computer.
 
-## Hosted Celesto sandboxes
+## Give the agent a tool
 
-Use `CelestoSandboxClient` when you want OpenAI to spin up a fresh Celesto computer for the agent's session. The client creates the computer on `create()`, runs every shell command and file operation against it, and tears it down on `delete()`.
+```python inspect_computer.py
+from agents import Agent, Runner, function_tool
+from celesto import CloudComputer
 
-<Steps>
-  <Step title="Import the provider and OpenAI primitives">
-    ```python
-    from agents import Runner
-    from agents.run import RunConfig
-    from agents.sandbox import SandboxAgent, SandboxRunConfig
-    from celesto.integrations.openai_agents import (
-        CelestoSandboxClient,
-        CelestoSandboxClientOptions,
-    )
-    ```
-  </Step>
-  <Step title="Define your SandboxAgent">
-    A `SandboxAgent` is an OpenAI agent that always works inside a sandbox you provide.
 
-    ```python
-    agent = SandboxAgent(
-        name="Workspace analyst",
-        instructions="Inspect the sandbox workspace before answering.",
-    )
-    ```
-  </Step>
-  <Step title="Create a session and run the agent">
-    ```python
-    import asyncio
+@function_tool
+def inspect_computer() -> str:
+    """Report the operating system of a fresh Celesto computer."""
+    with CloudComputer(size_id="micro") as computer:
+        result = computer.run("uname -a")
+        if result.exit_code != 0:
+            raise RuntimeError(f"uname exited with code {result.exit_code}")
+        return result.stdout.strip()
 
-    async def main():
-        client = CelestoSandboxClient()
-        session = await client.create(
-            options=CelestoSandboxClientOptions(cpus=2, memory=4096),
-        )
-        try:
-            async with session:
-                result = await Runner.run(
-                    agent,
-                    "Run `uname -a` in the sandbox and summarize the result.",
-                    run_config=RunConfig(sandbox=SandboxRunConfig(session=session)),
-                )
-                print(result.final_output)
-        finally:
-            await client.delete(session)
 
-    asyncio.run(main())
-    ```
-
-    <Check>
-      The agent prints a one-line summary of `uname -a` output from a fresh Celesto computer.
-    </Check>
-  </Step>
-</Steps>
-
-### Client options
-
-Pass a `CelestoSandboxClientOptions` to control how the computer is created. Every field is optional. Omit a field to inherit the template's default.
-
-<Note>
-  CPU and memory must match a named Celesto size. Free and Nano plans use Nano (1 vCPU, 512 MB). Builder and Growth can also use Small (1 vCPU, 1 GB), Standard (2 vCPU, 4 GB), and Large (4 vCPU, 12 GB). See [Choose computer size](/cloud/features/resources).
-</Note>
-
-<ParamField body="template_id" type="string" default="scratch">
-  Sandbox template to create the computer from. Defaults to `scratch` (a minimal Ubuntu computer). Pass `coding-agent` when your agent needs common coding tools preinstalled. See [Use a template](/cloud/computers#use-a-template).
-</ParamField>
-
-<ParamField body="template_version" type="string">
-  Pin an immutable template version for reproducible runs.
-</ParamField>
-
-<ParamField body="cpus" type="integer">
-  CPU value from a named size. Use together with the matching `memory` value. Defaults to the template's value.
-</ParamField>
-
-<ParamField body="memory" type="integer">
-  Memory in MB from a named size. Use together with the matching `cpus` value. Defaults to the template's value.
-</ParamField>
-
-<ParamField body="disk_size_mb" type="integer">
-  Disk size in MB. Range: 512-20480. Defaults to the template's value.
-</ParamField>
-
-<ParamField body="image" type="string">
-  Legacy OS image selector. Prefer `template_id` for new code.
-</ParamField>
-
-<ParamField body="computer_id" type="string">
-  Reuse an existing Celesto computer instead of creating a new one. When set, the session attaches to that computer and starts it if needed.
-</ParamField>
-
-<ParamField body="network_policy" type="object" default='{"mode": "open"}'>
-  Outbound internet setting for a newly created computer. Use `{"mode": "off"}` to create an offline computer. When you reuse `computer_id`, the requested setting must match that computer's saved policy; if it does not, `client.create()` raises `RuntimeError` and does not start the computer. Requires Celesto SDK `0.0.13` or later.
-</ParamField>
-
-<ParamField body="delete_on_close" type="boolean">
-  Whether to delete the computer when the session closes. Defaults to `true` if the client created the computer, and `false` if you passed in an existing `computer_id`.
-</ParamField>
-
-<Tip>
-  Need preinstalled coding tools? Create the session with `options=CelestoSandboxClientOptions(template_id="coding-agent")`.
-</Tip>
-
-For the setting choices and persistent-home requirement, see [Network Control](/cloud/features/network-control).
-
-### Authenticate the client
-
-By default `CelestoSandboxClient` uses your `CELESTO_API_KEY` environment variable. You can also pass credentials directly:
-
-```python
-from celesto.integrations.openai_agents import CelestoSandboxClient
-
-client = CelestoSandboxClient(api_key="your-api-key")
-```
-
-### Resume a session later
-
-Save the session state when your process exits and resume it on the next run. This keeps the same computer attached to the same agent identity:
-
-```python
-state = session.state.model_dump()
-# ... persist `state` to disk or a database
-
-resumed = await client.resume(
-    CelestoSandboxClient().deserialize_session_state(state)
-)
-```
-
-<Tip>
-  Use `delete_on_close=False` when you plan to resume. Otherwise the computer is deleted when the original session ends.
-</Tip>
-
-## Local Celesto sandboxes
-
-`SmolVMSandboxClient` runs the agent in a [local Celesto sandbox](/celesto/introduction) on your own machine. It is a drop-in replacement for `CelestoSandboxClient` and uses the same `SandboxAgent`, `SandboxRunConfig`, and `Runner` flow.
-
-```python
-from agents import Runner
-from agents.run import RunConfig
-from agents.sandbox import SandboxAgent, SandboxRunConfig
-from celesto.integrations.openai_agents import (
-    SmolVMSandboxClient,
-    SmolVMSandboxClientOptions,
+agent = Agent(
+    name="Computer inspector",
+    instructions="Use inspect_computer to report the computer's operating system.",
+    tools=[inspect_computer],
 )
 
-agent = SandboxAgent(
-    name="Local workspace analyst",
-    instructions="Inspect the sandbox workspace before answering.",
-)
-
-async def main():
-    client = SmolVMSandboxClient()
-    session = await client.create(
-        options=SmolVMSandboxClientOptions(memory=2048),
-    )
-    try:
-        async with session:
-            result = await Runner.run(
-                agent,
-                "List the files in the workspace and describe them.",
-                run_config=RunConfig(sandbox=SandboxRunConfig(session=session)),
-            )
-            print(result.final_output)
-    finally:
-        await client.delete(session)
+if __name__ == "__main__":
+    result = Runner.run_sync(agent, "What operating system is the computer running?")
+    print(result.final_output)
 ```
 
-### Client options
+The `with` block starts the computer and deletes it when the tool returns. Use [a named size](/cloud/features/resources) to give a workload more CPU, memory, or disk.
 
-<ParamField body="os" type="string">
-  OS image to boot inside the local sandbox (for example, `ubuntu-24.04`). Defaults to the default local image.
-</ParamField>
+The current Celesto package exposes `CloudComputer`, not the older `celesto.integrations.openai_agents` session adapter. The tool approach does not give the agent a persistent workspace automatically.
 
-<ParamField body="backend" type="string">
-  Which local backend to use (such as `firecracker` or `qemu`). Defaults to the auto-selected backend for your platform.
-</ParamField>
+## Resume a session later
 
-<ParamField body="memory" type="integer">
-  Memory in MB for the local sandbox.
-</ParamField>
-
-<ParamField body="disk_size" type="integer">
-  Disk size in MB for the local sandbox.
-</ParamField>
-
-<ParamField body="exposed_ports" type="tuple[int, ...]" default="()">
-  Guest ports to expose to your host. Use this when the agent runs a server (for example, a dev server or web app) you want to reach from your machine.
-</ParamField>
-
-<ParamField body="vm_id" type="string">
-  Reuse an existing local sandbox instead of creating a new one. The session attaches to that VM and starts it if needed.
-</ParamField>
-
-<ParamField body="delete_on_close" type="boolean">
-  Whether to delete the VM when the session closes. Defaults to `true` if the client created the VM, and `false` if you passed in an existing `vm_id`.
-</ParamField>
-
-## Choosing between hosted and local
-
-<CardGroup cols={2}>
-  <Card title="Hosted Celesto" icon="cloud">
-    Use when you want managed infrastructure, shared computers, longer-lived sessions, or runs that originate from servers without local virtualization.
-  </Card>
-  <Card title="Local Celesto" icon="laptop">
-    Use when you want fast iteration, private runs, no API key, or development on a single workstation.
-  </Card>
-</CardGroup>
-
-Both providers implement OpenAI's sandbox session interface, so the rest of your agent code (instructions, tools, runners) stays the same when you switch.
-
-## Common patterns
-
-### Read and write files in the sandbox
-
-`SandboxAgent` operations call `read()` and `write()` on the session. The hosted and local providers map those calls to the underlying computer or VM:
-
-```python
-from pathlib import Path
-
-async with session:
-    await session.write(Path("notes/plan.md"), io.BytesIO(b"# Plan\n"))
-    handle = await session.read(Path("notes/plan.md"))
-    print(handle.read().decode())
-```
-
-### Save and restore the workspace
-
-Both providers can snapshot the sandbox workspace as a tarball and rehydrate it later:
-
-```python
-async with session:
-    archive = await session.persist_workspace()
-    # store `archive.read()` somewhere durable
-
-# later, in a new session:
-async with new_session:
-    await new_session.hydrate_workspace(archive)
-```
-
-This is useful when you want to keep the agent's working files across runs without keeping the computer alive.
-
-## Troubleshooting
-
-<AccordionGroup>
-  <Accordion title="ImportError: OpenAI Agents support is not installed">
-    The integration is an optional extra. Install it with `pip install "celesto[openai-agents]"`. This adds the `openai-agents` and `smolvm` packages alongside Celesto.
-  </Accordion>
-  <Accordion title="The agent can't find files I expected">
-    Files written through `session.write()` land inside the sandbox workspace, not on your host. Use `session.read()` or `session.persist_workspace()` to pull them out.
-  </Accordion>
-  <Accordion title="Commands time out">
-    Long-running commands need a longer timeout. Pass `timeout=` when calling sandbox operations, or split the work into shorter steps in the agent's instructions.
-  </Accordion>
-</AccordionGroup>
+To reuse files across tool calls or agent runs, [keep the computer](/cloud/features/persistence) instead of creating it inside the tool every time. Save the computer ID in your application and reconnect with `CloudComputer.get(computer_id)`. Manage the computer's lifetime separately from the agent's.

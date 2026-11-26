@@ -8,6 +8,10 @@ Services inside a Celesto computer are private by default. This isolation is use
 
 Port publishing creates a public HTTPS URL that forwards traffic to a port inside the computer, so you can preview, test, and share running services without deploying them elsewhere.
 
+<Warning>
+  Anyone with the URL can connect without a Celesto API key. Add authentication to your app before you publish a service that exposes sensitive data or actions.
+</Warning>
+
 A port is the numbered address a service listens on. For example, a local development server might listen on port `8000`.
 
 ## When to publish a port
@@ -25,60 +29,64 @@ Pick any application port that your service listens on inside the computer, from
 
 ## Publish a service
 
-The following example starts a simple HTTP server on port `8000`, publishes the port, prints the public URL, lists published ports, and then removes the published port.
+Use a running `coding-agent` computer and substitute its name or ID for `einstein` below. The example serves an empty preview directory, not your workspace.
 
 <Steps>
   <Step title="Start a service and publish its port">
-    Start a server inside the computer, publish the port, and open the returned HTTPS URL in your browser.
+    Start a server inside the computer. Verify that it answers there before publishing the port and opening the public URL.
 
     <CodeGroup>
 
     ```python Python
-    from celesto import Computer
+    from celesto import CloudComputer
 
 
-    computer = Computer(template_id="coding-agent")
-    computer.run("python3 -m http.server 8000 &")
+    computer = CloudComputer.get("einstein")
+    computer.run(
+        'preview=$(mktemp -d) && '
+        '(nohup python3 -m http.server 8000 --bind 0.0.0.0 --directory "$preview" '
+        ">/tmp/preview-server.log 2>&1 </dev/null &)"
+    )
+    health = computer.run(
+        "curl -fsS --retry 5 --retry-connrefused --retry-delay 1 http://127.0.0.1:8000/"
+    )
+    if health.exit_code != 0:
+        raise RuntimeError("Preview did not start. Check /tmp/preview-server.log inside the computer.")
 
-    url = computer.publish_port(8000)
-    print(url)
-
-    published_ports = computer.list_published_ports()
-    print(published_ports)
-
-    computer.unpublish_port(8000)
-    computer.delete()
+    route = computer.publish_port(8000)
+    print(route.url)
     ```
 
     ```ts TypeScript
     import { Computer } from "@celestoai/sdk";
 
-    const computer = await Computer.create({ templateId: "coding-agent" });
-    await computer.run("python3 -m http.server 8000 &");
+    const computer = await Computer.get("einstein");
+    await computer.run(
+      "preview=$(mktemp -d) && " +
+      '(nohup python3 -m http.server 8000 --bind 0.0.0.0 --directory "$preview" ' +
+      ">/tmp/preview-server.log 2>&1 </dev/null &)",
+    );
+    const health = await computer.run(
+      "curl -fsS --retry 5 --retry-connrefused --retry-delay 1 http://127.0.0.1:8000/",
+    );
+    if (health.exitCode !== 0) {
+      throw new Error("Preview did not start. Check /tmp/preview-server.log inside the computer.");
+    }
 
     const url = await computer.publishPort(8000);
     console.log(url);
-
-    const publishedPorts = await computer.listPublishedPorts();
-    console.log(publishedPorts);
-
-    await computer.unpublishPort(8000);
-    await computer.delete();
     ```
 
     ```bash CLI
-    celesto computer create --template coding-agent
-    celesto computer run einstein "python3 -m http.server 8000 &"
-    celesto computer port publish einstein
-    celesto computer port list einstein
-    celesto computer port unpublish einstein
-    celesto computer delete einstein
+    celesto computer run einstein 'preview=$(mktemp -d) && (nohup python3 -m http.server 8000 --bind 0.0.0.0 --directory "$preview" >/tmp/preview-server.log 2>&1 </dev/null &)'
+    celesto computer run einstein 'curl -fsS --retry 5 --retry-connrefused --retry-delay 1 http://127.0.0.1:8000/' &&
+      celesto computer port publish einstein --port 8000
     ```
 
     </CodeGroup>
 
     <Check>
-      The publish command returns a public HTTPS URL that forwards traffic to the service running inside the computer.
+      Opening the returned HTTPS URL shows the preview directory listing.
     </Check>
   </Step>
 </Steps>
@@ -88,7 +96,7 @@ The following example starts a simple HTTP server on port `8000`, publishes the 
 Use the list command when you need to confirm which ports are currently exposed for a computer.
 
 ```bash CLI
-celesto computer port list einstein
+celesto computer port list einstein --cloud
 ```
 
 Each published port includes the internal port, the public URL, and its current status.
@@ -112,7 +120,7 @@ Each published port includes the internal port, the public URL, and its current 
 Published URLs are intended for short-lived development and testing workflows. Remove a published port when you no longer need external access to the service.
 
 ```bash CLI
-celesto computer port unpublish einstein
+celesto computer port unpublish einstein --port 8000
 ```
 
 <Tip>
@@ -121,14 +129,10 @@ celesto computer port unpublish einstein
 
 ## Troubleshooting
 
-If the published URL does not load, check that the service is still running inside the computer and listening on the expected port.
+If the public URL does not load, check that the service is running and answering on the expected port. Use `wss://` with the same public hostname for a WebSocket endpoint your app serves.
 
 ```bash CLI
 celesto computer run einstein "curl -I http://localhost:8000"
 ```
 
-If the command fails, restart the service and publish the port again.
-
-<Note>
-  Treat published URLs as public. If the service exposes sensitive data or actions, add authentication to the service before sharing the URL.
-</Note>
+If the local request fails, start the service and check it again. If you stopped and started the computer, restart the app even if the same public URL is still listed.

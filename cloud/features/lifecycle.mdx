@@ -10,42 +10,30 @@ Use the lifecycle when you want to control how long a workspace stays around. Li
 
 ## Create, stop, start, and delete
 
-Create a computer when you need a clean workspace. Stop it to pause work and keep the files inside it. Start it when you want to continue. Delete it when you no longer need the workspace.
+Create a computer when you need a clean workspace. Stop it to keep the files and shut down the processes. Start it to reopen those files, then restart any services you need. Delete it when you no longer need the workspace.
 
 <CodeGroup>
 
 ```python Python
-from celesto import Computer
+from celesto import CloudComputer
 
-
-computer = Computer(template_id="coding-agent")
-print(computer.name)
-
-computer.stop()
-computer.start()
-computer.delete()
-```
-
-```ts TypeScript
-import { Computer } from "@celestoai/sdk";
-
-const computer = await Computer.create({ templateId: "coding-agent" });
-console.log(computer.name);
-
-await computer.stop();
-await computer.start();
-await computer.delete();
+with CloudComputer(size_id="micro") as computer:
+    print(computer.id)
+    computer.stop()
+    computer.resume()
 ```
 
 ```bash CLI
-celesto computer create --template coding-agent
+celesto computer create --cloud --size micro
 
-celesto computer stop einstein
-celesto computer start einstein
-celesto computer delete einstein
+celesto computer stop einstein --cloud
+celesto computer start einstein --cloud
+celesto computer delete einstein --cloud
 ```
 
 </CodeGroup>
+
+For TypeScript, see [Keep files between sessions](/cloud/features/persistence#stop-and-start-the-same-computer) for an example that waits for each operation to finish.
 
 <Check>
   The same computer can stop, start again, and then be removed when the workspace is no longer needed.
@@ -53,16 +41,13 @@ celesto computer delete einstein
 
 ## Run work after a stop
 
-The CLI can start a stopped computer automatically when you run a command or open a terminal. This lets you stop a computer between work sessions and continue from the same workspace later.
+Start the computer before running commands or opening a terminal.
 
 ```bash CLI
+celesto computer start einstein --cloud
 celesto computer run einstein "uname -a"
-celesto computer ssh einstein
+celesto computer ssh einstein --cloud
 ```
-
-<Check>
-Commands that need a running computer can start the stopped computer before they run.
-</Check>
 
 ## Read the computer status
 
@@ -81,13 +66,7 @@ Celesto computer responses include a `status` field. Status means the current st
 | `deleted` | The computer has been deleted. |
 | `error` | The computer needs attention before it can be used. |
 
-## Resume agent work later
-
-For OpenAI `SandboxAgent` workflows, you can save session state and resume it later. Session state means the saved details Celesto uses to reconnect the same agent to the same sandbox workspace.
-
-<Tip>
-  Use `delete_on_close=False` when you plan to resume an OpenAI sandbox session. Follow the complete example in [the OpenAI agent sandbox guide](/cloud/openai-agents#resume-a-session-later).
-</Tip>
+If delete returns HTTP `409` while the computer is `creating`, wait for creation to finish, then retry deletion by the same computer ID.
 
 ## Choose the right session pattern
 
@@ -98,4 +77,3 @@ Use these patterns to decide how long a computer should stay available.
 | Create, run, delete | Start fresh for one task and clean up right away. |
 | Create, stop, start | Keep files and installed packages between sessions. |
 | Existing computer ID | Let a job or agent continue in a known workspace. |
-| Saved OpenAI session state | Resume an agent session with the same sandbox identity. |

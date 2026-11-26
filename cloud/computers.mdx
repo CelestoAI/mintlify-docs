@@ -20,55 +20,42 @@ The Computers API gives your code or agent an isolated Linux computer. You creat
   </Step>
 </Steps>
 
-<Note>
-  Celesto accepts Nano (1 vCPU, 512 MB), Small (1 vCPU, 1 GB), Standard (2 vCPU, 4 GB), and Large (4 vCPU, 12 GB). Free and Nano plans can create Nano computers. Builder and Growth can create every named size. See [Choose computer size](/cloud/features/resources).
-</Note>
+Choose a [named size](/cloud/features/resources) to set CPU, memory, and disk together. For example, Micro has 2 GB of memory and Large has 16 GB. Celesto assigns the computer's name. Save its ID in your own records if you need to associate it with a job, user, or label.
+
+When you call `POST /v1/computers` directly, send an `Idempotency-Key` header. Reuse that key and the original request body if you retry the same create request. The SDKs send a key for you.
+
+Stop and start to keep the disk, not the running processes. Restart your app after starting the computer again. If deleting a computer returns HTTP `409` while it is `creating`, wait for creation to finish and retry the delete. See [Keep files between sessions](/cloud/features/persistence).
+
+## What to know before running commands
+
+- Scratch includes a shell and basic network tools. Use `coding-agent` when you need Python or Node.js. Don't depend on `systemctl --user` on Scratch; start your application explicitly or use a template that provides the service manager it needs.
+- `/exec` takes a command of up to 10,000 characters and a timeout from 1 to 300 seconds. It returns the result after the command finishes. It does not accept standard input or provide a file upload or download endpoint. To send input interactively, [open a terminal connection](#open-a-terminal-connection).
+- Don't put credentials in command text or print them in command output. Command text can appear in error logs; a command output expiration time is not a log retention guarantee.
 
 <View title="Python" icon="python">
 
 ## Create a computer
 
-Use `Computer()` with no arguments to get a fresh `scratch` computer, which is a minimal Ubuntu sandbox.
+Use `CloudComputer()` for a fresh `scratch` computer. The `with` block starts it, waits until it is ready, and deletes it when you leave the block.
 
 ```python create_computer.py
-from celesto import Computer
+from celesto import CloudComputer
 
-
-computer = Computer()
-print(computer.name)
-print(computer.id)
-print(computer.status)
-
-computer.delete()
+with CloudComputer(size_id="micro") as computer:
+    print(computer.id)
 ```
 
-Override CPU, memory, or disk size when the default size is too small:
+Choose another named size when you need more resources:
 
 ```python create_sized_computer.py
-from celesto import Computer
+from celesto import CloudComputer
 
-
-computer = Computer(cpus=2, memory=4096, disk="15gb")
-print(f"{computer.name} has {computer.vcpus} vCPUs")
-print(f"{computer.ram_mb} MB RAM")
-
-computer.delete()
+with CloudComputer(size_id="standard") as computer:
+    print(computer.id)
 ```
 
-<ParamField body="cpus" type="integer">
-  CPU value from a named size. Use together with the matching `memory` value. Defaults to the template's value.
-</ParamField>
-
-<ParamField body="memory" type="integer">
-  Memory in MB from a named size. Use together with the matching `cpus` value. Defaults to the template's value.
-</ParamField>
-
-<ParamField body="disk" type="integer | string">
-  Disk size as MB or a string such as `"15gb"`. Alias for `disk_size_mb`.
-</ParamField>
-
-<ParamField body="disk_size_mb" type="integer">
-  Disk size in MB. Range: 512-20480. Defaults to the template's value.
+<ParamField body="size_id" type="string">
+  A [named size](/cloud/features/resources), such as `micro` or `standard`. Cloud computers do not accept CPU, memory, or disk overrides.
 </ParamField>
 
 <ParamField body="template_id" type="string" default="scratch">
@@ -79,73 +66,41 @@ computer.delete()
   Optional immutable template version. Pin this when you want repeatable builds as a template changes over time.
 </ParamField>
 
-<ParamField body="persistent_home" type="boolean" default="false">
-  Keep `/home/ohm` across stop and restore. Set this at create time when you plan to reuse the computer across sessions. This setting cannot be changed after the computer is created.
-</ParamField>
-
 <ParamField body="network_policy" type="object" default='{"mode": "open"}'>
-  Outbound internet setting, fixed when you create the computer. Use `{"mode": "off"}` to create an offline computer. Offline computers use the default home storage and cannot be combined with `persistent_home=True`. Requires Celesto SDK `0.0.13` or later.
+  Outbound internet setting, fixed when you create the computer. Use `{"mode": "off"}` to create an offline computer. Requires Celesto SDK `0.0.13` or later.
 </ParamField>
 
-See [Network Control](/cloud/features/network-control) for Python, TypeScript, CLI, and OpenAI Agents examples.
-
-## Create a computer with a persistent home
-
-Computers are ephemeral by default. Pass `persistent_home=True` to keep `/home/ohm` across stop and restore:
-
-```python create_persistent_computer.py
-from celesto import Computer
-
-
-computer = Computer(persistent_home=True)
-print(computer.name)
-```
-
-See [Keep work between sessions](/cloud/features/persistence) for how persistence works.
+See [Network Control](/cloud/features/network-control) for Python, TypeScript, and CLI examples.
 
 ## Use a template
 
-A template is a ready-made computer image with extra tools and default CPU, memory, and disk settings. Use `coding-agent` for common coding workflows:
+A template is a ready-made setup with tools installed. For built-in templates, your named size determines CPU, memory, and disk. Use `coding-agent` for common coding workflows:
 
 ```python create_from_template.py
-from celesto import Computer
+from celesto import CloudComputer
 
-
-computer = Computer(template_id="coding-agent")
-result = computer.run("python3 --version")
-print(result["stdout"].strip())
-
-computer.delete()
+with CloudComputer(template_id="coding-agent", size_id="micro") as computer:
+    result = computer.run("python3 --version")
+    print(result.stdout.strip())
 ```
 
 To start every computer with your own packages installed, build a [custom template](/cloud/features/custom-templates) and pass its `tpl_...` ID as `template_id`.
 
 ## List templates
 
-```python list_templates.py
-from celesto import Computer
-
-
-templates = Computer.list_templates()
-for template in templates:
-    print(
-        f"{template['id']}: {template['display_name']} "
-        f"({template['default_vcpus']} vCPU, {template['default_ram_mb']} MB RAM)"
-    )
+```bash
+celesto computer templates --cloud
 ```
 
 ## Run commands
 
 ```python run_command.py
-from celesto import Computer
+from celesto import CloudComputer
 
-
-computer = Computer(template_id="scratch")
-result = computer.run("ls -la /home", timeout=60)
-print(result["stdout"])
-print(result["exit_code"])
-
-computer.delete()
+with CloudComputer(size_id="micro") as computer:
+    result = computer.run("ls -la /home", timeout=60)
+    print(result.stdout)
+    print(result.exit_code)
 ```
 
 <ResponseField name="exit_code" type="integer" required>
@@ -162,124 +117,77 @@ computer.delete()
 
 ## Stream command output
 
-Use `run_stream()` when you want to see output as it is produced instead of waiting for the command to finish. It returns an iterator of event dicts that arrive over a server-sent events stream, which is useful for long-running builds, test suites, or agent tool calls that print progress.
+Use `run_stream()` when your code expects an iterator of command events. On Cloud, the events come from the completed `/exec` response, not from a live stream. For live terminal output, open a terminal connection instead.
 
 ```python stream_command.py
-from celesto import Computer
+from celesto import CloudComputer, CommandExitEvent, CommandOutputEvent
 
-
-computer = Computer(template_id="coding-agent")
-
-for event in computer.run_stream("pytest -q", timeout=300):
-    if event["type"] in ("stdout", "stderr"):
-        print(event["data"], end="")
-    elif event["type"] == "exit":
-        print(f"\nexit code: {event['exit_code']}")
-
-computer.delete()
+with CloudComputer(size_id="micro") as computer:
+    for event in computer.run_stream("uname -a"):
+        if isinstance(event, CommandOutputEvent):
+            print(event.data, end="")
+        elif isinstance(event, CommandExitEvent):
+            print(f"\nexit code: {event.exit_code}")
 ```
 
 Each event has a `type` field:
 
-- `started` — the command has been accepted. Includes `command_id` and `timeout_seconds`.
-- `stdout` and `stderr` — a chunk of output. The bytes are in `data`.
-- `exit` — the command finished. Includes `exit_code`, `duration_ms`, and `timed_out`.
+- `started` — command metadata, including `command_id` and `timeout_seconds`. Cloud yields it after receiving the result.
+- `stdout` and `stderr` — output text in `data`, when present.
+- `exit` — the completed result, including `exit_code`, `duration_ms`, and `timed_out`.
 
-The stream always ends with an `exit` event, even when the command times out or is interrupted. Break out of the loop early to stop consuming; the remote command still runs to completion.
+If the request fails, the iterator raises an error rather than yielding an `exit` event. Breaking out of the loop doesn't cancel a remote command.
 
 ## Get and list computers
 
-```python list_computers.py
-from celesto import Computer
+List your cloud computers in the dashboard or with the CLI:
 
-
-computers = Computer.list(status="running")
-for computer in computers:
-    info = Computer.get(computer["id"])
-    print(f"{info.name}: {info.status}")
-
-print(f"Total: {len(computers)}")
+```bash
+celesto computer list --cloud
 ```
+
+To reconnect in Python, use `CloudComputer.get(computer_id)` with the ID of an existing computer.
 
 ## Publish a port
 
-Publishing a port gives your computer a public HTTPS URL. Use it when an app, API server, or notebook running inside the computer needs to be reachable from outside the sandbox.
+Publishing a port gives your computer a public HTTPS URL. Anyone with the URL can connect without a Celesto API key. Add authentication to your app before publishing anything sensitive.
 
 Pick any application port from `1024` through `65535`. A computer can have up to four ports published at a time, and Celesto system ports are reserved for the platform.
 
+Use an existing computer with an app listening on port `8000`. See [Publish ports](/cloud/features/publish-ports) to start and check a sample app.
+
 ```python publish_port.py
-from celesto import Computer
+from celesto import CloudComputer
 
+computer = CloudComputer.get("einstein")
+route = computer.publish_port(8000)
+print(route.url)
 
-computer = Computer(template_id="coding-agent")
-computer.run("cd /tmp && python3 -m http.server 8000 > /tmp/server.log 2>&1 &")
-
-url = computer.publish_port(8000)
-print(url)
-
-for port in computer.list_published_ports():
-    print(f"{port['port']} -> {port['url']} ({port['status']})")
+for port in computer.published_ports():
+    print(f"{port.port} -> {port.url} ({port.status})")
 
 computer.unpublish_port(8000)
-computer.delete()
 ```
 
 ## Open a terminal connection
 
-Use `create_terminal_session()` when your application needs an interactive shell against a running computer, for example to power a web terminal in your own product. It calls `POST /computers/{id}/terminals` and returns a short-lived, direct connection to Celesto's fast terminal gateway. Your account must have write access to the computer.
+Use `terminal().attach()` to open an interactive shell on a running computer. Your account must have write access to it.
 
 ```python terminal.py
-import websockets
-import asyncio
-from celesto import Computer
+from celesto import CloudComputer
 
-
-async def main():
-    computer = Computer.get("einstein")
-    session = computer.create_terminal_session()
-
-    async with websockets.connect(session["url"]) as ws:
-        await ws.send("echo hello\n")
-        print(await ws.recv())
-
-
-asyncio.run(main())
+computer = CloudComputer.get("einstein")
+computer.terminal().attach()
 ```
-
-<Warning>
-  `session["url"]` embeds a short-lived terminal token. Treat it as a secret: pass it straight to your WebSocket client, do not log it, and do not send it to a browser you do not control. Use `session["expires_at"]` to know when to request a new session.
-</Warning>
-
-<ResponseField name="terminal_id" type="string" required>
-  Durable terminal session ID.
-</ResponseField>
-
-<ResponseField name="gateway_url" type="string" required>
-  Base gateway URL without credentials. Combine with `token` yourself only when you cannot use `url` directly.
-</ResponseField>
-
-<ResponseField name="token" type="string" required>
-  Short-lived terminal token. Treat this as a secret.
-</ResponseField>
-
-<ResponseField name="expires_at" type="string" required>
-  ISO 8601 timestamp after which the token stops working. Create a new session before this time.
-</ResponseField>
-
-<ResponseField name="url" type="string" required>
-  Authenticated `wss://` URL ready to pass to a WebSocket client.
-</ResponseField>
 
 ## Stop, start, and delete
 
 ```python lifecycle.py
-from celesto import Computer
+from celesto import CloudComputer
 
-
-computer = Computer()
-computer.stop()
-computer.start()
-computer.delete()
+with CloudComputer(size_id="micro") as computer:
+    computer.stop()
+    computer.resume()
 ```
 
 </View>
@@ -288,7 +196,7 @@ computer.delete()
 
 ## Create a computer
 
-Use `Computer.create()` with no arguments to get a fresh `scratch` computer, which is a minimal Ubuntu sandbox.
+Use `Computer.create()` to get a fresh `scratch` computer. The API can return while the computer is still `creating`. Save the ID, then call `refresh()` until `status` is `running` before running commands or publishing ports.
 
 ```ts create-computer.ts
 import { Computer } from "@celestoai/sdk";
@@ -297,41 +205,21 @@ const computer = await Computer.create();
 console.log(computer.name);
 console.log(computer.id);
 console.log(computer.status);
-
-await computer.delete();
 ```
 
-Override CPU, memory, or disk size when the default size is too small:
+Choose another named size when you need more resources:
 
 ```ts create-sized-computer.ts
 import { Computer } from "@celestoai/sdk";
 
-const computer = await Computer.create({
-  cpus: 2,
-  memory: 4096,
-  disk: "15gb",
-});
+const computer = await Computer.create({ sizeId: "standard" });
 
 console.log(`${computer.name} has ${computer.vcpus} vCPUs`);
 console.log(`${computer.ramMb} MB RAM`);
-
-await computer.delete();
 ```
 
-<ParamField body="cpus" type="integer">
-  CPU value from a named size. Use together with the matching `memory` value. Defaults to the template's value.
-</ParamField>
-
-<ParamField body="memory" type="integer">
-  Memory in MB from a named size. Use together with the matching `cpus` value. Defaults to the template's value.
-</ParamField>
-
-<ParamField body="disk" type="integer | string">
-  Disk size as MB or a string such as `"15gb"`. Alias for `diskSizeMb`.
-</ParamField>
-
-<ParamField body="diskSizeMb" type="integer">
-  Disk size in MB. Range: 512-20480. Defaults to the template's value.
+<ParamField body="sizeId" type="string">
+  A [named size](/cloud/features/resources), such as `micro` or `standard`. Cloud computers do not accept CPU, memory, or disk overrides.
 </ParamField>
 
 <ParamField body="templateId" type="string" default="scratch">
@@ -342,41 +230,21 @@ await computer.delete();
   Optional immutable template version. Pin this when you want repeatable builds as a template changes over time.
 </ParamField>
 
-<ParamField body="persistentHome" type="boolean" default="false">
-  Keep `/home/ohm` across stop and restore. Set this at create time when you plan to reuse the computer across sessions. This setting cannot be changed after the computer is created.
-</ParamField>
-
 <ParamField body="networkPolicy" type="object" default='{ mode: "open" }'>
-  Outbound internet setting, fixed when you create the computer. Use `{ mode: "off" }` to create an offline computer. Offline computers use the default home storage and cannot be combined with `persistentHome: true`. Requires `@celestoai/sdk` `0.1.5` or later.
+  Outbound internet setting, fixed when you create the computer. Use `{ mode: "off" }` to create an offline computer. Requires `@celestoai/sdk` `0.1.5` or later.
 </ParamField>
 
-See [Network Control](/cloud/features/network-control) for Python, TypeScript, CLI, and OpenAI Agents examples.
-
-## Create a computer with a persistent home
-
-Computers are ephemeral by default. Pass `persistentHome: true` to keep `/home/ohm` across stop and restore:
-
-```ts create-persistent-computer.ts
-import { Computer } from "@celestoai/sdk";
-
-const computer = await Computer.create({ persistentHome: true });
-console.log(computer.name);
-```
-
-See [Keep work between sessions](/cloud/features/persistence) for how persistence works.
+See [Network Control](/cloud/features/network-control) for Python, TypeScript, and CLI examples.
 
 ## Use a template
 
-A template is a ready-made computer image with extra tools and default CPU, memory, and disk settings. Use `coding-agent` for common coding workflows:
+A template is a ready-made setup with tools installed. For built-in templates, your named size determines CPU, memory, and disk. Use `coding-agent` for common coding workflows:
 
 ```ts create-from-template.ts
 import { Computer } from "@celestoai/sdk";
 
 const computer = await Computer.create({ templateId: "coding-agent" });
-const result = await computer.run("python3 --version");
-console.log(result.stdout.trim());
-
-await computer.delete();
+console.log(computer.id);
 ```
 
 ## List templates
@@ -396,15 +264,15 @@ for (const template of templates) {
 
 ## Run commands
 
+Use the ID of a running computer.
+
 ```ts run-command.ts
 import { Computer } from "@celestoai/sdk";
 
-const computer = await Computer.create({ templateId: "scratch" });
+const computer = await Computer.get("einstein");
 const result = await computer.run("ls -la /home", { timeout: 60 });
 console.log(result.stdout);
 console.log(result.exitCode);
-
-await computer.delete();
 ```
 
 <ResponseField name="exitCode" type="integer" required>
@@ -421,43 +289,23 @@ await computer.delete();
 
 ## Stream command output
 
-Use `runStream()` when you want to display command output as it is produced instead of waiting for the command to finish. It returns an `AsyncGenerator` that yields events over a server-sent events stream, so `for await` reads them one at a time. This is a good fit for long builds, test runs, or an agent tool call that wants to show progress to a user. `execStream()` is an alias.
+Use `runStream()` when your code expects an async iterator. Cloud buffers the `/exec` result and yields output only after the command finishes. `execStream()` is an alias. For live terminal output, open a terminal connection instead.
 
 ```ts stream-command.ts
 import { Computer } from "@celestoai/sdk";
 
-const computer = await Computer.create({ templateId: "coding-agent" });
+const computer = await Computer.get("einstein");
 
-for await (const event of computer.runStream("pytest -q", { timeout: 300 })) {
+for await (const event of computer.runStream("uname -a", { timeout: 30 })) {
   if (event.type === "stdout" || event.type === "stderr") {
     process.stdout.write(event.data);
   } else if (event.type === "exit") {
     console.log(`\nexit code: ${event.exitCode}`);
   }
 }
-
-await computer.delete();
 ```
 
-Each event has a `type` field:
-
-- `started` — the command has been accepted. Includes `commandId`, `startedAtUnixMs`, and `timeoutSeconds`.
-- `stdout` and `stderr` — a chunk of output. The bytes are in `data`.
-- `exit` — the command finished. Includes `exitCode`, `durationMs`, and `timedOut`.
-
-Pass an `AbortSignal` to cancel a stream from your own code. Aborting also stops the remote command:
-
-```ts stream-cancel.ts
-const controller = new AbortController();
-setTimeout(() => controller.abort(), 5000);
-
-for await (const event of computer.runStream("sleep 60 && echo done", {
-  timeout: 120,
-  signal: controller.signal,
-})) {
-  // ...
-}
-```
+The iterator yields `stdout` and `stderr` events when output is present, then an `exit` event with `exitCode`. If the request fails, the iterator throws instead of yielding `exit`. Passing an `AbortSignal` stops the client from waiting; a command the computer already accepted can keep running. Check its effects before retrying.
 
 ## List recent commands
 
@@ -491,15 +339,16 @@ console.log(`Total: ${computers.length}`);
 
 ## Publish a port
 
-Publishing a port gives your computer a public HTTPS URL. Use it when an app, API server, or notebook running inside the computer needs to be reachable from outside the sandbox.
+Publishing a port gives your computer a public HTTPS URL. Anyone with the URL can connect without a Celesto API key. Add authentication to your app before publishing anything sensitive.
 
 Pick any application port from `1024` through `65535`. A computer can have up to four ports published at a time, and Celesto system ports are reserved for the platform.
+
+Use an existing computer with an app listening on port `8000`. See [Publish ports](/cloud/features/publish-ports) to start and check a sample app.
 
 ```ts publish-port.ts
 import { Computer } from "@celestoai/sdk";
 
-const computer = await Computer.create({ templateId: "coding-agent" });
-await computer.run("cd /tmp && python3 -m http.server 8000 > /tmp/server.log 2>&1 &");
+const computer = await Computer.get("einstein");
 
 const url = await computer.publishPort(8000);
 console.log(url);
@@ -509,7 +358,6 @@ for (const port of await computer.listPublishedPorts()) {
 }
 
 await computer.unpublishPort(8000);
-await computer.delete();
 ```
 
 ## Stop, start, and delete
@@ -517,10 +365,27 @@ await computer.delete();
 ```ts lifecycle.ts
 import { Computer } from "@celestoai/sdk";
 
-const computer = await Computer.create();
+import { setTimeout as delay } from "node:timers/promises";
 
+const computer = await Computer.create({ sizeId: "micro" });
+console.log(computer.id); // Keep the ID so you can recover if a wait times out.
+
+async function waitFor(status: "running" | "stopped") {
+  const deadline = Date.now() + 60_000;
+  while (computer.status !== status) {
+    if (Date.now() >= deadline) {
+      throw new Error(`Computer ${computer.id} did not reach ${status}. Check its status before retrying.`);
+    }
+    await delay(1_000);
+    await computer.refresh();
+  }
+}
+
+await waitFor("running");
 await computer.stop();
+await waitFor("stopped");
 await computer.start();
+await waitFor("running");
 await computer.delete();
 ```
 
@@ -602,10 +467,6 @@ ws.on("open", () => ws.send("echo hello\n"));
 
 <ResponseField name="template_version" type="string">
   Pinned template version, if one was provided at create time. TypeScript exposes this as `templateVersion`.
-</ResponseField>
-
-<ResponseField name="persistentHome" type="boolean">
-  Whether `/home/ohm` is kept across stop and restore. Available in TypeScript as `persistentHome`. Set at create time and cannot be changed later.
 </ResponseField>
 
 <ResponseField name="connection" type="object">
