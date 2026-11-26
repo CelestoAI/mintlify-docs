@@ -18,6 +18,12 @@ JIT registration controls runner reuse. Your workflow's permissions and secrets 
 
 See [Celesto's security overview](https://celesto.ai/security) and [GitHub's JIT runner documentation](https://docs.github.com/en/actions/reference/security/secure-use#using-just-in-time-runners).
 
+## Landlock
+
+Your jobs can lock down their own processes with Landlock, a Linux feature that lets a program limit which files it can read or write. Tools that rely on it, such as `setpriv --landlock-access`, work on Celesto CI runners with no extra setup.
+
+Each job's kernel has Landlock turned on and `/sys/kernel/security/lsm` readable, so your tools can check that Landlock is available. This applies to CI runners only. Regular Celesto computers keep Landlock off.
+
 ## GitHub App permissions
 
 Install the Celesto CI App on the repositories you want to use. Connecting it requires a Celesto workspace admin and a GitHub account that administers the selected repositories. One installation connects to one Celesto workspace.
